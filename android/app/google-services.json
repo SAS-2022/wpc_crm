@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "769154525632",
+    "firebase_url": "https://wpc-crm-a9247-default-rtdb.firebaseio.com",
+    "project_id": "wpc-crm-a9247",
+    "storage_bucket": "wpc-crm-a9247.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769154525632:android:79da5181940acd774b8025",
+        "android_client_info": {
+          "package_name": "com.wisora.wpc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_hBPhoRpBR0ShJDoucSfxnGhctnJMgYo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

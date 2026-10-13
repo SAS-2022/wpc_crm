@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function profile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+    function supervisor() {
+      return request.auth != null && profile().active == true
+        && profile().role in ['kam', 'sales_manager', 'gm'];
+    }
+    // Same access as the Firestore attachment lists: KAM / managers, or the
+    // client's sales exec / the visit's author.
+    function canAccess(folder, parentId) {
+      return request.auth != null && (supervisor()
+        || (folder == 'clients'
+            && firestore.get(/databases/(default)/documents/clients/$(parentId)).data.assignedTo == request.auth.uid)
+        || (folder == 'visits'
+            && firestore.get(/databases/(default)/documents/visits/$(parentId)).data.salesExecId == request.auth.uid));
+    }
+
+    // Client and visit attachments, max 20 MB each.
+    match /{folder}/{parentId}/{fileName} {
+      allow read: if folder in ['clients', 'visits'] && canAccess(folder, parentId);
+      allow create: if folder in ['clients', 'visits'] && request.resource.size < 20 * 1024 * 1024
+        && canAccess(folder, parentId);
+      allow delete: if folder in ['clients', 'visits'] && supervisor();
+    }
+  }
+}

@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().active == true; }
+    function isGm() { return active() && me().role == 'gm'; }
+    function isAdmin() { return active() && me().role in ['sales_manager', 'gm']; }
+    function isSupervisor() { return active() && me().role in ['kam', 'sales_manager', 'gm']; }
+    function ownsClient(clientId) {
+      return active() && get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid;
+    }
+    function ownsVisit(visitId) {
+      return active() && get(/databases/$(database)/documents/visits/$(visitId)).data.salesExecId == request.auth.uid;
+    }
+
+    // GM / sales manager create and edit users; only the GM deletes them.
+    match /users/{uid} {
+      allow read: if request.auth.uid == uid || active();
+      allow create, update: if isAdmin();
+      allow delete: if isGm() && request.auth.uid != uid;
+
+      // Push tokens of the user's phones, written by the app, read by the sendPush function.
+      match /devices/{token} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // KAM, sales manager and GM can edit clients; a sales exec edits contact
+    // details, location and notes of their own clients (not category or assignment).
+    match /clients/{clientId} {
+      allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid);
+      // KAM / managers add any client; a sales exec adds clients for themselves.
+      allow create: if isSupervisor()
+        || (active() && request.resource.data.assignedTo == request.auth.uid
+            && request.resource.data.source == 'manual');
+      allow delete: if isAdmin();
+      allow update: if isSupervisor()
+        || (active() && resource.data.assignedTo == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'lastVisitAt', 'lat', 'lng', 'name', 'contactPerson', 'phone', 'mobile', 'email',
+              'address', 'city', 'notes', 'updatedAt']));
+
+      match /attachments/{attachmentId} {
+        allow read, create: if isSupervisor() || ownsClient(clientId);
+        allow delete: if isSupervisor();
+      }
+    }
+
+    match /visits/{visitId} {
+      allow read: if isSupervisor() || (active() && resource.data.salesExecId == request.auth.uid);
+      allow create: if active() && request.resource.data.salesExecId == request.auth.uid;
+      // A KAM only marks / unmarks themselves as having been at the visit.
+      allow update: if isAdmin()
+        || (isSupervisor()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kamId', 'kamMarkedAt'])
+            && (request.resource.data.kamId == request.auth.uid
+                || (resource.data.kamId == request.auth.uid && request.resource.data.kamId == null)));
+      allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if isSupervisor() || ownsVisit(visitId);
+        allow create: if (isSupervisor() || ownsVisit(visitId)) && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if active() && resource.data.authorId == request.auth.uid;
+      }
+
+      match /attachments/{attachmentId} {
+        allow read, create: if isSupervisor() || ownsVisit(visitId);
+        allow delete: if isSupervisor();
+      }
+    }
+
+    // Daily plans. A sales exec's own tasks start as pending; KAM / managers
+    // add approved tasks and approve or reject. The owner only ticks done.
+    match /tasks/{taskId} {
+      allow read: if isSupervisor() || (active() && resource.data.ownerId == request.auth.uid);
+      allow create: if active() && request.resource.data.createdBy == request.auth.uid
+        && (isSupervisor()
+            || (request.resource.data.ownerId == request.auth.uid && request.resource.data.approval == 'pending'));
+      allow update: if isSupervisor()
+        || (active() && resource.data.ownerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'visitId']));
+      allow delete: if isSupervisor()
+        || (active() && resource.data.ownerId == request.auth.uid && resource.data.approval != 'approved');
+    }
+
+    // In-app notifications: written by the sender, read and marked read by the recipient.
+    match /notifications/{notificationId} {
+      allow read, delete: if active() && resource.data.toId == request.auth.uid;
+      allow create: if active() && request.resource.data.fromId == request.auth.uid;
+      allow update: if active() && resource.data.toId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    // App settings such as visit frequency per client category.
+    match /settings/{settingId} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+
+    match /import_batches/{batchId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

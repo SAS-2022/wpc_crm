@@ -1,0 +1,786 @@
+{
+  "@@locale": "en",
+  "appTitle": "WPC CRM",
+  "email": "Email",
+  "password": "Password",
+  "signIn": "Sign in",
+  "signOut": "Sign out",
+  "signInFailed": "Wrong email or password",
+  "language": "Language",
+  "noAccessTitle": "No access",
+  "noAccessBody": "Your account is not set up or has been deactivated. Contact your sales manager.",
+  "welcome": "Welcome, {name}",
+  "@welcome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "roleSalesExec": "Sales executive",
+  "roleKam": "Key account manager",
+  "roleSalesManager": "Sales manager",
+  "roleGm": "General manager",
+  "clients": "Clients",
+  "map": "Map",
+  "visits": "Visits",
+  "liveTracking": "Live tracking",
+  "dashboard": "Dashboard",
+  "users": "Users",
+  "comingSoon": "Coming soon",
+  "addUser": "Add user",
+  "editUser": "Edit user",
+  "name": "Name",
+  "phone": "Phone",
+  "role": "Role",
+  "keyAccountManager": "Key account manager",
+  "none": "None",
+  "active": "Active",
+  "inactive": "Inactive",
+  "save": "Save",
+  "required": "Required",
+  "invalidEmail": "Invalid email",
+  "passwordTooShort": "At least 6 characters",
+  "saved": "Saved",
+  "errorWithMessage": "Error: {message}",
+  "@errorWithMessage": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "noUsers": "No users yet",
+  "clientsCount": "{count} clients · {green} visited recently",
+  "@clientsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "green": {
+        "type": "int"
+      }
+    }
+  },
+  "allSalespeople": "All sales executives",
+  "unassigned": "Unassigned",
+  "search": "Search",
+  "noClients": "No clients",
+  "importClients": "Import clients",
+  "importPickFile": "Choose Odoo export (.xlsx or .csv)",
+  "importReading": "Reading file…",
+  "importResolving": "Reading locations {done}/{total}",
+  "@importResolving": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "importNew": "New clients",
+  "importUpdated": "Updated clients",
+  "importUnchanged": "Unchanged",
+  "importNoLocation": "New clients without location",
+  "importUnresolved": "New clients – location link unreadable (saved without location)",
+  "importDuplicates": "Same VAT number, merged",
+  "importUnknownSalespeople": "Odoo salespeople not linked to a user",
+  "importConfirm": "Import",
+  "importDone": "Import complete: {added} added, {updated} updated",
+  "@importDone": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      }
+    }
+  },
+  "importResolverUnavailable": "Short location links could not be read (server function not available). Those clients are saved without a location.",
+  "latitude": "Latitude",
+  "longitude": "Longitude",
+  "address": "Address",
+  "city": "City",
+  "mobile": "Mobile",
+  "salesExecutive": "Sales executive",
+  "openInMaps": "Open in Google Maps",
+  "editClient": "Edit client",
+  "lastVisit": "Last visit",
+  "never": "Never",
+  "tags": "Tags",
+  "vat": "VAT number",
+  "odooSalesperson": "Odoo salesperson",
+  "odooSalespersonName": "Odoo salesperson name",
+  "odooSalespersonHelp": "Exactly as in the Odoo export, e.g. Sami Mansour @ Sales",
+  "details": "Details",
+  "invalidNumber": "Invalid number",
+  "mergedContacts": "Merged contacts",
+  "noLocation": "No location",
+  "statusAll": "All",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "showAllClients": "Show all clients",
+  "addVisit": "Add visit",
+  "saveVisit": "Save visit",
+  "visitNotes": "What was done at the visit",
+  "visitNotesHint": "Products discussed, orders, follow-ups…",
+  "visitNotesRequired": "Write what was done at the visit",
+  "visitSaved": "Visit saved",
+  "gettingLocation": "Getting your location…",
+  "locationUnavailable": "Location unavailable. Turn on GPS and try again.",
+  "locationPermissionDenied": "Location permission denied. Allow it in the phone settings.",
+  "locationAccuracy": "GPS accuracy ±{meters} m",
+  "@locationAccuracy": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "distanceFromClient": "{distance} from the client",
+  "@distanceFromClient": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "farFromClientWarning": "You are {distance} from this client. The visit will be flagged as far from the client. Save anyway?",
+  "@farFromClientWarning": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mockedLocationWarning": "Fake GPS detected. This visit will be flagged.",
+  "setClientLocationHere": "Set the client's location to my current position",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "saveAnyway": "Save anyway",
+  "myLocation": "My location",
+  "visitHistory": "Visits",
+  "noVisits": "No visits yet",
+  "farFlag": "Far from client ({distance})",
+  "@farFlag": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "fakeGpsFlag": "Fake GPS",
+  "emailInUse": "This email already has an account. Enter the password used the first time, or delete the account in Firebase Console → Authentication and try again.",
+  "delete": "Delete",
+  "deleteUserTitle": "Delete {name}?",
+  "deleteUserBody": "They will lose access to the app immediately. Their clients become unassigned, and their past visits are kept. To reuse the same email later, also delete the account in Firebase Console → Authentication.",
+  "userDeleted": "User deleted",
+  "@deleteUserTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "savedWithClients": "Saved · {count} clients from Odoo assigned",
+  "@savedWithClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pickOnMap": "Pick on map",
+  "pickOnMapHint": "Move the map so the pin is on the client's location",
+  "useThisLocation": "Use this location",
+  "useMyLocation": "Use my location",
+  "importLocationsOnly": "Import locations only (client name + location)",
+  "chooseFile": "Choose file",
+  "locationSheetColumns": "The sheet needs a header row with:\n• Client name (\"Name\" or \"Complete Name\") or \"Tax ID\"\n• A location: a Google Maps link (\"Location\" or \"Google Pin\"), \"24.71, 46.67\" text, or \"Latitude\" + \"Longitude\" columns",
+  "shortLinksUnavailable": "Short Google Maps links can't be read until the server function is deployed. Use full links or coordinates for now.",
+  "locationsToSet": "Clients getting a location",
+  "locationsToReplace": "Clients whose location will change",
+  "clientNotFound": "No matching client",
+  "sameNameSeveralClients": "Name matches several clients (add Tax ID)",
+  "locationUnreadable": "Location couldn't be read",
+  "replaceExistingLocations": "Also replace locations that are already set",
+  "updateLocationsButton": "Update {count} locations",
+  "@updateLocationsButton": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "locationsUpdated": "{count} locations updated",
+  "@locationsUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "everyone": "Everyone",
+  "withKam": "With KAM {name}",
+  "@withKam": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "kamWasThere": "{name} (KAM) was at this visit",
+  "@kamWasThere": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "markedHoursLater": "Marked {hours} h after the visit",
+  "@markedHoursLater": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "iWasThere": "I was at this visit",
+  "remove": "Remove",
+  "visitedBy": "Visited by {name}",
+  "@visitedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "openClient": "Open client",
+  "comments": "Comments",
+  "noComments": "No comments yet",
+  "writeComment": "Write a comment…",
+  "send": "Send",
+  "pasteMapsLink": "Paste Google Maps link",
+  "pasteMapsLinkHint": "https://maps.app.goo.gl/… or 24.63, 46.80",
+  "linkUnreadable": "Couldn't read a location from this link. Open it in Google Maps, tap Share → Copy link, and paste that.",
+  "justNow": "just now",
+  "minutesAgo": "{m} min ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{h} h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUpdated": "Live · updated {ago}",
+  "@liveUpdated": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "liveGpsOff": "Online, but GPS is turned off",
+  "liveNoFix": "Online, no new location since {ago}",
+  "@liveNoFix": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "liveOffline": "Offline · last seen {ago}",
+  "@liveOffline": {
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "liveNotAlways": "Location is not set to \"Allow all the time\" on this phone",
+  "noTrackedStaff": "No sales staff to show",
+  "noLocationYet": "No location received yet",
+  "showEveryone": "Show everyone",
+  "callPhone": "Call",
+  "sharingOn": "Location sharing is on",
+  "sharingIncomplete": "Location sharing is on, but needs attention",
+  "sharingOff": "Location sharing is off",
+  "issueGpsOff": "GPS is turned off",
+  "issueLocationDenied": "Location permission is not allowed",
+  "issueNotAlways": "Set location to \"Allow all the time\"",
+  "issueNotifications": "Allow notifications (keeps sharing running)",
+  "issueBattery": "Turn off battery optimization for this app",
+  "fix": "Fix",
+  "xiaomiHint": "On Xiaomi, Huawei or Oppo phones also open App settings → turn on Autostart and set Battery saver to \"No restrictions\".",
+  "appSettings": "App settings",
+  "home": "Home",
+  "more": "More",
+  "myPlan": "My plan",
+  "planOf": "{name}'s plan",
+  "@planOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addToPlan": "Add to plan",
+  "today": "Today",
+  "nothingPlanned": "Nothing planned for this day",
+  "planSummary": "{done} of {total} done · {pending} waiting for approval",
+  "@planSummary": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  },
+  "waitingApproval": "Waiting for approval",
+  "rejected": "Rejected",
+  "done": "Done",
+  "toDo": "To do",
+  "approve": "Approve",
+  "reject": "Reject",
+  "chooseClient": "Choose a client",
+  "clientVisit": "Client visit",
+  "task": "Task",
+  "noteOptional": "Note (optional)",
+  "taskDescription": "What needs to be done",
+  "needsApprovalHint": "Your KAM will approve this before it counts in your plan.",
+  "todaysPlan": "Today's plan",
+  "openPlan": "Open plan",
+  "monthProgress": "Progress · {month}",
+  "@monthProgress": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "visitsOfTarget": "{count} of {target} visits",
+  "@visitsOfTarget": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "visitsThisMonth": "{count} visits this month",
+  "@visitsThisMonth": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planTasksDone": "Planned tasks done",
+  "missedTasks": "Missed tasks",
+  "rideAlongs": "Visits with KAM",
+  "flaggedVisits": "Flagged visits",
+  "coverage": "Clients covered",
+  "waitingForYourApproval": "Waiting for your approval ({count})",
+  "@waitingForYourApproval": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myTeam": "My team",
+  "teamLine": "Today {done}/{total} done · Month visits {visits}",
+  "@teamLine": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "visits": {
+        "type": "String"
+      }
+    }
+  },
+  "noKamHint": "You have no KAM assigned yet, so your sales manager approves your plan.",
+  "monthlyVisitTarget": "Monthly visit target",
+  "monthlyVisitTargetHelp": "Leave empty for no target",
+  "paceOnTrack": "On track",
+  "paceSlightlyBehind": "Slightly behind",
+  "paceBehind": "Behind",
+  "completedVisits": "Completed visits",
+  "target": "Target",
+  "targetPace": "Target pace",
+  "barTooltip": "{name}: {done} visits · target {target} · expected by today {expected}",
+  "@barTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "thisMonth": "This month",
+  "lastMonth": "Last month",
+  "customRange": "Custom dates",
+  "noTargetSet": "No target set",
+  "coverageDetail": "{green} of {total} clients visited recently",
+  "@coverageDetail": {
+    "placeholders": {
+      "green": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "planCompletion": "Plan completion",
+  "tasksDetail": "{done} of {total} planned tasks",
+  "@tasksDetail": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "flaggedDetail": "Far from client or fake GPS",
+  "visitsVsTarget": "Visits vs target",
+  "progressVsTarget": "Progress vs target pace",
+  "statusRecent": "Visited recently",
+  "statusDueSoon": "Due soon",
+  "statusOverdue": "Overdue",
+  "plannedToday": "Planned today",
+  "category": "Category",
+  "categoryName": "Category {c}",
+  "@categoryName": {
+    "placeholders": {
+      "c": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryRule": "{c} · green up to {green} days, yellow up to {yellow} days",
+  "@categoryRule": {
+    "placeholders": {
+      "c": {
+        "type": "String"
+      },
+      "green": {
+        "type": "int"
+      },
+      "yellow": {
+        "type": "int"
+      }
+    }
+  },
+  "visitStatus": "Visit status",
+  "visitFrequency": "Visit frequency",
+  "visitFrequencyHelp": "Days since the last visit before a client turns yellow, then red. Clients never visited are red.",
+  "greenUpTo": "Green up to (days)",
+  "yellowUpTo": "Yellow up to (days)",
+  "yellowAfterGreen": "Must be more than green",
+  "redAfter": "Red after that",
+  "importDefaultCategory": "Category for new clients (when the sheet has no Category column)",
+  "notifications": "Notifications",
+  "noNotifications": "No notifications",
+  "markAllRead": "Mark all read",
+  "notifPlanSubmitted": "{name} added {count} items to their plan for {day} – waiting for your approval",
+  "@notifPlanSubmitted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "notifPlanApproved": "{name} approved your plan for {day}",
+  "@notifPlanApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "notifPlanRejected": "{name} rejected an item in your plan for {day}",
+  "@notifPlanRejected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "notifPlanChanged": "{name} changed your plan for {day}",
+  "@notifPlanChanged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "planUpdated": "{count} added to the plan",
+  "@planUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planSentForApproval": "{count} added and sent for approval",
+  "@planSentForApproval": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveCount": "Save ({count})",
+  "@saveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "showOnMap": "Show on map",
+  "share": "Share",
+  "shareTitle": "{name} – plan for {day}",
+  "@shareTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "tasks": "Tasks",
+  "route": "Route",
+  "approveAll": "Approve all ({count})",
+  "@approveAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeFromPlan": "Remove from plan",
+  "planClientsWithoutLocation": "{count} planned clients have no location and are not on the map",
+  "@planClientsWithoutLocation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clear": "Clear",
+  "clearPlanTitle": "Clear plan?",
+  "clearPlanUnapproved": "Remove the {count} items that are not approved yet?",
+  "@clearPlanUnapproved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearPlanAll": "Remove all {count} items from this day's plan? The sales executive will be notified.",
+  "@clearPlanAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addClient": "Add client",
+  "clientName": "Client name",
+  "clientAdded": "Client added",
+  "possibleDuplicate": "Client may already exist",
+  "possibleDuplicateBody": "\"{name}\" is already in the app with the same name or VAT number. Add a new client anyway?",
+  "@possibleDuplicateBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addAnyway": "Add anyway",
+  "contact": "Contact",
+  "contactPerson": "Contact person",
+  "locationSection": "Location",
+  "salesSection": "Sales",
+  "notes": "Notes",
+  "directions": "Directions",
+  "addedInApp": "Added in app",
+  "noContactDetails": "No contact details yet",
+  "coordinates": "Coordinates",
+  "daysAgo": "{days} days ago",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "importLinkedContacts": "Contact people linked to a company",
+  "accountSection": "Account",
+  "receivable": "Receivable (owed to us)",
+  "payable": "Payable (we owe)",
+  "street": "Street",
+  "region": "Region",
+  "country": "Country",
+  "teamPlansToday": "Team plans today",
+  "attachments": "Photos & files",
+  "noAttachments": "No photos or files yet",
+  "addAttachment": "Add photo or file",
+  "takePhoto": "Take photo",
+  "chooseFromGallery": "Choose from gallery",
+  "uploading": "Uploading…",
+  "deleteAttachmentConfirm": "Delete {name}?",
+  "@deleteAttachmentConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fileTooLarge": "{name} is larger than 20 MB",
+  "@fileTooLarge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "visitPhotos": "{count, plural, =0{No photos} =1{1 photo or file} other{{count} photos or files}}",
+  "@visitPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addUnmatchedClients": "Add {count} unmatched rows as new clients",
+  "@addUnmatchedClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newClientsAssignedTo": "Assigned to {name} · {noLocation} without location",
+  "@newClientsAssignedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "noLocation": {
+        "type": "int"
+      }
+    }
+  },
+  "importApplyButton": "Add {added} clients · update {updated} locations",
+  "@importApplyButton": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      }
+    }
+  },
+  "importApplyDone": "{added} clients added · {updated} locations updated",
+  "@importApplyDone": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      }
+    }
+  },
+  "newVisit": "New visit",
+  "searchVisits": "Search client or notes",
+  "yesterday": "Yesterday",
+  "thisWeek": "This week",
+  "allTime": "All",
+  "visitsTotal": "Visits",
+  "withKamCount": "With KAM",
+  "noVisitsHint": "Tap \"New visit\" to check in at a client",
+  "noMatchingVisits": "No visits match these filters",
+  "planProgress": "Plan progress",
+  "missed": "Missed",
+  "noPlanItems": "No plan items in this period",
+  "clientVisitsCard": "Client visits",
+  "visitedLabel": "Visited",
+  "notVisitedYet": "Not visited yet",
+  "noAssignedClients": "No clients assigned",
+  "ofTotal": "of {total}",
+  "@ofTotal": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "visitedOfClients": "{visited} of {total} clients visited · {pending} still pending",
+  "@visitedOfClients": {
+    "placeholders": {
+      "visited": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  }
+}

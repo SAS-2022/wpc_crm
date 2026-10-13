@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "roles": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists())",
+        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm)$/)"
+      }
+    },
+    "live_locations": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt']) && newData.child('lat').isNumber() && newData.child('lng').isNumber()"
+      }
+    },
+    "presence": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()"
+      }
+    },
+    "location_history": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$day": {
+          "$point": {
+            ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['lat', 'lng', 't'])"
+          }
+        }
+      }
+    }
+  }
+}
