@@ -1282,4 +1282,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifClientsTransferredOut(String name, int count, String other) {
     return '$name moved $count of your clients to $other';
   }
+
+  @override
+  String get teamPlans => 'Team plans';
+
+  @override
+  String get noTeamMembers => 'No team members yet';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String notifGpsOff(String name) {
+    return '$name turned off location (GPS)';
+  }
+
+  @override
+  String notifLocationDenied(String name) {
+    return '$name removed the app\'s location permission';
+  }
+
+  @override
+  String notifLocationNotAlways(String name) {
+    return '$name allowed location only while using the app – tracking stops in the background';
+  }
+
+  @override
+  String notifBatteryOptimized(String name) {
+    return '$name turned on battery optimization for WPC CRM – tracking may stop';
+  }
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get showLocation => 'Show location';
 }

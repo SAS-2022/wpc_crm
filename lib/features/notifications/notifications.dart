@@ -24,6 +24,11 @@ enum NotificationType {
   /// A KAM / manager moved the recipient's clients to `ownerId` (empty =
   /// unassigned); their open plan items for those clients were removed.
   clientsTransferredOut,
+
+  /// Written by the `trackingAlerts` Cloud Function: the sales exec
+  /// (`fromId`) turned off GPS, reduced the location permission or turned on
+  /// battery optimization during work hours. See [AppNotification.issue].
+  trackingIssue,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -36,6 +41,7 @@ class AppNotification {
     required this.ownerId,
     required this.date,
     required this.count,
+    this.issue = '',
     required this.read,
     required this.createdAt,
   });
@@ -49,6 +55,10 @@ class AppNotification {
   final String ownerId;
   final String date;
   final int count;
+
+  /// For [NotificationType.trackingIssue]: 'gpsOff', 'locationDenied',
+  /// 'notAlways' or 'battery'.
+  final String issue;
   final bool read;
   final DateTime? createdAt;
 
@@ -61,6 +71,7 @@ class AppNotification {
       ownerId: d['ownerId'] as String? ?? '',
       date: d['date'] as String? ?? '',
       count: (d['count'] as num?)?.toInt() ?? 0,
+      issue: d['issue'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );

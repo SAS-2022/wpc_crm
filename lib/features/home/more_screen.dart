@@ -44,6 +44,11 @@ class MoreScreen extends ConsumerWidget {
             ),
           if (me.role.isSupervisor && !wide) ...[
             ListTile(
+              leading: const Icon(Icons.groups),
+              title: Text(l10n.teamPlans),
+              onTap: () => context.push('/team-plans'),
+            ),
+            ListTile(
               leading: const Icon(Icons.my_location),
               title: Text(l10n.liveTracking),
               onTap: () => context.push('/live'),

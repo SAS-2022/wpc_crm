@@ -149,6 +149,7 @@ class TeamPlansCard extends ConsumerWidget {
     final tasks = ref.watch(teamDayTasksProvider(dayKey(DateTime.now()))).value ?? const <PlanTask>[];
     return _DashCard(
       title: l10n.teamPlansToday,
+      action: TextButton(onPressed: () => context.push('/team-plans'), child: Text(l10n.viewAll)),
       child: Column(
         children: [
           for (final u in team)

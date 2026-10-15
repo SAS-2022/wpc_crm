@@ -48,6 +48,7 @@ class AppShell extends ConsumerWidget {
       (path: '/map', icon: Icons.map_outlined, selected: Icons.map, label: l10n.map),
       (path: '/visits', icon: Icons.event_note_outlined, selected: Icons.event_note, label: l10n.visits),
       if (supervisor) ...[
+        (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),
         (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),

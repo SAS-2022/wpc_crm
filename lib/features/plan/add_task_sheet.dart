@@ -5,6 +5,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_location_dialog.dart';
 import '../clients/client_widgets.dart';
 import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
@@ -152,15 +153,23 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                           itemCount: candidates.length,
                           itemBuilder: (_, i) {
                             final c = candidates[i];
-                            return CheckboxListTile(
-                              value: _selected.containsKey(c.id),
-                              onChanged: (v) => setState(() => v == true ? _selected[c.id] = c : _selected.remove(c.id)),
-                              secondary: CategoryBadge(category: c.category, color: clientColor(c, rules, now)),
+                            final selected = _selected.containsKey(c.id);
+                            void toggle() => setState(() => selected ? _selected.remove(c.id) : _selected[c.id] = c);
+                            return ListTile(
+                              onTap: toggle,
+                              leading: CategoryBadge(category: c.category, color: clientColor(c, rules, now)),
                               title: Text(c.name),
                               subtitle: Text([
                                 c.city,
                                 if (c.hasLocation) visitStatusLabel(visitStatus(c, rules, now), l10n) else l10n.noLocation,
                               ].where((s) => s.isNotEmpty).join(' · ')),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ClientLocationButton(client: c),
+                                  Checkbox(value: selected, onChanged: (_) => toggle()),
+                                ],
+                              ),
                             );
                           },
                         ),

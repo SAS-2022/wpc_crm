@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_location_dialog.dart';
 import '../clients/clients_repository.dart';
 import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
@@ -122,7 +123,6 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final list = tasks.value ?? const <PlanTask>[];
     final isOwner = owner.id == me.id;
     final canManage = me.role.isSupervisor;
-    final locale = Localizations.localeOf(context).toString();
     final repo = ref.read(planRepositoryProvider);
     final pendingCount = list.where((t) => t.approval == TaskApproval.pending).length;
 
@@ -161,35 +161,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           : null,
       body: Column(
         children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => setState(() => _day = _day.subtract(const Duration(days: 1))),
-              ),
-              Expanded(
-                child: TextButton(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _day,
-                      firstDate: DateTime(2025),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null) setState(() => _day = picked);
-                  },
-                  child: Text(
-                    day == dayKey(DateTime.now()) ? l10n.today : DateFormat.yMMMEd(locale).format(_day),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () => setState(() => _day = _day.add(const Duration(days: 1))),
-              ),
-            ],
-          ),
+          DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),
           if (canManage && pendingCount > 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -252,8 +224,52 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 }
 
-/// One plan item, also used in the dashboard's approvals card.
-class PlanTaskTile extends StatelessWidget {
+/// Previous / next day arrows around the date, which opens a date picker.
+class DayBar extends StatelessWidget {
+  const DayBar({super.key, required this.day, required this.onChanged});
+
+  final DateTime day;
+  final ValueChanged<DateTime> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          onPressed: () => onChanged(day.subtract(const Duration(days: 1))),
+        ),
+        Expanded(
+          child: TextButton(
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: day,
+                firstDate: DateTime(2025),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (picked != null) onChanged(picked);
+            },
+            child: Text(
+              dayKey(day) == dayKey(DateTime.now()) ? l10n.today : DateFormat.yMMMEd(locale).format(day),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          onPressed: () => onChanged(day.add(const Duration(days: 1))),
+        ),
+      ],
+    );
+  }
+}
+
+/// One plan item, also used in the dashboard's approvals card. Client visits
+/// show whether the client has a location (tap the pin to see it).
+class PlanTaskTile extends ConsumerWidget {
   const PlanTaskTile({
     super.key,
     required this.task,
@@ -284,9 +300,12 @@ class PlanTaskTile extends StatelessWidget {
   final String? subtitlePrefix;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final client = task.isVisit
+        ? ref.watch(allClientsProvider).value?.where((c) => c.id == task.clientId).firstOrNull
+        : null;
     final status = switch (task.approval) {
       TaskApproval.pending => (l10n.waitingApproval, Colors.orange.shade800),
       TaskApproval.rejected => (l10n.rejected, scheme.error),
@@ -314,12 +333,17 @@ class PlanTaskTile extends StatelessWidget {
         children: [
           if (subtitlePrefix != null) Text(subtitlePrefix!),
           if (note.isNotEmpty) Text(note),
-          Text(status.$1, style: TextStyle(color: status.$2, fontWeight: FontWeight.w600)),
+          Text.rich(TextSpan(children: [
+            TextSpan(text: status.$1, style: TextStyle(color: status.$2, fontWeight: FontWeight.w600)),
+            if (client != null && !client.hasLocation)
+              TextSpan(text: ' · ${l10n.noLocation}', style: TextStyle(color: scheme.onSurfaceVariant)),
+          ])),
         ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (client != null) ClientLocationButton(client: client),
           if (onVisit != null)
             IconButton(icon: const Icon(Icons.add_location_alt), tooltip: l10n.addVisit, onPressed: onVisit),
           if (canApprove) ...[

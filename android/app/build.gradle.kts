@@ -16,6 +16,12 @@ val mapsApiKey: String = Properties().run {
     getProperty("MAPS_API_KEY") ?: ""
 }
 
+// Release signing (upload key) from android/key.properties, kept out of git.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.wisora.wpc"
     compileSdk = flutter.compileSdkVersion
@@ -42,11 +48,21 @@ android {
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Falls back to the debug key when key.properties is missing
+            // (e.g. another machine), so `flutter run --release` still works.
+            signingConfig = if (keystoreProperties.isEmpty) signingConfigs.getByName("debug")
+                else signingConfigs.getByName("release")
         }
     }
 }

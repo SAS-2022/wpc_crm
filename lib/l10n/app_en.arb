@@ -979,5 +979,42 @@
         "type": "String"
       }
     }
-  }
+  },
+  "teamPlans": "Team plans",
+  "noTeamMembers": "No team members yet",
+  "viewAll": "View all",
+  "notifGpsOff": "{name} turned off location (GPS)",
+  "@notifGpsOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLocationDenied": "{name} removed the app's location permission",
+  "@notifLocationDenied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLocationNotAlways": "{name} allowed location only while using the app – tracking stops in the background",
+  "@notifLocationNotAlways": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifBatteryOptimized": "{name} turned on battery optimization for WPC CRM – tracking may stop",
+  "@notifBatteryOptimized": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "Close",
+  "showLocation": "Show location"
 }

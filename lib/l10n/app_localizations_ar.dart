@@ -1279,4 +1279,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifClientsTransferredOut(String name, int count, String other) {
     return 'نقل $name $count من عملائك إلى $other';
   }
+
+  @override
+  String get teamPlans => 'خطط الفريق';
+
+  @override
+  String get noTeamMembers => 'لا يوجد أعضاء في الفريق بعد';
+
+  @override
+  String get viewAll => 'عرض الكل';
+
+  @override
+  String notifGpsOff(String name) {
+    return 'أوقف $name خدمة الموقع (GPS)';
+  }
+
+  @override
+  String notifLocationDenied(String name) {
+    return 'ألغى $name إذن الموقع للتطبيق';
+  }
+
+  @override
+  String notifLocationNotAlways(String name) {
+    return 'سمح $name بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية';
+  }
+
+  @override
+  String notifBatteryOptimized(String name) {
+    return 'فعّل $name تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع';
+  }
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get showLocation => 'عرض الموقع';
 }

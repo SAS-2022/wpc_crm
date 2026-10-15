@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -71,6 +72,10 @@ const TEXTS = {
     planChanged: (n, c, d) => `${n} changed your plan for ${d}`,
     clientsTransferredIn: (n, c) => `${n} moved ${c} clients to you`,
     clientsTransferredOut: (n, c, d, o) => `${n} moved ${c} of your clients to ${o || 'Unassigned'}`,
+    tracking_gpsOff: (n) => `${n} turned off location (GPS)`,
+    tracking_locationDenied: (n) => `${n} removed the app's location permission`,
+    tracking_notAlways: (n) => `${n} allowed location only while using the app – tracking stops in the background`,
+    tracking_battery: (n) => `${n} turned on battery optimization for WPC CRM – tracking may stop`,
   },
   ar: {
     title: 'WPC CRM',
@@ -80,6 +85,10 @@ const TEXTS = {
     planChanged: (n, c, d) => `عدّل ${n} خطتك ليوم ${d}`,
     clientsTransferredIn: (n, c) => `نقل ${n} ${c} عميل إليك`,
     clientsTransferredOut: (n, c, d, o) => `نقل ${n} ${c} من عملائك إلى ${o || 'غير مُسند'}`,
+    tracking_gpsOff: (n) => `أوقف ${n} خدمة الموقع (GPS)`,
+    tracking_locationDenied: (n) => `ألغى ${n} إذن الموقع للتطبيق`,
+    tracking_notAlways: (n) => `سمح ${n} بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية`,
+    tracking_battery: (n) => `فعّل ${n} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع`,
   },
 };
 
@@ -117,7 +126,8 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const stale = [];
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
-    const body = (t[n.type] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '');
+    const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type;
+    const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '');
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
       notification: { title: t.title, body },
@@ -133,6 +143,73 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
     });
   }));
   await Promise.all(stale.map((token) => db.doc(`users/${n.toId}/devices/${token}`).delete()));
+});
+
+// Tracking problems of a sales exec, from their presence (written by the phone).
+// Only while online and on duty: outside work hours location may be off.
+function trackingIssues(p) {
+  if (!p || p.online === false || p.onDuty !== true) return [];
+  const issues = [];
+  if (p.gpsOn === false) issues.push('gpsOff');
+  if (p.permission === 'denied' || p.permission === 'deniedForever') issues.push('locationDenied');
+  else if (p.permission === 'whileInUse') issues.push('notAlways');
+  if (p.batteryOptimized === true) issues.push('battery');
+  return issues;
+}
+
+/** The same warning about one person is sent at most this often. */
+const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
+
+/**
+ * Warns the sales exec's KAM and the sales managers (in-app + push through
+ * sendPush) when the exec turns off GPS, reduces the location permission or
+ * turns on battery optimization during work hours.
+ */
+exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 5 }, async (event) => {
+  const before = trackingIssues(event.data.before.val());
+  const fresh = trackingIssues(event.data.after.val()).filter((i) => !before.includes(i));
+  if (fresh.length === 0) return;
+
+  const uid = event.params.uid;
+  const db = admin.firestore();
+  const user = await db.doc(`users/${uid}`).get();
+  if (user.get('role') !== 'sales_exec' || user.get('active') !== true) return;
+
+  const sentRef = admin.database().ref(`tracking_alerts/${uid}`);
+  const sent = (await sentRef.get()).val() || {};
+  const now = Date.now();
+  const issues = fresh.filter((i) => !(sent[i] > now - ALERT_COOLDOWN_MS));
+  if (issues.length === 0) return;
+
+  const managers = await db.collection('users').where('role', '==', 'sales_manager').where('active', '==', true).get();
+  const to = new Set(managers.docs.map((d) => d.id));
+  const kamId = user.get('kamId');
+  if (kamId) {
+    const kam = await db.doc(`users/${kamId}`).get();
+    if (kam.get('active') === true) to.add(kamId);
+  }
+  to.delete(uid);
+  if (to.size === 0) return;
+
+  const day = new Date(now + 3 * 3600 * 1000).toISOString().slice(0, 10); // Saudi date
+  const batch = db.batch();
+  for (const toId of to) {
+    for (const issue of issues) {
+      batch.set(db.collection('notifications').doc(), {
+        toId,
+        type: 'trackingIssue',
+        issue,
+        fromId: uid,
+        ownerId: uid,
+        date: day,
+        count: 0,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+  await batch.commit();
+  await sentRef.update(Object.fromEntries(issues.map((i) => [i, now])));
 });
 
 /** Route points are kept this many days (user decision), visits are kept. */

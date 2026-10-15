@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_user.dart';
+import '../../core/providers.dart';
 import '../../firebase_options.dart';
 
 final usersProvider = StreamProvider<List<AppUser>>((ref) {
@@ -21,6 +23,20 @@ class EmailInUseException implements Exception {
 }
 
 final usersRepositoryProvider = Provider((ref) => UsersRepository());
+
+/// While a GM / sales manager is signed in, copies every user's role to RTDB
+/// `roles/{uid}` whenever the user list changes. RTDB rules rely on that copy;
+/// a missing one (e.g. a role changed in the console) blocked a KAM's live map.
+final roleMirrorProvider = Provider<void>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.role.isAdmin) return;
+  final users = ref.watch(usersProvider).value;
+  if (users == null || users.isEmpty) return;
+  FirebaseDatabase.instance
+      .ref('roles')
+      .update({for (final u in users) u.id: u.role.value})
+      .catchError((Object e) => debugPrint('Role mirror failed: $e'));
+});
 
 class UsersRepository {
   final _users = FirebaseFirestore.instance.collection('users');

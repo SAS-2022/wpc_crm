@@ -18,6 +18,7 @@ import '../features/users/user_form_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plan/plan_map_screen.dart';
 import '../features/plan/plan_screen.dart';
+import '../features/plan/team_plans_screen.dart';
 import '../features/reports/reports_screen.dart';
 import '../features/reports/route_history_screen.dart';
 import '../features/tracking/live_map_screen.dart';
@@ -52,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (me == null || !me.active) return goTo('/no-access');
       if (const ['/splash', '/login', '/no-access'].contains(loc)) return '/';
       if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/work-hours') && !me.role.isAdmin) return '/';
-      if (const ['/live', '/reports', '/history'].contains(loc) && !me.role.isSupervisor) return '/';
+      if (const ['/live', '/reports', '/history', '/team-plans'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
     },
@@ -134,6 +135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
+            GoRoute(
+              path: '/team-plans',
+              builder: (_, state) => TeamPlansScreen(initialDate: state.uri.queryParameters['date']),
+            ),
             GoRoute(
               path: '/history',
               builder: (_, state) => RouteHistoryScreen(

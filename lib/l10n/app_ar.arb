@@ -362,5 +362,14 @@
   "transferHistory": "سجل النقل",
   "transferBy": "بواسطة {name} · {when}",
   "notifClientsTransferredIn": "نقل {name} {count} عميل إليك",
-  "notifClientsTransferredOut": "نقل {name} {count} من عملائك إلى {other}"
+  "notifClientsTransferredOut": "نقل {name} {count} من عملائك إلى {other}",
+  "teamPlans": "خطط الفريق",
+  "noTeamMembers": "لا يوجد أعضاء في الفريق بعد",
+  "viewAll": "عرض الكل",
+  "notifGpsOff": "أوقف {name} خدمة الموقع (GPS)",
+  "notifLocationDenied": "ألغى {name} إذن الموقع للتطبيق",
+  "notifLocationNotAlways": "سمح {name} بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية",
+  "notifBatteryOptimized": "فعّل {name} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع",
+  "close": "إغلاق",
+  "showLocation": "عرض الموقع"
 }

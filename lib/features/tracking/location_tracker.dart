@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'work_hours.dart';
 
@@ -14,7 +15,9 @@ const trackingInterval = Duration(minutes: 2);
 /// hours ([WorkHours]) and keeps their presence honest: the server marks them
 /// offline as soon as the connection drops, and a heartbeat reports when GPS
 /// is off even without new fixes. Outside work hours nothing is sent and the
-/// live position is removed.
+/// live position is removed. GPS, permission and (Android) battery
+/// optimization in `presence` drive the `trackingAlerts` Cloud Function,
+/// which warns the KAM and sales managers.
 class LocationTracker {
   LocationTracker(this.uid);
 
@@ -43,6 +46,10 @@ class LocationTracker {
       _hours = WorkHours.fromMap(event.snapshot.value);
       _applyDuty();
     }));
+    // GPS switched on / off: report at once rather than at the next heartbeat.
+    if (!kIsWeb) {
+      _subscriptions.add(Geolocator.getServiceStatusStream().listen((_) => _beat(), onError: (_) {}));
+    }
     _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
     _heartbeat = Timer.periodic(trackingInterval, (_) => _beat());
     await _applyDuty();
@@ -85,16 +92,25 @@ class LocationTracker {
   Future<void> _beat() async {
     var gpsOn = false;
     var permission = LocationPermission.denied;
+    bool? batteryOptimized;
     try {
       gpsOn = await Geolocator.isLocationServiceEnabled();
       permission = await Geolocator.checkPermission();
     } catch (_) {
       // Reported as GPS off / denied.
     }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        batteryOptimized = !await Permission.ignoreBatteryOptimizations.isGranted;
+      } catch (_) {
+        // Unknown: not reported.
+      }
+    }
     await _presence.update({
       'lastSeen': ServerValue.timestamp,
       'gpsOn': gpsOn,
       'permission': permission.name,
+      'batteryOptimized': ?batteryOptimized,
     });
   }
 

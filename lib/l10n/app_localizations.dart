@@ -2275,6 +2275,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} moved {count} of your clients to {other}'**
   String notifClientsTransferredOut(String name, int count, String other);
+
+  /// No description provided for @teamPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Team plans'**
+  String get teamPlans;
+
+  /// No description provided for @noTeamMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'No team members yet'**
+  String get noTeamMembers;
+
+  /// No description provided for @viewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get viewAll;
+
+  /// No description provided for @notifGpsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} turned off location (GPS)'**
+  String notifGpsOff(String name);
+
+  /// No description provided for @notifLocationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} removed the app\'s location permission'**
+  String notifLocationDenied(String name);
+
+  /// No description provided for @notifLocationNotAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} allowed location only while using the app – tracking stops in the background'**
+  String notifLocationNotAlways(String name);
+
+  /// No description provided for @notifBatteryOptimized.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} turned on battery optimization for WPC CRM – tracking may stop'**
+  String notifBatteryOptimized(String name);
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @showLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Show location'**
+  String get showLocation;
 }
 
 class _AppLocalizationsDelegate

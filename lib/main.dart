@@ -8,6 +8,7 @@ import 'core/router.dart';
 import 'features/notifications/push.dart';
 import 'features/tracking/tracking_service.dart';
 import 'features/tracking/tracking_status.dart';
+import 'features/users/users_repository.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 
@@ -27,6 +28,8 @@ class WpcCrmApp extends ConsumerWidget {
     ref.listen(trackingStatusProvider, (_, _) {});
     // Registers this phone for push notifications while signed in.
     ref.listen(pushProvider, (_, _) {});
+    // GM / manager: keeps the RTDB role copies the database rules read in sync.
+    ref.listen(roleMirrorProvider, (_, _) {});
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,

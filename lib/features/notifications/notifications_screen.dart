@@ -38,6 +38,12 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
         NotificationType.clientsTransferredOut =>
           l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
+        NotificationType.trackingIssue => switch (n.issue) {
+            'gpsOff' => l10n.notifGpsOff(from),
+            'locationDenied' => l10n.notifLocationDenied(from),
+            'notAlways' => l10n.notifLocationNotAlways(from),
+            _ => l10n.notifBatteryOptimized(from),
+          },
       };
 
   @override
@@ -71,7 +77,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planRejected => Icons.cancel,
                     NotificationType.planChanged => Icons.edit_calendar,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
-                  }),
+                    NotificationType.trackingIssue => n.issue == 'battery' ? Icons.battery_alert : Icons.location_off,
+                  }, color: n.type == NotificationType.trackingIssue ? Theme.of(context).colorScheme.error : null),
                   title: Text(_text(l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day)),
                   subtitle: n.createdAt == null ? null : Text(DateFormat.MMMd(locale).add_jm().format(n.createdAt!)),
                   onTap: () {
@@ -79,6 +86,8 @@ class NotificationsScreen extends ConsumerWidget {
                     switch (n.type) {
                       case NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut:
                         context.go('/clients');
+                      case NotificationType.trackingIssue:
+                        context.push('/live');
                       default:
                         context.push('/plan/${n.ownerId}?date=${n.date}');
                     }
