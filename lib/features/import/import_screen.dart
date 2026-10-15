@@ -47,10 +47,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final rows = parseOdooTable(readTable(file.name, await file.readAsBytes()));
       final existing = await ref.read(allClientsProvider.future).timeout(const Duration(seconds: 60));
       final users = await ref.read(usersProvider.future).timeout(const Duration(seconds: 60));
-      final salespersonToUid = {
-        for (final u in users)
-          if (u.active && u.odooName.isNotEmpty) normalizeSalesperson(u.odooName): u.id,
-      };
+      final salespersonToUid = uidBySalesperson(users);
 
       // Short links already turned into a location don't need the server again.
       final knownPins = {for (final c in existing) if (c.hasLocation) c.googlePin};

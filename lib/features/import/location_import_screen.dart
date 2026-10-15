@@ -37,11 +37,8 @@ class _LocationImportScreenState extends ConsumerState<LocationImportScreen> {
 
   List<NewLocationClient> get _toAdd => _addNew ? _plan!.newClients : const [];
 
-  /// Odoo salesperson text → app user, through `users.odooName`.
-  Map<String, String> get _uidBySalesperson => {
-        for (final u in ref.read(usersProvider).value ?? const [])
-          if (u.active && u.odooName.isNotEmpty) normalizeSalesperson(u.odooName): u.id,
-      };
+  /// Odoo salesperson text → app user (sales executives only).
+  Map<String, String> get _uidBySalesperson => uidBySalesperson(ref.read(usersProvider).value ?? const []);
 
   Future<void> _pick() async {
     final l10n = AppLocalizations.of(context);

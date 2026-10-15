@@ -29,19 +29,22 @@ final plannedTodayProvider = Provider<Map<String, String>>((ref) {
   };
 });
 
-final salesExecsProvider = Provider<List<AppUser>>((ref) {
+/// People the client list and map can be filtered by: every sales executive,
+/// plus anyone else who has clients assigned (e.g. a KAM matched by an import).
+final clientOwnersProvider = Provider<List<AppUser>>((ref) {
   final users = ref.watch(usersProvider).value ?? const [];
-  return users.where((u) => u.role == UserRole.salesExec).toList();
+  final owners = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.assignedTo};
+  return users.where((u) => u.role == UserRole.salesExec || owners.contains(u.id)).toList();
 });
 
-/// Sales executive filter for KAM / managers; hidden for sales executives.
+/// Salesperson filter for KAM / managers; hidden for sales executives.
 class SalesFilterDropdown extends ConsumerWidget {
   const SalesFilterDropdown({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final execs = ref.watch(salesExecsProvider);
+    final owners = ref.watch(clientOwnersProvider);
     return DropdownButton<String?>(
       value: ref.watch(salesFilterProvider),
       isExpanded: true,
@@ -49,7 +52,11 @@ class SalesFilterDropdown extends ConsumerWidget {
       items: [
         DropdownMenuItem(value: null, child: Text(l10n.allSalespeople)),
         DropdownMenuItem(value: unassignedFilter, child: Text(l10n.unassigned)),
-        for (final u in execs) DropdownMenuItem(value: u.id, child: Text(u.name)),
+        for (final u in owners)
+          DropdownMenuItem(
+            value: u.id,
+            child: Text(u.role == UserRole.salesExec ? u.name : '${u.name} (${u.role.label(l10n)})'),
+          ),
       ],
       onChanged: ref.read(salesFilterProvider.notifier).set,
     );

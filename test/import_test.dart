@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wpc_crm/core/app_user.dart';
 import 'package:wpc_crm/features/clients/client.dart';
 import 'package:wpc_crm/features/import/import_plan.dart';
 import 'package:wpc_crm/features/import/odoo_parser.dart';
@@ -157,5 +158,18 @@ void main() {
       expect(p.creates.single.name, 'Smith, John');
       expect(p.linkedContacts, isEmpty);
     });
+  });
+
+  test('Odoo salesperson matches active sales executives only, not KAMs or managers', () {
+    AppUser u(String id, UserRole role, String odooName, {bool active = true}) =>
+        AppUser(id: id, name: id, email: '', phone: '', role: role, kamId: null, active: active, odooName: odooName);
+    final map = uidBySalesperson([
+      u('sami', UserRole.salesExec, 'Sami Mansour @ Sales'),
+      u('kam', UserRole.kam, 'Ahmed @ Sales'),
+      u('gm', UserRole.gm, 'Boss'),
+      u('left', UserRole.salesExec, 'Old Rep', active: false),
+      u('none', UserRole.salesExec, ''),
+    ]);
+    expect(map, {'sami mansour @ sales': 'sami'});
   });
 }

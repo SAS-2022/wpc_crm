@@ -1,3 +1,4 @@
+import '../../core/app_user.dart';
 import '../clients/client.dart';
 import 'odoo_parser.dart';
 
@@ -44,6 +45,14 @@ class ImportPlan {
 }
 
 String normalizeSalesperson(String name) => name.trim().toLowerCase();
+
+/// Odoo salesperson text → app user, through `users.odooName`. Only active
+/// sales executives: KAMs and managers own no clients, so their rows stay
+/// unassigned.
+Map<String, String> uidBySalesperson(Iterable<AppUser> users) => {
+      for (final u in users)
+        if (u.active && u.role == UserRole.salesExec && u.odooName.isNotEmpty) normalizeSalesperson(u.odooName): u.id,
+    };
 
 /// Compares the export with the clients already in Firestore.
 ///
