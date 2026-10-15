@@ -18,6 +18,10 @@ enum NotificationType {
   /// A KAM / manager added or removed items in someone's plan.
   planChanged,
 
+  /// A KAM / manager added [AppNotification.count] items to someone's plan
+  /// (already approved).
+  planItemsAdded,
+
   /// A KAM / manager moved clients to the recipient (count = how many).
   clientsTransferredIn,
 
@@ -57,7 +61,7 @@ class AppNotification {
   final int count;
 
   /// For [NotificationType.trackingIssue]: 'gpsOff', 'locationDenied',
-  /// 'notAlways' or 'battery'.
+  /// 'notAlways', 'battery' or 'offline' (offline 30 min, `offlineAlerts`).
   final String issue;
   final bool read;
   final DateTime? createdAt;

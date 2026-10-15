@@ -1016,5 +1016,80 @@
     }
   },
   "close": "Close",
-  "showLocation": "Show location"
+  "showLocation": "Show location",
+  "deleteVisitTitle": "Delete visit",
+  "deleteVisitBody": "The visit, its comments, photos and files are deleted for everyone. Plan items it completed become open again. This can't be undone.",
+  "visitDeleted": "Visit deleted",
+  "colourBy": "Colour by",
+  "salesperson": "Salesperson",
+  "notifPlanItemsAdded": "{name} added {count} item(s) to your plan for {day}",
+  "@notifPlanItemsAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "notifTrackingOffline": "{name} has been offline for over 30 minutes during work hours",
+  "@notifTrackingOffline": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackingLog": "Tracking log",
+  "trackingLogEmpty": "No changes recorded for this day",
+  "logOffline": "Lost connection",
+  "logOnline": "Back online",
+  "logGpsOff": "GPS turned off",
+  "logGpsOn": "GPS turned on",
+  "logOnDuty": "Work hours started",
+  "logOffDuty": "Work hours ended",
+  "logBatteryOn": "Battery optimization turned on",
+  "logBatteryOff": "Battery optimization turned off",
+  "logPermission": "Location permission: {value}",
+  "@logPermission": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "permissionAlways": "Allow all the time",
+  "permissionWhileInUse": "Only while using the app",
+  "permissionDenied": "Denied",
+  "logLasted": "for {duration}",
+  "@logLasted": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "durationMinutes": "{m} min",
+  "@durationMinutes": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursMinutes": "{h} h {m} min",
+  "@durationHoursMinutes": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  }
 }

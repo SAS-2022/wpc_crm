@@ -1317,4 +1317,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showLocation => 'Show location';
+
+  @override
+  String get deleteVisitTitle => 'Delete visit';
+
+  @override
+  String get deleteVisitBody =>
+      'The visit, its comments, photos and files are deleted for everyone. Plan items it completed become open again. This can\'t be undone.';
+
+  @override
+  String get visitDeleted => 'Visit deleted';
+
+  @override
+  String get colourBy => 'Colour by';
+
+  @override
+  String get salesperson => 'Salesperson';
+
+  @override
+  String notifPlanItemsAdded(String name, int count, String day) {
+    return '$name added $count item(s) to your plan for $day';
+  }
+
+  @override
+  String notifTrackingOffline(String name) {
+    return '$name has been offline for over 30 minutes during work hours';
+  }
+
+  @override
+  String get trackingLog => 'Tracking log';
+
+  @override
+  String get trackingLogEmpty => 'No changes recorded for this day';
+
+  @override
+  String get logOffline => 'Lost connection';
+
+  @override
+  String get logOnline => 'Back online';
+
+  @override
+  String get logGpsOff => 'GPS turned off';
+
+  @override
+  String get logGpsOn => 'GPS turned on';
+
+  @override
+  String get logOnDuty => 'Work hours started';
+
+  @override
+  String get logOffDuty => 'Work hours ended';
+
+  @override
+  String get logBatteryOn => 'Battery optimization turned on';
+
+  @override
+  String get logBatteryOff => 'Battery optimization turned off';
+
+  @override
+  String logPermission(String value) {
+    return 'Location permission: $value';
+  }
+
+  @override
+  String get permissionAlways => 'Allow all the time';
+
+  @override
+  String get permissionWhileInUse => 'Only while using the app';
+
+  @override
+  String get permissionDenied => 'Denied';
+
+  @override
+  String logLasted(String duration) {
+    return 'for $duration';
+  }
+
+  @override
+  String durationMinutes(int m) {
+    return '$m min';
+  }
+
+  @override
+  String durationHoursMinutes(int h, int m) {
+    return '$h h $m min';
+  }
 }

@@ -11,11 +11,11 @@ const _saudiOffset = Duration(hours: 3);
 class WorkHours {
   const WorkHours({required this.days, required this.startMinute, required this.endMinute});
 
-  /// Saturday to Thursday, 08:00–18:00 Saudi time.
+  /// Saturday to Thursday, 08:00–17:00 Saudi time (user decision 2026-10-16).
   static const defaults = WorkHours(
     days: {DateTime.saturday, DateTime.sunday, DateTime.monday, DateTime.tuesday, DateTime.wednesday, DateTime.thursday},
     startMinute: 8 * 60,
-    endMinute: 18 * 60,
+    endMinute: 17 * 60,
   );
 
   /// Working weekdays, as [DateTime.weekday] (Monday = 1 … Sunday = 7).

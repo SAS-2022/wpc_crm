@@ -76,7 +76,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
       final users = ref.read(usersProvider).value ?? const <AppUser>[];
       await sendNotifications(
         toIds: approved ? [widget.owner.id] : reviewersOf(widget.owner, users),
-        type: approved ? NotificationType.planChanged : NotificationType.planSubmitted,
+        type: approved ? NotificationType.planItemsAdded : NotificationType.planSubmitted,
         fromId: me.id,
         ownerId: widget.owner.id,
         date: widget.date,

@@ -46,12 +46,12 @@ class ImportPlan {
 
 String normalizeSalesperson(String name) => name.trim().toLowerCase();
 
-/// Odoo salesperson text → app user, through `users.odooName`. Only active
-/// sales executives: KAMs and managers own no clients, so their rows stay
-/// unassigned.
+/// Odoo salesperson text → app user, through `users.odooName`. Active sales
+/// executives and KAMs (Odoo lists some clients under a KAM; they are moved
+/// to the team later); managers' rows stay unassigned.
 Map<String, String> uidBySalesperson(Iterable<AppUser> users) => {
       for (final u in users)
-        if (u.active && u.role == UserRole.salesExec && u.odooName.isNotEmpty) normalizeSalesperson(u.odooName): u.id,
+        if (u.active && u.role.isTracked && u.odooName.isNotEmpty) normalizeSalesperson(u.odooName): u.id,
     };
 
 /// Compares the export with the clients already in Firestore.

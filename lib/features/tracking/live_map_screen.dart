@@ -11,6 +11,7 @@ import '../../core/app_user.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../clients/person_style.dart';
 import '../users/users_repository.dart';
 import 'live_data.dart';
 
@@ -131,7 +132,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   icon: _icons.circle(
                     context: context,
                     fill: Colors.white,
-                    text: _initials(u.name),
+                    text: initialsOf(u.name),
                     textColor: _color(liveState(locations[u.id], presence[u.id], now)),
                     ring: locations[u.id]!.mocked
                         ? Theme.of(context).colorScheme.error
@@ -280,7 +281,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = _initials(name);
+    final initials = initialsOf(name);
     return Container(
       width: 40,
       height: 40,
@@ -297,16 +298,4 @@ class _Avatar extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Up to two initials, or "?".
-String _initials(String name) {
-  final letters = name
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
-      .take(2)
-      .map((w) => w.characters.first)
-      .join();
-  return letters.isEmpty ? '?' : letters;
 }

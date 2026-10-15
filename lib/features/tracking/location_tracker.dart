@@ -19,9 +19,13 @@ const trackingInterval = Duration(minutes: 2);
 /// optimization in `presence` drive the `trackingAlerts` Cloud Function,
 /// which warns the KAM and sales managers.
 class LocationTracker {
-  LocationTracker(this.uid);
+  LocationTracker(this.uid, {this.onDutyChanged});
 
   final String uid;
+
+  /// Called when work hours start (true) or end (false), e.g. to change the
+  /// Android service notification.
+  final void Function(bool onDuty)? onDutyChanged;
   final _subscriptions = <StreamSubscription<Object?>>[];
   StreamSubscription<Position>? _positions;
   Timer? _heartbeat;
@@ -53,7 +57,6 @@ class LocationTracker {
     _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
     _heartbeat = Timer.periodic(trackingInterval, (_) => _beat());
     await _applyDuty();
-    await _beat();
   }
 
   /// Switches between sharing (work hours) and not sharing.
@@ -73,6 +76,9 @@ class LocationTracker {
       await FirebaseDatabase.instance.ref('live_locations/$uid').remove();
     }
     await _presence.update({'onDuty': on});
+    onDutyChanged?.call(on);
+    // Fresh GPS / permission state for the start of the day.
+    if (on) await _beat();
   }
 
   Future<void> stop() async {
@@ -89,7 +95,10 @@ class LocationTracker {
     await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
   }
 
+  /// Status heartbeat; silent outside work hours (user decision): only the
+  /// connection itself (online / offline) is kept by the server then.
   Future<void> _beat() async {
+    if (_onDuty != true) return;
     var gpsOn = false;
     var permission = LocationPermission.denied;
     bool? batteryOptimized;

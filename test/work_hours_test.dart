@@ -7,11 +7,11 @@ void main() {
   DateTime riyadh(int y, int m, int d, int h, [int min = 0]) => DateTime.utc(y, m, d, h - 3, min);
   const hours = WorkHours.defaults;
 
-  test('sharing Saturday to Thursday 08:00–18:00 Saudi time, not on Friday', () {
+  test('sharing Saturday to Thursday 08:00–17:00 Saudi time, not on Friday', () {
     expect(hours.isOn(riyadh(2026, 10, 17, 8)), isTrue); // Saturday, start
     expect(hours.isOn(riyadh(2026, 10, 17, 7, 59)), isFalse);
-    expect(hours.isOn(riyadh(2026, 10, 22, 17, 59)), isTrue); // Thursday
-    expect(hours.isOn(riyadh(2026, 10, 22, 18)), isFalse); // end is exclusive
+    expect(hours.isOn(riyadh(2026, 10, 22, 16, 59)), isTrue); // Thursday
+    expect(hours.isOn(riyadh(2026, 10, 22, 17)), isFalse); // end is exclusive
     expect(hours.isOn(riyadh(2026, 10, 16, 12)), isFalse); // Friday
   });
 

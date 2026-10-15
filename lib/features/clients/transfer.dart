@@ -37,11 +37,12 @@ List<AppUser> transferTargets(AppUser me, List<AppUser> users) => [
     ];
 
 /// Whether [me] may move a client away from [ownerId] (null = unassigned):
-/// the sales manager / GM always, a KAM only from a member of their team.
+/// the sales manager / GM always, a KAM only from themselves (clients Odoo
+/// lists under the KAM) or a member of their team.
 bool canTransferFrom(AppUser me, String? ownerId, Map<String, AppUser> users) {
   if (me.role.isAdmin) return true;
   if (me.role != UserRole.kam || ownerId == null) return false;
-  return users[ownerId]?.kamId == me.id;
+  return ownerId == me.id || users[ownerId]?.kamId == me.id;
 }
 
 /// Whether [me] may move clients to the unassigned pool.

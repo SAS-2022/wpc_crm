@@ -8,6 +8,7 @@ import '../users/users_repository.dart';
 import 'client.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
+import 'person_style.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 
@@ -274,6 +275,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                           return _ClientTile(
                             client: c,
                             exec: exec,
+                            showOwner: supervisor,
                             status: visitStatus(c, rules, now),
                             planned: planned.contains(c.id),
                             now: now,
@@ -296,11 +298,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 }
 
 /// One client row: category badge in its visit colour (blue when on today's
-/// plan, as on the map), and a status pill with the days since the last visit.
+/// plan, as on the map), the salesperson's initials (KAM / managers), and a
+/// status pill with the days since the last visit.
 class _ClientTile extends StatelessWidget {
   const _ClientTile({
     required this.client,
     required this.exec,
+    required this.showOwner,
     required this.status,
     required this.planned,
     required this.now,
@@ -311,6 +315,9 @@ class _ClientTile extends StatelessWidget {
 
   final Client client;
   final String exec;
+
+  /// Salesperson badge, for KAM / managers (a sales exec's clients are all theirs).
+  final bool showOwner;
   final VisitStatus status;
   final bool planned;
   final DateTime now;
@@ -354,20 +361,29 @@ class _ClientTile extends StatelessWidget {
       ),
       trailing: selected != null
           ? Checkbox(value: selected, onChanged: (_) => onSelect?.call())
-          : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.labelSmall?.copyWith(color: pillText, fontWeight: FontWeight.w700),
-                  ),
-                  Text(since, style: theme.textTheme.labelSmall?.copyWith(color: pillText, fontSize: 10)),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showOwner) ...[
+                  PersonBadge(userId: client.assignedTo, name: exec),
+                  const SizedBox(width: 8),
                 ],
-              ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        label,
+                        style: theme.textTheme.labelSmall?.copyWith(color: pillText, fontWeight: FontWeight.w700),
+                      ),
+                      Text(since, style: theme.textTheme.labelSmall?.copyWith(color: pillText, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ],
             ),
       onTap: selected != null ? onSelect : () => context.push('/clients/${client.id}'),
       onLongPress: onLongPress,

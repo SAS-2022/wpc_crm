@@ -107,6 +107,24 @@ class VisitsRepository {
     return visitRef.id;
   }
 
+  /// Sales manager / GM: deletes a visit (e.g. a test). Plan items it ticked
+  /// are open again and the client's last visit is taken from the visits
+  /// left. Comments, photos and files go with it (`cleanDeletedVisit` Cloud
+  /// Function).
+  Future<void> delete(Visit visit) async {
+    await _db.collection('visits').doc(visit.id).delete();
+    final ticked = await _db.collection('tasks').where('visitId', isEqualTo: visit.id).get();
+    for (final t in ticked.docs) {
+      await t.reference.update({'done': false, 'doneAt': null, 'visitId': null});
+    }
+    final left = await _db.collection('visits').where('clientId', isEqualTo: visit.clientId).get();
+    final latest = left.docs
+        .map((d) => d.data()['checkedInAt'])
+        .whereType<Timestamp>()
+        .fold<Timestamp?>(null, (a, b) => a == null || b.compareTo(a) > 0 ? b : a);
+    await _db.collection('clients').doc(visit.clientId).update({'lastVisitAt': latest});
+  }
+
   /// A KAM marks that they were at the visit (or removes the mark with null).
   Future<void> setKam(String visitId, String? kamId) =>
       _db.collection('visits').doc(visitId).update({

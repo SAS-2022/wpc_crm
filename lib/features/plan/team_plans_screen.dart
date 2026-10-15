@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../home/dashboard_cards.dart';
 import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
+import 'add_task_sheet.dart';
 import 'plan_repository.dart';
 import 'plan_screen.dart';
 import 'plan_task.dart';
@@ -100,9 +101,26 @@ class _PersonPlan extends ConsumerWidget {
               leading: CircleAvatar(child: Text(user.name.isEmpty ? '?' : user.name.characters.first)),
               title: Text(user.name, style: Theme.of(context).textTheme.titleMedium),
               subtitle: Text(tasks.isEmpty ? l10n.nothingPlanned : l10n.planSummary(done, approved.length, pending)),
-              trailing: pending > 0
-                  ? Badge(label: Text('$pending'), child: const Icon(Icons.chevron_right))
-                  : const Icon(Icons.chevron_right),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Added items are approved and the owner is notified.
+                  IconButton(
+                    icon: const Icon(Icons.playlist_add),
+                    tooltip: l10n.addToPlan,
+                    onPressed: () => showAddTaskSheet(
+                      context,
+                      owner: user,
+                      date: day,
+                      alreadyPlanned: {for (final t in tasks) if (t.clientId != null) t.clientId!},
+                    ),
+                  ),
+                  if (pending > 0)
+                    Badge(label: Text('$pending'), child: const Icon(Icons.chevron_right))
+                  else
+                    const Icon(Icons.chevron_right),
+                ],
+              ),
               onTap: open,
             ),
             if (approved.isNotEmpty)

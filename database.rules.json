@@ -34,6 +34,9 @@
         }
       }
     },
+    "tracking_events": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'"
+    },
     "settings": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'sales_manager'",

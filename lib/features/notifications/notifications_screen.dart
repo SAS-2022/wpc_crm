@@ -35,6 +35,7 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
         NotificationType.planChanged => l10n.notifPlanChanged(from, day),
+        NotificationType.planItemsAdded => l10n.notifPlanItemsAdded(from, n.count, day),
         NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
         NotificationType.clientsTransferredOut =>
           l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
@@ -42,6 +43,7 @@ class NotificationsScreen extends ConsumerWidget {
             'gpsOff' => l10n.notifGpsOff(from),
             'locationDenied' => l10n.notifLocationDenied(from),
             'notAlways' => l10n.notifLocationNotAlways(from),
+            'offline' => l10n.notifTrackingOffline(from),
             _ => l10n.notifBatteryOptimized(from),
           },
       };
@@ -76,8 +78,13 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planApproved => Icons.check_circle,
                     NotificationType.planRejected => Icons.cancel,
                     NotificationType.planChanged => Icons.edit_calendar,
+                    NotificationType.planItemsAdded => Icons.playlist_add,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
-                    NotificationType.trackingIssue => n.issue == 'battery' ? Icons.battery_alert : Icons.location_off,
+                    NotificationType.trackingIssue => switch (n.issue) {
+                        'battery' => Icons.battery_alert,
+                        'offline' => Icons.signal_wifi_off,
+                        _ => Icons.location_off,
+                      },
                   }, color: n.type == NotificationType.trackingIssue ? Theme.of(context).colorScheme.error : null),
                   title: Text(_text(l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day)),
                   subtitle: n.createdAt == null ? null : Text(DateFormat.MMMd(locale).add_jm().format(n.createdAt!)),

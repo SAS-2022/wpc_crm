@@ -29,12 +29,13 @@ final plannedTodayProvider = Provider<Map<String, String>>((ref) {
   };
 });
 
-/// People the client list and map can be filtered by: every sales executive,
-/// plus anyone else who has clients assigned (e.g. a KAM matched by an import).
+/// People the client list and map can be filtered by: every active sales
+/// executive and KAM (KAMs may hold Odoo clients), plus anyone else who has
+/// clients assigned.
 final clientOwnersProvider = Provider<List<AppUser>>((ref) {
   final users = ref.watch(usersProvider).value ?? const [];
   final owners = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.assignedTo};
-  return users.where((u) => u.role == UserRole.salesExec || owners.contains(u.id)).toList();
+  return users.where((u) => (u.active && u.role.isTracked) || owners.contains(u.id)).toList();
 });
 
 /// Salesperson filter for KAM / managers; hidden for sales executives.

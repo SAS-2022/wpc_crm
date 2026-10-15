@@ -197,7 +197,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 ],
                 onChanged: (id) => setState(() => _kamId = id),
               ),
-            if (_role == UserRole.salesExec)
+            // KAMs too: some Odoo clients are under a KAM until they're moved to the team.
+            if (_role.isTracked)
               TextFormField(
                 controller: _odooName,
                 decoration: InputDecoration(

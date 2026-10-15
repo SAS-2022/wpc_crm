@@ -2329,6 +2329,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show location'**
   String get showLocation;
+
+  /// No description provided for @deleteVisitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete visit'**
+  String get deleteVisitTitle;
+
+  /// No description provided for @deleteVisitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The visit, its comments, photos and files are deleted for everyone. Plan items it completed become open again. This can\'t be undone.'**
+  String get deleteVisitBody;
+
+  /// No description provided for @visitDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit deleted'**
+  String get visitDeleted;
+
+  /// No description provided for @colourBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour by'**
+  String get colourBy;
+
+  /// No description provided for @salesperson.
+  ///
+  /// In en, this message translates to:
+  /// **'Salesperson'**
+  String get salesperson;
+
+  /// No description provided for @notifPlanItemsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added {count} item(s) to your plan for {day}'**
+  String notifPlanItemsAdded(String name, int count, String day);
+
+  /// No description provided for @notifTrackingOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been offline for over 30 minutes during work hours'**
+  String notifTrackingOffline(String name);
+
+  /// No description provided for @trackingLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking log'**
+  String get trackingLog;
+
+  /// No description provided for @trackingLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes recorded for this day'**
+  String get trackingLogEmpty;
+
+  /// No description provided for @logOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost connection'**
+  String get logOffline;
+
+  /// No description provided for @logOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back online'**
+  String get logOnline;
+
+  /// No description provided for @logGpsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS turned off'**
+  String get logGpsOff;
+
+  /// No description provided for @logGpsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS turned on'**
+  String get logGpsOn;
+
+  /// No description provided for @logOnDuty.
+  ///
+  /// In en, this message translates to:
+  /// **'Work hours started'**
+  String get logOnDuty;
+
+  /// No description provided for @logOffDuty.
+  ///
+  /// In en, this message translates to:
+  /// **'Work hours ended'**
+  String get logOffDuty;
+
+  /// No description provided for @logBatteryOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization turned on'**
+  String get logBatteryOn;
+
+  /// No description provided for @logBatteryOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization turned off'**
+  String get logBatteryOff;
+
+  /// No description provided for @logPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission: {value}'**
+  String logPermission(String value);
+
+  /// No description provided for @permissionAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow all the time'**
+  String get permissionAlways;
+
+  /// No description provided for @permissionWhileInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Only while using the app'**
+  String get permissionWhileInUse;
+
+  /// No description provided for @permissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Denied'**
+  String get permissionDenied;
+
+  /// No description provided for @logLasted.
+  ///
+  /// In en, this message translates to:
+  /// **'for {duration}'**
+  String logLasted(String duration);
+
+  /// No description provided for @durationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{m} min'**
+  String durationMinutes(int m);
+
+  /// No description provided for @durationHoursMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{h} h {m} min'**
+  String durationHoursMinutes(int h, int m);
 }
 
 class _AppLocalizationsDelegate

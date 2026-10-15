@@ -6,10 +6,12 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
+import '../users/users_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
+import 'person_style.dart';
 import 'visit_rules.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
@@ -30,6 +32,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   });
   _Status _status = _Status.all;
   int? _fittedTo;
+
+  /// KAM / managers: pins coloured by salesperson instead of visit status.
+  bool _byPerson = false;
 
   @override
   void dispose() {
@@ -67,7 +72,21 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             VisitStatus.dueSoon => _Status.dueSoon,
             VisitStatus.overdue => _Status.overdue,
           };
-    Color colorOf(Client c) => planned.contains(c.id) ? plannedColor : clientColor(c, rules, now);
+    final styles = ref.watch(personStylesProvider);
+    PersonStyle styleOf(Client c) => styles[c.assignedTo] ?? unassignedStyle;
+    final byPerson = _byPerson && (me?.role.isSupervisor ?? false);
+    Color colorOf(Client c) => byPerson
+        ? styleOf(c).color
+        : planned.contains(c.id)
+        ? plannedColor
+        : clientColor(c, rules, now);
+    final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
+    // Salesperson legend: everyone with clients on the map, most clients first.
+    final perPerson = <String?, int>{};
+    for (final c in located) {
+      perPerson[c.assignedTo] = (perPerson[c.assignedTo] ?? 0) + 1;
+    }
+    final legend = perPerson.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     int count(_Status s) => s == _Status.all ? located.length : located.where((c) => statusOf(c) == s).length;
     final clients = _status == _Status.all ? located : located.where((c) => statusOf(c) == _status).toList();
     final points = [for (final c in clients) LatLng(c.lat!, c.lng!)];
@@ -113,9 +132,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                   icon: _icons.circle(
                     context: context,
                     fill: colorOf(c),
-                    text: c.category,
+                    // Salesperson mode: their initials; otherwise the category letter.
+                    text: byPerson ? styleOf(c).initials : c.category,
                     // Dark letter on yellow, white on the darker colours.
-                    textColor: colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                    textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
                   ),
                   onTap: () => _showClient(context, c),
                 ),
@@ -133,7 +153,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (me?.role.isSupervisor ?? false)
+                      if (me?.role.isSupervisor ?? false) ...[
                         Row(
                           children: [
                             const Icon(Icons.filter_alt_outlined),
@@ -141,31 +161,79 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                             const Expanded(child: SalesFilterDropdown()),
                           ],
                         ),
-                      // Status filter; the coloured dots double as the map legend.
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (final (st, label, color) in [
-                              (_Status.all, l10n.statusAll, null),
-                              (_Status.recent, l10n.statusRecent, statusRecentColor),
-                              (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
-                              (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
-                              (_Status.planned, l10n.plannedToday, plannedColor),
-                            ])
-                              Padding(
-                                padding: const EdgeInsetsDirectional.only(end: 6),
-                                child: ChoiceChip(
-                                  visualDensity: VisualDensity.compact,
-                                  avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
-                                  label: Text('$label (${count(st)})'),
-                                  selected: _status == st,
-                                  onSelected: (_) => setState(() => _status = st),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: SegmentedButton<bool>(
+                                  showSelectedIcon: false,
+                                  style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                                  segments: [
+                                    ButtonSegment(value: false, label: Text(l10n.visitStatus)),
+                                    ButtonSegment(value: true, label: Text(l10n.salesperson)),
+                                  ],
+                                  selected: {byPerson},
+                                  onSelectionChanged: (s) => setState(() {
+                                    _byPerson = s.first;
+                                    // The status filter's chips are hidden in this mode.
+                                    _status = _Status.all;
+                                  }),
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
+                      // Salesperson colours: legend chips, tap to show one person.
+                      if (byPerson)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final MapEntry(key: uid, value: n) in legend)
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 6),
+                                  child: ChoiceChip(
+                                    visualDensity: VisualDensity.compact,
+                                    avatar: Icon(Icons.circle, size: 12, color: (styles[uid] ?? unassignedStyle).color),
+                                    label: Text('${uid == null ? l10n.unassigned : users[uid]?.name ?? '?'} ($n)'),
+                                    selected: filter != null && filter == (uid ?? unassignedFilter),
+                                    onSelected: (on) =>
+                                        ref.read(salesFilterProvider.notifier).set(on ? uid ?? unassignedFilter : null),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        )
+                      // Status filter; the coloured dots double as the map legend.
+                      else
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final (st, label, color) in [
+                                (_Status.all, l10n.statusAll, null),
+                                (_Status.recent, l10n.statusRecent, statusRecentColor),
+                                (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
+                                (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
+                                (_Status.planned, l10n.plannedToday, plannedColor),
+                              ])
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 6),
+                                  child: ChoiceChip(
+                                    visualDensity: VisualDensity.compact,
+                                    avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
+                                    label: Text('$label (${count(st)})'),
+                                    selected: _status == st,
+                                    onSelected: (_) => setState(() => _status = st),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -195,6 +263,21 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             children: [
               Text(c.name, style: Theme.of(context).textTheme.titleMedium),
               if (c.city.isNotEmpty) Text(c.city),
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
+                  final name =
+                      ref.read(usersProvider).value?.where((u) => u.id == c.assignedTo).firstOrNull?.name ??
+                      l10n.unassigned;
+                  return Row(
+                    children: [
+                      PersonBadge(userId: c.assignedTo, name: name, size: 24),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(name)),
+                    ],
+                  );
+                },
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [

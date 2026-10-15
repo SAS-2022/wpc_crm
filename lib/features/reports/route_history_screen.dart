@@ -14,6 +14,7 @@ import '../home/dashboard_cards.dart';
 import '../home/stats.dart';
 import '../home/stats_widgets.dart';
 import '../plan/plan_task.dart';
+import '../tracking/tracking_log.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
 import 'report.dart';
@@ -258,7 +259,14 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                 width: 360,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
-                  children: [controls, const SizedBox(height: 16), summary, const SizedBox(height: 8), visitList],
+                  children: [
+                    controls,
+                    const SizedBox(height: 16),
+                    summary,
+                    const SizedBox(height: 8),
+                    visitList,
+                    if (person != null) TrackingLogList(userId: person.id, day: dayStr),
+                  ],
                 ),
               ),
               const VerticalDivider(width: 1),
@@ -274,10 +282,16 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [controls, const SizedBox(height: 8), summary]),
             ),
             Expanded(child: map),
-            if (visits.isNotEmpty)
+            // Visits, then the tracking log, under the map.
+            if (person != null)
               ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: c.maxHeight * 0.3),
-                child: SingleChildScrollView(child: visitList),
+                constraints: BoxConstraints(maxHeight: c.maxHeight * 0.35),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [visitList, TrackingLogList(userId: person.id, day: dayStr)],
+                  ),
+                ),
               ),
           ],
         );

@@ -160,7 +160,7 @@ void main() {
     });
   });
 
-  test('Odoo salesperson matches active sales executives only, not KAMs or managers', () {
+  test('Odoo salesperson matches active sales executives and KAMs, not managers', () {
     AppUser u(String id, UserRole role, String odooName, {bool active = true}) =>
         AppUser(id: id, name: id, email: '', phone: '', role: role, kamId: null, active: active, odooName: odooName);
     final map = uidBySalesperson([
@@ -170,6 +170,6 @@ void main() {
       u('left', UserRole.salesExec, 'Old Rep', active: false),
       u('none', UserRole.salesExec, ''),
     ]);
-    expect(map, {'sami mansour @ sales': 'sami'});
+    expect(map, {'sami mansour @ sales': 'sami', 'ahmed @ sales': 'kam'});
   });
 }

@@ -87,6 +87,18 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
     await service.stopSelf();
     return;
   }
-  tracker = LocationTracker(user.uid);
+  tracker = LocationTracker(
+    user.uid,
+    onDutyChanged: (on) {
+      // The service notification can't go away (Android would stop the
+      // service), so off duty it says nothing is shared.
+      if (service is AndroidServiceInstance) {
+        service.setForegroundNotificationInfo(
+          title: 'WPC CRM',
+          content: on ? 'Sharing your location with your team (work hours)' : 'Off duty – your location is not shared',
+        );
+      }
+    },
+  );
   await tracker.start();
 }

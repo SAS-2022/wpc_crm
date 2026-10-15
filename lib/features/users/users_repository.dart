@@ -101,12 +101,12 @@ class UsersRepository {
   Future<int> _save(String uid, AppUser user) async {
     await _users.doc(uid).set(user.toMap());
     await FirebaseDatabase.instance.ref('roles/$uid').set(user.role.value);
-    return user.role == UserRole.salesExec && user.active && user.odooName.isNotEmpty
+    return user.role.isTracked && user.active && user.odooName.isNotEmpty
         ? _assignOdooClients(uid, user.odooName)
         : 0;
   }
 
-  /// Gives a sales executive the unassigned clients that Odoo lists under their
+  /// Gives a sales executive or KAM the unassigned clients that Odoo lists under their
   /// salesperson name. Clients already assigned to someone are left alone.
   Future<int> _assignOdooClients(String uid, String odooName) async {
     final db = FirebaseFirestore.instance;

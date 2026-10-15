@@ -46,8 +46,10 @@ void main() {
   });
 
   group('canTransferFrom', () {
-    test('a KAM moves clients of their team only', () {
+    test('a KAM moves their own clients and their team\'s only', () {
+      expect(canTransferFrom(kam, 'kam', byId), isTrue);
       expect(canTransferFrom(kam, 'sami', byId), isTrue);
+      expect(canTransferFrom(kam, 'kam2', byId), isFalse);
       expect(canTransferFrom(kam, 'omar', byId), isFalse);
       expect(canTransferFrom(kam, null, byId), isFalse);
     });

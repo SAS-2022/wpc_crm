@@ -1,5 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
@@ -47,14 +47,17 @@ async function resolve(url) {
   return null;
 }
 
-/** Turns Google Maps short links into coordinates. Sales manager / GM only. */
+/**
+ * Turns Google Maps short links into coordinates, for the web app (browsers
+ * can't follow them). Any active user: KAMs and sales execs paste a client's
+ * link on the dashboard; imports (sales manager / GM) send up to 50 at once.
+ */
 exports.resolvePins = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
   const me = await admin.firestore().doc(`users/${req.auth.uid}`).get();
-  if (!me.exists || me.get('active') !== true || !['sales_manager', 'gm'].includes(me.get('role'))) {
-    throw new HttpsError('permission-denied', 'Managers only');
-  }
-  const urls = Array.isArray(req.data?.urls) ? req.data.urls.filter((u) => typeof u === 'string').slice(0, 50) : [];
+  if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
+  const max = ['sales_manager', 'gm'].includes(me.get('role')) ? 50 : 5;
+  const urls = Array.isArray(req.data?.urls) ? req.data.urls.filter((u) => typeof u === 'string').slice(0, max) : [];
   const results = {};
   await Promise.all(urls.map(async (url) => {
     try { results[url] = await resolve(url); } catch (_) { results[url] = null; }
@@ -70,12 +73,14 @@ const TEXTS = {
     planApproved: (n, c, d) => `${n} approved your plan for ${d}`,
     planRejected: (n, c, d) => `${n} rejected an item in your plan for ${d}`,
     planChanged: (n, c, d) => `${n} changed your plan for ${d}`,
+    planItemsAdded: (n, c, d) => `${n} added ${c} item(s) to your plan for ${d}`,
     clientsTransferredIn: (n, c) => `${n} moved ${c} clients to you`,
     clientsTransferredOut: (n, c, d, o) => `${n} moved ${c} of your clients to ${o || 'Unassigned'}`,
     tracking_gpsOff: (n) => `${n} turned off location (GPS)`,
     tracking_locationDenied: (n) => `${n} removed the app's location permission`,
     tracking_notAlways: (n) => `${n} allowed location only while using the app – tracking stops in the background`,
     tracking_battery: (n) => `${n} turned on battery optimization for WPC CRM – tracking may stop`,
+    tracking_offline: (n) => `${n} has been offline for over 30 minutes during work hours`,
   },
   ar: {
     title: 'WPC CRM',
@@ -83,12 +88,14 @@ const TEXTS = {
     planApproved: (n, c, d) => `وافق ${n} على خطتك ليوم ${d}`,
     planRejected: (n, c, d) => `رفض ${n} عنصراً في خطتك ليوم ${d}`,
     planChanged: (n, c, d) => `عدّل ${n} خطتك ليوم ${d}`,
+    planItemsAdded: (n, c, d) => `أضاف ${n} ${c} عنصر إلى خطتك ليوم ${d}`,
     clientsTransferredIn: (n, c) => `نقل ${n} ${c} عميل إليك`,
     clientsTransferredOut: (n, c, d, o) => `نقل ${n} ${c} من عملائك إلى ${o || 'غير مُسند'}`,
     tracking_gpsOff: (n) => `أوقف ${n} خدمة الموقع (GPS)`,
     tracking_locationDenied: (n) => `ألغى ${n} إذن الموقع للتطبيق`,
     tracking_notAlways: (n) => `سمح ${n} بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية`,
     tracking_battery: (n) => `فعّل ${n} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع`,
+    tracking_offline: (n) => `${n} غير متصل منذ أكثر من 30 دقيقة خلال ساعات العمل`,
   },
 };
 
@@ -157,17 +164,67 @@ function trackingIssues(p) {
   return issues;
 }
 
+/** Tracking log days kept (user decision: 30). */
+const EVENT_DAYS = 30;
+
+const saudiDay = (ms) => new Date(ms + 3 * 3600 * 1000).toISOString().slice(0, 10);
+
+// What changed between two presence values, for the tracking log. GPS,
+// permission and battery are logged only when a previous value existed
+// (a first report is not a change).
+function presenceEvents(before, after) {
+  if (!after) return [];
+  const b = before || {};
+  const events = [];
+  if (typeof after.online === 'boolean' && b.online !== after.online) events.push({ type: after.online ? 'online' : 'offline' });
+  if (typeof after.onDuty === 'boolean' && b.onDuty !== undefined && b.onDuty !== after.onDuty) {
+    events.push({ type: after.onDuty ? 'onDuty' : 'offDuty' });
+  }
+  if (typeof after.gpsOn === 'boolean' && b.gpsOn !== undefined && b.gpsOn !== after.gpsOn) {
+    events.push({ type: after.gpsOn ? 'gpsOn' : 'gpsOff' });
+  }
+  if (after.permission && b.permission && b.permission !== after.permission) {
+    events.push({ type: 'permission', value: after.permission });
+  }
+  if (typeof after.batteryOptimized === 'boolean' && typeof b.batteryOptimized === 'boolean'
+    && b.batteryOptimized !== after.batteryOptimized) {
+    events.push({ type: after.batteryOptimized ? 'batteryOn' : 'batteryOff' });
+  }
+  return events;
+}
+
 /** The same warning about one person is sent at most this often. */
 const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
 
 /**
- * Warns the sales exec's KAM and the sales managers (in-app + push through
- * sendPush) when the exec turns off GPS, reduces the location permission or
- * turns on battery optimization during work hours.
+ * On every presence change: writes the tracking log (RTDB
+ * `tracking_events/{uid}/{day}`, kept EVENT_DAYS), and warns the sales exec's
+ * KAM and the sales managers (in-app + push through sendPush) when the exec
+ * turns off GPS, reduces the location permission or turns on battery
+ * optimization during work hours. Going offline is warned about by
+ * offlineAlerts, only after OFFLINE_ALERT_MS. Outside work hours (server
+ * clock, RTDB settings/workHours) nothing is logged or sent.
  */
 exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 5 }, async (event) => {
-  const before = trackingIssues(event.data.before.val());
-  const fresh = trackingIssues(event.data.after.val()).filter((i) => !before.includes(i));
+  const beforeVal = event.data.before.val();
+  const afterVal = event.data.after.val();
+  const changes = presenceEvents(beforeVal, afterVal);
+  const freshIssues = trackingIssues(afterVal).filter((i) => !trackingIssues(beforeVal).includes(i));
+  if (changes.length === 0 && freshIssues.length === 0) return;
+
+  // Silent outside work hours (user decision): nothing is logged or sent
+  // except the start / end of duty itself.
+  const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+  const working = workStartToday(hours, Date.now()) !== null;
+  const events = working ? changes : changes.filter((e) => e.type === 'onDuty' || e.type === 'offDuty');
+  if (events.length > 0) {
+    // Going offline is stamped when the server noticed it (lastSeen).
+    const t = typeof afterVal.lastSeen === 'number' && afterVal.online === false ? afterVal.lastSeen : Date.now();
+    const dayRef = admin.database().ref(`tracking_events/${event.params.uid}/${saudiDay(t)}`);
+    await Promise.all(events.map((e) => dayRef.push({ ...e, t })));
+  }
+
+  const fresh = working ? freshIssues : [];
   if (fresh.length === 0) return;
 
   const uid = event.params.uid;
@@ -212,21 +269,103 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   await sentRef.update(Object.fromEntries(issues.map((i) => [i, now])));
 });
 
+/** A sales exec offline this long during work hours is reported (user decision: 30 min). */
+const OFFLINE_ALERT_MS = 30 * 60 * 1000;
+
+// Saturday to Thursday 08:00–17:00 Saudi time; same as WorkHours.defaults.
+const DEFAULT_WORK_HOURS = { days: [6, 7, 1, 2, 3, 4], start: 8 * 60, end: 17 * 60 };
+
+/** Work hours from RTDB settings/workHours (same rules as work_hours.dart). */
+function workHours(v) {
+  if (!v || !Array.isArray(v.days) || typeof v.start !== 'number' || typeof v.end !== 'number' || v.end <= v.start) {
+    return DEFAULT_WORK_HOURS;
+  }
+  return { days: v.days.filter((d) => d >= 1 && d <= 7), start: v.start, end: v.end };
+}
+
+/** Today's work start (ms) when [now] is within work hours, else null. */
+function workStartToday(hours, now) {
+  const saudi = new Date(now + 3 * 3600 * 1000);
+  const weekday = saudi.getUTCDay() === 0 ? 7 : saudi.getUTCDay(); // Monday = 1 … Sunday = 7
+  const minute = saudi.getUTCHours() * 60 + saudi.getUTCMinutes();
+  if (!hours.days.includes(weekday) || minute < hours.start || minute >= hours.end) return null;
+  return now - (minute - hours.start) * 60 * 1000 - saudi.getUTCSeconds() * 1000 - saudi.getUTCMilliseconds();
+}
+
+/**
+ * Every 5 minutes during work hours: a sales exec whose phone has been
+ * offline for OFFLINE_ALERT_MS of work time is reported once per offline
+ * spell to their KAM (to the sales managers when they have no KAM). Coming
+ * back online is only logged, not notified (user decision: not too many
+ * notifications).
+ */
+exports.offlineAlerts = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const rtdb = admin.database();
+    const now = Date.now();
+    const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
+    const start = workStartToday(hours, now);
+    if (start === null) return;
+
+    const [presence, sentSnap] = await Promise.all([rtdb.ref('presence').get(), rtdb.ref('tracking_alerts').get()]);
+    const sent = sentSnap.val() || {};
+    const due = [];
+    presence.forEach((p) => {
+      const v = p.val() || {};
+      if (v.online !== false || typeof v.lastSeen !== 'number') return;
+      // Only work time counts: offline overnight is reported 30 min into the day.
+      if (now - Math.max(v.lastSeen, start) < OFFLINE_ALERT_MS) return;
+      if (sent[p.key]?.offlineSince === v.lastSeen) return;
+      due.push({ uid: p.key, since: v.lastSeen });
+    });
+    if (due.length === 0) return;
+
+    const db = admin.firestore();
+    const users = new Map((await db.collection('users').get()).docs.map((d) => [d.id, d.data()]));
+    const managers = [...users].filter(([, u]) => u.role === 'sales_manager' && u.active === true).map(([id]) => id);
+    const batch = db.batch();
+    const marks = {};
+    for (const { uid, since } of due) {
+      const user = users.get(uid);
+      marks[`${uid}/offlineSince`] = since;
+      if (user?.role !== 'sales_exec' || user.active !== true) continue;
+      const kam = users.get(user.kamId);
+      const to = kam?.active === true ? [user.kamId] : managers;
+      for (const toId of to) {
+        batch.set(db.collection('notifications').doc(), {
+          toId,
+          type: 'trackingIssue',
+          issue: 'offline',
+          fromId: uid,
+          ownerId: uid,
+          date: saudiDay(now),
+          count: 0,
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    await batch.commit();
+    await rtdb.ref('tracking_alerts').update(marks);
+  },
+);
+
 /** Route points are kept this many days (user decision), visits are kept. */
 const ROUTE_DAYS = 90;
 
 /**
  * Every night deletes RTDB `location_history/{uid}/{yyyy-MM-dd}` days older
- * than ROUTE_DAYS (Saudi time). Day keys sort as dates, so one key-range
+ * than ROUTE_DAYS and `tracking_events/{uid}/{yyyy-MM-dd}` days older than
+ * EVENT_DAYS (Saudi time). Day keys sort as dates, so one key-range
  * query per person finds the old days. People come from Firestore `users`
  * and RTDB `roles`, which also covers deleted users whose role is still there.
  */
 exports.cleanRouteHistory = onSchedule(
   { schedule: '0 3 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
   async () => {
-    const saudiNow = new Date(Date.now() + 3 * 3600 * 1000);
-    saudiNow.setUTCDate(saudiNow.getUTCDate() - ROUTE_DAYS - 1);
-    const lastOldDay = saudiNow.toISOString().slice(0, 10);
+    // Last day to delete for a retention of [days].
+    const lastOld = (days) => saudiDay(Date.now() - (days + 1) * 24 * 3600 * 1000);
 
     const rtdb = admin.database();
     const [users, roles] = await Promise.all([
@@ -237,15 +376,27 @@ exports.cleanRouteHistory = onSchedule(
 
     let removed = 0;
     for (const uid of uids) {
-      const ref = rtdb.ref(`location_history/${uid}`);
-      const old = await ref.orderByKey().endAt(lastOldDay).get();
-      const updates = {};
-      old.forEach((day) => { updates[day.key] = null; });
-      const count = Object.keys(updates).length;
-      if (count === 0) continue;
-      await ref.update(updates);
-      removed += count;
+      for (const [path, days] of [['location_history', ROUTE_DAYS], ['tracking_events', EVENT_DAYS]]) {
+        const ref = rtdb.ref(`${path}/${uid}`);
+        const old = await ref.orderByKey().endAt(lastOld(days)).get();
+        const updates = {};
+        old.forEach((day) => { updates[day.key] = null; });
+        const count = Object.keys(updates).length;
+        if (count === 0) continue;
+        await ref.update(updates);
+        removed += count;
+      }
     }
-    console.log(`cleanRouteHistory: removed ${removed} day(s) up to ${lastOldDay}`);
+    console.log(`cleanRouteHistory: removed ${removed} day(s) of routes / tracking log`);
   },
 );
+
+/**
+ * When a sales manager / GM deletes a visit, removes its comments and
+ * attachment records and the attachment files in Storage.
+ */
+exports.cleanDeletedVisit = onDocumentDeleted({ document: 'visits/{id}', maxInstances: 5 }, async (event) => {
+  const id = event.params.id;
+  await admin.firestore().recursiveDelete(admin.firestore().doc(`visits/${id}`));
+  await admin.storage().bucket().deleteFiles({ prefix: `visits/${id}/` });
+});

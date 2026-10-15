@@ -45,6 +45,33 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
     }
   }
 
+  Future<void> _delete(Visit visit) async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.deleteVisitTitle),
+        content: Text(l10n.deleteVisitBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(dialog).colorScheme.error),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    await _run(() async {
+      await ref.read(visitsRepositoryProvider).delete(visit);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.visitDeleted)));
+      router.pop();
+    });
+  }
+
   Future<void> _send(AppUser me) async {
     final body = _comment.text.trim();
     if (body.isEmpty) return;
@@ -102,7 +129,17 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(visit.clientName)),
+      appBar: AppBar(
+        title: Text(visit.clientName),
+        actions: [
+          if (me.role.isAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: l10n.deleteVisitTitle,
+              onPressed: _busy ? null : () => _delete(visit),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(

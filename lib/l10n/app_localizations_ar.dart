@@ -1314,4 +1314,89 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get showLocation => 'عرض الموقع';
+
+  @override
+  String get deleteVisitTitle => 'حذف الزيارة';
+
+  @override
+  String get deleteVisitBody =>
+      'سيتم حذف الزيارة وتعليقاتها وصورها وملفاتها لدى الجميع، وتعود عناصر الخطة التي أنجزتها مفتوحة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get visitDeleted => 'تم حذف الزيارة';
+
+  @override
+  String get colourBy => 'التلوين حسب';
+
+  @override
+  String get salesperson => 'المندوب';
+
+  @override
+  String notifPlanItemsAdded(String name, int count, String day) {
+    return 'أضاف $name $count عنصر إلى خطتك ليوم $day';
+  }
+
+  @override
+  String notifTrackingOffline(String name) {
+    return '$name غير متصل منذ أكثر من 30 دقيقة خلال ساعات العمل';
+  }
+
+  @override
+  String get trackingLog => 'سجل التتبع';
+
+  @override
+  String get trackingLogEmpty => 'لا توجد تغييرات مسجلة لهذا اليوم';
+
+  @override
+  String get logOffline => 'انقطع الاتصال';
+
+  @override
+  String get logOnline => 'عاد متصلاً';
+
+  @override
+  String get logGpsOff => 'تم إيقاف GPS';
+
+  @override
+  String get logGpsOn => 'تم تشغيل GPS';
+
+  @override
+  String get logOnDuty => 'بدأت ساعات العمل';
+
+  @override
+  String get logOffDuty => 'انتهت ساعات العمل';
+
+  @override
+  String get logBatteryOn => 'تم تفعيل تحسين البطارية';
+
+  @override
+  String get logBatteryOff => 'تم إيقاف تحسين البطارية';
+
+  @override
+  String logPermission(String value) {
+    return 'إذن الموقع: $value';
+  }
+
+  @override
+  String get permissionAlways => 'السماح طوال الوقت';
+
+  @override
+  String get permissionWhileInUse => 'أثناء استخدام التطبيق فقط';
+
+  @override
+  String get permissionDenied => 'مرفوض';
+
+  @override
+  String logLasted(String duration) {
+    return 'لمدة $duration';
+  }
+
+  @override
+  String durationMinutes(int m) {
+    return '$m دقيقة';
+  }
+
+  @override
+  String durationHoursMinutes(int h, int m) {
+    return '$h س $m د';
+  }
 }
