@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
@@ -52,9 +53,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     final now = DateTime.now();
-    final located = (ref.watch(filteredClientsProvider).value ?? const <Client>[])
-        .where((c) => c.hasLocation)
-        .toList();
+    final located = (ref.watch(filteredClientsProvider).value ?? const <Client>[]).where((c) => c.hasLocation).toList();
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final filter = ref.watch(salesFilterProvider);
     final planned = {
@@ -87,11 +86,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       appBar: AppBar(
         title: Text(l10n.map),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            tooltip: l10n.clients,
-            onPressed: () => context.go('/clients'),
-          ),
+          IconButton(icon: const Icon(Icons.list), tooltip: l10n.clients, onPressed: () => context.go('/clients')),
         ],
       ),
       body: Stack(
@@ -130,47 +125,49 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             top: 8,
             start: 8,
             end: 8,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (me?.role.isSupervisor ?? false)
-                      Row(
-                        children: [
-                          const Icon(Icons.filter_alt_outlined),
-                          const SizedBox(width: 8),
-                          const Expanded(child: SalesFilterDropdown()),
-                        ],
-                      ),
-                    // Status filter; the coloured dots double as the map legend.
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final (st, label, color) in [
-                            (_Status.all, l10n.statusAll, null),
-                            (_Status.recent, l10n.statusRecent, statusRecentColor),
-                            (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
-                            (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
-                            (_Status.planned, l10n.plannedToday, plannedColor),
-                          ])
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(end: 6),
-                              child: ChoiceChip(
-                                visualDensity: VisualDensity.compact,
-                                avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
-                                label: Text('$label (${count(st)})'),
-                                selected: _status == st,
-                                onSelected: (_) => setState(() => _status = st),
+            child: PointerInterceptor(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (me?.role.isSupervisor ?? false)
+                        Row(
+                          children: [
+                            const Icon(Icons.filter_alt_outlined),
+                            const SizedBox(width: 8),
+                            const Expanded(child: SalesFilterDropdown()),
+                          ],
+                        ),
+                      // Status filter; the coloured dots double as the map legend.
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final (st, label, color) in [
+                              (_Status.all, l10n.statusAll, null),
+                              (_Status.recent, l10n.statusRecent, statusRecentColor),
+                              (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
+                              (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
+                              (_Status.planned, l10n.plannedToday, plannedColor),
+                            ])
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(end: 6),
+                                child: ChoiceChip(
+                                  visualDensity: VisualDensity.compact,
+                                  avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
+                                  label: Text('$label (${count(st)})'),
+                                  selected: _status == st,
+                                  onSelected: (_) => setState(() => _status = st),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

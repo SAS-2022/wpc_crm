@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/map_controls.dart';
 import '../../l10n/app_localizations.dart';
@@ -65,31 +66,37 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             top: 12,
             start: 12,
             end: 12,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(l10n.pickOnMapHint, textAlign: TextAlign.center),
+            child: PointerInterceptor(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(l10n.pickOnMapHint, textAlign: TextAlign.center),
+                ),
               ),
             ),
           ),
           PositionedDirectional(
             end: 12,
             bottom: 96,
-            child: FloatingActionButton.small(
-              heroTag: 'pickerMe',
-              tooltip: l10n.myLocation,
-              onPressed: _goToMe,
-              child: const Icon(Icons.my_location),
+            child: PointerInterceptor(
+              child: FloatingActionButton.small(
+                heroTag: 'pickerMe',
+                tooltip: l10n.myLocation,
+                onPressed: _goToMe,
+                child: const Icon(Icons.my_location),
+              ),
             ),
           ),
           PositionedDirectional(
             start: 16,
             end: 16,
             bottom: 24,
-            child: FilledButton.icon(
-              icon: const Icon(Icons.check),
-              label: Text(l10n.useThisLocation),
-              onPressed: () => Navigator.pop(context, _center),
+            child: PointerInterceptor(
+              child: FilledButton.icon(
+                icon: const Icon(Icons.check),
+                label: Text(l10n.useThisLocation),
+                onPressed: () => Navigator.pop(context, _center),
+              ),
             ),
           ),
         ],

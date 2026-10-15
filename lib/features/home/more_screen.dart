@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import '../../core/sign_out.dart';
 import '../../l10n/app_localizations.dart';
+import 'app_shell.dart';
 
 /// More tab: tools the role can use, language and sign out.
 class MoreScreen extends ConsumerWidget {
@@ -16,6 +17,8 @@ class MoreScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
     final locale = ref.watch(localeProvider) ?? Localizations.localeOf(context);
+    // On wide screens these pages are in the side menu already.
+    final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.more)),
@@ -33,17 +36,29 @@ class MoreScreen extends ConsumerWidget {
               title: Text(l10n.myPlan),
               onTap: () => context.push('/plan/${me.id}'),
             ),
-          ListTile(
-            leading: const Icon(Icons.map),
-            title: Text(l10n.map),
-            onTap: () => context.go('/map'),
-          ),
-          if (me.role.isSupervisor)
+          if (!wide)
+            ListTile(
+              leading: const Icon(Icons.map),
+              title: Text(l10n.map),
+              onTap: () => context.go('/map'),
+            ),
+          if (me.role.isSupervisor && !wide) ...[
             ListTile(
               leading: const Icon(Icons.my_location),
               title: Text(l10n.liveTracking),
               onTap: () => context.push('/live'),
             ),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: Text(l10n.reports),
+              onTap: () => context.push('/reports'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.route),
+              title: Text(l10n.routeHistory),
+              onTap: () => context.push('/history'),
+            ),
+          ],
           if (me.role.isAdmin) ...[
             ListTile(
               leading: const Icon(Icons.upload_file),
@@ -59,6 +74,11 @@ class MoreScreen extends ConsumerWidget {
               leading: const Icon(Icons.timelapse),
               title: Text(l10n.visitFrequency),
               onTap: () => context.push('/visit-rules'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: Text(l10n.workHours),
+              onTap: () => context.push('/work-hours'),
             ),
           ],
           const Divider(),

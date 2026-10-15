@@ -35,6 +35,9 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
         NotificationType.planChanged => l10n.notifPlanChanged(from, day),
+        NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
+        NotificationType.clientsTransferredOut =>
+          l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
       };
 
   @override
@@ -67,12 +70,18 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planApproved => Icons.check_circle,
                     NotificationType.planRejected => Icons.cancel,
                     NotificationType.planChanged => Icons.edit_calendar,
+                    NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
                   }),
                   title: Text(_text(l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day)),
                   subtitle: n.createdAt == null ? null : Text(DateFormat.MMMd(locale).add_jm().format(n.createdAt!)),
                   onTap: () {
                     if (!n.read) markRead(n.id);
-                    context.push('/plan/${n.ownerId}?date=${n.date}');
+                    switch (n.type) {
+                      case NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut:
+                        context.go('/clients');
+                      default:
+                        context.push('/plan/${n.ownerId}?date=${n.date}');
+                    }
                   },
                 );
               },

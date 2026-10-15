@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'transfer.dart';
+
 class Client {
   const Client({
     required this.id,
@@ -31,6 +33,8 @@ class Client {
     this.payable = 0,
     this.currency = '',
     this.contacts = const [],
+    this.hidden = false,
+    this.transfers = const [],
   });
 
   final String id;
@@ -82,6 +86,13 @@ class Client {
   /// Odoo child contacts of this company.
   final List<ClientContact> contacts;
 
+  /// Hidden by a KAM / manager: left out of lists, the map, plans, visits
+  /// and statistics (e.g. clients that belong to no salesperson).
+  final bool hidden;
+
+  /// Who moved this client between sales executives, oldest first.
+  final List<ClientTransfer> transfers;
+
   bool get hasLocation => lat != null && lng != null;
 
   static String normalizeName(String name) =>
@@ -121,6 +132,11 @@ class Client {
       contacts: [
         for (final c in d['contacts'] as List? ?? const [])
           if (c is Map) ClientContact.fromMap(c),
+      ],
+      hidden: d['hidden'] == true,
+      transfers: [
+        for (final t in d['transfers'] as List? ?? const [])
+          if (t is Map) ClientTransfer.fromMap(t),
       ],
     );
   }

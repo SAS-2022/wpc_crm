@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,10 +46,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   Color _color(LiveState s) => switch (s) {
-        LiveState.live => Colors.green.shade600,
-        LiveState.stale => Colors.orange.shade700,
-        LiveState.offline => Colors.grey,
-      };
+    LiveState.live => Colors.green.shade600,
+    LiveState.stale => Colors.orange.shade700,
+    LiveState.offDuty => Colors.blueGrey,
+    LiveState.offline => Colors.grey,
+  };
 
   String _ago(AppLocalizations l10n, DateTime? t, DateTime now) {
     if (t == null) return l10n.never;
@@ -60,12 +62,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   String _status(AppLocalizations l10n, LiveState s, LiveLocation? loc, Presence? p, DateTime now) => switch (s) {
-        LiveState.live => l10n.liveUpdated(_ago(l10n, loc?.updatedAt, now)),
-        LiveState.stale => p != null && !p.gpsOn
-            ? l10n.liveGpsOff
-            : l10n.liveNoFix(_ago(l10n, loc?.updatedAt, now)),
-        LiveState.offline => l10n.liveOffline(_ago(l10n, p?.lastSeen ?? loc?.updatedAt, now)),
-      };
+    LiveState.live => l10n.liveUpdated(_ago(l10n, loc?.updatedAt, now)),
+    LiveState.stale => p != null && !p.gpsOn ? l10n.liveGpsOff : l10n.liveNoFix(_ago(l10n, loc?.updatedAt, now)),
+    LiveState.offDuty => l10n.liveOffDuty,
+    LiveState.offline => l10n.liveOffline(_ago(l10n, p?.lastSeen ?? loc?.updatedAt, now)),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -81,13 +82,16 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       if (me?.role == UserRole.kam) return u.id == me!.id || u.kamId == me.id;
       return true;
     }).toList();
-    final order = {LiveState.live: 0, LiveState.stale: 1, LiveState.offline: 2};
+    final order = {LiveState.live: 0, LiveState.stale: 1, LiveState.offDuty: 2, LiveState.offline: 3};
     people.sort((a, b) {
       final sa = liveState(locations[a.id], presence[a.id], now);
       final sb = liveState(locations[b.id], presence[b.id], now);
       return order[sa]!.compareTo(order[sb]!) != 0 ? order[sa]!.compareTo(order[sb]!) : a.name.compareTo(b.name);
     });
-    final located = [for (final u in people) if (locations[u.id] != null) u];
+    final located = [
+      for (final u in people)
+        if (locations[u.id] != null) u,
+    ];
     final points = [for (final u in located) LatLng(locations[u.id]!.lat, locations[u.id]!.lng)];
 
     if (_map != null && !_fitted && points.isNotEmpty) {
@@ -143,38 +147,44 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
             initialChildSize: 0.28,
             minChildSize: 0.12,
             maxChildSize: 0.7,
-            builder: (context, scroll) => Material(
-              elevation: 8,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: ListView(
-                controller: scroll,
-                children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
+            builder: (context, scroll) => PointerInterceptor(
+              child: Material(
+                elevation: 8,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: ListView(
+                  controller: scroll,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
+                      ),
                     ),
-                  ),
-                  if (people.isEmpty) ListTile(title: Text(l10n.noTrackedStaff)),
-                  for (final u in people)
-                    Builder(builder: (context) {
-                      final loc = locations[u.id];
-                      final p = presence[u.id];
-                      final s = liveState(loc, p, now);
-                      return ListTile(
-                        leading: _Avatar(name: u.name, color: _color(s), mocked: loc?.mocked ?? false),
-                        title: Text(u.name),
-                        subtitle: Text(loc == null && p == null ? l10n.noLocationYet : _status(l10n, s, loc, p, now)),
-                        trailing: loc == null ? null : const Icon(Icons.center_focus_strong),
-                        onTap: loc == null
-                            ? null
-                            : () => _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 16)),
-                        onLongPress: () => _showPerson(u, loc, p),
-                      );
-                    }),
-                ],
+                    if (people.isEmpty) ListTile(title: Text(l10n.noTrackedStaff)),
+                    for (final u in people)
+                      Builder(
+                        builder: (context) {
+                          final loc = locations[u.id];
+                          final p = presence[u.id];
+                          final s = liveState(loc, p, now);
+                          return ListTile(
+                            leading: _Avatar(name: u.name, color: _color(s), mocked: loc?.mocked ?? false),
+                            title: Text(u.name),
+                            subtitle: Text(
+                              loc == null && p == null ? l10n.noLocationYet : _status(l10n, s, loc, p, now),
+                            ),
+                            trailing: loc == null ? null : const Icon(Icons.center_focus_strong),
+                            onTap: loc == null
+                                ? null
+                                : () => _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 16)),
+                            onLongPress: () => _showPerson(u, loc, p),
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -184,11 +194,13 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
           ? null
           : Padding(
               padding: EdgeInsets.only(bottom: MediaQuery.sizeOf(context).height * 0.28),
-              child: FloatingActionButton.small(
-                heroTag: 'liveFit',
-                tooltip: l10n.showEveryone,
-                onPressed: () => _fitAll(points),
-                child: const Icon(Icons.zoom_out_map),
+              child: PointerInterceptor(
+                child: FloatingActionButton.small(
+                  heroTag: 'liveFit',
+                  tooltip: l10n.showEveryone,
+                  onPressed: () => _fitAll(points),
+                  child: const Icon(Icons.zoom_out_map),
+                ),
               ),
             ),
     );
@@ -215,11 +227,13 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               Text(u.name, style: Theme.of(context).textTheme.titleLarge),
               Text(u.role.label(l10n)),
               const SizedBox(height: 12),
-              Row(children: [
-                Icon(Icons.circle, size: 12, color: _color(s)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_status(l10n, s, loc, p, now))),
-              ]),
+              Row(
+                children: [
+                  Icon(Icons.circle, size: 12, color: _color(s)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_status(l10n, s, loc, p, now))),
+                ],
+              ),
               if (loc?.accuracy != null) Text(l10n.locationAccuracy(loc!.accuracy!.round())),
               if (loc?.mocked ?? false) Text(l10n.mockedLocationWarning, style: TextStyle(color: error)),
               if (p != null && p.permission.isNotEmpty && p.permission != 'always')
@@ -277,13 +291,22 @@ class _Avatar extends StatelessWidget {
         boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
       ),
       alignment: Alignment.center,
-      child: Text(initials, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+      child: Text(
+        initials,
+        style: TextStyle(fontWeight: FontWeight.bold, color: color),
+      ),
     );
   }
 }
 
 /// Up to two initials, or "?".
 String _initials(String name) {
-  final letters = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).take(2).map((w) => w.characters.first).join();
+  final letters = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .take(2)
+      .map((w) => w.characters.first)
+      .join();
   return letters.isEmpty ? '?' : letters;
 }

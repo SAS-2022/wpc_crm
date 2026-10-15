@@ -1070,4 +1070,213 @@ class AppLocalizationsAr extends AppLocalizations {
   String visitedOfClients(int visited, int total, int pending) {
     return 'تمت زيارة $visited من $total عميل · $pending متبقٍ';
   }
+
+  @override
+  String get reports => 'التقارير';
+
+  @override
+  String get routeHistory => 'سجل المسار';
+
+  @override
+  String get teamPerformance => 'أداء الفريق';
+
+  @override
+  String get person => 'الشخص';
+
+  @override
+  String get clientsVisitedColumn => 'العملاء الذين تمت زيارتهم';
+
+  @override
+  String get ownClientsVisited => 'زيارة عملائه';
+
+  @override
+  String get onSchedule => 'ضمن الموعد';
+
+  @override
+  String unvisitedInPeriod(int count) {
+    return 'لم تتم زيارتهم في هذه الفترة ($count)';
+  }
+
+  @override
+  String get allClientsVisited => 'تمت زيارة جميع العملاء في هذه الفترة';
+
+  @override
+  String showAllCount(int count) {
+    return 'عرض الكل ($count)';
+  }
+
+  @override
+  String get importHistory => 'عمليات الاستيراد';
+
+  @override
+  String get noImports => 'لا توجد عمليات استيراد بعد';
+
+  @override
+  String importBatchLine(int added, int updated, int unchanged) {
+    return '$added جديد · $updated محدّث · $unchanged بدون تغيير';
+  }
+
+  @override
+  String importedByName(String name) {
+    return 'بواسطة $name';
+  }
+
+  @override
+  String get distance => 'المسافة';
+
+  @override
+  String get firstLocation => 'أول موقع';
+
+  @override
+  String get lastLocation => 'آخر موقع';
+
+  @override
+  String locationPointsCount(int count) {
+    return '$count نقطة';
+  }
+
+  @override
+  String fakeGpsPoints(int count) {
+    return '$count نقطة GPS مزيفة';
+  }
+
+  @override
+  String get noRouteData => 'لا توجد مواقع مسجلة لهذا اليوم';
+
+  @override
+  String get choosePerson => 'اختر شخصًا';
+
+  @override
+  String get previousDay => 'اليوم السابق';
+
+  @override
+  String get nextDay => 'اليوم التالي';
+
+  @override
+  String trackingGaps(int count) {
+    return '$count انقطاع في التتبع';
+  }
+
+  @override
+  String get hiddenClients => 'العملاء المخفيون';
+
+  @override
+  String get hideClient => 'إخفاء العميل';
+
+  @override
+  String get unhideClient => 'إظهار مجددًا';
+
+  @override
+  String get hideClientTitle => 'إخفاء هذا العميل؟';
+
+  @override
+  String get hideClientBody =>
+      'سيتم استبعادهم من قوائم العملاء والخريطة والخطط والزيارات وجميع الإحصائيات للجميع. تبقى زياراتهم وبياناتهم محفوظة. لإظهارهم مجددًا استخدم تصفية \"المخفيون\" في العملاء.';
+
+  @override
+  String get clientHiddenBanner => 'مخفي: مستبعد من القوائم والإحصائيات';
+
+  @override
+  String get clientHidden => 'تم إخفاء العميل';
+
+  @override
+  String get clientUnhidden => 'تم إظهار العميل مجددًا';
+
+  @override
+  String get selectClients => 'تحديد العملاء';
+
+  @override
+  String selectedCount(int count) {
+    return 'تم تحديد $count';
+  }
+
+  @override
+  String get selectAll => 'تحديد الكل';
+
+  @override
+  String hideClientsTitle(int count) {
+    return 'إخفاء $count عميل؟';
+  }
+
+  @override
+  String clientsHiddenCount(int count) {
+    return 'تم إخفاء $count عميل';
+  }
+
+  @override
+  String clientsUnhiddenCount(int count) {
+    return 'تم إظهار $count عميل مجددًا';
+  }
+
+  @override
+  String get liveOffDuty => 'خارج الدوام · لا تتم مشاركة الموقع';
+
+  @override
+  String get workHours => 'ساعات العمل';
+
+  @override
+  String get workHoursHelp =>
+      'تتم مشاركة مواقع الفريق الميداني في هذه الأيام والساعات فقط (بتوقيت السعودية). خارجها لا يُرسل أي موقع ويظهر الموظفون خارج الدوام.';
+
+  @override
+  String get workDays => 'أيام العمل';
+
+  @override
+  String get startTime => 'البداية';
+
+  @override
+  String get endTime => 'النهاية';
+
+  @override
+  String get endAfterStart => 'يجب أن يكون وقت النهاية بعد وقت البداية';
+
+  @override
+  String get transferClients => 'نقل';
+
+  @override
+  String transferClientsTitle(int count) {
+    return 'نقل $count عميل إلى';
+  }
+
+  @override
+  String get transferClientTitle => 'نقل العميل إلى';
+
+  @override
+  String get transferPlanNote =>
+      'تُحذف عناصر الخطة المفتوحة لهؤلاء العملاء من اليوم فصاعداً من خطة المندوب الحالي. تبقى الخطط والزيارات السابقة كما هي.';
+
+  @override
+  String transferSkipped(int count) {
+    return '$count من العملاء المحددين ليسوا ضمن فريقك وسيتم تجاوزهم.';
+  }
+
+  @override
+  String get transferNoneAllowed =>
+      'لا ينتمي أي من العملاء المحددين إلى فريقك.';
+
+  @override
+  String get noTransferTargets => 'لا يوجد مندوبو مبيعات للنقل إليهم';
+
+  @override
+  String clientsTransferredCount(int count, String name) {
+    return 'تم نقل $count عميل إلى $name';
+  }
+
+  @override
+  String get transferHistory => 'سجل النقل';
+
+  @override
+  String transferBy(String name, String when) {
+    return 'بواسطة $name · $when';
+  }
+
+  @override
+  String notifClientsTransferredIn(String name, int count) {
+    return 'نقل $name $count عميل إليك';
+  }
+
+  @override
+  String notifClientsTransferredOut(String name, int count, String other) {
+    return 'نقل $name $count من عملائك إلى $other';
+  }
 }

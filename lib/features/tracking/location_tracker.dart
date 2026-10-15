@@ -5,19 +5,29 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
+import 'work_hours.dart';
+
 /// How often a position is sent (user decision: every 2 minutes).
 const trackingInterval = Duration(minutes: 2);
 
-/// Sends the user's position to RTDB every [trackingInterval] and keeps their
-/// presence honest: the server marks them offline as soon as the connection
-/// drops, and a heartbeat reports when GPS is off even without new fixes.
+/// Sends the user's position to RTDB every [trackingInterval] during work
+/// hours ([WorkHours]) and keeps their presence honest: the server marks them
+/// offline as soon as the connection drops, and a heartbeat reports when GPS
+/// is off even without new fixes. Outside work hours nothing is sent and the
+/// live position is removed.
 class LocationTracker {
   LocationTracker(this.uid);
 
   final String uid;
   final _subscriptions = <StreamSubscription<Object?>>[];
+  StreamSubscription<Position>? _positions;
   Timer? _heartbeat;
+  Timer? _dutyCheck;
   DateTime? _lastSent;
+  WorkHours _hours = WorkHours.defaults;
+
+  /// null until first checked.
+  bool? _onDuty;
 
   DatabaseReference get _presence => FirebaseDatabase.instance.ref('presence/$uid');
 
@@ -29,12 +39,33 @@ class LocationTracker {
       await _presence.onDisconnect().update({'online': false, 'lastSeen': ServerValue.timestamp});
       await _presence.update({'online': true, 'lastSeen': ServerValue.timestamp});
     }));
-    _subscriptions.add(Geolocator.getPositionStream(locationSettings: _settings()).listen(
-      _send,
-      onError: (_) => _beat(),
-    ));
+    _subscriptions.add(workHoursRef.onValue.listen((event) {
+      _hours = WorkHours.fromMap(event.snapshot.value);
+      _applyDuty();
+    }));
+    _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
     _heartbeat = Timer.periodic(trackingInterval, (_) => _beat());
+    await _applyDuty();
     await _beat();
+  }
+
+  /// Switches between sharing (work hours) and not sharing.
+  Future<void> _applyDuty() async {
+    final on = _hours.isOn(DateTime.now());
+    if (on == _onDuty) return;
+    _onDuty = on;
+    await _positions?.cancel();
+    // Off duty a coarse, low-power stream keeps iOS from suspending the app
+    // (so sharing resumes on its own when work starts); its fixes are dropped.
+    _positions = Geolocator.getPositionStream(locationSettings: on ? _settings() : _idleSettings()).listen(
+      on ? _send : (_) {},
+      onError: (_) => _beat(),
+    );
+    if (!on) {
+      _lastSent = null;
+      await FirebaseDatabase.instance.ref('live_locations/$uid').remove();
+    }
+    await _presence.update({'onDuty': on});
   }
 
   Future<void> stop() async {
@@ -42,7 +73,11 @@ class LocationTracker {
       await s.cancel();
     }
     _subscriptions.clear();
+    await _positions?.cancel();
+    _positions = null;
+    _onDuty = null;
     _heartbeat?.cancel();
+    _dutyCheck?.cancel();
     await _presence.onDisconnect().cancel();
     await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
   }
@@ -64,6 +99,7 @@ class LocationTracker {
   }
 
   Future<void> _send(Position p) async {
+    if (_onDuty != true) return;
     final now = DateTime.now();
     // The OS may deliver fixes more often than asked for; keep one per interval.
     if (_lastSent != null && now.difference(_lastSent!) < trackingInterval - const Duration(seconds: 15)) return;
@@ -103,5 +139,21 @@ class LocationTracker {
             showBackgroundLocationIndicator: true,
           ),
         _ => const LocationSettings(accuracy: LocationAccuracy.high),
+      };
+
+  LocationSettings _idleSettings() => switch (defaultTargetPlatform) {
+        TargetPlatform.android => AndroidSettings(
+            accuracy: LocationAccuracy.lowest,
+            distanceFilter: 5000,
+            intervalDuration: const Duration(minutes: 30),
+          ),
+        TargetPlatform.iOS => AppleSettings(
+            accuracy: LocationAccuracy.lowest,
+            distanceFilter: 5000,
+            pauseLocationUpdatesAutomatically: false,
+            allowBackgroundLocationUpdates: true,
+            showBackgroundLocationIndicator: false,
+          ),
+        _ => const LocationSettings(accuracy: LocationAccuracy.lowest, distanceFilter: 5000),
       };
 }

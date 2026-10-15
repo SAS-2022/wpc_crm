@@ -16,6 +16,8 @@ class Visit {
     required this.mocked,
     this.kamId,
     this.kamMarkedAt,
+    this.checkInLat,
+    this.checkInLng,
   });
 
   final String id;
@@ -41,6 +43,10 @@ class Visit {
   final String? kamId;
   final DateTime? kamMarkedAt;
 
+  /// Where the phone was at check-in.
+  final double? checkInLat;
+  final double? checkInLng;
+
   factory Visit.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return Visit(
@@ -55,6 +61,8 @@ class Visit {
       mocked: d['mocked'] as bool? ?? false,
       kamId: d['kamId'] as String?,
       kamMarkedAt: (d['kamMarkedAt'] as Timestamp?)?.toDate(),
+      checkInLat: (d['checkInLat'] as num?)?.toDouble(),
+      checkInLng: (d['checkInLng'] as num?)?.toDouble(),
     );
   }
 }

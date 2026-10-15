@@ -99,13 +99,15 @@ class UsersRepository {
         .where('odooSalesperson', isEqualTo: odooName.trim())
         .where('assignedTo', isNull: true)
         .get();
-    for (var i = 0; i < clients.docs.length; i += 400) {
+    // Hidden clients stay unassigned.
+    final docs = clients.docs.where((d) => d.data()['hidden'] != true).toList();
+    for (var i = 0; i < docs.length; i += 400) {
       final batch = db.batch();
-      for (final d in clients.docs.skip(i).take(400)) {
+      for (final d in docs.skip(i).take(400)) {
         batch.update(d.reference, {'assignedTo': uid, 'updatedAt': FieldValue.serverTimestamp()});
       }
       await batch.commit();
     }
-    return clients.docs.length;
+    return docs.length;
   }
 }

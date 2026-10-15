@@ -1,13 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../import/import_plan.dart';
 import '../import/location_import.dart';
+import '../notifications/notifications.dart';
+import '../plan/plan_task.dart';
 import 'client.dart';
+import 'transfer.dart';
 
-/// Clients the signed-in user may see: all for KAM/managers, own for sales execs.
-final clientsProvider = StreamProvider<List<Client>>((ref) {
+/// Every client the signed-in user may read (all for KAM/managers, own for
+/// sales execs), hidden ones included: for the client page, imports and
+/// duplicate checks.
+final allClientsProvider = StreamProvider<List<Client>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
   Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('clients');
@@ -17,10 +23,25 @@ final clientsProvider = StreamProvider<List<Client>>((ref) {
       );
 });
 
+/// The clients used everywhere else (lists, map, plans, statistics): hidden
+/// ones left out.
+final clientsProvider = Provider<AsyncValue<List<Client>>>(
+  (ref) => ref.watch(allClientsProvider).whenData((list) => list.where((c) => !c.hidden).toList()),
+);
+
+/// Ids of hidden clients, to leave their visits and plan items out of statistics.
+final hiddenClientIdsProvider = Provider<Set<String>>((ref) => {
+      for (final c in ref.watch(allClientsProvider).value ?? const <Client>[])
+        if (c.hidden) c.id,
+    });
+
 /// Sales executive filter shared by the client list and map.
 /// null = everyone, [unassignedFilter] = clients without a sales executive.
 final salesFilterProvider = NotifierProvider<SalesFilter, String?>(SalesFilter.new);
 const unassignedFilter = '_unassigned';
+
+bool matchesSalesFilter(Client c, String? filter) =>
+    filter == null || (filter == unassignedFilter ? c.assignedTo == null : c.assignedTo == filter);
 
 class SalesFilter extends Notifier<String?> {
   @override
@@ -31,13 +52,16 @@ class SalesFilter extends Notifier<String?> {
 
 final filteredClientsProvider = Provider<AsyncValue<List<Client>>>((ref) {
   final filter = ref.watch(salesFilterProvider);
-  return ref.watch(clientsProvider).whenData(
-        (list) => filter == null
-            ? list
-            : list
-                .where((c) => filter == unassignedFilter ? c.assignedTo == null : c.assignedTo == filter)
-                .toList(),
-      );
+  return ref.watch(clientsProvider).whenData((list) => list.where((c) => matchesSalesFilter(c, filter)).toList());
+});
+
+/// Hidden clients under the sales filter, for the client list's "Hidden" chip.
+final filteredHiddenClientsProvider = Provider<List<Client>>((ref) {
+  final filter = ref.watch(salesFilterProvider);
+  return [
+    for (final c in ref.watch(allClientsProvider).value ?? const <Client>[])
+      if (c.hidden && matchesSalesFilter(c, filter)) c,
+  ];
 });
 
 final clientsRepositoryProvider = Provider((ref) => ClientsRepository());
@@ -65,6 +89,91 @@ class ClientsRepository {
 
   Future<void> update(String clientId, Map<String, dynamic> data) =>
       _clients.doc(clientId).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+
+  /// KAM / managers hide a client from lists and statistics, or show it again.
+  Future<void> setHidden(String clientId, {required bool hidden, required String by}) =>
+      setHiddenMany([clientId], hidden: hidden, by: by);
+
+  /// [setHidden] for several clients, in batches (500 writes per batch max).
+  Future<void> setHiddenMany(List<String> clientIds, {required bool hidden, required String by}) async {
+    for (var i = 0; i < clientIds.length; i += 400) {
+      final batch = _db.batch();
+      for (final id in clientIds.skip(i).take(400)) {
+        batch.update(_clients.doc(id), {
+          'hidden': hidden,
+          'hiddenBy': hidden ? by : null,
+          'hiddenAt': hidden ? FieldValue.serverTimestamp() : null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Moves [clients] to the sales executive [toId] (null = unassigned):
+  /// logs the move on each client, removes the previous owner's open plan
+  /// items for them from today on, and notifies both people. Clients already
+  /// with [toId] are skipped; returns how many were moved.
+  Future<int> transfer(List<Client> clients, {required String? toId, required AppUser by}) async {
+    final moved = clients.where((c) => c.assignedTo != toId).toList();
+    if (moved.isEmpty) return 0;
+    final now = DateTime.now();
+    for (var i = 0; i < moved.length; i += 400) {
+      final batch = _db.batch();
+      for (final c in moved.skip(i).take(400)) {
+        final entry = ClientTransfer(fromId: c.assignedTo, toId: toId, byId: by.id, at: now);
+        batch.update(_clients.doc(c.id), {
+          'assignedTo': toId,
+          'transfers': FieldValue.arrayUnion([entry.toMap()]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+
+    // Open plan items of the previous owners (whereIn takes 30 values).
+    final previousOwner = {for (final c in moved) c.id: c.assignedTo};
+    final tasks = <PlanTask>[];
+    final ids = previousOwner.keys.toList();
+    for (var i = 0; i < ids.length; i += 30) {
+      final s = await _db.collection('tasks').where('clientId', whereIn: ids.skip(i).take(30).toList()).get();
+      tasks.addAll(s.docs.map(PlanTask.fromDoc));
+    }
+    final drop = planItemsToDrop(tasks, previousOwner, dayKey(now));
+    for (var i = 0; i < drop.length; i += 400) {
+      final batch = _db.batch();
+      for (final t in drop.skip(i).take(400)) {
+        batch.delete(_db.collection('tasks').doc(t.id));
+      }
+      await batch.commit();
+    }
+
+    if (toId != null) {
+      await sendNotifications(
+        toIds: [toId],
+        type: NotificationType.clientsTransferredIn,
+        fromId: by.id,
+        ownerId: '',
+        date: '',
+        count: moved.length,
+      );
+    }
+    final countByOwner = <String, int>{};
+    for (final owner in previousOwner.values.nonNulls) {
+      countByOwner[owner] = (countByOwner[owner] ?? 0) + 1;
+    }
+    for (final MapEntry(key: owner, value: count) in countByOwner.entries) {
+      await sendNotifications(
+        toIds: [owner],
+        type: NotificationType.clientsTransferredOut,
+        fromId: by.id,
+        ownerId: toId ?? '',
+        date: '',
+        count: count,
+      );
+    }
+    return moved.length;
+  }
 
   /// Sets the location of matched clients (from a "name → location" sheet).
   Future<void> updateLocations(List<LocationUpdate> updates) async {

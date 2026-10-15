@@ -121,7 +121,7 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final client = ref.watch(clientsProvider).value?.where((c) => c.id == widget.clientId).firstOrNull;
+    final client = ref.watch(allClientsProvider).value?.where((c) => c.id == widget.clientId).firstOrNull;
     if (client == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }

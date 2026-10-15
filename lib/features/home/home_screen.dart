@@ -89,12 +89,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Sales execs may only query their own documents.
     final key = (me.role.isSupervisor ? null : me.id, _range.months.join(','));
+    // Hidden clients are left out of every number.
+    final hidden = ref.watch(hiddenClientIdsProvider);
     final rangeVisits = (ref.watch(rangeVisitsProvider(key)).value ?? const <Visit>[])
-        .where((v) => v.checkedInAt != null && _range.contains(v.checkedInAt!))
+        .where((v) => v.checkedInAt != null && _range.contains(v.checkedInAt!) && !hidden.contains(v.clientId))
         .toList();
     final visits = rangeVisits.where((v) => ids.contains(v.salesExecId)).toList();
     final tasks = (ref.watch(rangeTasksProvider(key)).value ?? const <PlanTask>[])
-        .where((t) => ids.contains(t.ownerId) && _range.contains(DateTime.parse(t.date)))
+        .where((t) => ids.contains(t.ownerId) && _range.contains(DateTime.parse(t.date)) && !hidden.contains(t.clientId))
         .toList();
     final allClients = ref.watch(clientsProvider).value ?? const <Client>[];
     final clients = allClients.where((c) => c.hasLocation && ids.contains(c.assignedTo)).toList();

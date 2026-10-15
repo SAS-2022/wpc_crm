@@ -33,7 +33,7 @@ class Tracking {
         autoStartOnBoot: true,
         isForegroundMode: true,
         initialNotificationTitle: 'WPC CRM',
-        initialNotificationContent: 'Sharing your location with your team',
+        initialNotificationContent: 'Shares your location with your team during work hours',
         foregroundServiceNotificationId: 4401,
         foregroundServiceTypes: [AndroidForegroundType.location],
       ),

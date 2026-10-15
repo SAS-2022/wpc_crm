@@ -1072,4 +1072,214 @@ class AppLocalizationsEn extends AppLocalizations {
   String visitedOfClients(int visited, int total, int pending) {
     return '$visited of $total clients visited · $pending still pending';
   }
+
+  @override
+  String get reports => 'Reports';
+
+  @override
+  String get routeHistory => 'Route history';
+
+  @override
+  String get teamPerformance => 'Team performance';
+
+  @override
+  String get person => 'Person';
+
+  @override
+  String get clientsVisitedColumn => 'Clients visited';
+
+  @override
+  String get ownClientsVisited => 'Own clients visited';
+
+  @override
+  String get onSchedule => 'On schedule';
+
+  @override
+  String unvisitedInPeriod(int count) {
+    return 'Not visited in this period ($count)';
+  }
+
+  @override
+  String get allClientsVisited => 'Every client was visited in this period';
+
+  @override
+  String showAllCount(int count) {
+    return 'Show all ($count)';
+  }
+
+  @override
+  String get importHistory => 'Imports';
+
+  @override
+  String get noImports => 'No imports yet';
+
+  @override
+  String importBatchLine(int added, int updated, int unchanged) {
+    return '$added new · $updated updated · $unchanged unchanged';
+  }
+
+  @override
+  String importedByName(String name) {
+    return 'by $name';
+  }
+
+  @override
+  String get distance => 'Distance';
+
+  @override
+  String get firstLocation => 'First location';
+
+  @override
+  String get lastLocation => 'Last location';
+
+  @override
+  String locationPointsCount(int count) {
+    return '$count points';
+  }
+
+  @override
+  String fakeGpsPoints(int count) {
+    return '$count fake GPS points';
+  }
+
+  @override
+  String get noRouteData => 'No locations recorded for this day';
+
+  @override
+  String get choosePerson => 'Choose a person';
+
+  @override
+  String get previousDay => 'Previous day';
+
+  @override
+  String get nextDay => 'Next day';
+
+  @override
+  String trackingGaps(int count) {
+    return '$count gaps in tracking';
+  }
+
+  @override
+  String get hiddenClients => 'Hidden clients';
+
+  @override
+  String get hideClient => 'Hide client';
+
+  @override
+  String get unhideClient => 'Show again';
+
+  @override
+  String get hideClientTitle => 'Hide this client?';
+
+  @override
+  String get hideClientBody =>
+      'They will be left out of client lists, the map, plans, visits and all statistics, for everyone. Their visits and data are kept. To show them again, use the \"Hidden\" filter in Clients.';
+
+  @override
+  String get clientHiddenBanner => 'Hidden: left out of lists and statistics';
+
+  @override
+  String get clientHidden => 'Client hidden';
+
+  @override
+  String get clientUnhidden => 'Client shown again';
+
+  @override
+  String get selectClients => 'Select clients';
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String hideClientsTitle(int count) {
+    return 'Hide $count clients?';
+  }
+
+  @override
+  String clientsHiddenCount(int count) {
+    return '$count clients hidden';
+  }
+
+  @override
+  String clientsUnhiddenCount(int count) {
+    return '$count clients shown again';
+  }
+
+  @override
+  String get liveOffDuty =>
+      'Off duty · outside work hours, location not shared';
+
+  @override
+  String get workHours => 'Work hours';
+
+  @override
+  String get workHoursHelp =>
+      'Field staff locations are shared only on these days and hours (Saudi time). Outside them nothing is sent and people show as off duty.';
+
+  @override
+  String get workDays => 'Work days';
+
+  @override
+  String get startTime => 'Start';
+
+  @override
+  String get endTime => 'End';
+
+  @override
+  String get endAfterStart => 'End time must be after start time';
+
+  @override
+  String get transferClients => 'Transfer';
+
+  @override
+  String transferClientsTitle(int count) {
+    return 'Transfer $count clients to';
+  }
+
+  @override
+  String get transferClientTitle => 'Transfer client to';
+
+  @override
+  String get transferPlanNote =>
+      'Open plan items for these clients from today on are removed from the current salesperson\'s plan. Past plans and visits are kept.';
+
+  @override
+  String transferSkipped(int count) {
+    return '$count selected clients are not in your team and will be skipped.';
+  }
+
+  @override
+  String get transferNoneAllowed =>
+      'None of the selected clients belong to your team.';
+
+  @override
+  String get noTransferTargets => 'No sales executives to transfer to';
+
+  @override
+  String clientsTransferredCount(int count, String name) {
+    return '$count clients moved to $name';
+  }
+
+  @override
+  String get transferHistory => 'Transfer history';
+
+  @override
+  String transferBy(String name, String when) {
+    return 'by $name · $when';
+  }
+
+  @override
+  String notifClientsTransferredIn(String name, int count) {
+    return '$name moved $count clients to you';
+  }
+
+  @override
+  String notifClientsTransferredOut(String name, int count, String other) {
+    return '$name moved $count of your clients to $other';
+  }
 }

@@ -84,7 +84,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   Future<void> _share(AppUser owner, List<PlanTask> tasks) async {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final clients = {for (final c in ref.read(clientsProvider).value ?? const <Client>[]) c.id: c};
+    final clients = {for (final c in ref.read(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final open = tasks.where((t) => t.approval != TaskApproval.rejected).toList();
     final visits = open.where((t) => t.isVisit).toList();
     final located = [for (final t in visits) if (clients[t.clientId]?.hasLocation ?? false) clients[t.clientId]!];

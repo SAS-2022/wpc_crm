@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../core/app_user.dart';
 import '../../core/location.dart';
 import '../../core/providers.dart';
 import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
 import '../import/import_service.dart';
+import '../users/users_repository.dart';
 import 'client.dart';
-import 'client_widgets.dart';
 import 'clients_repository.dart';
 import 'location_picker_screen.dart';
+import 'transfer.dart';
 import 'visit_rules.dart';
 
 /// Add (clientId == null) or edit a client. Sales execs edit contact details,
@@ -40,6 +42,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   final _vat = TextEditingController();
   final _notes = TextEditingController();
   String? _assignedTo;
+
+  /// The client as loaded (null when adding); a changed assignment is saved
+  /// as a transfer of it.
+  Client? _original;
   String _category = defaultCategory;
   bool _loaded = false;
   bool _busy = false;
@@ -79,6 +85,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     _lng.text = c.lng?.toString() ?? '';
     _category = c.category;
     _assignedTo = c.assignedTo;
+    _original = c;
     _contactPerson.text = c.contactPerson;
     _email.text = c.email;
     _vat.text = c.vat;
@@ -174,15 +181,13 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       'notes': _notes.text.trim(),
       if (manage || _isNew) 'vat': _vat.text.replaceAll(RegExp(r'\s'), ''),
       if (manage || _isNew) 'category': _category,
-      // A sales exec's new client is theirs.
-      if (manage)
-        'assignedTo': _assignedTo
-      else if (_isNew)
-        'assignedTo': me.id,
+      // A sales exec's new client is theirs. A changed assignment of an
+      // existing client is saved as a transfer below.
+      if (_isNew) 'assignedTo': manage ? _assignedTo : me.id,
     };
 
     if (_isNew) {
-      final clients = ref.read(clientsProvider).value ?? const <Client>[];
+      final clients = ref.read(allClientsProvider).value ?? const <Client>[];
       final key = Client.normalizeName(data['name'] as String);
       final vat = data['vat'] as String;
       final duplicate = clients
@@ -224,6 +229,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
         if (mounted) context.pushReplacement('/clients/$id');
       } else {
         await repo.update(widget.clientId!, data);
+        final original = _original;
+        if (manage && original != null && _assignedTo != original.assignedTo) {
+          await repo.transfer([original], toId: _assignedTo, by: me);
+        }
         messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
         if (mounted) context.pop();
       }
@@ -243,7 +252,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
         ref.watch(currentUserProvider).value?.role.isSupervisor ?? false;
     if (!_loaded && !_isNew) {
       final client = ref
-          .watch(clientsProvider)
+          .watch(allClientsProvider)
           .value
           ?.where((c) => c.id == widget.clientId)
           .firstOrNull;
@@ -252,7 +261,15 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       }
       _fill(client);
     }
-    final execs = ref.watch(salesExecsProvider);
+    final me = ref.watch(currentUserProvider).value;
+    final users = ref.watch(usersProvider).value ?? const <AppUser>[];
+    final owner = _original?.assignedTo;
+    // A KAM assigns only within their team; when the client belongs to
+    // someone else the assignment can't be changed here.
+    final canAssign = me != null && (_isNew || canTransferFrom(me, owner, {for (final u in users) u.id: u}));
+    final targets = me == null ? const <AppUser>[] : transferTargets(me, users);
+    final execs = [...targets, ...users.where((u) => u.id == owner && !targets.contains(u))];
+    final offerUnassigned = _isNew || owner == null || (me != null && canUnassign(me));
 
     String? coordinate(String? v, double max) {
       if (v == null || v.trim().isEmpty) return null;
@@ -417,11 +434,11 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
                     : null,
                 decoration: InputDecoration(labelText: l10n.salesExecutive),
                 items: [
-                  DropdownMenuItem(value: null, child: Text(l10n.unassigned)),
+                  if (offerUnassigned) DropdownMenuItem(value: null, child: Text(l10n.unassigned)),
                   for (final u in execs)
                     DropdownMenuItem(value: u.id, child: Text(u.name)),
                 ],
-                onChanged: (v) => setState(() => _assignedTo = v),
+                onChanged: canAssign ? (v) => setState(() => _assignedTo = v) : null,
               ),
             ],
             const SizedBox(height: 24),

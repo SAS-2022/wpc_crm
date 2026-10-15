@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../l10n/app_localizations.dart';
 import 'location.dart';
@@ -39,10 +40,9 @@ Future<void> fitPoints(GoogleMapController map, List<LatLng> points, {double pad
     west = math.min(west, p.longitude);
     east = math.max(east, p.longitude);
   }
-  await map.animateCamera(CameraUpdate.newLatLngBounds(
-    LatLngBounds(southwest: LatLng(south, west), northeast: LatLng(north, east)),
-    padding,
-  ));
+  await map.animateCamera(
+    CameraUpdate.newLatLngBounds(LatLngBounds(southwest: LatLng(south, west), northeast: LatLng(north, east)), padding),
+  );
   if (await map.getZoomLevel() > _fitMaxZoom) {
     await map.animateCamera(CameraUpdate.zoomTo(_fitMaxZoom));
   }
@@ -109,7 +109,11 @@ class MarkerIcons {
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: size * (text.length > 1 ? 0.38 : 0.45)),
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+          fontSize: size * (text.length > 1 ? 0.38 : 0.45),
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -135,18 +139,23 @@ class MapControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     Widget button(IconData icon, String tooltip, VoidCallback onPressed) => Padding(
-          padding: const EdgeInsets.only(top: 8),
-          // No hero: several maps can be open in the tab stacks at once.
-          child: FloatingActionButton.small(heroTag: null, tooltip: tooltip, onPressed: onPressed, child: Icon(icon)),
-        );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        button(Icons.my_location, l10n.myLocation, onMyLocation),
-        button(Icons.add, l10n.zoomIn, () => map?.animateCamera(CameraUpdate.zoomIn())),
-        button(Icons.remove, l10n.zoomOut, () => map?.animateCamera(CameraUpdate.zoomOut())),
-        if (onFitAll != null) button(Icons.zoom_out_map, l10n.showAllClients, onFitAll!),
-      ],
+      padding: const EdgeInsets.only(top: 8),
+      // No hero: several maps can be open in the tab stacks at once.
+      child: FloatingActionButton.small(heroTag: null, tooltip: tooltip, onPressed: onPressed, child: Icon(icon)),
+    );
+    // On the web the map is a browser element under Flutter's layer; without
+    // this, clicks on the buttons also reach the map (a double click on "+"
+    // zoomed in towards the button).
+    return PointerInterceptor(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(Icons.my_location, l10n.myLocation, onMyLocation),
+          button(Icons.add, l10n.zoomIn, () => map?.animateCamera(CameraUpdate.zoomIn())),
+          button(Icons.remove, l10n.zoomOut, () => map?.animateCamera(CameraUpdate.zoomOut())),
+          if (onFitAll != null) button(Icons.zoom_out_map, l10n.showAllClients, onFitAll!),
+        ],
+      ),
     );
   }
 }

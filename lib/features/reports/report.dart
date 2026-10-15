@@ -1,0 +1,192 @@
+import 'dart:math' as math;
+
+import '../../core/app_user.dart';
+import '../clients/client.dart';
+import '../clients/visit_rules.dart';
+import '../home/stats.dart';
+import '../plan/plan_task.dart';
+import '../visits/visit.dart';
+import '../visits/visits_repository.dart';
+
+/// One person's numbers for a period, a row of the team table.
+class PersonReport {
+  const PersonReport({
+    required this.user,
+    required this.visits,
+    required this.target,
+    required this.clientsVisited,
+    required this.assigned,
+    required this.assignedVisited,
+    required this.onSchedule,
+    required this.flagged,
+    required this.withKam,
+    required this.tasksApproved,
+    required this.tasksDone,
+  });
+
+  final AppUser user;
+
+  /// Visits made by this person in the period.
+  final int visits;
+
+  /// Monthly target spread over the period; 0 = no target.
+  final double target;
+
+  /// Distinct clients this person visited.
+  final int clientsVisited;
+
+  /// Clients assigned to this person, and how many of them anyone visited.
+  final int assigned;
+  final int assignedVisited;
+
+  /// Assigned clients that are green under the visit rules today.
+  final int onSchedule;
+
+  /// Visits far from the client or with fake GPS.
+  final int flagged;
+
+  /// Visits a KAM marked "I was there".
+  final int withKam;
+  final int tasksApproved;
+  final int tasksDone;
+
+  double? get coverage => assigned == 0 ? null : assignedVisited / assigned;
+  double? get planCompletion => tasksApproved == 0 ? null : tasksDone / tasksApproved;
+}
+
+bool isFlagged(Visit v) => v.mocked || (v.distanceMeters != null && v.distanceMeters! > visitRadiusMeters);
+
+/// [visits] and [tasks] may hold more than the period; they are filtered here.
+List<PersonReport> buildReports({
+  required List<AppUser> people,
+  required List<Client> clients,
+  required List<Visit> visits,
+  required List<PlanTask> tasks,
+  required StatsRange range,
+  required VisitRules rules,
+  required DateTime now,
+}) {
+  final inRange = visits.where((v) => v.checkedInAt != null && range.contains(v.checkedInAt!)).toList();
+  final visitedIds = {for (final v in inRange) v.clientId};
+  return [
+    for (final u in people)
+      () {
+        final mine = inRange.where((v) => v.salesExecId == u.id).toList();
+        final assigned = clients.where((c) => c.assignedTo == u.id).toList();
+        final approved = tasks
+            .where((t) =>
+                t.ownerId == u.id && t.approval == TaskApproval.approved && range.contains(DateTime.parse(t.date)))
+            .toList();
+        return PersonReport(
+          user: u,
+          visits: mine.length,
+          target: targetFor(u.monthlyTarget, range),
+          clientsVisited: {for (final v in mine) v.clientId}.length,
+          assigned: assigned.length,
+          assignedVisited: assigned.where((c) => visitedIds.contains(c.id)).length,
+          onSchedule: assigned.where((c) => visitStatus(c, rules, now) == VisitStatus.recent).length,
+          flagged: mine.where(isFlagged).length,
+          withKam: mine.where((v) => v.kamId != null).length,
+          tasksApproved: approved.length,
+          tasksDone: approved.where((t) => t.done).length,
+        );
+      }(),
+  ];
+}
+
+/// Clients of [ownerIds] nobody visited in the period, longest unvisited
+/// first (never visited at the top).
+List<Client> unvisitedClients({
+  required List<Client> clients,
+  required Set<String> ownerIds,
+  required List<Visit> visits,
+  required StatsRange range,
+}) {
+  final visited = {
+    for (final v in visits)
+      if (v.checkedInAt != null && range.contains(v.checkedInAt!)) v.clientId,
+  };
+  return clients.where((c) => ownerIds.contains(c.assignedTo) && !visited.contains(c.id)).toList()
+    ..sort((a, b) {
+      if (a.lastVisitAt == null || b.lastVisitAt == null) {
+        if (a.lastVisitAt == b.lastVisitAt) return a.name.compareTo(b.name);
+        return a.lastVisitAt == null ? -1 : 1;
+      }
+      return a.lastVisitAt!.compareTo(b.lastVisitAt!);
+    });
+}
+
+/// A point of RTDB `location_history/{uid}/{day}`.
+class RoutePoint {
+  const RoutePoint({required this.lat, required this.lng, required this.t, this.accuracy, this.mocked = false});
+
+  final double lat;
+  final double lng;
+  final DateTime t;
+  final double? accuracy;
+  final bool mocked;
+}
+
+class RouteSummary {
+  const RouteSummary({required this.path, required this.distanceMeters, required this.mockedPoints});
+
+  /// Usable points in time order (rough fixes left out).
+  final List<RoutePoint> path;
+  final double distanceMeters;
+  final int mockedPoints;
+
+  DateTime? get first => path.isEmpty ? null : path.first.t;
+  DateTime? get last => path.isEmpty ? null : path.last.t;
+}
+
+/// Fixes rougher than this are left out of the route.
+const _maxAccuracy = 100.0;
+
+/// Moves shorter than this (or than the fixes' accuracy) count as standing
+/// still, so GPS jitter at a client doesn't add up to kilometres.
+const _minMove = 25.0;
+
+RouteSummary summarizeRoute(List<RoutePoint> points) {
+  final path = points.where((p) => (p.accuracy ?? 0) <= _maxAccuracy).toList()..sort((a, b) => a.t.compareTo(b.t));
+  var distance = 0.0;
+  RoutePoint? from;
+  for (final p in path) {
+    if (from == null) {
+      from = p;
+      continue;
+    }
+    final d = distanceBetween(from.lat, from.lng, p.lat, p.lng);
+    if (d > math.max(_minMove, math.max(from.accuracy ?? 0, p.accuracy ?? 0))) {
+      distance += d;
+      from = p;
+    }
+  }
+  return RouteSummary(path: path, distanceMeters: distance, mockedPoints: path.where((p) => p.mocked).length);
+}
+
+/// No location for longer than this (phone offline, GPS off) is a gap in
+/// tracking, not travel.
+const routeGap = Duration(minutes: 15);
+
+/// [path] (in time order) cut into runs of continuous tracking.
+List<List<RoutePoint>> splitAtGaps(List<RoutePoint> path, {Duration gap = routeGap}) {
+  final runs = <List<RoutePoint>>[];
+  for (final p in path) {
+    if (runs.isEmpty || p.t.difference(runs.last.last.t) > gap) {
+      runs.add([p]);
+    } else {
+      runs.last.add(p);
+    }
+  }
+  return runs;
+}
+
+/// Great-circle distance in meters.
+double distanceBetween(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  double rad(double d) => d * math.pi / 180;
+  final dLat = rad(lat2 - lat1);
+  final dLng = rad(lng2 - lng1);
+  final a = math.pow(math.sin(dLat / 2), 2) + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.pow(math.sin(dLng / 2), 2);
+  return 2 * r * math.asin(math.sqrt(a));
+}

@@ -13,6 +13,8 @@ import '../visits/visit.dart';
 import '../visits/visits_repository.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
+import 'transfer.dart';
+import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 
 /// Client page: quick actions (call, WhatsApp, directions, visit), contact,
@@ -31,11 +33,39 @@ class ClientDetailScreen extends ConsumerWidget {
     return digits.startsWith('05') ? '966${digits.substring(1)}' : digits;
   }
 
+  /// Hides the client (after confirming) or shows it again.
+  Future<void> _setHidden(BuildContext context, WidgetRef ref, {required bool hidden}) async {
+    final l10n = AppLocalizations.of(context);
+    final me = ref.read(currentUserProvider).value;
+    final messenger = ScaffoldMessenger.of(context);
+    if (me == null) return;
+    if (hidden) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(l10n.hideClientTitle),
+          content: Text(l10n.hideClientBody),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.hideClient)),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    try {
+      await ref.read(clientsRepositoryProvider).setHidden(clientId, hidden: hidden, by: me.id);
+      messenger.showSnackBar(SnackBar(content: Text(hidden ? l10n.clientHidden : l10n.clientUnhidden)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
-    final clients = ref.watch(clientsProvider);
+    final clients = ref.watch(allClientsProvider);
     final client = clients.value?.where((c) => c.id == clientId).firstOrNull;
     if (client == null) {
       return Scaffold(
@@ -55,6 +85,9 @@ class ClientDetailScreen extends ConsumerWidget {
     final rule = rules.of(client.category);
     final canEdit = (me?.role.isSupervisor ?? false) || client.assignedTo == me?.id;
     final phone = client.mobile.isNotEmpty ? client.mobile : client.phone;
+    final usersById = {for (final u in users) u.id: u};
+    final canTransfer = me != null && canTransferFrom(me, client.assignedTo, usersById);
+    String nameOf(String? uid) => uid == null ? l10n.unassigned : usersById[uid]?.name ?? '?';
 
     Widget section(String title, List<Widget> rows) {
       final visible = rows.where((w) => w is! SizedBox).toList();
@@ -103,6 +136,18 @@ class ClientDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(client.name),
         actions: [
+          if (canTransfer)
+            IconButton(
+              icon: const Icon(Icons.swap_horiz),
+              tooltip: l10n.transferClients,
+              onPressed: () => showTransferDialog(context, ref, [client]),
+            ),
+          if (me?.role.isSupervisor ?? false)
+            IconButton(
+              icon: Icon(client.hidden ? Icons.visibility : Icons.visibility_off),
+              tooltip: client.hidden ? l10n.unhideClient : l10n.hideClient,
+              onPressed: () => _setHidden(context, ref, hidden: !client.hidden),
+            ),
           if (canEdit)
             IconButton(
               icon: const Icon(Icons.edit),
@@ -114,6 +159,21 @@ class ClientDetailScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          if (client.hidden)
+            Card(
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              color: theme.colorScheme.surfaceContainerHighest,
+              child: ListTile(
+                leading: const Icon(Icons.visibility_off),
+                title: Text(l10n.clientHiddenBanner),
+                trailing: (me?.role.isSupervisor ?? false)
+                    ? TextButton(
+                        onPressed: () => _setHidden(context, ref, hidden: false),
+                        child: Text(l10n.unhideClient),
+                      )
+                    : null,
+              ),
+            ),
           // Header: category, status and quick actions.
           Padding(
             padding: const EdgeInsets.all(16),
@@ -208,6 +268,18 @@ class ClientDetailScreen extends ConsumerWidget {
             row(Icons.receipt_long, l10n.vat, client.vat),
             row(Icons.sell, l10n.tags, client.tags),
             row(Icons.merge_type, l10n.mergedContacts, client.aliases.join('\n')),
+          ]),
+          section(l10n.transferHistory, [
+            for (final t in client.transfers.reversed)
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.swap_horiz),
+                title: Text('${nameOf(t.fromId)} → ${nameOf(t.toId)}', style: theme.textTheme.bodyLarge),
+                subtitle: Text(l10n.transferBy(
+                  nameOf(t.byId),
+                  t.at == null ? '' : DateFormat.yMMMd(locale).add_jm().format(t.at!),
+                )),
+              ),
           ]),
           section(l10n.locationSection, [
             row(Icons.place, l10n.address, client.address),

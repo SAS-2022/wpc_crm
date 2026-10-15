@@ -18,9 +18,18 @@ class LiveLocation {
 }
 
 class Presence {
-  const Presence({required this.online, required this.lastSeen, required this.gpsOn, required this.permission});
+  const Presence({
+    required this.online,
+    required this.lastSeen,
+    required this.gpsOn,
+    required this.permission,
+    this.onDuty = true,
+  });
 
   final bool online;
+
+  /// false outside work hours, when no location is shared.
+  final bool onDuty;
   final DateTime? lastSeen;
   final bool gpsOn;
 
@@ -29,13 +38,15 @@ class Presence {
 }
 
 /// live = online with a fix in the last 5 minutes; stale = online but no
-/// recent fix (GPS off, indoors); offline = phone disconnected.
-enum LiveState { live, stale, offline }
+/// recent fix (GPS off, indoors); offDuty = online outside work hours (no
+/// location shared); offline = phone disconnected.
+enum LiveState { live, stale, offDuty, offline }
 
 const _staleAfter = Duration(minutes: 5);
 
 LiveState liveState(LiveLocation? location, Presence? presence, DateTime now) {
   if (presence == null || !presence.online) return LiveState.offline;
+  if (!presence.onDuty) return LiveState.offDuty;
   final updated = location?.updatedAt;
   return updated != null && now.difference(updated) <= _staleAfter ? LiveState.live : LiveState.stale;
 }
@@ -69,5 +80,6 @@ final presenceProvider = StreamProvider<Map<String, Presence>>((ref) =>
               lastSeen: _time(d['lastSeen']),
               gpsOn: d['gpsOn'] != false,
               permission: '${d['permission'] ?? ''}',
+              onDuty: d['onDuty'] != false,
             ),
         }));

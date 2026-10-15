@@ -18,7 +18,10 @@ import '../features/users/user_form_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plan/plan_map_screen.dart';
 import '../features/plan/plan_screen.dart';
+import '../features/reports/reports_screen.dart';
+import '../features/reports/route_history_screen.dart';
 import '../features/tracking/live_map_screen.dart';
+import '../features/tracking/work_hours_screen.dart';
 import '../features/visits/add_visit_screen.dart';
 import '../features/visits/visit_detail_screen.dart';
 import '../features/visits/visits_screen.dart';
@@ -48,8 +51,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final me = profile.value;
       if (me == null || !me.active) return goTo('/no-access');
       if (const ['/splash', '/login', '/no-access'].contains(loc)) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules') && !me.role.isAdmin) return '/';
-      if (loc == '/live' && !me.role.isSupervisor) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/work-hours') && !me.role.isAdmin) return '/';
+      if (const ['/live', '/reports', '/history'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
     },
@@ -58,7 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/no-access', builder: (_, _) => const NoAccessScreen()),
       StatefulShellRoute.indexedStack(
-        builder: (_, _, shell) => AppShell(shell: shell),
+        builder: (_, state, shell) => AppShell(shell: shell, location: state.uri.path),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(
@@ -130,7 +133,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
+            GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
+            GoRoute(
+              path: '/history',
+              builder: (_, state) => RouteHistoryScreen(
+                userId: state.uri.queryParameters['uid'],
+                date: state.uri.queryParameters['date'],
+              ),
+            ),
             GoRoute(path: '/visit-rules', builder: (_, _) => const VisitRulesScreen()),
+            GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
             GoRoute(
               path: '/import',
               builder: (_, _) => const ImportScreen(),

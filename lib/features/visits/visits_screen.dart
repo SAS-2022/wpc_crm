@@ -63,6 +63,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     final users = {for (final u in allUsers) u.id: u};
     final visitors = allUsers.where((u) => u.active && u.role.isTracked).toList();
     final visits = ref.watch(visitsProvider);
+    final hidden = ref.watch(hiddenClientIdsProvider);
     final locale = Localizations.localeOf(context).toString();
     final now = DateTime.now();
 
@@ -86,6 +87,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
         data: (all) {
           final q = _query.trim().toLowerCase();
           final list = all
+              .where((v) => !hidden.contains(v.clientId))
               .where((v) => _visitor == null || v.salesExecId == _visitor || v.kamId == _visitor)
               .where((v) => _inPeriod(v, now))
               .where((v) => q.isEmpty || v.clientName.toLowerCase().contains(q) || v.notes.toLowerCase().contains(q))

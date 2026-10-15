@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -68,6 +69,8 @@ const TEXTS = {
     planApproved: (n, c, d) => `${n} approved your plan for ${d}`,
     planRejected: (n, c, d) => `${n} rejected an item in your plan for ${d}`,
     planChanged: (n, c, d) => `${n} changed your plan for ${d}`,
+    clientsTransferredIn: (n, c) => `${n} moved ${c} clients to you`,
+    clientsTransferredOut: (n, c, d, o) => `${n} moved ${c} of your clients to ${o || 'Unassigned'}`,
   },
   ar: {
     title: 'WPC CRM',
@@ -75,6 +78,8 @@ const TEXTS = {
     planApproved: (n, c, d) => `وافق ${n} على خطتك ليوم ${d}`,
     planRejected: (n, c, d) => `رفض ${n} عنصراً في خطتك ليوم ${d}`,
     planChanged: (n, c, d) => `عدّل ${n} خطتك ليوم ${d}`,
+    clientsTransferredIn: (n, c) => `نقل ${n} ${c} عميل إليك`,
+    clientsTransferredOut: (n, c, d, o) => `نقل ${n} ${c} من عملائك إلى ${o || 'غير مُسند'}`,
   },
 };
 
@@ -92,10 +97,13 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const n = event.data?.data();
   if (!n?.toId) return;
   const db = admin.firestore();
-  const [to, from, devices] = await Promise.all([
+  // For client transfers ownerId is the other sales executive (empty = unassigned).
+  const other = n.type === 'clientsTransferredOut' && n.ownerId ? `users/${n.ownerId}` : null;
+  const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
     db.collection(`users/${n.toId}/devices`).get(),
+    other ? db.doc(other).get() : null,
   ]);
   if (to.get('active') !== true || devices.empty) return;
 
@@ -109,7 +117,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const stale = [];
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
-    const body = (t[n.type] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang));
+    const body = (t[n.type] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '');
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
       notification: { title: t.title, body },
@@ -126,3 +134,41 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   }));
   await Promise.all(stale.map((token) => db.doc(`users/${n.toId}/devices/${token}`).delete()));
 });
+
+/** Route points are kept this many days (user decision), visits are kept. */
+const ROUTE_DAYS = 90;
+
+/**
+ * Every night deletes RTDB `location_history/{uid}/{yyyy-MM-dd}` days older
+ * than ROUTE_DAYS (Saudi time). Day keys sort as dates, so one key-range
+ * query per person finds the old days. People come from Firestore `users`
+ * and RTDB `roles`, which also covers deleted users whose role is still there.
+ */
+exports.cleanRouteHistory = onSchedule(
+  { schedule: '0 3 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const saudiNow = new Date(Date.now() + 3 * 3600 * 1000);
+    saudiNow.setUTCDate(saudiNow.getUTCDate() - ROUTE_DAYS - 1);
+    const lastOldDay = saudiNow.toISOString().slice(0, 10);
+
+    const rtdb = admin.database();
+    const [users, roles] = await Promise.all([
+      admin.firestore().collection('users').select().get(),
+      rtdb.ref('roles').get(),
+    ]);
+    const uids = new Set([...users.docs.map((d) => d.id), ...Object.keys(roles.val() || {})]);
+
+    let removed = 0;
+    for (const uid of uids) {
+      const ref = rtdb.ref(`location_history/${uid}`);
+      const old = await ref.orderByKey().endAt(lastOldDay).get();
+      const updates = {};
+      old.forEach((day) => { updates[day.key] = null; });
+      const count = Object.keys(updates).length;
+      if (count === 0) continue;
+      await ref.update(updates);
+      removed += count;
+    }
+    console.log(`cleanRouteHistory: removed ${removed} day(s) up to ${lastOldDay}`);
+  },
+);

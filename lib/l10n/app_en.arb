@@ -782,5 +782,202 @@
         "type": "int"
       }
     }
+  },
+  "reports": "Reports",
+  "routeHistory": "Route history",
+  "teamPerformance": "Team performance",
+  "person": "Person",
+  "clientsVisitedColumn": "Clients visited",
+  "ownClientsVisited": "Own clients visited",
+  "onSchedule": "On schedule",
+  "unvisitedInPeriod": "Not visited in this period ({count})",
+  "@unvisitedInPeriod": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allClientsVisited": "Every client was visited in this period",
+  "showAllCount": "Show all ({count})",
+  "@showAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importHistory": "Imports",
+  "noImports": "No imports yet",
+  "importBatchLine": "{added} new · {updated} updated · {unchanged} unchanged",
+  "@importBatchLine": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      },
+      "unchanged": {
+        "type": "int"
+      }
+    }
+  },
+  "importedByName": "by {name}",
+  "@importedByName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "distance": "Distance",
+  "firstLocation": "First location",
+  "lastLocation": "Last location",
+  "locationPointsCount": "{count} points",
+  "@locationPointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fakeGpsPoints": "{count} fake GPS points",
+  "@fakeGpsPoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noRouteData": "No locations recorded for this day",
+  "choosePerson": "Choose a person",
+  "previousDay": "Previous day",
+  "nextDay": "Next day",
+  "trackingGaps": "{count} gaps in tracking",
+  "@trackingGaps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hiddenClients": "Hidden clients",
+  "hideClient": "Hide client",
+  "unhideClient": "Show again",
+  "hideClientTitle": "Hide this client?",
+  "hideClientBody": "They will be left out of client lists, the map, plans, visits and all statistics, for everyone. Their visits and data are kept. To show them again, use the \"Hidden\" filter in Clients.",
+  "clientHiddenBanner": "Hidden: left out of lists and statistics",
+  "clientHidden": "Client hidden",
+  "clientUnhidden": "Client shown again",
+  "selectClients": "Select clients",
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectAll": "Select all",
+  "hideClientsTitle": "Hide {count} clients?",
+  "@hideClientsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsHiddenCount": "{count} clients hidden",
+  "@clientsHiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsUnhiddenCount": "{count} clients shown again",
+  "@clientsUnhiddenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveOffDuty": "Off duty · outside work hours, location not shared",
+  "workHours": "Work hours",
+  "workHoursHelp": "Field staff locations are shared only on these days and hours (Saudi time). Outside them nothing is sent and people show as off duty.",
+  "workDays": "Work days",
+  "startTime": "Start",
+  "endTime": "End",
+  "endAfterStart": "End time must be after start time",
+  "transferClients": "Transfer",
+  "transferClientsTitle": "Transfer {count} clients to",
+  "@transferClientsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transferClientTitle": "Transfer client to",
+  "transferPlanNote": "Open plan items for these clients from today on are removed from the current salesperson's plan. Past plans and visits are kept.",
+  "transferSkipped": "{count} selected clients are not in your team and will be skipped.",
+  "@transferSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transferNoneAllowed": "None of the selected clients belong to your team.",
+  "noTransferTargets": "No sales executives to transfer to",
+  "clientsTransferredCount": "{count} clients moved to {name}",
+  "@clientsTransferredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "transferHistory": "Transfer history",
+  "transferBy": "by {name} · {when}",
+  "@transferBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "notifClientsTransferredIn": "{name} moved {count} clients to you",
+  "@notifClientsTransferredIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifClientsTransferredOut": "{name} moved {count} of your clients to {other}",
+  "@notifClientsTransferredOut": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "other": {
+        "type": "String"
+      }
+    }
   }
 }

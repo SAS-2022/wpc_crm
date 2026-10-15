@@ -45,7 +45,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     });
     try {
       final rows = parseOdooTable(readTable(file.name, await file.readAsBytes()));
-      final existing = await ref.read(clientsProvider.future).timeout(const Duration(seconds: 60));
+      final existing = await ref.read(allClientsProvider.future).timeout(const Duration(seconds: 60));
       final users = await ref.read(usersProvider.future).timeout(const Duration(seconds: 60));
       final salespersonToUid = {
         for (final u in users)
@@ -122,7 +122,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   Widget build(BuildContext context) {
     // Keep the lists live while this screen is open; unwatched providers are
     // paused, which would leave the import waiting forever.
-    ref.watch(clientsProvider);
+    ref.watch(allClientsProvider);
     ref.watch(usersProvider);
     final l10n = AppLocalizations.of(context);
     final plan = _plan;

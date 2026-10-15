@@ -33,6 +33,13 @@
           }
         }
       }
+    },
+    "settings": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'sales_manager'",
+      "workHours": {
+        ".validate": "newData.hasChildren(['days', 'start', 'end']) && newData.child('start').isNumber() && newData.child('end').isNumber() && newData.child('end').val() > newData.child('start').val()"
+      }
     }
   }
 }

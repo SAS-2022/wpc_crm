@@ -59,7 +59,7 @@ class _LocationImportScreenState extends ConsumerState<LocationImportScreen> {
     });
     try {
       final rows = parseLocationTable(readTable(file.name, await file.readAsBytes()));
-      final clients = await ref.read(clientsProvider.future).timeout(const Duration(seconds: 60));
+      final clients = await ref.read(allClientsProvider.future).timeout(const Duration(seconds: 60));
 
       final shortLinks = {
         for (final r in rows)
@@ -130,7 +130,7 @@ class _LocationImportScreenState extends ConsumerState<LocationImportScreen> {
   @override
   Widget build(BuildContext context) {
     // Keep the client list live while this screen is open (see ImportScreen).
-    ref.watch(clientsProvider);
+    ref.watch(allClientsProvider);
     final users = ref.watch(usersProvider).value ?? const [];
     final l10n = AppLocalizations.of(context);
     final plan = _plan;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
@@ -51,8 +52,8 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
   Color _color(PlanTask t) => t.done
       ? statusRecentColor
       : t.approval == TaskApproval.pending
-          ? statusDueSoonColor
-          : plannedColor;
+      ? statusDueSoonColor
+      : plannedColor;
 
   void _fit(List<LatLng> points) {
     if (_map != null) fitPoints(_map!, points);
@@ -63,11 +64,14 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     final owner = (ref.watch(usersProvider).value ?? const <AppUser>[]).where((u) => u.id == widget.userId).firstOrNull;
-    final clients = {for (final c in ref.watch(clientsProvider).value ?? const <Client>[]) c.id: c};
+    final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final tasks = (ref.watch(dayTasksProvider((widget.userId, widget.date))).value ?? const <PlanTask>[])
         .where((t) => t.isVisit && t.approval != TaskApproval.rejected)
         .toList();
-    final located = [for (final t in tasks) if (clients[t.clientId]?.hasLocation ?? false) t];
+    final located = [
+      for (final t in tasks)
+        if (clients[t.clientId]?.hasLocation ?? false) t,
+    ];
     final points = [for (final t in located) LatLng(clients[t.clientId]!.lat!, clients[t.clientId]!.lng!)];
     final missing = tasks.length - located.length;
 
@@ -110,40 +114,45 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
           PositionedDirectional(
             end: 12,
             bottom: 32,
-            child: MapControls(
-              map: _map,
-              onMyLocation: _goToMe,
-              onFitAll: points.isEmpty ? null : () => _fit(points),
-            ),
+            child: MapControls(map: _map, onMyLocation: _goToMe, onFitAll: points.isEmpty ? null : () => _fit(points)),
           ),
           PositionedDirectional(
             top: 8,
             start: 8,
             end: 8,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Wrap(spacing: 14, runSpacing: 4, children: [
-                      for (final (color, label) in [
-                        (plannedColor, l10n.plannedToday),
-                        (statusDueSoonColor, l10n.waitingApproval),
-                        (statusRecentColor, l10n.done),
-                      ])
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.circle, size: 12, color: color),
-                          const SizedBox(width: 4),
-                          Text(label, style: Theme.of(context).textTheme.bodySmall),
-                        ]),
-                    ]),
-                    if (missing > 0) ...[
-                      const SizedBox(height: 4),
-                      Text(l10n.planClientsWithoutLocation(missing), style: Theme.of(context).textTheme.bodySmall),
+            child: PointerInterceptor(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 4,
+                        children: [
+                          for (final (color, label) in [
+                            (plannedColor, l10n.plannedToday),
+                            (statusDueSoonColor, l10n.waitingApproval),
+                            (statusRecentColor, l10n.done),
+                          ])
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.circle, size: 12, color: color),
+                                const SizedBox(width: 4),
+                                Text(label, style: Theme.of(context).textTheme.bodySmall),
+                              ],
+                            ),
+                        ],
+                      ),
+                      if (missing > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(l10n.planClientsWithoutLocation(missing), style: Theme.of(context).textTheme.bodySmall),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -159,7 +168,14 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
     final canManage = me?.role.isSupervisor ?? false;
     Future<void> notify(NotificationType type) => me == null || owner == null
         ? Future.value()
-        : sendNotifications(toIds: [owner.id], type: type, fromId: me.id, ownerId: owner.id, date: widget.date, count: 1);
+        : sendNotifications(
+            toIds: [owner.id],
+            type: type,
+            fromId: me.id,
+            ownerId: owner.id,
+            date: widget.date,
+            count: 1,
+          );
 
     showModalBottomSheet<void>(
       context: context,
@@ -173,41 +189,47 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
               Text('$number. ${c.name}', style: Theme.of(context).textTheme.titleMedium),
               if (c.city.isNotEmpty) Text(c.city),
               if (t.title.isNotEmpty) Text(t.title),
-              Text(t.done
-                  ? l10n.done
-                  : t.approval == TaskApproval.pending
-                      ? l10n.waitingApproval
-                      : l10n.toDo),
+              Text(
+                t.done
+                    ? l10n.done
+                    : t.approval == TaskApproval.pending
+                    ? l10n.waitingApproval
+                    : l10n.toDo,
+              ),
               const SizedBox(height: 16),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(sheet);
-                    context.push('/clients/${c.id}');
-                  },
-                  child: Text(l10n.details),
-                ),
-                if (canManage && t.approval == TaskApproval.pending)
-                  FilledButton(
-                    onPressed: () async {
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
                       Navigator.pop(sheet);
-                      await repo.setApproval(t.id, TaskApproval.approved, me!.id);
-                      await notify(NotificationType.planApproved);
+                      context.push('/clients/${c.id}');
                     },
-                    child: Text(l10n.approve),
+                    child: Text(l10n.details),
                   ),
-                if (canManage)
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                    onPressed: () async {
-                      Navigator.pop(sheet);
-                      await repo.delete(t.id);
-                      if (owner?.id != me?.id) await notify(NotificationType.planChanged);
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(l10n.removeFromPlan),
-                  ),
-              ]),
+                  if (canManage && t.approval == TaskApproval.pending)
+                    FilledButton(
+                      onPressed: () async {
+                        Navigator.pop(sheet);
+                        await repo.setApproval(t.id, TaskApproval.approved, me!.id);
+                        await notify(NotificationType.planApproved);
+                      },
+                      child: Text(l10n.approve),
+                    ),
+                  if (canManage)
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                      onPressed: () async {
+                        Navigator.pop(sheet);
+                        await repo.delete(t.id);
+                        if (owner?.id != me?.id) await notify(NotificationType.planChanged);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(l10n.removeFromPlan),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

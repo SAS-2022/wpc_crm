@@ -1933,6 +1933,348 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{visited} of {total} clients visited · {pending} still pending'**
   String visitedOfClients(int visited, int total, int pending);
+
+  /// No description provided for @reports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reports;
+
+  /// No description provided for @routeHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Route history'**
+  String get routeHistory;
+
+  /// No description provided for @teamPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Team performance'**
+  String get teamPerformance;
+
+  /// No description provided for @person.
+  ///
+  /// In en, this message translates to:
+  /// **'Person'**
+  String get person;
+
+  /// No description provided for @clientsVisitedColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients visited'**
+  String get clientsVisitedColumn;
+
+  /// No description provided for @ownClientsVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Own clients visited'**
+  String get ownClientsVisited;
+
+  /// No description provided for @onSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'On schedule'**
+  String get onSchedule;
+
+  /// No description provided for @unvisitedInPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited in this period ({count})'**
+  String unvisitedInPeriod(int count);
+
+  /// No description provided for @allClientsVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Every client was visited in this period'**
+  String get allClientsVisited;
+
+  /// No description provided for @showAllCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all ({count})'**
+  String showAllCount(int count);
+
+  /// No description provided for @importHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Imports'**
+  String get importHistory;
+
+  /// No description provided for @noImports.
+  ///
+  /// In en, this message translates to:
+  /// **'No imports yet'**
+  String get noImports;
+
+  /// No description provided for @importBatchLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{added} new · {updated} updated · {unchanged} unchanged'**
+  String importBatchLine(int added, int updated, int unchanged);
+
+  /// No description provided for @importedByName.
+  ///
+  /// In en, this message translates to:
+  /// **'by {name}'**
+  String importedByName(String name);
+
+  /// No description provided for @distance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get distance;
+
+  /// No description provided for @firstLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'First location'**
+  String get firstLocation;
+
+  /// No description provided for @lastLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Last location'**
+  String get lastLocation;
+
+  /// No description provided for @locationPointsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} points'**
+  String locationPointsCount(int count);
+
+  /// No description provided for @fakeGpsPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} fake GPS points'**
+  String fakeGpsPoints(int count);
+
+  /// No description provided for @noRouteData.
+  ///
+  /// In en, this message translates to:
+  /// **'No locations recorded for this day'**
+  String get noRouteData;
+
+  /// No description provided for @choosePerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a person'**
+  String get choosePerson;
+
+  /// No description provided for @previousDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get previousDay;
+
+  /// No description provided for @nextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get nextDay;
+
+  /// No description provided for @trackingGaps.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} gaps in tracking'**
+  String trackingGaps(int count);
+
+  /// No description provided for @hiddenClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden clients'**
+  String get hiddenClients;
+
+  /// No description provided for @hideClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide client'**
+  String get hideClient;
+
+  /// No description provided for @unhideClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Show again'**
+  String get unhideClient;
+
+  /// No description provided for @hideClientTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this client?'**
+  String get hideClientTitle;
+
+  /// No description provided for @hideClientBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They will be left out of client lists, the map, plans, visits and all statistics, for everyone. Their visits and data are kept. To show them again, use the \"Hidden\" filter in Clients.'**
+  String get hideClientBody;
+
+  /// No description provided for @clientHiddenBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: left out of lists and statistics'**
+  String get clientHiddenBanner;
+
+  /// No description provided for @clientHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Client hidden'**
+  String get clientHidden;
+
+  /// No description provided for @clientUnhidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Client shown again'**
+  String get clientUnhidden;
+
+  /// No description provided for @selectClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Select clients'**
+  String get selectClients;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @hideClientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide {count} clients?'**
+  String hideClientsTitle(int count);
+
+  /// No description provided for @clientsHiddenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients hidden'**
+  String clientsHiddenCount(int count);
+
+  /// No description provided for @clientsUnhiddenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients shown again'**
+  String clientsUnhiddenCount(int count);
+
+  /// No description provided for @liveOffDuty.
+  ///
+  /// In en, this message translates to:
+  /// **'Off duty · outside work hours, location not shared'**
+  String get liveOffDuty;
+
+  /// No description provided for @workHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Work hours'**
+  String get workHours;
+
+  /// No description provided for @workHoursHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Field staff locations are shared only on these days and hours (Saudi time). Outside them nothing is sent and people show as off duty.'**
+  String get workHoursHelp;
+
+  /// No description provided for @workDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Work days'**
+  String get workDays;
+
+  /// No description provided for @startTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get startTime;
+
+  /// No description provided for @endTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get endTime;
+
+  /// No description provided for @endAfterStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be after start time'**
+  String get endAfterStart;
+
+  /// No description provided for @transferClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer'**
+  String get transferClients;
+
+  /// No description provided for @transferClientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer {count} clients to'**
+  String transferClientsTitle(int count);
+
+  /// No description provided for @transferClientTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer client to'**
+  String get transferClientTitle;
+
+  /// No description provided for @transferPlanNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Open plan items for these clients from today on are removed from the current salesperson\'s plan. Past plans and visits are kept.'**
+  String get transferPlanNote;
+
+  /// No description provided for @transferSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected clients are not in your team and will be skipped.'**
+  String transferSkipped(int count);
+
+  /// No description provided for @transferNoneAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'None of the selected clients belong to your team.'**
+  String get transferNoneAllowed;
+
+  /// No description provided for @noTransferTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales executives to transfer to'**
+  String get noTransferTargets;
+
+  /// No description provided for @clientsTransferredCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients moved to {name}'**
+  String clientsTransferredCount(int count, String name);
+
+  /// No description provided for @transferHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer history'**
+  String get transferHistory;
+
+  /// No description provided for @transferBy.
+  ///
+  /// In en, this message translates to:
+  /// **'by {name} · {when}'**
+  String transferBy(String name, String when);
+
+  /// No description provided for @notifClientsTransferredIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} moved {count} clients to you'**
+  String notifClientsTransferredIn(String name, int count);
+
+  /// No description provided for @notifClientsTransferredOut.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} moved {count} of your clients to {other}'**
+  String notifClientsTransferredOut(String name, int count, String other);
 }
 
 class _AppLocalizationsDelegate

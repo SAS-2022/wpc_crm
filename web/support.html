@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WPC CRM Support</title>
+  <meta name="description" content="Help with the WPC CRM app: getting an account, location settings, notifications and contact.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root {
+      --bg: #fdf8f4; --surface: #ffffff; --ink: #1d1b19; --muted: #5c5650;
+      --line: #e6ddd4; --accent: #8b5a2b; --accent-soft: #f3e7da;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #171412; --surface: #211d1a; --ink: #f1ebe5; --muted: #b5aca3;
+        --line: #3a332d; --accent: #e0b083; --accent-soft: #3a2c20;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #171412; --surface: #211d1a; --ink: #f1ebe5; --muted: #b5aca3;
+      --line: #3a332d; --accent: #e0b083; --accent-soft: #3a2c20;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", Tahoma, sans-serif;
+    }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 24px 16px 64px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    header img { height: 44px; }
+    nav a { color: var(--accent); text-decoration: none; font-weight: 600; margin-inline-start: 16px; }
+    section.lang { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 24px 24px; margin-top: 24px; }
+    h1 { font-size: 1.7rem; line-height: 1.25; margin: 20px 0 4px; }
+    h2 { font-size: 1.15rem; margin: 28px 0 8px; color: var(--accent); }
+    .contact { background: var(--accent-soft); border-radius: 10px; padding: 14px 18px; margin: 16px 0; }
+    ul, ol { padding-inline-start: 22px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/assets/images/Regular.png" alt="WPC Wood Panels Co">
+    <nav><a href="#en">English</a><a href="#ar">العربية</a><a href="privacy.html">Privacy · الخصوصية</a></nav>
+  </header>
+
+  <section class="lang" id="en" lang="en" dir="ltr">
+    <h1>WPC CRM Support</h1>
+    <p>WPC CRM is the field sales app for Wood Panels Co staff. Sales executives use it to plan and record client visits; managers use it to follow the team's visits, routes and targets. Managers can also use the web dashboard at <a href="https://wpc-crm-a9247.web.app">wpc-crm-a9247.web.app</a>.</p>
+
+    <div class="contact">
+      <strong>Contact:</strong> <a href="mailto:wissam.b@woodpanelsco.com">wissam.b@woodpanelsco.com</a><br>
+      Please include your name, your phone model and a short description or screenshot of the problem.
+    </div>
+
+    <h2>Getting an account</h2>
+    <p>Accounts are created by the sales manager or general manager. There is no public sign-up. If you need an account, or forgot your password, contact your manager.</p>
+
+    <h2>Location sharing</h2>
+    <ul>
+      <li><strong>iPhone:</strong> Settings → WPC CRM → Location → <em>Always</em>, and turn on <em>Precise Location</em>.</li>
+      <li><strong>Android:</strong> Settings → Apps → WPC CRM → Permissions → Location → <em>Allow all the time</em>. Also allow notifications, and set Battery to <em>Unrestricted</em> (on Xiaomi phones also turn on <em>Autostart</em>).</li>
+      <li>The Home screen of the app shows a card when something is missing, with a <em>Fix</em> button.</li>
+      <li>Your location is shared only during work hours (currently Saturday to Thursday, 08:00–18:00 Saudi time), and never after you sign out.</li>
+    </ul>
+
+    <h2>Check-in problems</h2>
+    <ul>
+      <li>Wait a few seconds outdoors so GPS can get an accurate position.</li>
+      <li>A check-in far from the client is still saved, but marked so your manager can see it.</li>
+      <li>If a client has no location yet, you can set it at the visit.</li>
+    </ul>
+
+    <h2>Notifications</h2>
+    <p>Allow notifications for WPC CRM in your phone's settings. You get notified when your plan is approved, rejected or changed, and managers when a plan is submitted.</p>
+
+    <h2>Privacy</h2>
+    <p>See the <a href="privacy.html">privacy policy</a> for what the app collects and who can see it.</p>
+  </section>
+
+  <section class="lang" id="ar" lang="ar" dir="rtl">
+    <h1>الدعم لتطبيق WPC CRM</h1>
+    <p>WPC CRM هو تطبيق المبيعات الميدانية لموظفي Wood Panels Co. يستخدمه مندوبو المبيعات لتخطيط زيارات العملاء وتسجيلها، ويستخدمه المدراء لمتابعة زيارات الفريق ومساراته وأهدافه. ويمكن للمدراء أيضًا استخدام لوحة المعلومات على الويب: <a href="https://wpc-crm-a9247.web.app">wpc-crm-a9247.web.app</a>.</p>
+
+    <div class="contact">
+      <strong>التواصل:</strong> <a href="mailto:wissam.b@woodpanelsco.com">wissam.b@woodpanelsco.com</a><br>
+      يرجى ذكر اسمك وطراز هاتفك ووصف قصير للمشكلة أو لقطة شاشة.
+    </div>
+
+    <h2>الحصول على حساب</h2>
+    <p>يُنشئ مدير المبيعات أو المدير العام الحسابات، ولا يوجد تسجيل عام. إذا احتجت إلى حساب أو نسيت كلمة المرور، تواصل مع مديرك.</p>
+
+    <h2>مشاركة الموقع</h2>
+    <ul>
+      <li><strong>iPhone:</strong> الإعدادات ← WPC CRM ← الموقع ← <em>دائمًا</em>، وفعّل <em>الموقع الدقيق</em>.</li>
+      <li><strong>أندرويد:</strong> الإعدادات ← التطبيقات ← WPC CRM ← الأذونات ← الموقع ← <em>السماح طوال الوقت</em>. اسمح أيضًا بالإشعارات، واضبط البطارية على <em>غير مقيّد</em> (وفي هواتف Xiaomi فعّل أيضًا <em>التشغيل التلقائي</em>).</li>
+      <li>تظهر في الشاشة الرئيسية للتطبيق بطاقة عند وجود إعداد ناقص، مع زر <em>إصلاح</em>.</li>
+      <li>تتم مشاركة موقعك خلال ساعات العمل فقط (حاليًا من السبت إلى الخميس، 08:00–18:00 بتوقيت السعودية)، ولا تتم بعد تسجيل الخروج.</li>
+    </ul>
+
+    <h2>مشاكل تسجيل الحضور</h2>
+    <ul>
+      <li>انتظر بضع ثوانٍ في مكان مفتوح ليحصل GPS على موقع دقيق.</li>
+      <li>يُحفظ تسجيل الحضور البعيد عن العميل، لكنه يُعلَّم ليراه مديرك.</li>
+      <li>إذا لم يكن للعميل موقع بعد، يمكنك تحديده أثناء الزيارة.</li>
+    </ul>
+
+    <h2>الإشعارات</h2>
+    <p>اسمح بالإشعارات لتطبيق WPC CRM من إعدادات الهاتف. تصلك إشعارات عند الموافقة على خطتك أو رفضها أو تعديلها، ويصل للمدراء إشعار عند إرسال خطة.</p>
+
+    <h2>الخصوصية</h2>
+    <p>راجع <a href="privacy.html">سياسة الخصوصية</a> لمعرفة البيانات التي يجمعها التطبيق ومن يمكنه الاطلاع عليها.</p>
+  </section>
+</div>
+</body>
+</html>

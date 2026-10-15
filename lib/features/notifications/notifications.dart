@@ -17,6 +17,13 @@ enum NotificationType {
 
   /// A KAM / manager added or removed items in someone's plan.
   planChanged,
+
+  /// A KAM / manager moved clients to the recipient (count = how many).
+  clientsTransferredIn,
+
+  /// A KAM / manager moved the recipient's clients to `ownerId` (empty =
+  /// unassigned); their open plan items for those clients were removed.
+  clientsTransferredOut,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -37,7 +44,8 @@ class AppNotification {
   final NotificationType type;
   final String fromId;
 
-  /// Whose plan it is about, and which day.
+  /// Whose plan it is about, and which day. For client transfers: the
+  /// other sales executive, and no day.
   final String ownerId;
   final String date;
   final int count;
