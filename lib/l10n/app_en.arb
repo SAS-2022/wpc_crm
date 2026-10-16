@@ -784,6 +784,7 @@
     }
   },
   "reports": "Reports",
+  "tripDetails": "Trip details",
   "routeHistory": "Route history",
   "teamPerformance": "Team performance",
   "person": "Person",
@@ -1136,5 +1137,32 @@
         "type": "int"
       }
     }
-  }
+  },
+  "profile": "Profile",
+  "personalInfo": "Personal info",
+  "emailChangeByAdmin": "To change your email or role, ask a sales manager.",
+  "changePassword": "Change password",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmNewPassword": "Confirm new password",
+  "passwordsDontMatch": "Passwords don't match",
+  "wrongCurrentPassword": "Current password is wrong",
+  "passwordChanged": "Password changed",
+  "resetPasswordByEmail": "Reset password by email",
+  "resetPasswordInfo": "Forgot your current password? We'll email you a link to set a new one.",
+  "sendResetLink": "Send link",
+  "resetEmailSent": "Reset link sent to {email}",
+  "@resetEmailSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "forgotPassword": "Forgot password?",
+  "resetEmailSentIfExists": "If this email has an account, a reset link was sent to it.",
+  "tooManyAttempts": "Too many attempts. Try again later.",
+  "updateRequiredTitle": "Update required",
+  "updateRequiredBody": "A new version of WPC CRM is available. Please update the app to continue.",
+  "updateNow": "Update now"
 }

@@ -14,6 +14,7 @@ import '../features/home/home_screen.dart';
 import '../features/home/more_screen.dart';
 import '../features/import/import_screen.dart';
 import '../features/import/location_import_screen.dart';
+import '../features/users/profile_screen.dart';
 import '../features/users/user_form_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plan/plan_map_screen.dart';
@@ -61,10 +62,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/no-access', builder: (_, _) => const NoAccessScreen()),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (_, state, shell) => AppShell(shell: shell, location: state.uri.path),
+        navigatorContainerBuilder: (_, shell, children) => BranchPager(shell: shell, children: children),
         branches: [
-          StatefulShellBranch(routes: [
+          StatefulShellBranch(preload: true, routes: [
             GoRoute(
               path: '/',
               builder: (_, _) => const HomeScreen(),
@@ -89,7 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ],
             ),
           ]),
-          StatefulShellBranch(routes: [
+          StatefulShellBranch(preload: true, routes: [
             GoRoute(
               path: '/clients',
               builder: (_, _) => const ClientsScreen(),
@@ -114,7 +116,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(path: '/map', builder: (_, _) => const ClientsMapScreen()),
           ]),
-          StatefulShellBranch(routes: [
+          StatefulShellBranch(preload: true, routes: [
             GoRoute(
               path: '/visits',
               builder: (_, _) => const VisitsScreen(),
@@ -131,8 +133,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               ],
             ),
           ]),
-          StatefulShellBranch(routes: [
+          StatefulShellBranch(preload: true, routes: [
             GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
+            GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(

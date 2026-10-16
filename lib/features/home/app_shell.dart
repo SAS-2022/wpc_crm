@@ -94,3 +94,89 @@ class AppShell extends ConsumerWidget {
     );
   }
 }
+
+/// The tabs' navigators side by side, so on phones a sideways swipe moves to
+/// the next / previous tab (tapping still works). Swiping only works on a
+/// tab's first screen: deeper screens have maps and sliders that need the
+/// gesture. Wide screens keep a plain stack (side menu, no swiping).
+class BranchPager extends StatefulWidget {
+  const BranchPager({super.key, required this.shell, required this.children});
+
+  final StatefulNavigationShell shell;
+  final List<Widget> children;
+
+  @override
+  State<BranchPager> createState() => _BranchPagerState();
+}
+
+class _BranchPagerState extends State<BranchPager> {
+  static const _tabRoots = {'/', '/clients', '/visits', '/more'};
+  late final _pages = PageController(initialPage: widget.shell.currentIndex);
+
+  /// True while the pager follows a tab tap, so that move isn't taken for a swipe.
+  bool _following = false;
+
+  @override
+  void didUpdateWidget(BranchPager old) {
+    super.didUpdateWidget(old);
+    // A tab was tapped (or a link opened another tab): show it without
+    // sliding past the tabs in between.
+    final index = widget.shell.currentIndex;
+    if (_pages.hasClients && _pages.page?.round() != index) {
+      _following = true;
+      _pages.jumpToPage(index);
+      _following = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = widget.shell;
+    if (MediaQuery.sizeOf(context).width >= wideLayoutWidth) {
+      return IndexedStack(index: shell.currentIndex, children: widget.children);
+    }
+    final atRoot = _tabRoots.contains(shell.shellRouteContext.routerState.uri.path);
+    // Switches tab once the swipe has settled, so the gesture isn't cut off
+    // halfway by the other tab's screen.
+    return NotificationListener<ScrollEndNotification>(
+      onNotification: (n) {
+        // widget.shell, not the one captured at build: it has the current tab.
+        final i = _pages.page?.round();
+        if (!_following && n.depth == 0 && i != null && i != widget.shell.currentIndex) widget.shell.goBranch(i);
+        return false;
+      },
+      child: PageView(
+        controller: _pages,
+        physics: atRoot ? const PageScrollPhysics() : const NeverScrollableScrollPhysics(),
+        children: [for (final child in widget.children) _KeepAlive(child: child)],
+      ),
+    );
+  }
+}
+
+/// Keeps a tab's navigator (and its screens' state) while it's off screen.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+}

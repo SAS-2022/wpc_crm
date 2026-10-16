@@ -1075,6 +1075,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reports => 'التقارير';
 
   @override
+  String get tripDetails => 'تفاصيل الرحلة';
+
+  @override
   String get routeHistory => 'سجل المسار';
 
   @override
@@ -1469,4 +1472,70 @@ class AppLocalizationsAr extends AppLocalizations {
   String clientsMerged(int count) {
     return 'تم دمج $count عملاء في عميل واحد';
   }
+
+  @override
+  String get profile => 'الملف الشخصي';
+
+  @override
+  String get personalInfo => 'المعلومات الشخصية';
+
+  @override
+  String get emailChangeByAdmin =>
+      'لتغيير بريدك الإلكتروني أو دورك، تواصل مع مدير المبيعات.';
+
+  @override
+  String get changePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get currentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get newPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get confirmNewPassword => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get passwordsDontMatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get wrongCurrentPassword => 'كلمة المرور الحالية غير صحيحة';
+
+  @override
+  String get passwordChanged => 'تم تغيير كلمة المرور';
+
+  @override
+  String get resetPasswordByEmail => 'إعادة تعيين كلمة المرور عبر البريد';
+
+  @override
+  String get resetPasswordInfo =>
+      'نسيت كلمة المرور الحالية؟ سنرسل لك رابطاً عبر البريد لتعيين كلمة جديدة.';
+
+  @override
+  String get sendResetLink => 'إرسال الرابط';
+
+  @override
+  String resetEmailSent(String email) {
+    return 'تم إرسال رابط إعادة التعيين إلى $email';
+  }
+
+  @override
+  String get forgotPassword => 'نسيت كلمة المرور؟';
+
+  @override
+  String get resetEmailSentIfExists =>
+      'إذا كان لهذا البريد حساب، فقد أُرسل إليه رابط إعادة التعيين.';
+
+  @override
+  String get tooManyAttempts => 'محاولات كثيرة. حاول لاحقاً.';
+
+  @override
+  String get updateRequiredTitle => 'التحديث مطلوب';
+
+  @override
+  String get updateRequiredBody =>
+      'يتوفر إصدار جديد من WPC CRM. يرجى تحديث التطبيق للمتابعة.';
+
+  @override
+  String get updateNow => 'حدّث الآن';
 }

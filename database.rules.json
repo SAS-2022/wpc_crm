@@ -34,6 +34,12 @@
         }
       }
     },
+    "route_snapped": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
     "tracking_events": {
       ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'"
     },

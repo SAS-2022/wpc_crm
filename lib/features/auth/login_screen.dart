@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/language_button.dart';
+import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -39,6 +40,36 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Emails a reset link. The answer is the same whether or not the address
+  /// has an account, so the screen doesn't reveal who has one.
+  Future<void> _forgotPassword() async {
+    final l10n = AppLocalizations.of(context);
+    final email = await showTextInputDialog(
+      context,
+      title: l10n.forgotPassword,
+      label: l10n.email,
+      initialText: _email.text.trim(),
+      confirmLabel: l10n.sendResetLink,
+      maxLines: 1,
+    );
+    if (email == null || !email.trim().contains('@') || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await FirebaseAuth.instance.setLanguageCode(Localizations.localeOf(context).languageCode);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'too-many-requests') {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.tooManyAttempts)));
+        return;
+      }
+      if (e.code == 'invalid-email') {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.invalidEmail)));
+        return;
+      }
+    }
+    messenger.showSnackBar(SnackBar(content: Text(l10n.resetEmailSentIfExists)));
   }
 
   @override
@@ -94,6 +125,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : Text(l10n.signIn),
                   ),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: _busy ? null : _forgotPassword, child: Text(l10n.forgotPassword)),
                 ],
               ),
             ),

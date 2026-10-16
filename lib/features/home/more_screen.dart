@@ -28,6 +28,8 @@ class MoreScreen extends ConsumerWidget {
             leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
             title: Text(me.name),
             subtitle: Text('${me.role.label(l10n)} · ${me.email}'),
+            trailing: Tooltip(message: l10n.profile, child: const Icon(Icons.chevron_right)),
+            onTap: () => context.push('/profile'),
           ),
           const Divider(),
           if (me.role.isTracked)
@@ -85,6 +87,7 @@ class MoreScreen extends ConsumerWidget {
               title: Text(l10n.workHours),
               onTap: () => context.push('/work-hours'),
             ),
+
           ],
           const Divider(),
           ListTile(

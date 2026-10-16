@@ -190,3 +190,85 @@ double distanceBetween(double lat1, double lng1, double lat2, double lng2) {
   final a = math.pow(math.sin(dLat / 2), 2) + math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.pow(math.sin(dLng / 2), 2);
   return 2 * r * math.asin(math.sqrt(a));
 }
+
+/// A stretch of route between two fixes, snapped to roads by the `snapRoute`
+/// Cloud Function (RTDB `route_snapped/{uid}/{day}/legs`).
+class SnappedLeg {
+  const SnappedLeg({required this.from, required this.to, required this.meters, this.points});
+
+  final DateTime from;
+  final DateTime to;
+  final double meters;
+
+  /// Road shape; null = no believable road route, drawn straight.
+  final List<(double, double)>? points;
+}
+
+/// One person's day from `route_snapped`: [handled] = history points the
+/// function has seen (when it equals the history count, nothing is pending).
+class SnappedRoute {
+  const SnappedRoute({this.handled = 0, this.legs = const []});
+
+  final int handled;
+  final List<SnappedLeg> legs;
+}
+
+/// Decodes a Google encoded polyline into (lat, lng) pairs.
+List<(double, double)> decodePolyline(String encoded) {
+  final points = <(double, double)>[];
+  var index = 0, lat = 0, lng = 0;
+  int next() {
+    var result = 0, shift = 0, b = 0;
+    do {
+      b = encoded.codeUnitAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20 && index < encoded.length);
+    // Not `~`: on the web it gives an unsigned 32-bit number.
+    return (result & 1) != 0 ? -(result >> 1) - 1 : result >> 1;
+  }
+
+  while (index < encoded.length) {
+    lat += next();
+    lng += next();
+    points.add((lat / 1e5, lng / 1e5));
+  }
+  return points;
+}
+
+/// The line drawn for each run and the distance travelled: road shapes where
+/// [legs] cover the run, straight lines between fixes elsewhere (e.g. fixes
+/// not snapped yet). Fixes inside a leg (standing at a client) are skipped.
+({List<List<(double, double)>> lines, double meters}) routeLines(List<List<RoutePoint>> runs, List<SnappedLeg> legs) {
+  final sorted = [...legs]..sort((a, b) => a.from.compareTo(b.from));
+  final lines = <List<(double, double)>>[];
+  var meters = 0.0;
+  void straight(List<RoutePoint> piece, List<(double, double)> line) {
+    if (piece.length < 2) return;
+    // The first fix is already the end of the line when a leg came before.
+    line.addAll([for (final p in piece.skip(line.isEmpty ? 0 : 1)) (p.lat, p.lng)]);
+    meters += summarizeRoute(piece).distanceMeters;
+  }
+
+  for (final run in runs) {
+    final line = <(double, double)>[];
+    var cursor = run.first.t;
+    for (final leg in sorted) {
+      if (leg.from.isBefore(cursor) || leg.to.isAfter(run.last.t)) continue;
+      straight([for (final p in run) if (!p.t.isBefore(cursor) && !p.t.isAfter(leg.from)) p], line);
+      final from = run.firstWhere((p) => p.t == leg.from, orElse: () => run.first);
+      final to = run.firstWhere((p) => p.t == leg.to, orElse: () => run.last);
+      line.addAll(leg.points ?? [(from.lat, from.lng), (to.lat, to.lng)]);
+      meters += leg.meters;
+      cursor = leg.to;
+    }
+    straight([for (final p in run) if (!p.t.isBefore(cursor)) p], line);
+    lines.add(line);
+  }
+  // Across tracking gaps the way taken is unknown: counted straight, as before.
+  for (var i = 1; i < runs.length; i++) {
+    final (a, b) = (runs[i - 1].last, runs[i].first);
+    meters += distanceBetween(a.lat, a.lng, b.lat, b.lng);
+  }
+  return (lines: lines, meters: meters);
+}

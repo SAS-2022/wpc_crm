@@ -154,4 +154,35 @@ void main() {
     expect(runs.map((r) => r.length), [3, 3, 1]);
     expect(splitAtGaps(const []), isEmpty);
   });
+
+  test('decodes a Google encoded polyline', () {
+    final points = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+    expect(points.length, 3);
+    expect(points[0].$1, closeTo(38.5, 1e-6));
+    expect(points[0].$2, closeTo(-120.2, 1e-6));
+    expect(points[2].$1, closeTo(43.252, 1e-6));
+    expect(points[2].$2, closeTo(-126.453, 1e-6));
+  });
+
+  test('route lines use road legs and skip fixes standing inside them', () {
+    final t0 = DateTime(2026, 10, 14, 8);
+    DateTime at(int minute) => t0.add(Duration(minutes: minute));
+    RoutePoint p(double lat, int minute) => RoutePoint(lat: lat, lng: 46.6, t: at(minute), accuracy: 10);
+    final run = [p(24.70, 0), p(24.71, 2), p(24.7101, 4), p(24.72, 6), p(24.73, 8)];
+    final legs = [
+      SnappedLeg(from: at(0), to: at(2), meters: 1500, points: const [(24.70, 46.6), (24.705, 46.61), (24.71, 46.6)]),
+      SnappedLeg(from: at(2), to: at(6), meters: 1300), // no believable road: straight
+    ];
+    final result = routeLines([run], legs);
+    expect(result.lines.single, [
+      (24.70, 46.6), (24.705, 46.61), (24.71, 46.6), // road leg
+      (24.71, 46.6), (24.72, 46.6), // straight leg; the fix at minute 4 is skipped
+      (24.73, 46.6), // not snapped yet
+    ]);
+    expect(result.meters, closeTo(1500 + 1300 + 1112, 5));
+
+    final unsnapped = routeLines([run], const []);
+    expect(unsnapped.lines.single.length, 5);
+    expect(unsnapped.meters, closeTo(summarizeRoute(run).distanceMeters, 0.01));
+  });
 }

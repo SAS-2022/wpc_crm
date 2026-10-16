@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
 import 'core/router.dart';
+import 'features/app_update/app_update.dart';
 import 'features/notifications/push.dart';
 import 'features/tracking/tracking_service.dart';
 import 'features/tracking/tracking_status.dart';
@@ -50,7 +51,7 @@ class WpcCrmApp extends ConsumerWidget {
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: child,
+        child: UpdateGate(child: child),
       ),
     );
   }

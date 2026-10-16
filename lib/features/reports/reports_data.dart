@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -69,3 +70,35 @@ RoutePoint? _point(Object? value) {
     mocked: value['mocked'] == true,
   );
 }
+
+/// Road-snapped legs of one person's day ('yyyy-MM-dd'), written by the
+/// `snapRoute` Cloud Function.
+final snappedRouteProvider = StreamProvider.autoDispose.family<SnappedRoute, (String, String)>((ref, key) =>
+    FirebaseDatabase.instance.ref('route_snapped/${key.$1}/${key.$2}').onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value is! Map<Object?, Object?>) return const SnappedRoute();
+      return SnappedRoute(
+        handled: (value['n'] as num?)?.toInt() ?? 0,
+        legs: [
+          if (value['legs'] case final Map<Object?, Object?> legs)
+            for (final MapEntry(:key, :value) in legs.entries) ?_leg(key, value),
+        ],
+      );
+    }));
+
+SnappedLeg? _leg(Object? key, Object? value) {
+  final times = '$key'.split('_').map(int.tryParse).toList();
+  if (times.length != 2 || times.contains(null) || value is! Map<Object?, Object?>) return null;
+  final encoded = value['p'];
+  return SnappedLeg(
+    from: DateTime.fromMillisecondsSinceEpoch(times[0]!),
+    to: DateTime.fromMillisecondsSinceEpoch(times[1]!),
+    meters: (value['m'] as num?)?.toDouble() ?? 0,
+    points: encoded is String ? decodePolyline(encoded) : null,
+  );
+}
+
+/// Asks `snapRoute` to snap whatever of the day isn't snapped yet. Throws
+/// [FirebaseFunctionsException] e.g. when the Routes API isn't enabled.
+Future<void> snapRoute(String uid, String day) =>
+    FirebaseFunctions.instance.httpsCallable('snapRoute').call({'uid': uid, 'day': day});

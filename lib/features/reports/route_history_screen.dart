@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,6 +45,10 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
   /// Person, day and whether there was something to show at the last fit.
   String? _fitted;
 
+  /// Person, day and history count last sent to `snapRoute`.
+  String? _snapAsked;
+  bool _snapErrorShown = false;
+
   @override
   void dispose() {
     _map?.dispose();
@@ -51,6 +56,21 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
   }
 
   void _open(String uid, DateTime day) => context.go('/history?uid=$uid&date=${dayKey(day)}');
+
+  /// Has the Cloud Function snap new fixes to roads; the result arrives
+  /// through [snappedRouteProvider]. Without it the route stays straight.
+  void _snap(String uid, String day, int count) {
+    final key = '$uid|$day|$count';
+    if (_snapAsked == key) return;
+    _snapAsked = key;
+    snapRoute(uid, day).catchError((Object e) {
+      if (!mounted || _snapErrorShown) return;
+      _snapErrorShown = true;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).errorWithMessage(e is FirebaseFunctionsException ? e.message ?? e.code : '$e')),
+      ));
+    });
+  }
 
   Future<void> _pickDay(String uid, DateTime day) async {
     final picked = await showDatePicker(
@@ -82,6 +102,12 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
         ? const <RoutePoint>[]
         : ref.watch(routePointsProvider((person.id, dayStr))).value ?? const <RoutePoint>[];
     final route = summarizeRoute(points);
+    final snapped = person == null
+        ? const SnappedRoute()
+        : ref.watch(snappedRouteProvider((person.id, dayStr))).value;
+    if (person != null && snapped != null && points.length > 1 && snapped.handled != points.length) {
+      _snap(person.id, dayStr, points.length);
+    }
     final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final hidden = ref.watch(hiddenClientIdsProvider);
     final visits = (ref.watch(rangeVisitsProvider((null, monthKey(day)))).value ?? const <Visit>[])
@@ -103,6 +129,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final path = [for (final p in route.path) LatLng(p.lat, p.lng)];
     LatLng latLng(RoutePoint p) => LatLng(p.lat, p.lng);
     final runs = splitAtGaps(route.path);
+    final lines = routeLines(runs, snapped?.legs ?? const []);
     final everything = [...path, for (final v in visits) ?visitPoint(v)];
     final fitKey = '${person?.id}|$dayStr|${everything.isNotEmpty}';
     if (_map != null && _fitted != fitKey && everything.isNotEmpty) {
@@ -153,7 +180,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       children: route.path.isEmpty
           ? [Text(l10n.noRouteData, style: theme.textTheme.bodyMedium)]
           : [
-              _Fact(icon: Icons.route, label: l10n.distance, value: formatDistance(route.distanceMeters)),
+              _Fact(icon: Icons.route, label: l10n.distance, value: formatDistance(lines.meters)),
               _Fact(icon: Icons.play_arrow, label: l10n.firstLocation, value: time.format(route.first!)),
               _Fact(icon: Icons.stop, label: l10n.lastLocation, value: time.format(route.last!)),
               _Fact(icon: Icons.event_available, label: l10n.visits, value: '${visits.length}'),
@@ -195,11 +222,11 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       onMapCreated: (controller) => setState(() => _map = controller),
       polylines: {
         // Solid where tracking was continuous.
-        for (final (i, run) in runs.indexed)
-          if (run.length > 1)
+        for (final (i, line) in lines.lines.indexed)
+          if (line.length > 1)
             Polyline(
               polylineId: PolylineId('run-$i'),
-              points: [for (final p in run) latLng(p)],
+              points: [for (final (lat, lng) in line) LatLng(lat, lng)],
               color: seriesBlue,
               width: 4,
             ),
@@ -274,25 +301,34 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
             ],
           );
         }
+        // Phones: the details start folded so the map gets the room.
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [controls, const SizedBox(height: 8), summary]),
-            ),
-            Expanded(child: map),
-            // Visits, then the tracking log, under the map.
+            Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 0), child: controls),
             if (person != null)
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: c.maxHeight * 0.35),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [visitList, TrackingLogList(userId: person.id, day: dayStr)],
+              ExpansionTile(
+                dense: true,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                childrenPadding: EdgeInsets.zero,
+                title: Text(l10n.tripDetails),
+                subtitle: Text(route.path.isEmpty
+                    ? l10n.noRouteData
+                    : '${l10n.distance}: ${formatDistance(lines.meters)} · ${l10n.visits}: ${visits.length}'),
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: c.maxHeight * 0.45),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [summary, const SizedBox(height: 8), visitList, TrackingLogList(userId: person.id, day: dayStr)],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
+            Expanded(child: map),
           ],
         );
       }),

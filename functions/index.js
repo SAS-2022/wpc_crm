@@ -376,7 +376,7 @@ exports.cleanRouteHistory = onSchedule(
 
     let removed = 0;
     for (const uid of uids) {
-      for (const [path, days] of [['location_history', ROUTE_DAYS], ['tracking_events', EVENT_DAYS]]) {
+      for (const [path, days] of [['location_history', ROUTE_DAYS], ['route_snapped', ROUTE_DAYS], ['tracking_events', EVENT_DAYS]]) {
         const ref = rtdb.ref(`${path}/${uid}`);
         const old = await ref.orderByKey().endAt(lastOld(days)).get();
         const updates = {};
@@ -399,4 +399,130 @@ exports.cleanDeletedVisit = onDocumentDeleted({ document: 'visits/{id}', maxInst
   const id = event.params.id;
   await admin.firestore().recursiveDelete(admin.firestore().doc(`visits/${id}`));
   await admin.storage().bucket().deleteFiles({ prefix: `visits/${id}/` });
+});
+
+// --- Road-following route history ---------------------------------------
+
+const ROUTE_MAX_ACCURACY = 100; // same as _maxAccuracy in report.dart
+const ROUTE_GAP_MS = 15 * 60 * 1000; // same as routeGap in report.dart
+const ROUTE_MIN_MOVE = 150; // closer fixes count as standing still (no routing between them)
+const ROUTE_LEGS_PER_CALL = 10; // ≤10 intermediate waypoints stays on the cheaper Routes SKU
+const ROUTE_MAX_LEGS = 400; // per call, a safety cap on cost
+
+function metersBetween(a, b) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+
+/** Fixes worth routing between: good accuracy, per run of continuous tracking, stops collapsed. */
+function routeLegs(raw) {
+  const path = Object.values(raw || {})
+    .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
+    .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
+    .sort((a, b) => a.t - b.t);
+  const legs = [];
+  let last = null; // last kept fix
+  let prev = null; // last fix seen
+  for (const p of path) {
+    if (!prev || p.t - prev.t > ROUTE_GAP_MS) {
+      last = p; // new run
+    } else if (metersBetween(last, p) > Math.max(ROUTE_MIN_MOVE, (last.accuracy || 0) + (p.accuracy || 0))) {
+      legs.push([last, p]);
+      last = p;
+    }
+    prev = p;
+  }
+  return legs;
+}
+
+/** Drives through [points]; returns one {p, m, s} per leg, or null when no route was found. */
+async function computeRoute(points, token) {
+  const wp = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+  const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Goog-FieldMask': 'routes.legs.polyline.encodedPolyline,routes.legs.distanceMeters,routes.legs.duration',
+    },
+    body: JSON.stringify({
+      origin: wp(points[0]),
+      destination: wp(points[points.length - 1]),
+      intermediates: points.slice(1, -1).map(wp),
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_UNAWARE',
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // No route between some of the points: drawn straight. Anything else (API off, no permission) is an error.
+    if (res.status === 400 || res.status === 404) return null;
+    throw new HttpsError('failed-precondition', `Routes API ${res.status}: ${body?.error?.message || ''}`);
+  }
+  return body.routes?.[0]?.legs || null;
+}
+
+/**
+ * Snaps one person's day of `location_history` to roads with the Routes API
+ * and saves it in RTDB `route_snapped/{uid}/{day}` {n: history points handled,
+ * legs: {"<fromT>_<toT>": {p: encoded polyline, m: meters} | {s: true, m}}}.
+ * Legs already saved are not asked again, so each stretch is paid for once.
+ * A road route much longer or slower than the time between the fixes allows
+ * is replaced by a straight line (s: true). Callable by supervisors (KAM for
+ * their team) and the person themselves.
+ */
+exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
+  const { uid, day } = req.data || {};
+  if (typeof uid !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day || '')) throw new HttpsError('invalid-argument', 'uid and day');
+  const db = admin.firestore();
+  const me = await db.doc(`users/${req.auth.uid}`).get();
+  if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
+  const role = me.get('role');
+  if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
+    const target = await db.doc(`users/${uid}`).get();
+    if (role !== 'kam' || target.get('kamId') !== req.auth.uid) throw new HttpsError('permission-denied', 'Not your team');
+  }
+
+  const rtdb = admin.database();
+  const outRef = rtdb.ref(`route_snapped/${uid}/${day}`);
+  const [history, saved] = await Promise.all([rtdb.ref(`location_history/${uid}/${day}`).get(), outRef.child('legs').get()]);
+  const raw = history.val() || {};
+  const done = saved.val() || {};
+  const key = ([a, b]) => `${a.t}_${b.t}`;
+  const missing = routeLegs(raw).filter((leg) => !done[key(leg)]).slice(0, ROUTE_MAX_LEGS);
+
+  // Consecutive missing legs (sharing a fix) go into one request.
+  const chains = [];
+  for (const leg of missing) {
+    const chain = chains[chains.length - 1];
+    if (chain && chain.length < ROUTE_LEGS_PER_CALL && chain[chain.length - 1][1] === leg[0]) chain.push(leg);
+    else chains.push([leg]);
+  }
+
+  const updates = {};
+  if (chains.length) {
+    const { access_token: token } = await admin.credential.applicationDefault().getAccessToken();
+    await Promise.all(chains.map(async (chain) => {
+      const legs = await computeRoute([chain[0][0], ...chain.map((l) => l[1])], token);
+      chain.forEach(([a, b], i) => {
+        const straight = Math.round(metersBetween(a, b));
+        const r = legs?.[i];
+        const meters = r?.distanceMeters ?? 0;
+        const seconds = parseInt(r?.duration || '0', 10);
+        const elapsed = (b.t - a.t) / 1000;
+        const plausible = r?.polyline?.encodedPolyline &&
+          meters <= Math.max(2.5 * straight, straight + 2000) &&
+          seconds <= Math.max(2 * elapsed, elapsed + 300);
+        updates[`legs/${a.t}_${b.t}`] = plausible ? { p: r.polyline.encodedPolyline, m: meters } : { s: true, m: straight };
+      });
+    }));
+  }
+  updates.n = Object.keys(raw).length;
+  await outRef.update(updates);
+  return { snapped: Object.keys(updates).length - 1 };
 });

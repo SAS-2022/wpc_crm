@@ -1940,6 +1940,12 @@ abstract class AppLocalizations {
   /// **'Reports'**
   String get reports;
 
+  /// No description provided for @tripDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip details'**
+  String get tripDetails;
+
   /// No description provided for @routeHistory.
   ///
   /// In en, this message translates to:
@@ -2599,6 +2605,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} clients merged into one'**
   String clientsMerged(int count);
+
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @personalInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal info'**
+  String get personalInfo;
+
+  /// No description provided for @emailChangeByAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'To change your email or role, ask a sales manager.'**
+  String get emailChangeByAdmin;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get changePassword;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPassword;
+
+  /// No description provided for @confirmNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmNewPassword;
+
+  /// No description provided for @passwordsDontMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords don\'t match'**
+  String get passwordsDontMatch;
+
+  /// No description provided for @wrongCurrentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password is wrong'**
+  String get wrongCurrentPassword;
+
+  /// No description provided for @passwordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get passwordChanged;
+
+  /// No description provided for @resetPasswordByEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password by email'**
+  String get resetPasswordByEmail;
+
+  /// No description provided for @resetPasswordInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot your current password? We\'ll email you a link to set a new one.'**
+  String get resetPasswordInfo;
+
+  /// No description provided for @sendResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send link'**
+  String get sendResetLink;
+
+  /// No description provided for @resetEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset link sent to {email}'**
+  String resetEmailSent(String email);
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get forgotPassword;
+
+  /// No description provided for @resetEmailSentIfExists.
+  ///
+  /// In en, this message translates to:
+  /// **'If this email has an account, a reset link was sent to it.'**
+  String get resetEmailSentIfExists;
+
+  /// No description provided for @tooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again later.'**
+  String get tooManyAttempts;
+
+  /// No description provided for @updateRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update required'**
+  String get updateRequiredTitle;
+
+  /// No description provided for @updateRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version of WPC CRM is available. Please update the app to continue.'**
+  String get updateRequiredBody;
+
+  /// No description provided for @updateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update now'**
+  String get updateNow;
 }
 
 class _AppLocalizationsDelegate

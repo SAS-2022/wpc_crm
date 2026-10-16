@@ -19,6 +19,9 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if request.auth.uid == uid || active();
       allow create, update: if isAdmin();
+      // Profile page: everyone edits their own name and phone.
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone']);
       allow delete: if isGm() && request.auth.uid != uid;
 
       // Push tokens of the user's phones, written by the app, read by the sendPush function.

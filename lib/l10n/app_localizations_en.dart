@@ -1077,6 +1077,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reports => 'Reports';
 
   @override
+  String get tripDetails => 'Trip details';
+
+  @override
   String get routeHistory => 'Route history';
 
   @override
@@ -1472,4 +1475,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String clientsMerged(int count) {
     return '$count clients merged into one';
   }
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get personalInfo => 'Personal info';
+
+  @override
+  String get emailChangeByAdmin =>
+      'To change your email or role, ask a sales manager.';
+
+  @override
+  String get changePassword => 'Change password';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmNewPassword => 'Confirm new password';
+
+  @override
+  String get passwordsDontMatch => 'Passwords don\'t match';
+
+  @override
+  String get wrongCurrentPassword => 'Current password is wrong';
+
+  @override
+  String get passwordChanged => 'Password changed';
+
+  @override
+  String get resetPasswordByEmail => 'Reset password by email';
+
+  @override
+  String get resetPasswordInfo =>
+      'Forgot your current password? We\'ll email you a link to set a new one.';
+
+  @override
+  String get sendResetLink => 'Send link';
+
+  @override
+  String resetEmailSent(String email) {
+    return 'Reset link sent to $email';
+  }
+
+  @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
+  String get resetEmailSentIfExists =>
+      'If this email has an account, a reset link was sent to it.';
+
+  @override
+  String get tooManyAttempts => 'Too many attempts. Try again later.';
+
+  @override
+  String get updateRequiredTitle => 'Update required';
+
+  @override
+  String get updateRequiredBody =>
+      'A new version of WPC CRM is available. Please update the app to continue.';
+
+  @override
+  String get updateNow => 'Update now';
 }
