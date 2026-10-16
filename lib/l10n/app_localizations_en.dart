@@ -1402,4 +1402,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String durationHoursMinutes(int h, int m) {
     return '$h h $m min';
   }
+
+  @override
+  String get addTask => 'Add task';
+
+  @override
+  String get commentOptional => 'Comment (optional)';
+
+  @override
+  String get markDone => 'Mark done';
+
+  @override
+  String get markNotDone => 'Not done';
+
+  @override
+  String get visitTasksLabel => 'Tasks at the client';
+
+  @override
+  String checklistProgress(int done, int total) {
+    return '$done/$total tasks';
+  }
+
+  @override
+  String get possibleDuplicates => 'Possible duplicates';
+
+  @override
+  String get dupSameVat => 'Same Tax ID';
+
+  @override
+  String get dupSameName => 'Same name';
+
+  @override
+  String get dupSamePhone => 'Same phone';
+
+  @override
+  String get dupSimilarName => 'Similar name';
+
+  @override
+  String get dupNearby => 'Same place';
+
+  @override
+  String get noDuplicates => 'No possible duplicates';
+
+  @override
+  String get notDuplicates => 'Not duplicates';
+
+  @override
+  String get markedNotDuplicates => 'Marked as different clients';
+
+  @override
+  String get mergeClients => 'Merge';
+
+  @override
+  String get mergeClientsTitle => 'Merge clients';
+
+  @override
+  String get mergeHint =>
+      'Choose the client to keep. The others are deleted: their visits, plan items, files, contacts and names move to the kept client, and its empty details are filled from them. The kept client\'s name, category and salesperson stay. This can\'t be undone.';
+
+  @override
+  String get mergeKeep => 'Keep this client';
+
+  @override
+  String mergeCount(int count) {
+    return 'Merge $count';
+  }
+
+  @override
+  String clientsMerged(int count) {
+    return '$count clients merged into one';
+  }
 }

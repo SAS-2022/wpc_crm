@@ -8,6 +8,8 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../attachments/attachments.dart';
 import '../attachments/attachments_section.dart';
+import '../plan/checklist.dart';
+import '../plan/plan_repository.dart';
 import '../users/users_repository.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
@@ -91,6 +93,10 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
     }
     final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
     final comments = ref.watch(visitCommentsProvider(widget.visitId)).value ?? const [];
+    // Plan tasks at this client, as left by the visitor.
+    final planTasks = (ref.watch(visitPlanTasksProvider((visit.id, visit.salesExecId))).value ?? const [])
+        .where((t) => t.checklist.isNotEmpty)
+        .toList();
     final locale = Localizations.localeOf(context).toString();
     String format(DateTime? t) => t == null ? '' : DateFormat.yMMMd(locale).add_jm().format(t);
     final error = Theme.of(context).colorScheme.error;
@@ -168,6 +174,13 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   child: SelectableText(visit.notes, style: Theme.of(context).textTheme.bodyLarge),
                 ),
+                if (planTasks.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: Text(l10n.tasks, style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  for (final t in planTasks) PlanChecklist(task: t),
+                ],
                 AttachmentsSection(
                   owner: (parent: AttachmentParent.visits, id: visit.id),
                   canAdd: me.role.isSupervisor || ownVisit,

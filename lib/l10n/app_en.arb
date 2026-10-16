@@ -1091,5 +1091,50 @@
         "type": "int"
       }
     }
+  },
+  "addTask": "Add task",
+  "commentOptional": "Comment (optional)",
+  "markDone": "Mark done",
+  "markNotDone": "Not done",
+  "visitTasksLabel": "Tasks at the client",
+  "checklistProgress": "{done}/{total} tasks",
+  "@checklistProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "possibleDuplicates": "Possible duplicates",
+  "dupSameVat": "Same Tax ID",
+  "dupSameName": "Same name",
+  "dupSamePhone": "Same phone",
+  "dupSimilarName": "Similar name",
+  "dupNearby": "Same place",
+  "noDuplicates": "No possible duplicates",
+  "notDuplicates": "Not duplicates",
+  "markedNotDuplicates": "Marked as different clients",
+  "mergeClients": "Merge",
+  "mergeClientsTitle": "Merge clients",
+  "mergeHint": "Choose the client to keep. The others are deleted: their visits, plan items, files, contacts and names move to the kept client, and its empty details are filled from them. The kept client's name, category and salesperson stay. This can't be undone.",
+  "mergeKeep": "Keep this client",
+  "mergeCount": "Merge {count}",
+  "@mergeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsMerged": "{count} clients merged into one",
+  "@clientsMerged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

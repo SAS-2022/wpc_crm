@@ -1399,4 +1399,74 @@ class AppLocalizationsAr extends AppLocalizations {
   String durationHoursMinutes(int h, int m) {
     return '$h س $m د';
   }
+
+  @override
+  String get addTask => 'إضافة مهمة';
+
+  @override
+  String get commentOptional => 'تعليق (اختياري)';
+
+  @override
+  String get markDone => 'تم';
+
+  @override
+  String get markNotDone => 'لم تتم';
+
+  @override
+  String get visitTasksLabel => 'مهام عند العميل';
+
+  @override
+  String checklistProgress(int done, int total) {
+    return '$done/$total مهام';
+  }
+
+  @override
+  String get possibleDuplicates => 'عملاء مكررون محتملون';
+
+  @override
+  String get dupSameVat => 'نفس الرقم الضريبي';
+
+  @override
+  String get dupSameName => 'نفس الاسم';
+
+  @override
+  String get dupSamePhone => 'نفس رقم الهاتف';
+
+  @override
+  String get dupSimilarName => 'اسم مشابه';
+
+  @override
+  String get dupNearby => 'نفس المكان';
+
+  @override
+  String get noDuplicates => 'لا يوجد عملاء مكررون محتملون';
+
+  @override
+  String get notDuplicates => 'ليسوا مكررين';
+
+  @override
+  String get markedNotDuplicates => 'تم تمييزهم كعملاء مختلفين';
+
+  @override
+  String get mergeClients => 'دمج';
+
+  @override
+  String get mergeClientsTitle => 'دمج العملاء';
+
+  @override
+  String get mergeHint =>
+      'اختر العميل الذي سيبقى. سيُحذف الآخرون: تنتقل زياراتهم وبنود الخطط والملفات وجهات الاتصال والأسماء إلى العميل المتبقي، وتُكمل بياناته الفارغة منهم. يبقى اسم العميل المتبقي وفئته ومندوبه. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get mergeKeep => 'إبقاء هذا العميل';
+
+  @override
+  String mergeCount(int count) {
+    return 'دمج $count';
+  }
+
+  @override
+  String clientsMerged(int count) {
+    return 'تم دمج $count عملاء في عميل واحد';
+  }
 }

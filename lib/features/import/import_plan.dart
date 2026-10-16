@@ -58,6 +58,7 @@ Map<String, String> uidBySalesperson(Iterable<AppUser> users) => {
 ///
 /// Rows are matched by VAT, or by normalized name when there is no VAT
 /// (a client that later gets a VAT in Odoo is still matched by its name).
+/// Rows of clients merged into another one in the app are skipped.
 /// Existing clients keep their app-side data (assignment, green period,
 /// visits); a salesperson from Odoo only fills an empty assignment.
 ImportPlan buildPlan({
@@ -89,6 +90,8 @@ ImportPlan buildPlan({
 
   final byVat = {for (final c in existing) if (c.vat.isNotEmpty) c.vat: c};
   final byName = {for (final c in existing) c.nameKey: c};
+  // Clients merged into another one in the app: their rows are skipped.
+  final mergedAway = [for (final c in existing) ...c.mergedFrom];
   final usedIds = <String>{};
 
   final creates = <PlannedWrite>[];
@@ -115,6 +118,13 @@ ImportPlan buildPlan({
       // A name match must not be a different company with its own VAT.
       final named = byName[primary.nameKey];
       if (named != null && (named.vat.isEmpty || primary.vat.isEmpty)) match = named;
+    }
+    if (match == null &&
+        mergedAway.any((m) =>
+            (primary.vat.isNotEmpty && m.vat == primary.vat) ||
+            (m.nameKey == primary.nameKey && (m.vat.isEmpty || primary.vat.isEmpty)))) {
+      unchanged++;
+      continue;
     }
     if (match != null && !usedIds.add(match.id)) match = null;
     final uid = salespersonToUid[normalizeSalesperson(primary.salesperson)];
@@ -193,9 +203,20 @@ ImportPlan buildPlan({
       'currency': match.currency,
       'contacts': [for (final c in match.contacts) c.toMap()],
     };
+    // Names of clients merged into this one stay aliases.
+    odooFields['aliases'] = {
+      ...aliases,
+      for (final m in match.mergedFrom)
+        if (m.nameKey != primary.nameKey) m.name,
+    }.toList();
     final changes = <String, dynamic>{
       for (final e in odooFields.entries)
-        if (!_same(e.value, current[e.key])) e.key: e.value,
+        if (e.key == 'aliases'
+            // Order of aliases doesn't matter.
+            ? !_same({...e.value as List}.length, {...current['aliases'] as List}.length) ||
+                !{...current['aliases'] as List}.containsAll(e.value as List)
+            : !_same(e.value, current[e.key]))
+          e.key: e.value,
     };
     if (coords != null && (primary.pinUrl != match.googlePin || !match.hasLocation)) {
       if (coords.lat != match.lat || coords.lng != match.lng) {

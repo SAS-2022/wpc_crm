@@ -14,6 +14,7 @@ import '../clients/clients_repository.dart';
 import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
 import 'add_task_sheet.dart';
+import 'checklist.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
 
@@ -96,6 +97,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       for (final (i, t) in visits.indexed) ...[
         '${i + 1}. ${t.clientName}${clients[t.clientId]?.city.isNotEmpty ?? false ? ' – ${clients[t.clientId]!.city}' : ''}${t.done ? ' ✓' : ''}',
         if (t.title.isNotEmpty) '   ${t.title}',
+        for (final c in t.checklist) '   ${c.done ? '☑' : '☐'} ${c.text}${c.comment.isNotEmpty ? ' – ${c.comment}' : ''}',
         if (clients[t.clientId]?.hasLocation ?? false) '   ${maps(clients[t.clientId]!)}',
       ],
       if (open.any((t) => !t.isVisit)) ...['', l10n.tasks, for (final t in open.where((t) => !t.isVisit)) '• ${t.title}${t.done ? ' ✓' : ''}'],
@@ -212,6 +214,13 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                             ? () => context.push('/clients/${t.clientId}/visit')
                             : null,
                         onEdit: canManage ? () => _editTitle(me, owner, t) : null,
+                        canTickChecklist: isOwner && t.approval == TaskApproval.approved,
+                        canEditChecklist: (isOwner || canManage) && t.approval != TaskApproval.rejected,
+                        onChecklistChanged: (items) async {
+                          await repo.setChecklist(t.id, items);
+                          final added = items.length - t.checklist.length;
+                          if (!isOwner && added > 0) await _notifyOwner(me, owner, NotificationType.planChanged, added);
+                        },
                       ),
                   ],
                 );
@@ -282,6 +291,9 @@ class PlanTaskTile extends ConsumerWidget {
     this.onVisit,
     this.onEdit,
     this.subtitlePrefix,
+    this.canTickChecklist = false,
+    this.canEditChecklist = false,
+    this.onChecklistChanged,
   });
 
   final PlanTask task;
@@ -298,6 +310,11 @@ class PlanTaskTile extends ConsumerWidget {
 
   /// e.g. the owner's name in the approvals list.
   final String? subtitlePrefix;
+
+  /// A visit's task checklist: the owner ticks, the owner / KAM / managers add.
+  final bool canTickChecklist;
+  final bool canEditChecklist;
+  final ValueChanged<List<ChecklistItem>>? onChecklistChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -321,7 +338,7 @@ class PlanTaskTile extends ConsumerWidget {
             color: task.done ? Colors.green.shade700 : scheme.onSurfaceVariant,
           );
 
-    return ListTile(
+    final tile = ListTile(
       onTap: onEdit,
       leading: leading,
       title: Text(
@@ -335,6 +352,11 @@ class PlanTaskTile extends ConsumerWidget {
           if (note.isNotEmpty) Text(note),
           Text.rich(TextSpan(children: [
             TextSpan(text: status.$1, style: TextStyle(color: status.$2, fontWeight: FontWeight.w600)),
+            if (task.checklist.isNotEmpty)
+              TextSpan(
+                text: ' · ${l10n.checklistProgress(task.checklistDone, task.checklist.length)}',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             if (client != null && !client.hasLocation)
               TextSpan(text: ' · ${l10n.noLocation}', style: TextStyle(color: scheme.onSurfaceVariant)),
           ])),
@@ -362,6 +384,23 @@ class PlanTaskTile extends ConsumerWidget {
             IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: onDelete),
         ],
       ),
+    );
+    final editable = canEditChecklist && onChecklistChanged != null;
+    if (!task.isVisit || (task.checklist.isEmpty && !editable)) return tile;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        tile,
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 40, bottom: 4),
+          child: PlanChecklist(
+            task: task,
+            canTick: canTickChecklist && onChecklistChanged != null,
+            canEdit: editable,
+            onChanged: onChecklistChanged,
+          ),
+        ),
+      ],
     );
   }
 }

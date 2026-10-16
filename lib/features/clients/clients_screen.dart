@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
 import 'client_widgets.dart';
+import 'duplicates_view.dart';
 import 'clients_repository.dart';
 import 'person_style.dart';
 import 'transfer_dialog.dart';
@@ -27,6 +28,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   /// Hidden clients instead of the visible ones (KAM / managers).
   bool _showHidden = false;
+
+  /// Groups of possible duplicates instead of the list (KAM / managers).
+  bool _showDuplicates = false;
 
   /// Ids ticked for hiding / showing; null when not selecting.
   Set<String>? _selected;
@@ -101,6 +105,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
     final hidden = supervisor ? ref.watch(filteredHiddenClientsProvider) : const <Client>[];
     if (hidden.isEmpty) _showHidden = false;
+    final duplicates = ref.watch(duplicateGroupsProvider);
     final clients = _showHidden ? AsyncValue.data(hidden) : ref.watch(filteredClientsProvider);
     final now = DateTime.now();
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
@@ -163,7 +168,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
         : AppBar(
             title: Text(l10n.clients),
             actions: [
-              if (supervisor)
+              if (supervisor && !_showDuplicates)
                 IconButton(
                   icon: const Icon(Icons.checklist),
                   tooltip: l10n.selectClients,
@@ -212,7 +217,24 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 showCheckmark: false,
                 onSelected: (v) => setState(() {
                   _showHidden = v;
+                  _showDuplicates = false;
                   _selected = _selected == null ? null : {};
+                }),
+              ),
+            ),
+          // Only KAM / managers, and only when there are some.
+          if (duplicates.isNotEmpty || _showDuplicates)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilterChip(
+                avatar: const Icon(Icons.content_copy, size: 16),
+                label: Text('${l10n.possibleDuplicates} (${duplicates.length})'),
+                selected: _showDuplicates,
+                showCheckmark: false,
+                onSelected: (v) => setState(() {
+                  _showDuplicates = v;
+                  _showHidden = false;
+                  _selected = null;
                 }),
               ),
             ),
@@ -246,6 +268,21 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
               data: (_) {
+                if (_showDuplicates) {
+                  return Column(
+                    children: [
+                      chips,
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: DuplicatesList(groups: [
+                          for (final g in duplicates)
+                            if (_query.isEmpty || g.clients.any((c) => c.nameKey.contains(_query) || c.vat.contains(_query)))
+                              g,
+                        ]),
+                      ),
+                    ],
+                  );
+                }
                 if (list.isEmpty) {
                   return Column(
                     children: [

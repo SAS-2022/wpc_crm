@@ -46,10 +46,18 @@ final pendingTasksProvider = StreamProvider<List<PlanTask>>((ref) {
   return _tasks.where('approval', isEqualTo: TaskApproval.pending.name).snapshots().map(_sorted);
 });
 
+/// The plan items a visit ticked, with their checklists: (visitId, ownerId).
+final visitPlanTasksProvider = StreamProvider.family<List<PlanTask>, (String, String)>((ref, key) => _tasks
+    .where('visitId', isEqualTo: key.$1)
+    .where('ownerId', isEqualTo: key.$2)
+    .snapshots()
+    .map((s) => s.docs.map(PlanTask.fromDoc).toList()));
+
 final planRepositoryProvider = Provider((ref) => PlanRepository());
 
 class PlanRepository {
-  /// Adds several client visits (or one free task) in one write.
+  /// Adds several client visits (or one free task) in one write. Each visit
+  /// gets the [checklist] tasks.
   Future<void> addMany({
     required String ownerId,
     required String date,
@@ -57,6 +65,7 @@ class PlanRepository {
     required bool approved,
     required List<({String id, String name})> clients,
     String title = '',
+    List<String> checklist = const [],
   }) async {
     final batch = FirebaseFirestore.instance.batch();
     final items = clients.isEmpty ? [null] : clients;
@@ -72,6 +81,8 @@ class PlanRepository {
         'approval': (approved ? TaskApproval.approved : TaskApproval.pending).name,
         'approvedBy': approved ? createdBy : null,
         'done': false,
+        if (c != null && checklist.isNotEmpty)
+          'checklist': [for (final text in checklist) ChecklistItem.create(text, createdBy).toMap()],
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
@@ -107,6 +118,9 @@ class PlanRepository {
   Future<void> delete(String taskId) => _tasks.doc(taskId).delete();
 
   Future<void> setTitle(String taskId, String title) => _tasks.doc(taskId).update({'title': title});
+
+  Future<void> setChecklist(String taskId, List<ChecklistItem> items) =>
+      _tasks.doc(taskId).update({'checklist': [for (final i in items) i.toMap()]});
 
   /// Deletes [tasks] in one write.
   Future<void> deleteAll(List<PlanTask> tasks) async {

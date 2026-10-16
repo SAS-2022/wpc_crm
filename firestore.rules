@@ -72,7 +72,8 @@ service cloud.firestore {
     }
 
     // Daily plans. A sales exec's own tasks start as pending; KAM / managers
-    // add approved tasks and approve or reject. The owner only ticks done.
+    // add approved tasks and approve or reject. The owner only ticks done and
+    // edits the checklist of a visit (adds, ticks, comments).
     match /tasks/{taskId} {
       allow read: if isSupervisor() || (active() && resource.data.ownerId == request.auth.uid);
       allow create: if active() && request.resource.data.createdBy == request.auth.uid
@@ -80,7 +81,7 @@ service cloud.firestore {
             || (request.resource.data.ownerId == request.auth.uid && request.resource.data.approval == 'pending'));
       allow update: if isSupervisor()
         || (active() && resource.data.ownerId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'visitId']));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'visitId', 'checklist']));
       allow delete: if isSupervisor()
         || (active() && resource.data.ownerId == request.auth.uid && resource.data.approval != 'approved');
     }

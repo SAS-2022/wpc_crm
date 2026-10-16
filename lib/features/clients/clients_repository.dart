@@ -8,6 +8,8 @@ import '../import/location_import.dart';
 import '../notifications/notifications.dart';
 import '../plan/plan_task.dart';
 import 'client.dart';
+import 'duplicates.dart';
+import 'merge.dart';
 import 'transfer.dart';
 
 /// Every client the signed-in user may read (all for KAM/managers, own for
@@ -64,6 +66,22 @@ final filteredHiddenClientsProvider = Provider<List<Client>>((ref) {
   ];
 });
 
+/// Possible duplicates among the visible clients (KAM / managers). With a
+/// salesperson filter, groups with at least one of their clients.
+final duplicateGroupsProvider = Provider<List<DuplicateGroup>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.role.isSupervisor) return const [];
+  final groups = ref.watch(_allDuplicateGroupsProvider);
+  final filter = ref.watch(salesFilterProvider);
+  return [
+    for (final g in groups)
+      if (g.clients.any((c) => matchesSalesFilter(c, filter))) g,
+  ];
+});
+
+final _allDuplicateGroupsProvider =
+    Provider<List<DuplicateGroup>>((ref) => findDuplicates(ref.watch(clientsProvider).value ?? const []));
+
 final clientsRepositoryProvider = Provider((ref) => ClientsRepository());
 
 class ClientsRepository {
@@ -108,6 +126,56 @@ class ClientsRepository {
       }
       await batch.commit();
     }
+  }
+
+  /// Marks [clients] as different customers, so they stop showing as
+  /// possible duplicates of each other.
+  Future<void> markNotDuplicates(List<Client> clients) async {
+    final batch = _db.batch();
+    for (final c in clients) {
+      batch.update(_clients.doc(c.id), {
+        'notDuplicates': FieldValue.arrayUnion([for (final o in clients) if (o.id != c.id) o.id]),
+      });
+    }
+    await batch.commit();
+  }
+
+  /// Sales manager / GM: merges [others] into [keep]. Their visits, plan
+  /// items and attachments move to [keep] (files stay where they are; the
+  /// download links keep working), [keep] gets their details (see
+  /// [mergeUpdate]) and they are deleted.
+  Future<void> merge(Client keep, List<Client> others, {required String byId}) async {
+    final ops = <void Function(WriteBatch)>[];
+    for (final o in others) {
+      for (final collection in ['visits', 'tasks']) {
+        final s = await _db.collection(collection).where('clientId', isEqualTo: o.id).get();
+        for (final d in s.docs) {
+          ops.add((b) => b.update(d.reference, {'clientId': keep.id, 'clientName': keep.name}));
+        }
+      }
+      final files = await _clients.doc(o.id).collection('attachments').get();
+      for (final d in files.docs) {
+        ops.add((b) => b.set(_clients.doc(keep.id).collection('attachments').doc(d.id), d.data()));
+        ops.add((b) => b.delete(d.reference));
+      }
+    }
+    for (var i = 0; i < ops.length; i += 400) {
+      final batch = _db.batch();
+      for (final op in ops.skip(i).take(400)) {
+        op(batch);
+      }
+      await batch.commit();
+    }
+    // Last, so a failure above leaves both clients in place.
+    final batch = _db.batch();
+    batch.update(_clients.doc(keep.id), {
+      ...mergeUpdate(keep, others, byId: byId, at: DateTime.now()),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    for (final o in others) {
+      batch.delete(_clients.doc(o.id));
+    }
+    await batch.commit();
   }
 
   /// Moves [clients] to the sales executive [toId] (null = unassigned):

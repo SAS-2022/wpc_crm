@@ -76,6 +76,9 @@ class TodayPlanCard extends ConsumerWidget {
                     onVisit: t.isVisit && !t.done && t.approval == TaskApproval.approved
                         ? () => context.push('/clients/${t.clientId}/visit')
                         : null,
+                    canTickChecklist: t.approval == TaskApproval.approved,
+                    canEditChecklist: t.approval != TaskApproval.rejected,
+                    onChecklistChanged: (items) => repo.setChecklist(t.id, items),
                   ),
                 if (tasks.length > 5) Text('+${tasks.length - 5}', textAlign: TextAlign.center),
               ],

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'merge.dart';
 import 'transfer.dart';
 
 class Client {
@@ -35,6 +36,8 @@ class Client {
     this.contacts = const [],
     this.hidden = false,
     this.transfers = const [],
+    this.notDuplicates = const [],
+    this.mergedFrom = const [],
   });
 
   final String id;
@@ -93,6 +96,13 @@ class Client {
   /// Who moved this client between sales executives, oldest first.
   final List<ClientTransfer> transfers;
 
+  /// Clients marked "not duplicates" of this one (left out of the
+  /// possible duplicates list).
+  final List<String> notDuplicates;
+
+  /// Clients merged into this one, with what they had absorbed before.
+  final List<MergedClient> mergedFrom;
+
   bool get hasLocation => lat != null && lng != null;
 
   static String normalizeName(String name) =>
@@ -137,6 +147,11 @@ class Client {
       transfers: [
         for (final t in d['transfers'] as List? ?? const [])
           if (t is Map) ClientTransfer.fromMap(t),
+      ],
+      notDuplicates: List<String>.from(d['notDuplicates'] as List? ?? const []),
+      mergedFrom: [
+        for (final m in d['mergedFrom'] as List? ?? const [])
+          if (m is Map) MergedClient.fromMap(m),
       ],
     );
   }

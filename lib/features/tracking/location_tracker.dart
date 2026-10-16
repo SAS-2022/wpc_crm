@@ -31,6 +31,7 @@ class LocationTracker {
   Timer? _heartbeat;
   Timer? _dutyCheck;
   DateTime? _lastSent;
+  bool _connected = false;
   WorkHours _hours = WorkHours.defaults;
 
   /// null until first checked.
@@ -40,11 +41,20 @@ class LocationTracker {
 
   Future<void> start() async {
     _subscriptions.add(FirebaseDatabase.instance.ref('.info/connected').onValue.listen((event) async {
-      if (event.snapshot.value != true) return;
+      _connected = event.snapshot.value == true;
+      if (!_connected) return;
       // Registered on the server: runs when the phone disconnects
       // (no signal, switched off, app killed).
       await _presence.onDisconnect().update({'online': false, 'lastSeen': ServerValue.timestamp});
       await _presence.update({'online': true, 'lastSeen': ServerValue.timestamp});
+    }));
+    // After a quick reconnect the server may notice the old, dropped
+    // connection only later and run its onDisconnect, marking a connected
+    // phone offline. Put it right while connected.
+    _subscriptions.add(_presence.child('online').onValue.listen((event) {
+      if (_connected && event.snapshot.value == false) {
+        _presence.update({'online': true, 'lastSeen': ServerValue.timestamp}).ignore();
+      }
     }));
     _subscriptions.add(workHoursRef.onValue.listen((event) {
       _hours = WorkHours.fromMap(event.snapshot.value);

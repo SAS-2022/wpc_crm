@@ -10,6 +10,9 @@ import '../attachments/attachments.dart';
 import '../attachments/attachments_section.dart';
 import '../clients/client.dart';
 import '../clients/clients_repository.dart';
+import '../plan/checklist.dart';
+import '../plan/plan_repository.dart';
+import '../plan/plan_task.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
 
@@ -127,6 +130,13 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
     }
     final distance = _distance(client);
     final error = Theme.of(context).colorScheme.error;
+    final me = ref.watch(currentUserProvider).value;
+    // Tasks for this client on today's plan: ticked here, saved at once.
+    final planned = me == null
+        ? const <PlanTask>[]
+        : (ref.watch(dayTasksProvider((me.id, dayKey(DateTime.now())))).value ?? const <PlanTask>[])
+            .where((t) => t.clientId == client.id && t.approval == TaskApproval.approved && t.checklist.isNotEmpty)
+            .toList();
 
     final Widget locationStatus;
     if (_locating) {
@@ -177,6 +187,17 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
           const SizedBox(height: 8),
           Card(child: locationStatus),
           const SizedBox(height: 16),
+          if (planned.isNotEmpty) ...[
+            Text(l10n.tasks, style: Theme.of(context).textTheme.titleMedium),
+            for (final t in planned)
+              PlanChecklist(
+                task: t,
+                canTick: true,
+                canEdit: true,
+                onChanged: (items) => ref.read(planRepositoryProvider).setChecklist(t.id, items),
+              ),
+            const SizedBox(height: 16),
+          ],
           TextField(
             controller: _notes,
             minLines: 5,

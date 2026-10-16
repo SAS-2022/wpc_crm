@@ -2473,6 +2473,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{h} h {m} min'**
   String durationHoursMinutes(int h, int m);
+
+  /// No description provided for @addTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Add task'**
+  String get addTask;
+
+  /// No description provided for @commentOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment (optional)'**
+  String get commentOptional;
+
+  /// No description provided for @markDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark done'**
+  String get markDone;
+
+  /// No description provided for @markNotDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done'**
+  String get markNotDone;
+
+  /// No description provided for @visitTasksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks at the client'**
+  String get visitTasksLabel;
+
+  /// No description provided for @checklistProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done}/{total} tasks'**
+  String checklistProgress(int done, int total);
+
+  /// No description provided for @possibleDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicates'**
+  String get possibleDuplicates;
+
+  /// No description provided for @dupSameVat.
+  ///
+  /// In en, this message translates to:
+  /// **'Same Tax ID'**
+  String get dupSameVat;
+
+  /// No description provided for @dupSameName.
+  ///
+  /// In en, this message translates to:
+  /// **'Same name'**
+  String get dupSameName;
+
+  /// No description provided for @dupSamePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Same phone'**
+  String get dupSamePhone;
+
+  /// No description provided for @dupSimilarName.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar name'**
+  String get dupSimilarName;
+
+  /// No description provided for @dupNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Same place'**
+  String get dupNearby;
+
+  /// No description provided for @noDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'No possible duplicates'**
+  String get noDuplicates;
+
+  /// No description provided for @notDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Not duplicates'**
+  String get notDuplicates;
+
+  /// No description provided for @markedNotDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as different clients'**
+  String get markedNotDuplicates;
+
+  /// No description provided for @mergeClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get mergeClients;
+
+  /// No description provided for @mergeClientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge clients'**
+  String get mergeClientsTitle;
+
+  /// No description provided for @mergeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client to keep. The others are deleted: their visits, plan items, files, contacts and names move to the kept client, and its empty details are filled from them. The kept client\'s name, category and salesperson stay. This can\'t be undone.'**
+  String get mergeHint;
+
+  /// No description provided for @mergeKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this client'**
+  String get mergeKeep;
+
+  /// No description provided for @mergeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge {count}'**
+  String mergeCount(int count);
+
+  /// No description provided for @clientsMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients merged into one'**
+  String clientsMerged(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -24,6 +24,7 @@ class PlanTask {
     required this.approval,
     required this.done,
     required this.visitId,
+    this.checklist = const [],
   });
 
   final String id;
@@ -41,7 +42,12 @@ class PlanTask {
   final bool done;
   final String? visitId;
 
+  /// Tasks to do at a client visit, ticked by the owner.
+  final List<ChecklistItem> checklist;
+
   bool get isVisit => clientId != null;
+
+  int get checklistDone => checklist.where((i) => i.done).length;
 
   factory PlanTask.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -56,6 +62,74 @@ class PlanTask {
       approval: TaskApproval.values.asNameMap()[d['approval']] ?? TaskApproval.pending,
       done: d['done'] as bool? ?? false,
       visitId: d['visitId'] as String?,
+      checklist: [
+        for (final i in d['checklist'] as List<dynamic>? ?? const [])
+          if (i is Map<String, dynamic>) ChecklistItem.fromMap(i),
+      ],
     );
   }
+}
+
+/// One task on a planned client visit (e.g. "Collect payment"), added by a
+/// KAM / manager or the owner and ticked by the owner, with an optional
+/// comment. Stored in the plan item's `checklist` array.
+class ChecklistItem {
+  const ChecklistItem({
+    required this.id,
+    required this.text,
+    required this.addedBy,
+    this.done = false,
+    this.comment = '',
+    this.doneAt,
+  });
+
+  /// Random id: items are matched by it when one is ticked or removed.
+  final String id;
+  final String text;
+  final String addedBy;
+  final bool done;
+  final String comment;
+  final DateTime? doneAt;
+
+  factory ChecklistItem.create(String text, String addedBy) =>
+      ChecklistItem(id: FirebaseFirestore.instance.collection('tasks').doc().id, text: text, addedBy: addedBy);
+
+  ChecklistItem complete({required bool done, String? comment}) => ChecklistItem(
+        id: id,
+        text: text,
+        addedBy: addedBy,
+        done: done,
+        comment: comment ?? this.comment,
+        doneAt: done ? (this.done ? doneAt : DateTime.now()) : null,
+      );
+
+  factory ChecklistItem.fromMap(Map<String, dynamic> d) => ChecklistItem(
+        id: d['id'] as String? ?? '',
+        text: d['text'] as String? ?? '',
+        addedBy: d['addedBy'] as String? ?? '',
+        done: d['done'] as bool? ?? false,
+        comment: d['comment'] as String? ?? '',
+        doneAt: (d['doneAt'] as Timestamp?)?.toDate(),
+      );
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'text': text,
+        'addedBy': addedBy,
+        'done': done,
+        'comment': comment,
+        // Server timestamps aren't allowed inside arrays.
+        'doneAt': doneAt == null ? null : Timestamp.fromDate(doneAt!),
+      };
+}
+
+/// Checklist texts used in [tasks], most used first: offered as quick choices.
+List<String> recentChecklistTexts(Iterable<PlanTask> tasks) {
+  final counts = <String, int>{};
+  for (final t in tasks) {
+    for (final i in t.checklist) {
+      counts.update(i.text, (n) => n + 1, ifAbsent: () => 1);
+    }
+  }
+  return (counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!)));
 }

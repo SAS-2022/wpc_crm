@@ -11,6 +11,7 @@ import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
 import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
+import 'checklist.dart';
 import 'plan_repository.dart';
 
 /// Adds client visits (several at once) or a free task to [owner]'s plan for
@@ -43,6 +44,7 @@ class _AddTaskSheet extends ConsumerStatefulWidget {
 class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
   final _title = TextEditingController();
   final _selected = <String, Client>{};
+  final _checklist = <String>[];
   bool _visit = true;
   String _query = '';
   bool _busy = false;
@@ -71,6 +73,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
             approved: approved,
             clients: _visit ? [for (final c in _selected.values) (id: c.id, name: c.name)] : const [],
             title: _title.text.trim(),
+            checklist: _visit ? _checklist : const [],
           );
       final count = _visit ? _selected.length : 1;
       final users = ref.read(usersProvider).value ?? const <AppUser>[];
@@ -141,6 +144,16 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(labelText: _visit ? l10n.noteOptional : l10n.taskDescription),
                   ),
+                  // Tasks for every selected client.
+                  if (_visit)
+                    OwnerChecklistEditor(
+                      ownerId: widget.owner.id,
+                      date: widget.date,
+                      texts: _checklist,
+                      onChanged: (t) => setState(() => _checklist
+                        ..clear()
+                        ..addAll(t)),
+                    ),
                 ],
               ),
             ),

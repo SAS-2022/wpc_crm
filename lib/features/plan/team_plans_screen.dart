@@ -144,6 +144,20 @@ class _PersonPlan extends ConsumerWidget {
                     count: 1,
                   );
                 },
+                canEditChecklist: t.approval != TaskApproval.rejected,
+                onChecklistChanged: (items) async {
+                  await ref.read(planRepositoryProvider).setChecklist(t.id, items);
+                  final added = items.length - t.checklist.length;
+                  if (added <= 0) return;
+                  await sendNotifications(
+                    toIds: [user.id],
+                    type: NotificationType.planChanged,
+                    fromId: me.id,
+                    ownerId: user.id,
+                    date: day,
+                    count: added,
+                  );
+                },
               ),
           ],
         ),
