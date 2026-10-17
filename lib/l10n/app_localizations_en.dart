@@ -572,6 +572,103 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get addToTodaysPlan => 'Add to today\'s plan';
+
+  @override
+  String get onTodaysPlan => 'On today\'s plan';
+
+  @override
+  String get moveToSalesperson => 'Move to another salesperson';
+
+  @override
+  String get clientType => 'Type';
+
+  @override
+  String get clientTypeCompany => 'Company';
+
+  @override
+  String get clientTypeIndividual => 'Individual';
+
+  @override
+  String get companyId => 'Company ID (CR)';
+
+  @override
+  String get notSet => 'Not set';
+
+  @override
+  String get importFillOnly => 'Only fill missing fields';
+
+  @override
+  String get importFillOnlyHint =>
+      'Contact person, Company / Individual and Company ID of existing clients, only where empty. Nothing else changes and no clients are added.';
+
+  @override
+  String get filters => 'Filters';
+
+  @override
+  String get clearFilters => 'Clear all';
+
+  @override
+  String get clientTags => 'Client tags';
+
+  @override
+  String get tagFilterAny => 'Shows clients with any of the selected tags.';
+
+  @override
+  String tagClientsTitle(int count) {
+    return 'Tags for $count clients';
+  }
+
+  @override
+  String get tagClientsHelp =>
+      'Tap a tag once to add it, twice to remove it. Other tags stay as they are.';
+
+  @override
+  String get tagWillAdd => 'Will be added';
+
+  @override
+  String get tagWillRemove => 'Will be removed';
+
+  @override
+  String tagsUpdatedCount(int count) {
+    return 'Tags updated for $count clients';
+  }
+
+  @override
+  String get addTag => 'Add tag';
+
+  @override
+  String get editTag => 'Edit tag';
+
+  @override
+  String get tagNameEn => 'Name (English)';
+
+  @override
+  String get tagNameAr => 'Name (Arabic)';
+
+  @override
+  String get tagDuplicate => 'A tag with this name already exists';
+
+  @override
+  String deleteTagTitle(String name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String deleteTagBody(int count) {
+    return 'It is removed from $count clients. This cannot be undone.';
+  }
+
+  @override
+  String get clientTagsHelp =>
+      'Tags describe the client\'s business (factory, showroom, …). Use them to filter the client list and map. Tag clients on their edit screen, or select several in the client list.';
+
+  @override
+  String clientsCountShort(int count) {
+    return '$count clients';
+  }
+
+  @override
   String get addToPlan => 'Add to plan';
 
   @override

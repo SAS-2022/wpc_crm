@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
@@ -39,36 +40,39 @@ Future<bool> showTransferDialog(BuildContext context, WidgetRef ref, List<Client
   final target = await showDialog<String>(
     context: context,
     builder: (dialog) => StatefulBuilder(
-      builder: (dialog, setState) => AlertDialog(
-        title: Text(clients.length == 1 ? l10n.transferClientTitle : l10n.transferClientsTitle(allowed.length)),
-        content: SizedBox(
-          width: 400,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              for (final o in options)
-                ListTile(
-                  leading: Icon(picked == o.id ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                  title: Text(o.name),
-                  onTap: () => setState(() => picked = o.id),
-                ),
-              const SizedBox(height: 8),
-              if (allowed.length < clients.length)
-                Text(
-                  l10n.transferSkipped(clients.length - allowed.length),
-                  style: TextStyle(color: Theme.of(dialog).colorScheme.error),
-                ),
-              Text(l10n.transferPlanNote, style: Theme.of(dialog).textTheme.bodySmall),
-            ],
+      // PointerInterceptor: the dialog also opens over the web clients map.
+      builder: (dialog, setState) => PointerInterceptor(
+        child: AlertDialog(
+          title: Text(clients.length == 1 ? l10n.transferClientTitle : l10n.transferClientsTitle(allowed.length)),
+          content: SizedBox(
+            width: 400,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final o in options)
+                  ListTile(
+                    leading: Icon(picked == o.id ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                    title: Text(o.name),
+                    onTap: () => setState(() => picked = o.id),
+                  ),
+                const SizedBox(height: 8),
+                if (allowed.length < clients.length)
+                  Text(
+                    l10n.transferSkipped(clients.length - allowed.length),
+                    style: TextStyle(color: Theme.of(dialog).colorScheme.error),
+                  ),
+                Text(l10n.transferPlanNote, style: Theme.of(dialog).textTheme.bodySmall),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel)),
+            FilledButton(
+              onPressed: picked == null ? null : () => Navigator.pop(dialog, picked),
+              child: Text(l10n.transferClients),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel)),
-          FilledButton(
-            onPressed: picked == null ? null : () => Navigator.pop(dialog, picked),
-            child: Text(l10n.transferClients),
-          ),
-        ],
       ),
     ),
   );

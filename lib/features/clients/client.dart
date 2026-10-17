@@ -3,6 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'merge.dart';
 import 'transfer.dart';
 
+/// Values of `clients.clientType`, from Odoo's "Is a Company".
+const clientTypeCompany = 'company';
+const clientTypeIndividual = 'individual';
+
 class Client {
   const Client({
     required this.id,
@@ -23,6 +27,9 @@ class Client {
     required this.category,
     required this.lastVisitAt,
     this.contactPerson = '',
+    this.clientType = '',
+    this.companyId = '',
+    this.tagIds = const [],
     this.email = '',
     this.notes = '',
     this.source = 'import',
@@ -71,6 +78,15 @@ class Client {
   final String category;
   final DateTime? lastVisitAt;
   final String contactPerson;
+
+  /// [clientTypeCompany], [clientTypeIndividual] or empty (unknown).
+  final String clientType;
+
+  /// Commercial registration number ("Company ID" in Odoo).
+  final String companyId;
+
+  /// Business tags (Factory, Showroom, …) from `settings/clientTags`.
+  final List<String> tagIds;
   final String email;
   final String notes;
 
@@ -129,6 +145,9 @@ class Client {
       category: switch (d['category']) { final String c when const ['A', 'B', 'C'].contains(c) => c, _ => 'B' },
       lastVisitAt: (d['lastVisitAt'] as Timestamp?)?.toDate(),
       contactPerson: d['contactPerson'] as String? ?? '',
+      clientType: d['clientType'] as String? ?? '',
+      companyId: d['companyId'] as String? ?? '',
+      tagIds: List<String>.from(d['tagIds'] as List? ?? const []),
       email: d['email'] as String? ?? '',
       notes: d['notes'] as String? ?? '',
       source: d['source'] as String? ?? 'import',

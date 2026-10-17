@@ -18,6 +18,8 @@ class ImportRow {
     this.contactPerson = '',
     this.legalName = '',
     this.isCompany = true,
+    this.clientType = '',
+    this.companyId = '',
     this.street = '',
     this.state = '',
     this.country = '',
@@ -50,6 +52,13 @@ class ImportRow {
   /// Odoo "Company Name": the registered name, often in Arabic.
   final String legalName;
   final bool isCompany;
+
+  /// [clientTypeCompany] / [clientTypeIndividual] from "Is a Company";
+  /// empty when the cell is empty.
+  final String clientType;
+
+  /// Odoo "Company ID" (commercial registration number), or empty.
+  final String companyId;
   final String street;
   final String state;
   final String country;
@@ -78,7 +87,7 @@ List<ImportRow> parseOdooTable(List<List<String>> table) {
     for (final c in [
       'Tax ID', 'Phone', 'Mobile', 'Contact Address Complete', 'Street',
       'City', 'Tags', 'Salesperson', 'Google Pin', 'Category', 'Email', 'Contact Person',
-      'Company Name', 'Is a Company', 'State', 'Country', 'Total Receivable', 'Total Payable', 'Currency',
+      'Company Name', 'Is a Company', 'State', 'Country', 'Total Receivable', 'Total Payable', 'Currency', 'Company ID',
     ])
       c: col(c),
   };
@@ -107,10 +116,12 @@ List<ImportRow> parseOdooTable(List<List<String>> table) {
       pinUrl: extractUrl(cell('Google Pin')),
       category: parseCategory(cell('Category')),
       email: cell('Email'),
-      contactPerson: cell('Contact Person'),
+      contactPerson: cleanContactPerson(cell('Contact Person')),
       legalName: cell('Company Name') == '0' ? '' : cell('Company Name'),
       // Excel stores this as a boolean ("false"), CSV as "0".
       isCompany: !const {'0', 'false', 'no'}.contains(cell('Is a Company').toLowerCase()),
+      clientType: parseClientType(cell('Is a Company')),
+      companyId: cell('Company ID').replaceAll(RegExp(r'\s'), ''),
       street: cell('Street'),
       state: cell('State'),
       country: cell('Country'),
@@ -154,4 +165,20 @@ bool isShortLink(String url) =>
     if (lat.abs() <= 90 && lng.abs() <= 180) return (lat: lat, lng: lng);
   }
   return null;
+}
+
+/// "Is a Company" cell → client type; empty when the cell is empty or unknown.
+String parseClientType(String cell) => switch (cell.trim().toLowerCase()) {
+      '1' || 'true' || 'yes' => clientTypeCompany,
+      '0' || 'false' || 'no' => clientTypeIndividual,
+      _ => '',
+    };
+
+/// Odoo's "Contact Person" holds placeholders (".", "Contact") and phone
+/// numbers too; keeps only text that looks like a name.
+String cleanContactPerson(String cell) {
+  final v = cell.trim();
+  if (!RegExp(r'\p{L}', unicode: true).hasMatch(v)) return '';
+  if (const {'contact', 'n/a', 'na', 'none'}.contains(v.toLowerCase())) return '';
+  return v;
 }

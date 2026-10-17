@@ -1,17 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
+import '../../core/app_user.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
+import '../plan/add_task_sheet.dart';
+import '../plan/plan_repository.dart';
+import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
+import 'client_filters.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
 import 'person_style.dart';
+import 'transfer.dart';
+import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
@@ -153,18 +161,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (me?.role.isSupervisor ?? false) ...[
-                        Row(
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
                           children: [
-                            const Icon(Icons.filter_alt_outlined),
-                            const SizedBox(width: 8),
-                            const Expanded(child: SalesFilterDropdown()),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
+                            const ClientFiltersButton(),
+                            if (me?.role.isSupervisor ?? false) ...[
+                              const SizedBox(width: 12),
                               Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
                               const SizedBox(width: 8),
                               Expanded(
@@ -184,9 +187,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                                 ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
+                      const Padding(padding: EdgeInsets.only(bottom: 4), child: ActiveClientFilters(compact: true)),
                       // Salesperson colours: legend chips, tap to show one person.
                       if (byPerson)
                         SingleChildScrollView(
@@ -252,61 +256,128 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
   void _showClient(BuildContext context, Client c) {
     final l10n = AppLocalizations.of(context);
+    final me = ref.read(currentUserProvider).value;
+    final usersById = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
+    final canMove = me != null && canTransferFrom(me, c.assignedTo, usersById);
     showModalBottomSheet<void>(
       context: context,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(c.name, style: Theme.of(context).textTheme.titleMedium),
-              if (c.city.isNotEmpty) Text(c.city),
-              const SizedBox(height: 8),
-              Builder(
-                builder: (context) {
-                  final name =
-                      ref.read(usersProvider).value?.where((u) => u.id == c.assignedTo).firstOrNull?.name ??
-                      l10n.unassigned;
-                  return Row(
-                    children: [
-                      PersonBadge(userId: c.assignedTo, name: name, size: 24),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(name)),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(sheet);
-                        context.push('/clients/${c.id}');
-                      },
-                      child: Text(l10n.details),
+      builder: (sheet) => PointerInterceptor(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(c.name, style: Theme.of(context).textTheme.titleMedium),
+                if (c.city.isNotEmpty) Text(c.city),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final name =
+                        ref.read(usersProvider).value?.where((u) => u.id == c.assignedTo).firstOrNull?.name ??
+                        l10n.unassigned;
+                    return Row(
+                      children: [
+                        PersonBadge(userId: c.assignedTo, name: name, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(name)),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pop(sheet);
+                          context.push('/clients/${c.id}');
+                        },
+                        child: Text(l10n.details),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheet);
-                        context.push('/clients/${c.id}/visit');
-                      },
-                      icon: const Icon(Icons.add_location_alt),
-                      label: Text(l10n.addVisit),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.pop(sheet);
+                          context.push('/clients/${c.id}/visit');
+                        },
+                        icon: const Icon(Icons.add_location_alt),
+                        label: Text(l10n.addVisit),
+                      ),
                     ),
+                  ],
+                ),
+                if (ref.read(currentUserProvider).value?.role.isTracked ?? false) ...[
+                  const SizedBox(height: 12),
+                  _AddToTodayButton(client: c),
+                ],
+                // Web dashboard: KAM / managers move the client to another salesperson.
+                if (kIsWeb && canMove) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheet);
+                      showTransferDialog(context, ref, [c]);
+                    },
+                    icon: const Icon(Icons.swap_horiz),
+                    label: Text(l10n.moveToSalesperson),
                   ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// One tap puts the client on the user's plan for today; shows "On today's
+/// plan" once it's there (any approval state, not done).
+class _AddToTodayButton extends ConsumerStatefulWidget {
+  const _AddToTodayButton({required this.client});
+
+  final Client client;
+
+  @override
+  ConsumerState<_AddToTodayButton> createState() => _AddToTodayButtonState();
+}
+
+class _AddToTodayButtonState extends ConsumerState<_AddToTodayButton> {
+  bool _busy = false;
+
+  Future<void> _add(AppUser me) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      final approved = await addClientToTodayPlan(ref, me, widget.client);
+      messenger.showSnackBar(SnackBar(content: Text(approved ? l10n.planUpdated(1) : l10n.planSentForApproval(1))));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final me = ref.watch(currentUserProvider).value;
+    if (me == null) return const SizedBox.shrink();
+    final tasks = ref.watch(dayTasksProvider((me.id, dayKey(DateTime.now())))).value;
+    final onPlan =
+        tasks?.any((t) => t.clientId == widget.client.id && !t.done && t.approval != TaskApproval.rejected) ?? false;
+    return FilledButton.tonalIcon(
+      onPressed: onPlan || _busy || tasks == null ? null : () => _add(me),
+      icon: _busy
+          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : Icon(onPlan ? Icons.event_available : Icons.playlist_add),
+      label: Text(onPlan ? l10n.onTodaysPlan : l10n.addToTodaysPlan),
     );
   }
 }

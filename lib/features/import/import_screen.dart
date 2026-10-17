@@ -30,12 +30,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   bool _resolverUnavailable = false;
   bool _committing = false;
 
+  /// Only fill empty contact person / client type / company ID of existing clients.
+  bool _fillOnly = false;
+
   Future<void> _pick() async {
     final l10n = AppLocalizations.of(context);
-    final files = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['xlsx', 'csv'],
-    );
+    final files = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['xlsx', 'csv']);
     if (files.isEmpty) return;
     final file = files.first;
     setState(() {
@@ -50,11 +50,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       final salespersonToUid = uidBySalesperson(users);
 
       // Short links already turned into a location don't need the server again.
-      final knownPins = {for (final c in existing) if (c.hasLocation) c.googlePin};
-      final shortLinks = {
-        for (final r in rows)
-          if (isShortLink(r.pinUrl) && !knownPins.contains(r.pinUrl)) r.pinUrl,
-      }.toList();
+      final knownPins = {
+        for (final c in existing)
+          if (c.hasLocation) c.googlePin,
+      };
+      final shortLinks = _fillOnly
+          ? const <String>[]
+          : {
+              for (final r in rows)
+                if (isShortLink(r.pinUrl) && !knownPins.contains(r.pinUrl)) r.pinUrl,
+            }.toList();
       var resolved = (coords: <String, Coords>{}, available: true);
       if (shortLinks.isNotEmpty) {
         setState(() => _progress = l10n.importResolving(0, shortLinks.length));
@@ -68,6 +73,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         existing: existing,
         resolvedPins: resolved.coords,
         salespersonToUid: salespersonToUid,
+        fillOnly: _fillOnly,
       );
       setState(() {
         _fileName = file.name;
@@ -77,8 +83,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           for (final r in rows)
             if (r.salesperson.isNotEmpty && !salespersonToUid.containsKey(normalizeSalesperson(r.salesperson)))
               r.salesperson,
-        }.toList()
-          ..sort();
+        }.toList()..sort();
         _progress = null;
       });
     } catch (e) {
@@ -97,16 +102,17 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _error = null;
     });
     try {
-      await ref.read(clientsRepositoryProvider).commitImport(
+      await ref
+          .read(clientsRepositoryProvider)
+          .commitImport(
             plan,
             fileName: _fileName,
             importedBy: ref.read(currentUserProvider).value!.id,
             defaultCategory: _defaultCategory,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.importDone(plan.creates.length, plan.updates.length)),
-      ));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.importDone(plan.creates.length, plan.updates.length))));
       context.go('/clients');
     } catch (e) {
       setState(() => _error = l10n.errorWithMessage('$e'));
@@ -130,6 +136,20 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.importFillOnly),
+            subtitle: Text(l10n.importFillOnlyHint),
+            value: _fillOnly,
+            onChanged: busy
+                ? null
+                : (v) => setState(() {
+                    _fillOnly = v;
+                    // The preview was built for the other mode.
+                    _plan = null;
+                  }),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: busy ? null : _pick,
             icon: const Icon(Icons.upload_file),
@@ -157,29 +177,51 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             if (_resolverUnavailable)
               Card(
                 color: Theme.of(context).colorScheme.errorContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(l10n.importResolverUnavailable),
-                ),
+                child: Padding(padding: const EdgeInsets.all(12), child: Text(l10n.importResolverUnavailable)),
               ),
-            _Section(l10n.importNew, [for (final w in plan.creates) w.name]),
-            _Section(l10n.importUpdated, [for (final w in plan.updates) '${w.name}  (${w.data.keys.join(', ')})']),
-            ListTile(title: Text(l10n.importUnchanged), trailing: Text('${plan.unchanged}')),
-            _Section(l10n.importDuplicates, [
-              for (final g in plan.mergedDuplicates) '${g.first.vat}: ${g.map((r) => r.name).join(' | ')}',
-            ]),
-            _Section(l10n.importUnresolved, [for (final r in plan.newWithUnreadablePin) '#${r.rowNumber} ${r.name} — ${r.pinUrl}']),
-            _Section(l10n.importNoLocation, [for (final r in plan.newWithoutPin) '#${r.rowNumber} ${r.name}']),
-            _Section(l10n.importLinkedContacts, [for (final r in plan.linkedContacts) '#${r.rowNumber} ${r.name}']),
-            _Section(l10n.importUnknownSalespeople, _unknownSalespeople),
-            const SizedBox(height: 16),
-            Text(l10n.importDefaultCategory, style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: [for (final c in clientCategories) ButtonSegment(value: c, label: Text(c))],
-              selected: {_defaultCategory},
-              onSelectionChanged: (s) => setState(() => _defaultCategory = s.first),
-            ),
+            if (_fillOnly) ...[
+              // Fill mode: how many clients get each field; nothing else is written.
+              for (final (key, label) in [
+                ('contactPerson', l10n.contactPerson),
+                ('clientType', l10n.clientType),
+                ('companyId', l10n.companyId),
+              ])
+                ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: Text(label),
+                  trailing: Text('${plan.updates.where((w) => w.data.containsKey(key)).length}'),
+                ),
+              _Section(l10n.importUpdated, [
+                // Few fields: show the values themselves.
+                for (final w in plan.updates) '${w.name}  (${w.data.values.join(' · ')})',
+              ]),
+              ListTile(title: Text(l10n.importUnchanged), trailing: Text('${plan.unchanged}')),
+            ] else ...[
+              _Section(l10n.importNew, [for (final w in plan.creates) w.name]),
+              _Section(l10n.importUpdated, [
+                for (final w in plan.updates) '${w.name}  (${w.data.keys.join(', ')})',
+              ]),
+              ListTile(title: Text(l10n.importUnchanged), trailing: Text('${plan.unchanged}')),
+              _Section(l10n.importDuplicates, [
+                for (final g in plan.mergedDuplicates) '${g.first.vat}: ${g.map((r) => r.name).join(' | ')}',
+              ]),
+              _Section(l10n.importUnresolved, [
+                for (final r in plan.newWithUnreadablePin) '#${r.rowNumber} ${r.name} — ${r.pinUrl}',
+              ]),
+              _Section(l10n.importNoLocation, [for (final r in plan.newWithoutPin) '#${r.rowNumber} ${r.name}']),
+              _Section(l10n.importLinkedContacts, [for (final r in plan.linkedContacts) '#${r.rowNumber} ${r.name}']),
+              _Section(l10n.importUnknownSalespeople, _unknownSalespeople),
+            ],
+            if (!_fillOnly) ...[
+              const SizedBox(height: 16),
+              Text(l10n.importDefaultCategory, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: [for (final c in clientCategories) ButtonSegment(value: c, label: Text(c))],
+                selected: {_defaultCategory},
+                onSelectionChanged: (s) => setState(() => _defaultCategory = s.first),
+              ),
+            ],
             const SizedBox(height: 16),
             FilledButton(
               onPressed: busy || (plan.creates.isEmpty && plan.updates.isEmpty) ? null : _commit,
@@ -207,8 +249,7 @@ class _Section extends StatelessWidget {
       trailing: Text('${lines.length}'),
       enabled: lines.isNotEmpty,
       children: [
-        for (final line in lines.take(300))
-          ListTile(dense: true, title: Text(line)),
+        for (final line in lines.take(300)) ListTile(dense: true, title: Text(line)),
         if (lines.length > 300) ListTile(dense: true, title: Text('… +${lines.length - 300}')),
       ],
     );

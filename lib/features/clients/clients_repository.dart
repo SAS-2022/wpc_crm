@@ -52,17 +52,51 @@ class SalesFilter extends Notifier<String?> {
   void set(String? value) => state = value;
 }
 
+/// Company / individual filter shared by the client list and map; null = all.
+final clientTypeFilterProvider = NotifierProvider<ClientTypeFilter, String?>(ClientTypeFilter.new);
+
+class ClientTypeFilter extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? value) => state = value;
+}
+
+/// Tag filter shared by the client list and map: clients with any of these
+/// tags; empty = all.
+final tagFilterProvider = NotifierProvider<TagFilter, Set<String>>(TagFilter.new);
+
+class TagFilter extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  void toggle(String id) => state = state.contains(id) ? ({...state}..remove(id)) : {...state, id};
+
+  void clear() => state = const {};
+}
+
+/// Salesperson, company / individual and tag filters together.
+bool Function(Client) _clientFilter(Ref ref) {
+  final sales = ref.watch(salesFilterProvider);
+  final type = ref.watch(clientTypeFilterProvider);
+  final tags = ref.watch(tagFilterProvider);
+  return (c) =>
+      matchesSalesFilter(c, sales) &&
+      (type == null || c.clientType == type) &&
+      (tags.isEmpty || c.tagIds.any(tags.contains));
+}
+
 final filteredClientsProvider = Provider<AsyncValue<List<Client>>>((ref) {
-  final filter = ref.watch(salesFilterProvider);
-  return ref.watch(clientsProvider).whenData((list) => list.where((c) => matchesSalesFilter(c, filter)).toList());
+  final matches = _clientFilter(ref);
+  return ref.watch(clientsProvider).whenData((list) => list.where(matches).toList());
 });
 
 /// Hidden clients under the sales filter, for the client list's "Hidden" chip.
 final filteredHiddenClientsProvider = Provider<List<Client>>((ref) {
-  final filter = ref.watch(salesFilterProvider);
+  final matches = _clientFilter(ref);
   return [
     for (final c in ref.watch(allClientsProvider).value ?? const <Client>[])
-      if (c.hidden && matchesSalesFilter(c, filter)) c,
+      if (c.hidden && matches(c)) c,
   ];
 });
 
@@ -125,6 +159,21 @@ class ClientsRepository {
         });
       }
       await batch.commit();
+    }
+  }
+
+  /// Adds [add] and removes [remove] tag ids on several clients, in batches.
+  Future<void> setTagsMany(List<String> clientIds, {Set<String> add = const {}, Set<String> remove = const {}}) async {
+    // Firestore can't arrayUnion and arrayRemove one field in one update.
+    for (final (field, ids) in [(FieldValue.arrayUnion, add), (FieldValue.arrayRemove, remove)]) {
+      if (ids.isEmpty) continue;
+      for (var i = 0; i < clientIds.length; i += 400) {
+        final batch = _db.batch();
+        for (final id in clientIds.skip(i).take(400)) {
+          batch.update(_clients.doc(id), {'tagIds': field(ids.toList()), 'updatedAt': FieldValue.serverTimestamp()});
+        }
+        await batch.commit();
+      }
     }
   }
 

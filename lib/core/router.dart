@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/login_screen.dart';
 import '../features/auth/status_screens.dart';
+import '../features/clients/client_tags_screen.dart';
 import '../features/clients/client_detail_screen.dart';
 import '../features/clients/client_edit_screen.dart';
 import '../features/clients/clients_map_screen.dart';
@@ -53,7 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final me = profile.value;
       if (me == null || !me.active) return goTo('/no-access');
       if (const ['/splash', '/login', '/no-access'].contains(loc)) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/work-hours') && !me.role.isAdmin) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/client-tags' || loc == '/work-hours') && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
@@ -150,6 +151,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ),
             GoRoute(path: '/visit-rules', builder: (_, _) => const VisitRulesScreen()),
+            GoRoute(path: '/client-tags', builder: (_, _) => const ClientTagsScreen()),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
             GoRoute(
               path: '/import',

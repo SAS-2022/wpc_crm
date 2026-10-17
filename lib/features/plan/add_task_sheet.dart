@@ -13,6 +13,33 @@ import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
 import 'checklist.dart';
 import 'plan_repository.dart';
+import 'plan_task.dart';
+
+/// Puts [client] on [me]'s plan for today in one tap (clients map). Same
+/// approval and notifications as the add sheet; returns whether it was
+/// approved straight away (KAM) or sent for approval (sales exec).
+Future<bool> addClientToTodayPlan(WidgetRef ref, AppUser me, Client client) async {
+  final today = dayKey(DateTime.now());
+  final approved = me.role.isSupervisor;
+  await ref.read(planRepositoryProvider).addMany(
+        ownerId: me.id,
+        date: today,
+        createdBy: me.id,
+        approved: approved,
+        clients: [(id: client.id, name: client.name)],
+      );
+  if (!approved) {
+    await sendNotifications(
+      toIds: reviewersOf(me, ref.read(usersProvider).value ?? const <AppUser>[]),
+      type: NotificationType.planSubmitted,
+      fromId: me.id,
+      ownerId: me.id,
+      date: today,
+      count: 1,
+    );
+  }
+  return approved;
+}
 
 /// Adds client visits (several at once) or a free task to [owner]'s plan for
 /// [date]. A sales exec's additions wait for approval and notify their

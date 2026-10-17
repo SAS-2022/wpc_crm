@@ -11,6 +11,8 @@ import '../attachments/attachments_section.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
 import '../visits/visits_repository.dart';
+import 'client.dart';
+import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
 import 'transfer.dart';
@@ -196,6 +198,7 @@ class ClientDetailScreen extends ConsumerWidget {
                         ].join(' · '),
                         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
+                      ClientTagChips(client: client),
                     ],
                   ),
                 ),
@@ -265,7 +268,13 @@ class ClientDetailScreen extends ConsumerWidget {
             row(Icons.category, l10n.category, l10n.categoryRule(client.category, rule.greenDays, rule.yellowDays)),
             row(Icons.badge, l10n.salesExecutive, exec?.name ?? l10n.unassigned),
             row(Icons.business, l10n.odooSalesperson, client.odooSalesperson),
+            row(Icons.apartment, l10n.clientType, switch (client.clientType) {
+              clientTypeCompany => l10n.clientTypeCompany,
+              clientTypeIndividual => l10n.clientTypeIndividual,
+              _ => '',
+            }),
             row(Icons.receipt_long, l10n.vat, client.vat),
+            row(Icons.numbers, l10n.companyId, client.companyId),
             row(Icons.sell, l10n.tags, client.tags),
             row(Icons.merge_type, l10n.mergedContacts, client.aliases.join('\n')),
           ]),

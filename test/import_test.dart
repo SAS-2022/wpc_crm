@@ -172,4 +172,75 @@ void main() {
     ]);
     expect(map, {'sami mansour @ sales': 'sami', 'ahmed @ sales': 'kam'});
   });
+
+  group('Contact person, client type, company ID', () {
+    const h = ['Complete Name', 'Tax ID', 'Is a Company', 'Contact Person', 'Company ID', 'Google Pin', 'Salesperson'];
+    List<ImportRow> rows(List<List<String>> r) => parseOdooTable([h, ...r]);
+
+    test('parses the columns and drops placeholder contact names', () {
+      final r = rows([
+        ['A Co', '', 'true', 'Ahmad', '1010 918165', '', ''],
+        ['B', '', 'false', '+966 50 342 9632', '', '', ''],
+        ['C', '', '', '.', '', '', ''],
+        ['D', '', '1', 'Contact', '', '', ''],
+      ]);
+      expect([for (final x in r) x.clientType], [clientTypeCompany, clientTypeIndividual, '', clientTypeCompany]);
+      expect([for (final x in r) x.contactPerson], ['Ahmad', '', '', '']);
+      expect(r.first.companyId, '1010918165');
+    });
+
+    test('a normal import writes them', () {
+      final p = buildPlan(
+        rows: rows([['A Co', '', 'true', 'Ahmad', '1010', '', '']]),
+        existing: const [],
+        resolvedPins: const {},
+        salespersonToUid: const {},
+      );
+      expect(p.creates.single.data, containsPair('clientType', clientTypeCompany));
+      expect(p.creates.single.data, containsPair('companyId', '1010'));
+      expect(p.creates.single.data, containsPair('contactPerson', 'Ahmad'));
+    });
+
+    test('fill only: fills empty fields of matched clients and nothing else', () {
+      final existing = [
+        existingClient(id: 'c1', vat: '300', name: 'A Co', assignedTo: 'u9', lat: 24),
+        Client(
+          id: 'c2', vat: '', nameKey: 'b co', name: 'B Co', aliases: const [], phone: '', mobile: '',
+          address: '', city: '', tags: '', odooSalesperson: '', googlePin: '', lat: null, lng: null,
+          assignedTo: null, category: 'B', lastVisitAt: null, contactPerson: 'Kept', clientType: clientTypeIndividual,
+        ),
+      ];
+      final p = buildPlan(
+        rows: rows([
+          ['A Co renamed', '300', 'true', 'Ahmad', '1010', 'https://maps.google.com/?q=1.0,2.0', 'Sami @ Sales'],
+          ['B Co', '', 'true', 'Omar', '2020', '', ''],
+          ['New Co', '', 'true', 'Ali', '3030', '', ''],
+        ]),
+        existing: existing,
+        resolvedPins: const {},
+        salespersonToUid: {'sami @ sales': 'u1'},
+        fillOnly: true,
+      );
+      expect(p.creates, isEmpty);
+      expect({for (final w in p.updates) w.existingId: w.data}, {
+        'c1': {'contactPerson': 'Ahmad', 'clientType': clientTypeCompany, 'companyId': '1010'},
+        'c2': {'companyId': '2020'},
+      });
+      expect(p.unchanged, 1);
+    });
+
+    test('fill only: takes a value from another row with the same VAT', () {
+      final p = buildPlan(
+        rows: rows([
+          ['A Co', '300', 'true', '', '', '', ''],
+          ['A Co branch', '300', 'true', 'Sami', '', '', ''],
+        ]),
+        existing: [existingClient(vat: '300', name: 'A Co')],
+        resolvedPins: const {},
+        salespersonToUid: const {},
+        fillOnly: true,
+      );
+      expect(p.updates.single.data, {'contactPerson': 'Sami', 'clientType': clientTypeCompany});
+    });
+  });
 }

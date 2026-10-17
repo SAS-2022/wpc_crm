@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../import/import_service.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
+import 'client_tags.dart';
 import 'clients_repository.dart';
 import 'location_picker_screen.dart';
 import 'transfer.dart';
@@ -40,6 +41,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   final _contactPerson = TextEditingController();
   final _email = TextEditingController();
   final _vat = TextEditingController();
+  final _companyId = TextEditingController();
+
+  /// [clientTypeCompany], [clientTypeIndividual] or '' (not set).
+  String _clientType = '';
   final _notes = TextEditingController();
   String? _assignedTo;
 
@@ -47,6 +52,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   /// as a transfer of it.
   Client? _original;
   String _category = defaultCategory;
+  Set<String> _tagIds = {};
   bool _loaded = false;
   bool _busy = false;
   bool _locating = false;
@@ -62,6 +68,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     _contactPerson,
     _email,
     _vat,
+    _companyId,
     _notes,
   ];
 
@@ -84,11 +91,14 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     _lat.text = c.lat?.toString() ?? '';
     _lng.text = c.lng?.toString() ?? '';
     _category = c.category;
+    _tagIds = {...c.tagIds};
     _assignedTo = c.assignedTo;
     _original = c;
     _contactPerson.text = c.contactPerson;
     _email.text = c.email;
     _vat.text = c.vat;
+    _companyId.text = c.companyId;
+    _clientType = c.clientType;
     _notes.text = c.notes;
     _loaded = true;
   }
@@ -180,7 +190,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       'lng': double.tryParse(_lng.text.trim()),
       'notes': _notes.text.trim(),
       if (manage || _isNew) 'vat': _vat.text.replaceAll(RegExp(r'\s'), ''),
+      if (manage || _isNew) 'companyId': _companyId.text.replaceAll(RegExp(r'\s'), ''),
+      if (manage || _isNew) 'clientType': _clientType,
       if (manage || _isNew) 'category': _category,
+      if (manage) 'tagIds': _tagIds.toList(),
       // A sales exec's new client is theirs. A changed assignment of an
       // existing client is saved as a transfer below.
       if (_isNew) 'assignedTo': manage ? _assignedTo : me.id,
@@ -316,8 +329,20 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l10n.required : null,
             ),
-            if (manage || _isNew)
+            if (manage || _isNew) ...[
+              DropdownButtonFormField<String>(
+                initialValue: _clientType,
+                decoration: InputDecoration(labelText: l10n.clientType),
+                items: [
+                  DropdownMenuItem(value: '', child: Text(l10n.notSet)),
+                  DropdownMenuItem(value: clientTypeCompany, child: Text(l10n.clientTypeCompany)),
+                  DropdownMenuItem(value: clientTypeIndividual, child: Text(l10n.clientTypeIndividual)),
+                ],
+                onChanged: (v) => setState(() => _clientType = v ?? ''),
+              ),
               field(_vat, l10n.vat, type: TextInputType.number),
+              field(_companyId, l10n.companyId, type: TextInputType.number),
+            ],
             section(l10n.contact),
             field(_contactPerson, l10n.contactPerson),
             field(_phone, l10n.phone, type: TextInputType.phone),
@@ -426,6 +451,21 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
                     ),
                   );
                 },
+              ),
+              const SizedBox(height: 16),
+              Text(l10n.clientTags, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final t in ref.watch(clientTagsProvider).value ?? defaultClientTags)
+                    FilterChip(
+                      label: Text(t.label(Localizations.localeOf(context).languageCode)),
+                      selected: _tagIds.contains(t.id),
+                      onSelected: (on) => setState(() => on ? _tagIds.add(t.id) : _tagIds.remove(t.id)),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String?>(

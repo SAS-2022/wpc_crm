@@ -6,6 +6,8 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
+import 'client_filters.dart';
+import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'duplicates_view.dart';
 import 'clients_repository.dart';
@@ -86,6 +88,24 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     }
   }
 
+  /// Adds / removes tags on the ticked clients.
+  Future<void> _tagSelected(List<String> ids) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final change = await showBulkTagsDialog(context, ids.length);
+    if (change == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(clientsRepositoryProvider).setTagsMany(ids, add: change.add, remove: change.remove);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.tagsUpdatedCount(ids.length))));
+      if (mounted) setState(() => _selected = null);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   /// Moves the ticked clients to another sales executive.
   Future<void> _transferSelected(List<Client> ticked) async {
     setState(() => _busy = true);
@@ -116,7 +136,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               _query.isEmpty ||
               c.nameKey.contains(_query) ||
               c.city.toLowerCase().contains(_query) ||
-              c.vat.contains(_query),
+              c.vat.contains(_query) ||
+              c.companyId.contains(_query),
         )
         .toList();
     final list = searched.where((c) => _matches(c, rules, now, _status)).toList();
@@ -142,6 +163,11 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 icon: const Icon(Icons.select_all),
                 tooltip: l10n.selectAll,
                 onPressed: () => setState(() => _selected = {for (final c in list) c.id}),
+              ),
+              IconButton(
+                icon: const Icon(Icons.sell_outlined),
+                tooltip: l10n.clientTags,
+                onPressed: ticked.isEmpty || _busy ? null : () => _tagSelected(ticked.toList()),
               ),
               IconButton(
                 icon: const Icon(Icons.swap_horiz),
@@ -256,12 +282,20 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.search),
-              onChanged: (v) => setState(() => _query = Client.normalizeName(v)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.search),
+                    onChanged: (v) => setState(() => _query = Client.normalizeName(v)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const ClientFiltersButton(),
+              ],
             ),
           ),
-          if (supervisor) const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: SalesFilterDropdown()),
+          const Padding(padding: EdgeInsets.fromLTRB(16, 8, 16, 0), child: ActiveClientFilters()),
           if (_busy) const LinearProgressIndicator(),
           Expanded(
             child: clients.when(
@@ -337,7 +371,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 /// One client row: category badge in its visit colour (blue when on today's
 /// plan, as on the map), the salesperson's initials (KAM / managers), and a
 /// status pill with the days since the last visit.
-class _ClientTile extends StatelessWidget {
+class _ClientTile extends ConsumerWidget {
   const _ClientTile({
     required this.client,
     required this.exec,
@@ -365,7 +399,9 @@ class _ClientTile extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tags = ref.watch(clientTagsByIdProvider);
+    final lang = Localizations.localeOf(context).languageCode;
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final color = planned ? plannedColor : visitStatusColor(status);
@@ -382,7 +418,14 @@ class _ClientTile extends StatelessWidget {
       subtitle: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: [client.city, exec].where((s) => s.isNotEmpty).join(' · ')),
+            TextSpan(
+              text: [
+                client.city,
+                exec,
+                for (final id in client.tagIds)
+                  if (tags[id] case final t?) t.label(lang),
+              ].where((s) => s.isNotEmpty).join(' · '),
+            ),
             if (!client.hasLocation) ...[
               const TextSpan(text: '  '),
               WidgetSpan(

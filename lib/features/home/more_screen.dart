@@ -78,6 +78,11 @@ class MoreScreen extends ConsumerWidget {
               onTap: () => context.push('/users'),
             ),
             ListTile(
+              leading: const Icon(Icons.sell_outlined),
+              title: Text(l10n.clientTags),
+              onTap: () => context.push('/client-tags'),
+            ),
+            ListTile(
               leading: const Icon(Icons.timelapse),
               title: Text(l10n.visitFrequency),
               onTap: () => context.push('/visit-rules'),

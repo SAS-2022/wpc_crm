@@ -567,6 +567,104 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get addToTodaysPlan => 'إضافة إلى خطة اليوم';
+
+  @override
+  String get onTodaysPlan => 'في خطة اليوم';
+
+  @override
+  String get moveToSalesperson => 'نقل إلى مندوب آخر';
+
+  @override
+  String get clientType => 'النوع';
+
+  @override
+  String get clientTypeCompany => 'شركة';
+
+  @override
+  String get clientTypeIndividual => 'فرد';
+
+  @override
+  String get companyId => 'رقم السجل التجاري';
+
+  @override
+  String get notSet => 'غير محدد';
+
+  @override
+  String get importFillOnly => 'تعبئة الحقول الناقصة فقط';
+
+  @override
+  String get importFillOnlyHint =>
+      'الشخص المسؤول، شركة / فرد، ورقم السجل التجاري للعملاء الحاليين، فقط إذا كانت فارغة. لا يتغير أي شيء آخر ولا يُضاف عملاء جدد.';
+
+  @override
+  String get filters => 'الفلاتر';
+
+  @override
+  String get clearFilters => 'مسح الكل';
+
+  @override
+  String get clientTags => 'تصنيفات العملاء';
+
+  @override
+  String get tagFilterAny =>
+      'يعرض العملاء الذين لديهم أي من التصنيفات المختارة.';
+
+  @override
+  String tagClientsTitle(int count) {
+    return 'تصنيفات $count عميل';
+  }
+
+  @override
+  String get tagClientsHelp =>
+      'اضغط على التصنيف مرة لإضافته ومرتين لإزالته. التصنيفات الأخرى تبقى كما هي.';
+
+  @override
+  String get tagWillAdd => 'ستتم إضافته';
+
+  @override
+  String get tagWillRemove => 'ستتم إزالته';
+
+  @override
+  String tagsUpdatedCount(int count) {
+    return 'تم تحديث التصنيفات لـ $count عميل';
+  }
+
+  @override
+  String get addTag => 'إضافة تصنيف';
+
+  @override
+  String get editTag => 'تعديل التصنيف';
+
+  @override
+  String get tagNameEn => 'الاسم (إنجليزي)';
+
+  @override
+  String get tagNameAr => 'الاسم (عربي)';
+
+  @override
+  String get tagDuplicate => 'يوجد تصنيف بهذا الاسم';
+
+  @override
+  String deleteTagTitle(String name) {
+    return 'حذف \"$name\"؟';
+  }
+
+  @override
+  String deleteTagBody(int count) {
+    return 'ستتم إزالته من $count عميل. لا يمكن التراجع عن ذلك.';
+  }
+
+  @override
+  String get clientTagsHelp =>
+      'التصنيفات تصف نشاط العميل (مصنع، معرض، …). استخدمها لتصفية قائمة العملاء والخريطة. صنّف العملاء من شاشة التعديل، أو اختر عدة عملاء من القائمة.';
+
+  @override
+  String clientsCountShort(int count) {
+    return '$count عميل';
+  }
+
+  @override
   String get addToPlan => 'إضافة إلى الخطة';
 
   @override

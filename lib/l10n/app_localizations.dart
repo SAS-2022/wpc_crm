@@ -1088,6 +1088,174 @@ abstract class AppLocalizations {
   /// **'{name}\'s plan'**
   String planOf(String name);
 
+  /// No description provided for @addToTodaysPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to today\'s plan'**
+  String get addToTodaysPlan;
+
+  /// No description provided for @onTodaysPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'On today\'s plan'**
+  String get onTodaysPlan;
+
+  /// No description provided for @moveToSalesperson.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to another salesperson'**
+  String get moveToSalesperson;
+
+  /// No description provided for @clientType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get clientType;
+
+  /// No description provided for @clientTypeCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get clientTypeCompany;
+
+  /// No description provided for @clientTypeIndividual.
+  ///
+  /// In en, this message translates to:
+  /// **'Individual'**
+  String get clientTypeIndividual;
+
+  /// No description provided for @companyId.
+  ///
+  /// In en, this message translates to:
+  /// **'Company ID (CR)'**
+  String get companyId;
+
+  /// No description provided for @notSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get notSet;
+
+  /// No description provided for @importFillOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only fill missing fields'**
+  String get importFillOnly;
+
+  /// No description provided for @importFillOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact person, Company / Individual and Company ID of existing clients, only where empty. Nothing else changes and no clients are added.'**
+  String get importFillOnlyHint;
+
+  /// No description provided for @filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filters;
+
+  /// No description provided for @clearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clearFilters;
+
+  /// No description provided for @clientTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Client tags'**
+  String get clientTags;
+
+  /// No description provided for @tagFilterAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows clients with any of the selected tags.'**
+  String get tagFilterAny;
+
+  /// No description provided for @tagClientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags for {count} clients'**
+  String tagClientsTitle(int count);
+
+  /// No description provided for @tagClientsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a tag once to add it, twice to remove it. Other tags stay as they are.'**
+  String get tagClientsHelp;
+
+  /// No description provided for @tagWillAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Will be added'**
+  String get tagWillAdd;
+
+  /// No description provided for @tagWillRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Will be removed'**
+  String get tagWillRemove;
+
+  /// No description provided for @tagsUpdatedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags updated for {count} clients'**
+  String tagsUpdatedCount(int count);
+
+  /// No description provided for @addTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tag'**
+  String get addTag;
+
+  /// No description provided for @editTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit tag'**
+  String get editTag;
+
+  /// No description provided for @tagNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (English)'**
+  String get tagNameEn;
+
+  /// No description provided for @tagNameAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (Arabic)'**
+  String get tagNameAr;
+
+  /// No description provided for @tagDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag with this name already exists'**
+  String get tagDuplicate;
+
+  /// No description provided for @deleteTagTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String deleteTagTitle(String name);
+
+  /// No description provided for @deleteTagBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It is removed from {count} clients. This cannot be undone.'**
+  String deleteTagBody(int count);
+
+  /// No description provided for @clientTagsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags describe the client\'s business (factory, showroom, …). Use them to filter the client list and map. Tag clients on their edit screen, or select several in the client list.'**
+  String get clientTagsHelp;
+
+  /// No description provided for @clientsCountShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients'**
+  String clientsCountShort(int count);
+
   /// No description provided for @addToPlan.
   ///
   /// In en, this message translates to:

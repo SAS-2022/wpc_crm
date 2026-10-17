@@ -61,11 +61,15 @@ Map<String, String> uidBySalesperson(Iterable<AppUser> users) => {
 /// Rows of clients merged into another one in the app are skipped.
 /// Existing clients keep their app-side data (assignment, green period,
 /// visits); a salesperson from Odoo only fills an empty assignment.
+///
+/// [fillOnly]: no new clients; matched clients only get the [fillChanges]
+/// fields that are empty in the app (assignment, location, hidden etc. stay as they are).
 ImportPlan buildPlan({
   required List<ImportRow> rows,
   required List<Client> existing,
   required Map<String, Coords> resolvedPins,
   required Map<String, String> salespersonToUid,
+  bool fillOnly = false,
 }) {
   // Odoo names a child contact "Parent, Person": attach it to the parent.
   final byNameKey = {for (final r in rows) r.nameKey: r};
@@ -127,6 +131,19 @@ ImportPlan buildPlan({
       continue;
     }
     if (match != null && !usedIds.add(match.id)) match = null;
+    if (fillOnly) {
+      if (match == null) {
+        unchanged++;
+        continue;
+      }
+      final fills = fillChanges(match, group, primary);
+      if (fills.isEmpty) {
+        unchanged++;
+      } else {
+        updates.add(PlannedWrite(existingId: match.id, name: match.name, data: fills));
+      }
+      continue;
+    }
     final uid = salespersonToUid[normalizeSalesperson(primary.salesperson)];
 
     final odooFields = <String, dynamic>{
@@ -145,6 +162,8 @@ ImportPlan buildPlan({
       if (primary.category.isNotEmpty) 'category': primary.category,
       if (primary.email.isNotEmpty) 'email': primary.email,
       if (primary.contactPerson.isNotEmpty) 'contactPerson': primary.contactPerson,
+      if (primary.clientType.isNotEmpty) 'clientType': primary.clientType,
+      if (primary.companyId.isNotEmpty) 'companyId': primary.companyId,
       'legalName': primary.legalName,
       'street': primary.street,
       'state': primary.state,
@@ -194,6 +213,8 @@ ImportPlan buildPlan({
       'category': match.category,
       'email': match.email,
       'contactPerson': match.contactPerson,
+      'clientType': match.clientType,
+      'companyId': match.companyId,
       'legalName': match.legalName,
       'street': match.street,
       'state': match.state,
@@ -242,6 +263,19 @@ ImportPlan buildPlan({
     mergedDuplicates: merged,
     linkedContacts: linked,
   );
+}
+
+/// Contact person, client type and company ID where they are empty on [client] and have a value in the rows of
+/// its group ([primary] first, then the other same-VAT rows).
+Map<String, String> fillChanges(Client client, List<ImportRow> group, ImportRow primary) {
+  final rows = [primary, ...group.where((r) => r != primary)];
+  String first(String Function(ImportRow) f) => rows.map(f).firstWhere((v) => v.isNotEmpty, orElse: () => '');
+  return {
+    if (client.contactPerson.isEmpty && first((r) => r.contactPerson).isNotEmpty)
+      'contactPerson': first((r) => r.contactPerson),
+    if (client.clientType.isEmpty && first((r) => r.clientType).isNotEmpty) 'clientType': first((r) => r.clientType),
+    if (client.companyId.isEmpty && first((r) => r.companyId).isNotEmpty) 'companyId': first((r) => r.companyId),
+  };
 }
 
 bool _same(Object? a, Object? b) => switch ((a, b)) {
