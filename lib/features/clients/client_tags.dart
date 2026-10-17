@@ -35,6 +35,31 @@ const defaultClientTags = [
   ClientTag(id: 'showroom', en: 'Showroom', ar: 'معرض'),
 ];
 
+/// Labels for a client's locations (Office, Factory, …), used until a GM /
+/// sales manager first saves the list (`settings/locationTypes`).
+const defaultLocationTypes = [
+  ClientTag(id: 'office', en: 'Office', ar: 'مكتب'),
+  ClientTag(id: 'factory', en: 'Factory', ar: 'مصنع'),
+  ClientTag(id: 'showroom', en: 'Showroom', ar: 'معرض'),
+  ClientTag(id: 'warehouse', en: 'Warehouse', ar: 'مستودع'),
+  ClientTag(id: 'workshop', en: 'Workshop', ar: 'ورشة'),
+  ClientTag(id: 'branch', en: 'Branch', ar: 'فرع'),
+];
+
+/// The two editable label lists: business tags on clients, and the labels of
+/// a client's locations. Same shape ({tags: [{id, en, ar}]}), same editor.
+enum TagList {
+  clientTags('settings/clientTags', defaultClientTags),
+  locationTypes('settings/locationTypes', defaultLocationTypes);
+
+  const TagList(this.path, this.defaults);
+
+  final String path;
+  final List<ClientTag> defaults;
+
+  DocumentReference<Map<String, dynamic>> get doc => FirebaseFirestore.instance.doc(path);
+}
+
 /// Comparison key: case, spaces, punctuation and Arabic letter forms ignored.
 String tagKey(String name) => name
     .toLowerCase()
@@ -55,18 +80,24 @@ class DuplicateTagException implements Exception {
   const DuplicateTagException();
 }
 
-List<ClientTag> _tagsOf(Map<String, dynamic>? data) {
+List<ClientTag> _tagsOf(TagList kind, Map<String, dynamic>? data) {
   final list = data?['tags'];
-  if (list is! List) return defaultClientTags;
+  if (list is! List) return kind.defaults;
   return [
     for (final m in list)
       if (m is Map) ClientTag.fromMap(m),
   ];
 }
 
-final _doc = FirebaseFirestore.instance.doc('settings/clientTags');
+final tagListProvider = StreamProvider.family<List<ClientTag>, TagList>(
+    (ref, kind) => kind.doc.snapshots().map((s) => _tagsOf(kind, s.data())));
 
-final clientTagsProvider = StreamProvider<List<ClientTag>>((ref) => _doc.snapshots().map((s) => _tagsOf(s.data())));
+final clientTagsProvider = tagListProvider(TagList.clientTags);
+
+/// Location type id → label.
+final locationTypesByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
+      for (final t in ref.watch(tagListProvider(TagList.locationTypes)).value ?? defaultLocationTypes) t.id: t,
+    });
 
 /// Tag id → tag, for showing a client's tags.
 final clientTagsByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
@@ -75,22 +106,24 @@ final clientTagsByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
 
 /// Adds a tag ([id] null) or renames one. Checked inside a transaction so two
 /// people can't add the same name at once; throws [DuplicateTagException].
-Future<void> saveClientTag({String? id, required String en, required String ar}) =>
+Future<void> saveTag(TagList kind, {String? id, required String en, required String ar}) =>
     FirebaseFirestore.instance.runTransaction((tx) async {
-      final tags = _tagsOf((await tx.get(_doc)).data());
+      final tags = _tagsOf(kind, (await tx.get(kind.doc)).data());
       if (isDuplicateTag(tags, en, ar, exceptId: id)) throw const DuplicateTagException();
-      final tag = ClientTag(id: id ?? _doc.collection('x').doc().id, en: en, ar: ar);
+      final tag = ClientTag(id: id ?? kind.doc.collection('x').doc().id, en: en, ar: ar);
       final updated = id == null ? [...tags, tag] : [for (final t in tags) t.id == id ? tag : t];
-      tx.set(_doc, {'tags': [for (final t in updated) t.toMap()]});
+      tx.set(kind.doc, {'tags': [for (final t in updated) t.toMap()]});
     });
 
-/// Removes the tag from the list and from every client that has it.
-Future<void> deleteClientTag(String id) async {
+/// Removes the label from the list. A client tag is also removed from every
+/// client that has it; a deleted location type leaves its locations unlabelled.
+Future<void> deleteTag(TagList kind, String id) async {
   final db = FirebaseFirestore.instance;
   await db.runTransaction((tx) async {
-    final tags = _tagsOf((await tx.get(_doc)).data());
-    tx.set(_doc, {'tags': [for (final t in tags) if (t.id != id) t.toMap()]});
+    final tags = _tagsOf(kind, (await tx.get(kind.doc)).data());
+    tx.set(kind.doc, {'tags': [for (final t in tags) if (t.id != id) t.toMap()]});
   });
+  if (kind != TagList.clientTags) return;
   final tagged = await db.collection('clients').where('tagIds', arrayContains: id).get();
   for (var i = 0; i < tagged.docs.length; i += 400) {
     final batch = db.batch();

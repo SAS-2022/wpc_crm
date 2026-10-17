@@ -32,13 +32,24 @@ class MoreScreen extends ConsumerWidget {
             onTap: () => context.push('/profile'),
           ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.beach_access),
+            title: Text(l10n.myLeave),
+            onTap: () => context.push('/leave'),
+          ),
+          if (me.role.canSeeHr && !wide)
+            ListTile(
+              leading: const Icon(Icons.badge),
+              title: Text(l10n.hrArea),
+              onTap: () => context.push('/hr'),
+            ),
           if (me.role.isTracked)
             ListTile(
               leading: const Icon(Icons.today),
               title: Text(l10n.myPlan),
               onTap: () => context.push('/plan/${me.id}'),
             ),
-          if (!wide)
+          if (!wide && me.role.isSales)
             ListTile(
               leading: const Icon(Icons.map),
               title: Text(l10n.map),
@@ -81,6 +92,11 @@ class MoreScreen extends ConsumerWidget {
               leading: const Icon(Icons.sell_outlined),
               title: Text(l10n.clientTags),
               onTap: () => context.push('/client-tags'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: Text(l10n.locationTypes),
+              onTap: () => context.push('/location-types'),
             ),
             ListTile(
               leading: const Icon(Icons.timelapse),

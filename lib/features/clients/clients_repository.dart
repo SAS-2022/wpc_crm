@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
+import '../attachments/attachments.dart';
 import '../import/import_plan.dart';
 import '../import/location_import.dart';
 import '../notifications/notifications.dart';
@@ -187,6 +188,31 @@ class ClientsRepository {
       });
     }
     await batch.commit();
+  }
+
+  /// How many visits (and calls) were made to the client, by anyone.
+  Future<int> visitCount(String clientId) async =>
+      (await _db.collection('visits').where('clientId', isEqualTo: clientId).count().get()).count ?? 0;
+
+  /// Sales manager / GM: deletes the client with its plan items and its
+  /// photos / files. Its visits stay (they carry the client's name), so
+  /// visit history, reports and targets don't change (user decision 2026-10-17).
+  Future<void> delete(Client client) async {
+    final files = AttachmentsRepository();
+    final owner = (parent: AttachmentParent.clients, id: client.id);
+    for (final d in (await _clients.doc(client.id).collection('attachments').get()).docs) {
+      await files.delete(owner, Attachment.fromDoc(d));
+    }
+    final tasks = await _db.collection('tasks').where('clientId', isEqualTo: client.id).get();
+    for (var i = 0; i < tasks.docs.length; i += 400) {
+      final batch = _db.batch();
+      for (final t in tasks.docs.skip(i).take(400)) {
+        batch.delete(t.reference);
+      }
+      await batch.commit();
+    }
+    // Last, so a failure above leaves the client in place.
+    await _clients.doc(client.id).delete();
   }
 
   /// Sales manager / GM: merges [others] into [keep]. Their visits, plan

@@ -185,19 +185,22 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
                         borderRadius: BorderRadius.circular(8),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            a.url,
-                            width: 96,
-                            height: 96,
-                            fit: BoxFit.cover,
-                            cacheWidth: 288,
-                            errorBuilder: (_, _, _) => Container(
-                              width: 96,
-                              height: 96,
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.broken_image),
-                            ),
-                          ),
+                          // HEIC (iPhone) photos: only Safari can show them, so other
+                          // browsers get a labelled tile; tapping opens the file.
+                          child: a.contentType == 'image/heic' && kIsWeb
+                              ? _FileTile(label: 'HEIC', icon: Icons.photo, tooltip: a.fileName)
+                              : Image.network(
+                                  a.url,
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 288,
+                                  // Web: when the canvas renderer can't load the photo,
+                                  // the browser's own <img> shows it instead.
+                                  webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                                  errorBuilder: (_, _, _) =>
+                                      _FileTile(label: a.fileName, icon: Icons.broken_image, tooltip: a.fileName),
+                                ),
                         ),
                       ),
                   ],
@@ -214,6 +217,38 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
                     : null,
                 onTap: () => _open(a),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A 96×96 tile standing in for a photo that can't be shown as a thumbnail.
+class _FileTile extends StatelessWidget {
+  const _FileTile({required this.label, required this.icon, required this.tooltip});
+
+  final String label;
+  final IconData icon;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 96,
+        height: 96,
+        padding: const EdgeInsets.all(6),
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon),
+            const SizedBox(height: 4),
+            Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall),
           ],
         ),
       ),

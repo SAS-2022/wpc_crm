@@ -8,6 +8,13 @@ service cloud.firestore {
     function isGm() { return active() && me().role == 'gm'; }
     function isAdmin() { return active() && me().role in ['sales_manager', 'gm']; }
     function isSupervisor() { return active() && me().role in ['kam', 'sales_manager', 'gm']; }
+    // The sales team; HR, accounting and procurement are not (no clients, visits, plans).
+    function isSales() { return active() && me().role in ['sales_exec', 'kam', 'sales_manager', 'gm']; }
+    // HR, GM and (for now, to test) the sales manager see the HR area.
+    // Edits leave types, holidays, balances and request details: HR and GM,
+    // and the sales manager for now (testing, user decision 2026-10-17).
+    function managesHr() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+    function isHrArea() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
     function ownsClient(clientId) {
       return active() && get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid;
     }
@@ -31,19 +38,19 @@ service cloud.firestore {
     }
 
     // KAM, sales manager and GM can edit clients; a sales exec edits contact
-    // details, location and notes of their own clients (not category or assignment).
+    // details, locations and notes of their own clients (not category or assignment).
     match /clients/{clientId} {
       allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid);
       // KAM / managers add any client; a sales exec adds clients for themselves.
       allow create: if isSupervisor()
-        || (active() && request.resource.data.assignedTo == request.auth.uid
+        || (isSales() && request.resource.data.assignedTo == request.auth.uid
             && request.resource.data.source == 'manual');
       allow delete: if isAdmin();
       allow update: if isSupervisor()
         || (active() && resource.data.assignedTo == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'lastVisitAt', 'lat', 'lng', 'name', 'contactPerson', 'phone', 'mobile', 'email',
-              'address', 'city', 'notes', 'updatedAt']));
+              'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
+              'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt']));
 
       match /attachments/{attachmentId} {
         allow read, create: if isSupervisor() || ownsClient(clientId);
@@ -53,7 +60,7 @@ service cloud.firestore {
 
     match /visits/{visitId} {
       allow read: if isSupervisor() || (active() && resource.data.salesExecId == request.auth.uid);
-      allow create: if active() && request.resource.data.salesExecId == request.auth.uid;
+      allow create: if isSales() && request.resource.data.salesExecId == request.auth.uid;
       // A KAM only marks / unmarks themselves as having been at the visit.
       allow update: if isAdmin()
         || (isSupervisor()
@@ -79,7 +86,7 @@ service cloud.firestore {
     // edits the checklist of a visit (adds, ticks, comments).
     match /tasks/{taskId} {
       allow read: if isSupervisor() || (active() && resource.data.ownerId == request.auth.uid);
-      allow create: if active() && request.resource.data.createdBy == request.auth.uid
+      allow create: if isSales() && request.resource.data.createdBy == request.auth.uid
         && (isSupervisor()
             || (request.resource.data.ownerId == request.auth.uid && request.resource.data.approval == 'pending'));
       allow update: if isSupervisor()
@@ -105,6 +112,60 @@ service cloud.firestore {
 
     match /import_batches/{batchId} {
       allow read, write: if isAdmin();
+    }
+
+    // HR edits leave types and public holidays (everyone reads them, as settings).
+    match /settings/leaveTypes {
+      allow write: if managesHr();
+    }
+    match /settings/holidays {
+      allow write: if managesHr();
+    }
+
+    // Leave and other employee requests. The owner sends and may cancel while
+    // waiting; each step of the chain is decided, in order, by the user (KAM)
+    // or role the request's `awaitingKey` names, never by the requester.
+    // HR / GM may correct the details (dates, days, type, reason) but not the
+    // approval fields, so nobody skips the order. The HR area (HR, GM, SM)
+    // reads all; a KAM reads their team's (`kamId`).
+    match /leave_requests/{requestId} {
+      function ownsRequest() { return active() && resource.data.uid == request.auth.uid; }
+      function awaitsMe() {
+        return resource.data.awaitingKey == 'uid:' + request.auth.uid
+          || resource.data.awaitingKey == 'role:' + me().role;
+      }
+      allow read: if ownsRequest() || isHrArea() || (active() && resource.data.kamId == request.auth.uid);
+      allow create: if active() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.stepIndex == 0
+        && request.resource.data.steps.size() > 0
+        && request.resource.data.steps[request.resource.data.steps.size() - 1].role in ['hr', 'gm'];
+      allow update: if (managesHr()
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['uid', 'steps', 'stepIndex', 'awaitingKey', 'status', 'decidedAt']))
+        || (ownsRequest() && resource.data.status == 'pending'
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'awaitingKey', 'updatedAt']))
+        || (active() && resource.data.status == 'pending' && resource.data.uid != request.auth.uid && awaitsMe()
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['steps', 'stepIndex', 'awaitingKey', 'status', 'updatedAt', 'decidedAt']));
+      allow delete: if managesHr();
+
+      // Documents (e.g. a hospital report): the owner adds them, HR may too.
+      match /attachments/{attachmentId} {
+        function parent() { return get(/databases/$(database)/documents/leave_requests/$(requestId)).data; }
+        allow read: if isHrArea() || (active() && (parent().uid == request.auth.uid || parent().kamId == request.auth.uid));
+        allow create: if managesHr() || (active() && parent().uid == request.auth.uid);
+        allow delete: if managesHr();
+      }
+    }
+
+    // HR's yearly days and adjustments per person: `{uid}_{year}`.
+    match /leave_balances/{balanceId} {
+      // By id, so the owner may also read a record HR hasn't created yet.
+      allow read: if isHrArea() || (active() && balanceId.split('_')[0] == request.auth.uid);
+      allow write: if managesHr();
     }
   }
 }

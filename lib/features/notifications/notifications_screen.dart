@@ -39,6 +39,9 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
         NotificationType.clientsTransferredOut =>
           l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
+        NotificationType.leaveRequested => l10n.notifLeaveRequested(owner),
+        NotificationType.leaveApproved => l10n.notifLeaveApproved(from),
+        NotificationType.leaveRejected => l10n.notifLeaveRejected(from),
         NotificationType.trackingIssue => switch (n.issue) {
             'gpsOff' => l10n.notifGpsOff(from),
             'locationDenied' => l10n.notifLocationDenied(from),
@@ -80,6 +83,9 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planChanged => Icons.edit_calendar,
                     NotificationType.planItemsAdded => Icons.playlist_add,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
+                    NotificationType.leaveRequested => Icons.beach_access,
+                    NotificationType.leaveApproved => Icons.event_available,
+                    NotificationType.leaveRejected => Icons.event_busy,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -95,6 +101,10 @@ class NotificationsScreen extends ConsumerWidget {
                         context.go('/clients');
                       case NotificationType.trackingIssue:
                         context.push('/live');
+                      case NotificationType.leaveRequested ||
+                            NotificationType.leaveApproved ||
+                            NotificationType.leaveRejected:
+                        context.push('/leave/${n.ref}');
                       default:
                         context.push('/plan/${n.ownerId}?date=${n.date}');
                     }

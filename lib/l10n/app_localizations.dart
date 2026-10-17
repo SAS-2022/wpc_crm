@@ -2893,6 +2893,864 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update now'**
   String get updateNow;
+
+  /// No description provided for @exportClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to Excel'**
+  String get exportClients;
+
+  /// No description provided for @exportClientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export clients to Excel'**
+  String get exportClientsTitle;
+
+  /// No description provided for @exportClientsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients (the current list with its search and filters). Choose the columns:'**
+  String exportClientsBody(int count);
+
+  /// No description provided for @exportColumnsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{selected} of {total} columns'**
+  String exportColumnsCount(int selected, int total);
+
+  /// No description provided for @exportSelectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get exportSelectNone;
+
+  /// No description provided for @exportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportButton;
+
+  /// No description provided for @exportLegalName.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal name'**
+  String get exportLegalName;
+
+  /// No description provided for @exportVisitStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit status'**
+  String get exportVisitStatus;
+
+  /// No description provided for @exportDaysSinceVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Days since last visit'**
+  String get exportDaysSinceVisit;
+
+  /// No description provided for @exportOtherContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Other contacts'**
+  String get exportOtherContacts;
+
+  /// No description provided for @exportMapsLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Maps link'**
+  String get exportMapsLink;
+
+  /// No description provided for @exportGooglePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo Google Pin'**
+  String get exportGooglePin;
+
+  /// No description provided for @exportOdooTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo tags'**
+  String get exportOdooTags;
+
+  /// No description provided for @exportCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get exportCurrency;
+
+  /// No description provided for @exportSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get exportSource;
+
+  /// No description provided for @exportSourceImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo import'**
+  String get exportSourceImport;
+
+  /// No description provided for @exportHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get exportHidden;
+
+  /// No description provided for @exportAddedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Added on'**
+  String get exportAddedOn;
+
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No description provided for @no.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
+  /// No description provided for @call.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get call;
+
+  /// No description provided for @calls.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls'**
+  String get calls;
+
+  /// No description provided for @logCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Log call'**
+  String get logCall;
+
+  /// No description provided for @saveCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Save call'**
+  String get saveCall;
+
+  /// No description provided for @callSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Call saved'**
+  String get callSaved;
+
+  /// No description provided for @callNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'What was discussed on the call'**
+  String get callNotes;
+
+  /// No description provided for @callNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders, follow-ups, next visit…'**
+  String get callNotesHint;
+
+  /// No description provided for @callNotesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Write what was discussed on the call'**
+  String get callNotesRequired;
+
+  /// No description provided for @callFromApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Called from the app'**
+  String get callFromApp;
+
+  /// No description provided for @callLoggedByHand.
+  ///
+  /// In en, this message translates to:
+  /// **'Logged by hand'**
+  String get callLoggedByHand;
+
+  /// No description provided for @callDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'About {duration} away from the app'**
+  String callDuration(String duration);
+
+  /// No description provided for @notThisCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Not this call'**
+  String get notThisCall;
+
+  /// No description provided for @logThisCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Back from a call ({duration}). Log it?'**
+  String logThisCall(String duration);
+
+  /// No description provided for @calledBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Call by {name}'**
+  String calledBy(String name);
+
+  /// No description provided for @visitsAndCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits and calls'**
+  String get visitsAndCalls;
+
+  /// No description provided for @visitsPlusCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits + calls'**
+  String get visitsPlusCalls;
+
+  /// No description provided for @visitsAndCallsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{visits} visits + {calls} calls'**
+  String visitsAndCallsDetail(int visits, int calls);
+
+  /// No description provided for @barTooltipCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {done} visits + {calls} calls · target {target} · expected by today {expected}'**
+  String barTooltipCalls(
+    String name,
+    int done,
+    int calls,
+    int target,
+    int expected,
+  );
+
+  /// No description provided for @roleHr.
+  ///
+  /// In en, this message translates to:
+  /// **'HR'**
+  String get roleHr;
+
+  /// No description provided for @roleAccounting.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounting'**
+  String get roleAccounting;
+
+  /// No description provided for @roleProcurement.
+  ///
+  /// In en, this message translates to:
+  /// **'Procurement'**
+  String get roleProcurement;
+
+  /// No description provided for @roleUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown role'**
+  String get roleUnknown;
+
+  /// No description provided for @updateAppForRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account uses a role this version of the app doesn\'t know yet. Please update the app (Google Play / TestFlight) or reload the web page.'**
+  String get updateAppForRole;
+
+  /// No description provided for @backOfficeHomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your attendance and leave requests will appear here.'**
+  String get backOfficeHomeBody;
+
+  /// No description provided for @hrArea.
+  ///
+  /// In en, this message translates to:
+  /// **'HR'**
+  String get hrArea;
+
+  /// No description provided for @myLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'My leave'**
+  String get myLeave;
+
+  /// No description provided for @myLeaveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances and requests'**
+  String get myLeaveHint;
+
+  /// No description provided for @myRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'My requests'**
+  String get myRequests;
+
+  /// No description provided for @newLeaveRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'New request'**
+  String get newLeaveRequest;
+
+  /// No description provided for @noLeaveRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests'**
+  String get noLeaveRequests;
+
+  /// No description provided for @leaveRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests'**
+  String get leaveRequests;
+
+  /// No description provided for @leaveBalances.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances'**
+  String get leaveBalances;
+
+  /// No description provided for @leaveTypesAndHolidays.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave types & holidays'**
+  String get leaveTypesAndHolidays;
+
+  /// No description provided for @leaveBalanceYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave balance {year}'**
+  String leaveBalanceYear(int year);
+
+  /// No description provided for @leavePendingDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days waiting for approval'**
+  String leavePendingDays(String days);
+
+  /// No description provided for @leaveRemainingOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{left} of {total} left'**
+  String leaveRemainingOf(String left, String total);
+
+  /// No description provided for @leaveDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String leaveDaysCount(String days);
+
+  /// No description provided for @leaveLeftAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} left after this'**
+  String leaveLeftAfter(String days);
+
+  /// No description provided for @leaveOverBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'This is more than the days left. HR decides whether it is allowed.'**
+  String get leaveOverBalance;
+
+  /// No description provided for @waitingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {who}'**
+  String waitingFor(String who);
+
+  /// No description provided for @waitingForMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for me'**
+  String get waitingForMe;
+
+  /// No description provided for @pendingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pendingStatus;
+
+  /// No description provided for @leaveApprovedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get leaveApprovedStatus;
+
+  /// No description provided for @leaveCancelledStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get leaveCancelledStatus;
+
+  /// No description provided for @leaveWaitingForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests waiting for your approval ({count})'**
+  String leaveWaitingForYou(int count);
+
+  /// No description provided for @requestType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get requestType;
+
+  /// No description provided for @pickLeaveDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the dates'**
+  String get pickLeaveDates;
+
+  /// No description provided for @halfDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Half day'**
+  String get halfDay;
+
+  /// No description provided for @countsCalendarDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts every calendar day'**
+  String get countsCalendarDays;
+
+  /// No description provided for @countsWorkDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts work days only'**
+  String get countsWorkDays;
+
+  /// No description provided for @leaveReasonOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get leaveReasonOptional;
+
+  /// No description provided for @leaveRequestDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you need?'**
+  String get leaveRequestDetails;
+
+  /// No description provided for @leaveReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Write what you need'**
+  String get leaveReasonRequired;
+
+  /// No description provided for @leaveDocumentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required: {document}'**
+  String leaveDocumentRequired(String document);
+
+  /// No description provided for @approvalOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval order'**
+  String get approvalOrder;
+
+  /// No description provided for @noApproverYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody can approve this request yet. Ask the GM to add an HR user.'**
+  String get noApproverYet;
+
+  /// No description provided for @leaveAcrossYears.
+  ///
+  /// In en, this message translates to:
+  /// **'A request can\'t cross the new year. Send one request per year.'**
+  String get leaveAcrossYears;
+
+  /// No description provided for @leaveNoWorkDays.
+  ///
+  /// In en, this message translates to:
+  /// **'These dates have no work days.'**
+  String get leaveNoWorkDays;
+
+  /// No description provided for @sendRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get sendRequest;
+
+  /// No description provided for @leaveRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent'**
+  String get leaveRequestSent;
+
+  /// No description provided for @approveRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve request'**
+  String get approveRequest;
+
+  /// No description provided for @rejectRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject request'**
+  String get rejectRequest;
+
+  /// No description provided for @rejectReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get rejectReason;
+
+  /// No description provided for @cancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get cancelRequest;
+
+  /// No description provided for @leaveAlreadyDecided.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone already decided this step.'**
+  String get leaveAlreadyDecided;
+
+  /// No description provided for @leaveTypesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting values follow Saudi labour law – HR should check them. Tap a type to edit it.'**
+  String get leaveTypesHint;
+
+  /// No description provided for @noYearlyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No yearly limit'**
+  String get noYearlyLimit;
+
+  /// No description provided for @daysPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days a year'**
+  String daysPerYear(int days);
+
+  /// No description provided for @unpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get unpaid;
+
+  /// No description provided for @otherRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request (no days)'**
+  String get otherRequest;
+
+  /// No description provided for @needsDocumentNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs: {document}'**
+  String needsDocumentNamed(String document);
+
+  /// No description provided for @addLeaveType.
+  ///
+  /// In en, this message translates to:
+  /// **'Add type'**
+  String get addLeaveType;
+
+  /// No description provided for @editLeaveType.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit type'**
+  String get editLeaveType;
+
+  /// No description provided for @nameEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (English)'**
+  String get nameEnglish;
+
+  /// No description provided for @nameArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (Arabic)'**
+  String get nameArabic;
+
+  /// No description provided for @isLeaveType.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave (has dates)'**
+  String get isLeaveType;
+
+  /// No description provided for @isLeaveTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Off for requests like a salary certificate'**
+  String get isLeaveTypeHint;
+
+  /// No description provided for @daysPerYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Days per year'**
+  String get daysPerYearLabel;
+
+  /// No description provided for @daysPerYearHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty = no limit'**
+  String get daysPerYearHelper;
+
+  /// No description provided for @paidLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get paidLeave;
+
+  /// No description provided for @needsDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a document'**
+  String get needsDocument;
+
+  /// No description provided for @documentNameEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Document (English)'**
+  String get documentNameEnglish;
+
+  /// No description provided for @documentNameArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Document (Arabic)'**
+  String get documentNameArabic;
+
+  /// No description provided for @publicHolidays.
+  ///
+  /// In en, this message translates to:
+  /// **'Public holidays'**
+  String get publicHolidays;
+
+  /// No description provided for @publicHolidaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'These days don\'t count as leave days.'**
+  String get publicHolidaysHint;
+
+  /// No description provided for @addHoliday.
+  ///
+  /// In en, this message translates to:
+  /// **'Add holiday'**
+  String get addHoliday;
+
+  /// No description provided for @tapTypeToEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a type to set this person\'s days or add an adjustment.'**
+  String get tapTypeToEdit;
+
+  /// No description provided for @daysThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Days this year for this person'**
+  String get daysThisYear;
+
+  /// No description provided for @daysThisYearHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty = the type\'s {days} days'**
+  String daysThisYearHelper(int days);
+
+  /// No description provided for @adjustDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or remove days'**
+  String get adjustDays;
+
+  /// No description provided for @adjustDaysHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 5 carried over, or -2'**
+  String get adjustDaysHelper;
+
+  /// No description provided for @adjustNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get adjustNote;
+
+  /// No description provided for @adjustments.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjustments'**
+  String get adjustments;
+
+  /// No description provided for @notifLeaveRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Request from {owner} – waiting for your approval'**
+  String notifLeaveRequested(String owner);
+
+  /// No description provided for @notifLeaveApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved your request'**
+  String notifLeaveApproved(String name);
+
+  /// No description provided for @notifLeaveRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} rejected your request'**
+  String notifLeaveRejected(String name);
+
+  /// No description provided for @addLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Add location'**
+  String get addLocation;
+
+  /// No description provided for @editLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit location'**
+  String get editLocation;
+
+  /// No description provided for @locationType.
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get locationType;
+
+  /// No description provided for @noLocationType.
+  ///
+  /// In en, this message translates to:
+  /// **'No label'**
+  String get noLocationType;
+
+  /// No description provided for @mainLocationType.
+  ///
+  /// In en, this message translates to:
+  /// **'Main location label'**
+  String get mainLocationType;
+
+  /// No description provided for @moreLocationsOnClientPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add more locations (factory, showroom, …) on the client page'**
+  String get moreLocationsOnClientPage;
+
+  /// No description provided for @mainLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Main'**
+  String get mainLocation;
+
+  /// No description provided for @makeMainLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Make main location'**
+  String get makeMainLocation;
+
+  /// No description provided for @locationNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Location {n}'**
+  String locationNumber(int n);
+
+  /// No description provided for @deleteLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String deleteLocationTitle(String name);
+
+  /// No description provided for @visitLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit location'**
+  String get visitLocation;
+
+  /// No description provided for @nearestLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'nearest'**
+  String get nearestLocation;
+
+  /// No description provided for @locationTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Location types'**
+  String get locationTypes;
+
+  /// No description provided for @locationTypesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Labels for a client\'s locations, e.g. Office, Factory, Showroom. Deleting one leaves those locations unlabelled.'**
+  String get locationTypesHelp;
+
+  /// No description provided for @otherLocations.
+  ///
+  /// In en, this message translates to:
+  /// **'Other locations'**
+  String get otherLocations;
+
+  /// No description provided for @saveClientFirstForLocations.
+  ///
+  /// In en, this message translates to:
+  /// **'Save the client first, then add more locations here.'**
+  String get saveClientFirstForLocations;
+
+  /// No description provided for @setMainLocationFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Set and save the main location first, then add more locations.'**
+  String get setMainLocationFirst;
+
+  /// No description provided for @visitsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 visit} other{{count} visits}}'**
+  String visitsCount(int count);
+
+  /// No description provided for @callsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 call} other{{count} calls}}'**
+  String callsCount(int count);
+
+  /// No description provided for @deleteClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete client'**
+  String get deleteClient;
+
+  /// No description provided for @deleteClientTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String deleteClientTitle(String name);
+
+  /// No description provided for @deleteClientBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The client, its plan items and its photos / files will be deleted. This can\'t be undone.'**
+  String get deleteClientBody;
+
+  /// No description provided for @deleteClientWithVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'This client has {count} visits. The visits stay in the visits list and reports; the client, its plan items and its photos / files are deleted. This can\'t be undone.\n\nEnter your password to confirm.'**
+  String deleteClientWithVisits(int count);
+
+  /// No description provided for @yourPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Your password'**
+  String get yourPassword;
+
+  /// No description provided for @wrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong password'**
+  String get wrongPassword;
+
+  /// No description provided for @clientDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} deleted'**
+  String clientDeleted(String name);
 }
 
 class _AppLocalizationsDelegate

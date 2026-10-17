@@ -81,8 +81,9 @@ Map<String, dynamic> mergeUpdate(Client keep, List<Client> others, {required Str
     'legalName': fill((c) => c.legalName),
     'googlePin': located?.googlePin.isNotEmpty ?? false ? located!.googlePin : fill((c) => c.googlePin),
     'notes': notes,
-    'lat': located?.lat,
-    'lng': located?.lng,
+    // Every location of every client (one within 30 m of another counts once);
+    // the kept client's main location stays main when it has one.
+    ...locationsUpdate(_mergedLocations([keep, ...others])),
     'assignedTo': keep.assignedTo ?? others.map((c) => c.assignedTo).nonNulls.firstOrNull,
     'lastVisitAt': lastVisit == null ? null : Timestamp.fromDate(lastVisit),
     'aliases': aliases.values.toList(),
@@ -113,4 +114,14 @@ Client suggestedKeep(List<Client> group) {
           return (b.lastVisitAt ?? DateTime(0)).compareTo(a.lastVisitAt ?? DateTime(0));
         }))
       .first;
+}
+
+List<ClientLocation> _mergedLocations(List<Client> clients) {
+  final out = <ClientLocation>[];
+  for (final l in clients.expand((c) => c.locations)) {
+    if (out.any((o) => metersBetween(o.lat, o.lng, l.lat, l.lng) < 30)) continue;
+    // Ids must stay unique once several clients' lists are joined.
+    out.add(out.any((o) => o.id == l.id) ? l.copyWith(id: 'l${out.length}_${l.id}') : l);
+  }
+  return out;
 }

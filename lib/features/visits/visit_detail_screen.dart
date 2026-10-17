@@ -11,6 +11,9 @@ import '../attachments/attachments_section.dart';
 import '../plan/checklist.dart';
 import '../plan/plan_repository.dart';
 import '../users/users_repository.dart';
+import '../clients/client_tags.dart';
+import '../clients/clients_repository.dart';
+import 'call_chip.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
 
@@ -106,7 +109,9 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
     final ownVisit = visit.salesExecId == me.id;
 
     Widget kamSection;
-    if (visit.kamId != null) {
+    if (visit.isCall && visit.kamId == null) {
+      kamSection = const SizedBox.shrink(); // nobody rides along on a call
+    } else if (visit.kamId != null) {
       final lateBy = visit.checkedInAt != null && visit.kamMarkedAt != null
           ? visit.kamMarkedAt!.difference(visit.checkedInAt!)
           : Duration.zero;
@@ -152,24 +157,39 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
             child: ListView(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.event_available),
+                  leading: visit.isCall ? const Icon(Icons.call, color: callColor) : const Icon(Icons.event_available),
                   title: Text(format(visit.checkedInAt)),
-                  subtitle: Text(l10n.visitedBy(users[visit.salesExecId]?.name ?? '')),
+                  subtitle: Text(visit.isCall
+                      ? l10n.calledBy(users[visit.salesExecId]?.name ?? '')
+                      : l10n.visitedBy(users[visit.salesExecId]?.name ?? '')),
                 ),
-                ListTile(
-                  leading: Icon(Icons.my_location, color: far || visit.mocked ? error : Colors.green.shade600),
-                  title: Text(visit.distanceMeters == null
-                      ? l10n.noLocation
-                      : l10n.distanceFromClient(formatDistance(visit.distanceMeters!))),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (visit.accuracy != null) Text(l10n.locationAccuracy(visit.accuracy!.round())),
-                      if (far) Text(l10n.farFlag(formatDistance(visit.distanceMeters!)), style: TextStyle(color: error)),
-                      if (visit.mocked) Text(l10n.fakeGpsFlag, style: TextStyle(color: error)),
-                    ],
+                if (visit.isCall)
+                  ListTile(
+                    leading: Icon(visit.callFromApp ? Icons.phone_forwarded : Icons.edit_note, color: callColor),
+                    title: Text(visit.callFromApp ? l10n.callFromApp : l10n.callLoggedByHand),
+                    subtitle: visit.callFromApp && visit.callSeconds != null
+                        ? Text(l10n.callDuration(formatCallDuration(visit.callSeconds!)))
+                        : null,
+                  )
+                else
+                  ListTile(
+                    leading: Icon(Icons.my_location, color: far || visit.mocked ? error : Colors.green.shade600),
+                    title: Text([
+                      if (ref.watch(locationTypesByIdProvider)[visit.locationTypeId] case final t?)
+                        t.label(Localizations.localeOf(context).languageCode),
+                      visit.distanceMeters == null
+                          ? l10n.noLocation
+                          : l10n.distanceFromClient(formatDistance(visit.distanceMeters!)),
+                    ].join(' · ')),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (visit.accuracy != null) Text(l10n.locationAccuracy(visit.accuracy!.round())),
+                        if (far) Text(l10n.farFlag(formatDistance(visit.distanceMeters!)), style: TextStyle(color: error)),
+                        if (visit.mocked) Text(l10n.fakeGpsFlag, style: TextStyle(color: error)),
+                      ],
+                    ),
                   ),
-                ),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: SelectableText(visit.notes, style: Theme.of(context).textTheme.bodyLarge),
@@ -187,11 +207,13 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
                   canDelete: me.role.isSupervisor,
                 ),
                 kamSection,
-                ListTile(
-                  leading: const Icon(Icons.store),
-                  title: Text(l10n.openClient),
-                  onTap: () => context.push('/clients/${visit.clientId}'),
-                ),
+                // Not for a client that was deleted (its visits are kept).
+                if (ref.watch(allClientsProvider).value?.any((c) => c.id == visit.clientId) ?? true)
+                  ListTile(
+                    leading: const Icon(Icons.store),
+                    title: Text(l10n.openClient),
+                    onTap: () => context.push('/clients/${visit.clientId}'),
+                  ),
                 const Divider(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

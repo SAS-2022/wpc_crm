@@ -1,5 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Check-ins farther than this from the client are flagged.
+const visitRadiusMeters = 300.0;
+
+/// `visits.type`: a visit at the client, or a phone call that counts like one
+/// (turns the client green, ticks the plan item) but is shown apart.
+enum VisitType { visit, call }
+
+/// "4 min" / "45 s": the length of a call made from the app.
+String formatCallDuration(int seconds) =>
+    seconds < 60 ? '$seconds s' : '${(seconds / 60).round()} min';
+
 String formatDistance(double meters) =>
     meters < 1000 ? '${meters.round()} m' : '${(meters / 1000).toStringAsFixed(1)} km';
 
@@ -18,6 +29,10 @@ class Visit {
     this.kamMarkedAt,
     this.checkInLat,
     this.checkInLng,
+    this.type = VisitType.visit,
+    this.callFromApp = false,
+    this.callSeconds,
+    this.locationTypeId = '',
   });
 
   final String id;
@@ -47,6 +62,24 @@ class Visit {
   final double? checkInLat;
   final double? checkInLng;
 
+  /// A visit at the client, or a phone call (no position, never flagged).
+  final VisitType type;
+
+  /// The call was dialled from the app; [callSeconds] is then the time the
+  /// user was away from the app (dialling, ringing and talking).
+  final bool callFromApp;
+  final int? callSeconds;
+
+  /// Label of the client location the visit was at (`settings/locationTypes`
+  /// id), e.g. 'factory'; empty for calls, unlabelled or older visits.
+  final String locationTypeId;
+
+  bool get isCall => type == VisitType.call;
+
+  /// Far from the client or fake GPS. Calls have no position, so never.
+  bool get isFlagged =>
+      !isCall && (mocked || (distanceMeters != null && distanceMeters! > visitRadiusMeters));
+
   factory Visit.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return Visit(
@@ -63,6 +96,11 @@ class Visit {
       kamMarkedAt: (d['kamMarkedAt'] as Timestamp?)?.toDate(),
       checkInLat: (d['checkInLat'] as num?)?.toDouble(),
       checkInLng: (d['checkInLng'] as num?)?.toDouble(),
+      // Visits saved before calls existed have no type.
+      type: d['type'] == 'call' ? VisitType.call : VisitType.visit,
+      callFromApp: d['callFromApp'] as bool? ?? false,
+      callSeconds: (d['callSeconds'] as num?)?.toInt(),
+      locationTypeId: d['locationTypeId'] as String? ?? '',
     );
   }
 }

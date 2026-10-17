@@ -113,6 +113,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final visits = (ref.watch(rangeVisitsProvider((null, monthKey(day)))).value ?? const <Visit>[])
         .where((v) =>
             person != null &&
+            !v.isCall && // no position to draw
             !hidden.contains(v.clientId) &&
             (v.salesExecId == person.id || v.kamId == person.id) &&
             v.checkedInAt != null &&
@@ -208,7 +209,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
             subtitle: Text([
               time.format(v.checkedInAt!),
               if (v.distanceMeters != null) formatDistance(v.distanceMeters!),
-              if (isFlagged(v)) v.mocked ? l10n.fakeGpsFlag : l10n.farFlag,
+              if (v.isFlagged) v.mocked ? l10n.fakeGpsFlag : l10n.farFlag,
             ].join(' · ')),
             onTap: () => context.go('/visits/${v.id}'),
           ),
@@ -268,7 +269,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                 context: context,
                 fill: seriesBlue,
                 text: '${i + 1}',
-                ring: isFlagged(v) ? theme.colorScheme.error : Colors.white,
+                ring: v.isFlagged ? theme.colorScheme.error : Colors.white,
               ),
               infoWindow: InfoWindow(title: v.clientName, snippet: time.format(v.checkedInAt!)),
             ),

@@ -6,13 +6,13 @@ import '../clients/visit_rules.dart';
 import '../home/stats.dart';
 import '../plan/plan_task.dart';
 import '../visits/visit.dart';
-import '../visits/visits_repository.dart';
 
 /// One person's numbers for a period, a row of the team table.
 class PersonReport {
   const PersonReport({
     required this.user,
     required this.visits,
+    this.calls = 0,
     required this.target,
     required this.clientsVisited,
     required this.assigned,
@@ -26,16 +26,20 @@ class PersonReport {
 
   final AppUser user;
 
-  /// Visits made by this person in the period.
+  /// Visits made by this person in the period, and phone calls (they count
+  /// toward the target too, shown as "visits + calls").
   final int visits;
+  final int calls;
+
+  int get contacts => visits + calls;
 
   /// Monthly target spread over the period; 0 = no target.
   final double target;
 
-  /// Distinct clients this person visited.
+  /// Distinct clients this person visited or called.
   final int clientsVisited;
 
-  /// Clients assigned to this person, and how many of them anyone visited.
+  /// Clients assigned to this person, and how many of them anyone visited or called.
   final int assigned;
   final int assignedVisited;
 
@@ -53,8 +57,6 @@ class PersonReport {
   double? get coverage => assigned == 0 ? null : assignedVisited / assigned;
   double? get planCompletion => tasksApproved == 0 ? null : tasksDone / tasksApproved;
 }
-
-bool isFlagged(Visit v) => v.mocked || (v.distanceMeters != null && v.distanceMeters! > visitRadiusMeters);
 
 /// [visits] and [tasks] may hold more than the period; they are filtered here.
 List<PersonReport> buildReports({
@@ -79,13 +81,14 @@ List<PersonReport> buildReports({
             .toList();
         return PersonReport(
           user: u,
-          visits: mine.length,
+          visits: mine.where((v) => !v.isCall).length,
+          calls: mine.where((v) => v.isCall).length,
           target: targetFor(u.monthlyTarget, range),
           clientsVisited: {for (final v in mine) v.clientId}.length,
           assigned: assigned.length,
           assignedVisited: assigned.where((c) => visitedIds.contains(c.id)).length,
           onSchedule: assigned.where((c) => visitStatus(c, rules, now) == VisitStatus.recent).length,
-          flagged: mine.where(isFlagged).length,
+          flagged: mine.where((v) => v.isFlagged).length,
           withKam: mine.where((v) => v.kamId != null).length,
           tasksApproved: approved.length,
           tasksDone: approved.where((t) => t.done).length,

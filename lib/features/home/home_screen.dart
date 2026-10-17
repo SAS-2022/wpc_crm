@@ -13,8 +13,9 @@ import '../notifications/notifications_screen.dart';
 import '../plan/plan_task.dart';
 import '../tracking/tracking_card.dart';
 import '../users/users_repository.dart';
+import '../hr/leave_widgets.dart';
+import '../visits/call_chip.dart';
 import '../visits/visit.dart';
-import '../visits/visits_repository.dart';
 import 'dashboard_cards.dart';
 import 'progress_charts.dart';
 import 'stats.dart';
@@ -73,6 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
+    if (me.role.isBackOffice) return _BackOfficeHome(me: me);
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
     final now = DateTime.now();
@@ -94,7 +96,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final rangeVisits = (ref.watch(rangeVisitsProvider(key)).value ?? const <Visit>[])
         .where((v) => v.checkedInAt != null && _range.contains(v.checkedInAt!) && !hidden.contains(v.clientId))
         .toList();
-    final visits = rangeVisits.where((v) => ids.contains(v.salesExecId)).toList();
+    // Visits and calls of the people shown; calls count toward the target
+    // but are shown apart ("190 + 30 / 240").
+    final mineAll = rangeVisits.where((v) => ids.contains(v.salesExecId)).toList();
+    final visits = mineAll.where((v) => !v.isCall).toList();
+    final calls = mineAll.where((v) => v.isCall).toList();
+    final contacts = mineAll.length;
     final tasks = (ref.watch(rangeTasksProvider(key)).value ?? const <PlanTask>[])
         .where((t) => ids.contains(t.ownerId) && _range.contains(DateTime.parse(t.date)) && !hidden.contains(t.clientId))
         .toList();
@@ -110,7 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final approved = tasks.where((t) => t.approval == TaskApproval.approved).toList();
     final tasksDone = approved.where((t) => t.done).length;
-    final flagged = visits.where((v) => v.mocked || (v.distanceMeters != null && v.distanceMeters! > visitRadiusMeters)).length;
+    final flagged = visits.where((v) => v.isFlagged).length;
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final green = clients.where((c) => visitStatus(c, rules, now) == VisitStatus.recent).length;
 
@@ -126,6 +133,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
           const TrackingCard(),
+          // Leave requests waiting for this person's approval (hidden when none).
+          const LeaveApprovalsCard(),
           // Filters: period and person, in one row above the numbers.
           Wrap(
             spacing: 8,
@@ -168,22 +177,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               StatTile(
                 icon: Icons.event_available,
                 label: l10n.visits,
-                value: target > 0 ? '${visits.length}/${target.round()}' : '${visits.length}',
-                footer: target > 0
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LinearProgressIndicator(
-                            value: (visits.length / target).clamp(0, 1),
-                            color: seriesBlue,
-                            minHeight: 6,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          const SizedBox(height: 6),
-                          PaceLabel(pace: paceOf(visits.length, expected)),
-                        ],
-                      )
-                    : Text(l10n.noTargetSet, style: theme.textTheme.bodySmall),
+                value: [visitsAndCallsText(visits.length, calls.length), if (target > 0) '${target.round()}'].join('/'),
+                footer: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (calls.isNotEmpty)
+                      Text(l10n.visitsAndCallsDetail(visits.length, calls.length),
+                          style: theme.textTheme.bodySmall?.copyWith(color: callColor)),
+                    if (target > 0) ...[
+                      // Visits (blue) then calls (purple) toward the target.
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: SizedBox(
+                          height: 6,
+                          child: Stack(children: [
+                            Container(color: theme.colorScheme.surfaceContainerHighest),
+                            FractionallySizedBox(
+                                alignment: AlignmentDirectional.centerStart,
+                                widthFactor: (contacts / target).clamp(0, 1).toDouble(),
+                                child: Container(color: callColor)),
+                            FractionallySizedBox(
+                                alignment: AlignmentDirectional.centerStart,
+                                widthFactor: (visits.length / target).clamp(0, 1).toDouble(),
+                                child: Container(color: seriesBlue)),
+                          ]),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      PaceLabel(pace: paceOf(contacts, expected)),
+                    ] else
+                      Text(l10n.noTargetSet, style: theme.textTheme.bodySmall),
+                  ],
+                ),
               ),
               StatTile(
                 icon: Icons.store,
@@ -241,6 +266,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             id: u.id,
                             name: u.name,
                             done: visits.where((v) => v.salesExecId == u.id).length,
+                            calls: calls.where((v) => v.salesExecId == u.id).length,
                             target: rangeTarget(u),
                             expected: expectedTarget(u),
                           ),
@@ -251,6 +277,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ProgressLine(
                       range: _range,
                       visitDays: [for (final v in visits) v.checkedInAt!],
+                      callDays: [for (final v in calls) v.checkedInAt!],
                       monthlyTarget: single.monthlyTarget,
                     ),
                 ],
@@ -279,6 +306,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             TeamPlansCard(me: me),
           ],
           if (me.role.isTracked) TodayPlanCard(user: me),
+        ],
+      ),
+    );
+  }
+}
+
+/// Home for HR, accounting and procurement: no sales numbers. Attendance and
+/// leave cards will go here.
+class _BackOfficeHome extends StatelessWidget {
+  const _BackOfficeHome({required this.me});
+
+  final AppUser me;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.welcome(me.name)), actions: const [NotificationsBell()]),
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
+              title: Text(me.name),
+              subtitle: Text(me.role.label(l10n)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/profile'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // HR: requests waiting for them first.
+          const LeaveApprovalsCard(),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(Icons.beach_access),
+              title: Text(l10n.myLeave),
+              subtitle: Text(l10n.myLeaveHint),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/leave'),
+            ),
+          ),
+          if (me.role.canSeeHr) ...[
+            const SizedBox(height: 12),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.badge),
+                title: Text(l10n.hrArea),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/hr'),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Text(l10n.backOfficeHomeBody, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
         ],
       ),
     );

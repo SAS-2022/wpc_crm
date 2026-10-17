@@ -6,10 +6,13 @@ import '../../l10n/app_localizations.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
 
-/// GM / sales manager: add, rename and delete client tags. Names must be
+/// GM / sales manager: add, rename and delete client tags, or (with
+/// [TagList.locationTypes]) the labels of client locations. Names must be
 /// unique (case, spaces and Arabic letter forms ignored).
 class ClientTagsScreen extends ConsumerWidget {
-  const ClientTagsScreen({super.key});
+  const ClientTagsScreen({super.key, this.kind = TagList.clientTags});
+
+  final TagList kind;
 
   Future<void> _edit(BuildContext context, List<ClientTag> tags, [ClientTag? tag]) async {
     final l10n = AppLocalizations.of(context);
@@ -59,7 +62,7 @@ class ClientTagsScreen extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await saveClientTag(id: tag?.id, en: en.text.trim(), ar: ar.text.trim());
+      await saveTag(kind, id: tag?.id, en: en.text.trim(), ar: ar.text.trim());
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
     } on DuplicateTagException {
       messenger.showSnackBar(SnackBar(content: Text(l10n.tagDuplicate)));
@@ -84,7 +87,7 @@ class ClientTagsScreen extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await deleteClientTag(tag.id);
+      await deleteTag(kind, tag.id);
     } on FirebaseException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('${e.message}'))));
     }
@@ -93,13 +96,16 @@ class ClientTagsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final tags = ref.watch(clientTagsProvider).value;
+    final tags = ref.watch(tagListProvider(kind)).value;
     final clients = ref.watch(allClientsProvider).value ?? const [];
     final lang = Localizations.localeOf(context).languageCode;
-    int used(String id) => clients.where((c) => c.tagIds.contains(id)).length;
+    final locations = kind == TagList.locationTypes;
+    int used(String id) => clients
+        .where((c) => locations ? c.locations.any((l) => l.typeId == id) : c.tagIds.contains(id))
+        .length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.clientTags)),
+      appBar: AppBar(title: Text(locations ? l10n.locationTypes : l10n.clientTags)),
       floatingActionButton: tags == null
           ? null
           : FloatingActionButton.extended(
@@ -112,10 +118,13 @@ class ClientTagsScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.only(bottom: 88),
               children: [
-                Padding(padding: const EdgeInsets.all(16), child: Text(l10n.clientTagsHelp)),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(locations ? l10n.locationTypesHelp : l10n.clientTagsHelp),
+                ),
                 for (final t in tags)
                   ListTile(
-                    leading: const Icon(Icons.sell_outlined),
+                    leading: Icon(locations ? Icons.place_outlined : Icons.sell_outlined),
                     title: Text(t.label(lang)),
                     subtitle: Text([lang == 'ar' ? t.en : t.ar, l10n.clientsCountShort(used(t.id))]
                         .where((s) => s.isNotEmpty)

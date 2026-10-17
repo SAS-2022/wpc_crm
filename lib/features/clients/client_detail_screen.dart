@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,9 +10,12 @@ import '../../l10n/app_localizations.dart';
 import '../attachments/attachments.dart';
 import '../attachments/attachments_section.dart';
 import '../users/users_repository.dart';
+import '../visits/app_calls.dart';
+import '../visits/call_chip.dart';
 import '../visits/visit.dart';
 import '../visits/visits_repository.dart';
 import 'client.dart';
+import 'client_locations_section.dart';
 import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
@@ -33,6 +37,35 @@ class ClientDetailScreen extends ConsumerWidget {
   static String _waNumber(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
     return digits.startsWith('05') ? '966${digits.substring(1)}' : digits;
+  }
+
+  /// Sales manager / GM: deletes the client after confirming. When it has
+  /// visits, they must type their login password first (re-authentication).
+  Future<void> _delete(BuildContext context, WidgetRef ref, Client client) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final repo = ref.read(clientsRepositoryProvider);
+    final int visits;
+    try {
+      visits = await repo.visitCount(client.id);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+      return;
+    }
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DeleteClientDialog(client: client, visits: visits),
+    );
+    if (ok != true) return;
+    try {
+      await repo.delete(client);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.clientDeleted(client.name))));
+      router.go('/clients');
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    }
   }
 
   /// Hides the client (after confirming) or shows it again.
@@ -90,6 +123,18 @@ class ClientDetailScreen extends ConsumerWidget {
     final usersById = {for (final u in users) u.id: u};
     final canTransfer = me != null && canTransferFrom(me, client.assignedTo, usersById);
     String nameOf(String? uid) => uid == null ? l10n.unassigned : usersById[uid]?.name ?? '?';
+    final calls = ref.read(appCallProvider.notifier);
+    void dial(String number) => calls.dial(clientId, number);
+
+    // Back from a call dialled here: offer to log it.
+    ref.listen(appCallProvider, (prev, next) {
+      if (next == null || next.clientId != clientId || next.endedAt == null || prev?.endedAt != null) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 10),
+        content: Text(l10n.logThisCall(formatCallDuration(next.seconds))),
+        action: SnackBarAction(label: l10n.logCall, onPressed: () => context.push('/clients/$clientId/call')),
+      ));
+    });
 
     Widget section(String title, List<Widget> rows) {
       final visible = rows.where((w) => w is! SizedBox).toList();
@@ -130,9 +175,16 @@ class ClientDetailScreen extends ConsumerWidget {
           ]),
         );
 
+    // "· Call" when the latest contact was a phone call.
+    final latest = ref.watch(clientVisitsProvider(clientId)).value?.firstOrNull;
+    final lastWasCall = latest != null &&
+        latest.isCall &&
+        client.lastVisitAt != null &&
+        (latest.checkedInAt == null || latest.checkedInAt!.difference(client.lastVisitAt!).inMinutes.abs() < 2);
     final lastVisit = client.lastVisitAt == null
         ? l10n.never
-        : '${DateFormat.yMMMd(locale).format(client.lastVisitAt!)} · ${l10n.daysAgo(now.difference(client.lastVisitAt!).inDays)}';
+        : '${DateFormat.yMMMd(locale).format(client.lastVisitAt!)} · ${l10n.daysAgo(now.difference(client.lastVisitAt!).inDays)}'
+            '${lastWasCall ? ' · ${l10n.call}' : ''}';
 
     return Scaffold(
       appBar: AppBar(
@@ -149,6 +201,12 @@ class ClientDetailScreen extends ConsumerWidget {
               icon: Icon(client.hidden ? Icons.visibility : Icons.visibility_off),
               tooltip: client.hidden ? l10n.unhideClient : l10n.hideClient,
               onPressed: () => _setHidden(context, ref, hidden: !client.hidden),
+            ),
+          if (me?.role.isAdmin ?? false)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: l10n.deleteClient,
+              onPressed: () => _delete(context, ref, client),
             ),
           if (canEdit)
             IconButton(
@@ -209,7 +267,7 @@ class ClientDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
             child: Row(
               children: [
-                action(Icons.call, l10n.callPhone, phone.isEmpty ? null : () => launchUrl(Uri.parse('tel:$phone'))),
+                action(Icons.call, l10n.callPhone, phone.isEmpty ? null : () => dial(phone)),
                 action(
                   Icons.chat,
                   'WhatsApp',
@@ -220,21 +278,17 @@ class ClientDetailScreen extends ConsumerWidget {
                 action(
                   Icons.directions,
                   l10n.directions,
-                  !client.hasLocation
-                      ? null
-                      : () => launchUrl(
-                            Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${client.lat},${client.lng}'),
-                            mode: LaunchMode.externalApplication,
-                          ),
+                  !client.hasLocation ? null : () => directionsToClient(context, client),
                 ),
                 action(Icons.add_location_alt, l10n.addVisit, () => context.push('/clients/$clientId/visit')),
+                action(Icons.add_call, l10n.logCall, () => context.push('/clients/$clientId/call')),
               ],
             ),
           ),
           section(l10n.contact, [
             row(Icons.person, l10n.contactPerson, client.contactPerson),
-            row(Icons.phone, l10n.phone, client.phone, onTap: () => launchUrl(Uri.parse('tel:${client.phone}'))),
-            row(Icons.smartphone, l10n.mobile, client.mobile, onTap: () => launchUrl(Uri.parse('tel:${client.mobile}'))),
+            row(Icons.phone, l10n.phone, client.phone, onTap: () => dial(client.phone)),
+            row(Icons.smartphone, l10n.mobile, client.mobile, onTap: () => dial(client.mobile)),
             row(Icons.email, l10n.email, client.email, onTap: () => launchUrl(Uri.parse('mailto:${client.email}'))),
             for (final c in client.contacts)
               ListTile(
@@ -247,7 +301,7 @@ class ClientDetailScreen extends ConsumerWidget {
                     : IconButton(
                         icon: const Icon(Icons.call),
                         tooltip: l10n.callPhone,
-                        onPressed: () => launchUrl(Uri.parse('tel:${c.mobile.isNotEmpty ? c.mobile : c.phone}')),
+                        onPressed: () => dial(c.mobile.isNotEmpty ? c.mobile : c.phone),
                       ),
               ),
             if (client.contactPerson.isEmpty &&
@@ -297,14 +351,8 @@ class ClientDetailScreen extends ConsumerWidget {
             row(Icons.location_city, l10n.city, client.city),
             row(Icons.map, l10n.region, client.state),
             row(Icons.public, l10n.country, client.country),
-            if (client.hasLocation)
-              row(Icons.my_location, l10n.coordinates, '${client.lat!.toStringAsFixed(6)}, ${client.lng!.toStringAsFixed(6)}',
-                  onTap: () => launchUrl(
-                        Uri.parse('https://www.google.com/maps/search/?api=1&query=${client.lat},${client.lng}'),
-                        mode: LaunchMode.externalApplication,
-                      ))
-            else
-              ListTile(dense: true, leading: const Icon(Icons.location_off), title: Text(l10n.noLocation)),
+            // Every location (main, factory, showroom, …), each labelled.
+            ClientLocationsList(client: client, canEdit: canEdit),
           ]),
           section(l10n.notes, [row(Icons.notes, l10n.notes, client.notes)]),
           AttachmentsSection(
@@ -322,6 +370,7 @@ class ClientDetailScreen extends ConsumerWidget {
                 for (final v in visits)
                   _VisitTile(
                     visit: v,
+                    place: ref.watch(locationTypesByIdProvider)[v.locationTypeId]?.label(locale.split('_').first),
                     author: users.where((u) => u.id == v.salesExecId).firstOrNull?.name ?? '',
                     locale: locale,
                   ),
@@ -336,9 +385,12 @@ class ClientDetailScreen extends ConsumerWidget {
 }
 
 class _VisitTile extends StatelessWidget {
-  const _VisitTile({required this.visit, required this.author, required this.locale});
+  const _VisitTile({required this.visit, required this.author, required this.locale, this.place});
 
   final Visit visit;
+
+  /// Which of the client's locations, when labelled.
+  final String? place;
   final String author;
   final String locale;
 
@@ -346,20 +398,114 @@ class _VisitTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final error = Theme.of(context).colorScheme.error;
-    final far = visit.distanceMeters != null && visit.distanceMeters! > visitRadiusMeters;
+    final far = !visit.isCall && visit.distanceMeters != null && visit.distanceMeters! > visitRadiusMeters;
     final when = visit.checkedInAt == null ? '' : DateFormat.yMMMd(locale).add_jm().format(visit.checkedInAt!);
     return ListTile(
       onTap: () => context.push('/visits/${visit.id}'),
-      leading: const Icon(Icons.event_available),
-      title: Text([when, author].where((s) => s.isNotEmpty).join(' · ')),
+      leading: visit.isCall ? const Icon(Icons.call, color: callColor) : const Icon(Icons.event_available),
+      title: Text([when, author, ?place].where((s) => s.isNotEmpty).join(' · ')),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (visit.isCall) CallChip(visit: visit),
           Text(visit.notes),
           if (far) Text(l10n.farFlag(formatDistance(visit.distanceMeters!)), style: TextStyle(color: error)),
           if (visit.mocked) Text(l10n.fakeGpsFlag, style: TextStyle(color: error)),
         ],
       ),
+    );
+  }
+}
+
+/// Confirms deleting a client. With visits, the user's login password is
+/// required and checked with Firebase before the dialog returns true.
+class _DeleteClientDialog extends StatefulWidget {
+  const _DeleteClientDialog({required this.client, required this.visits});
+
+  final Client client;
+  final int visits;
+
+  @override
+  State<_DeleteClientDialog> createState() => _DeleteClientDialogState();
+}
+
+class _DeleteClientDialogState extends State<_DeleteClientDialog> {
+  final _password = TextEditingController();
+  String? _error;
+  bool _checking = false;
+
+  bool get _needsPassword => widget.visits > 0;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    if (!_needsPassword) {
+      Navigator.pop(context, true);
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.email == null || _password.text.isEmpty) {
+      setState(() => _error = l10n.wrongPassword);
+      return;
+    }
+    setState(() {
+      _checking = true;
+      _error = null;
+    });
+    try {
+      await user!.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: user.email!, password: _password.text),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } on FirebaseAuthException catch (e) {
+      setState(() => _error = e.code == 'too-many-requests' ? l10n.tooManyAttempts : l10n.wrongPassword);
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final error = Theme.of(context).colorScheme.error;
+    return AlertDialog(
+      title: Text(l10n.deleteClientTitle(widget.client.name)),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_needsPassword ? l10n.deleteClientWithVisits(widget.visits) : l10n.deleteClientBody),
+            if (_needsPassword) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _password,
+                autofocus: true,
+                obscureText: true,
+                autofillHints: const [AutofillHints.password],
+                onSubmitted: (_) => _checking ? null : _confirm(),
+                decoration: InputDecoration(labelText: l10n.yourPassword, errorText: _error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _checking ? null : () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: error),
+          onPressed: _checking ? null : _confirm,
+          child: _checking
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(l10n.delete),
+        ),
+      ],
     );
   }
 }

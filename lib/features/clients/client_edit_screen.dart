@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../import/import_service.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
+import 'client_locations_section.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
 import 'location_picker_screen.dart';
@@ -45,6 +46,9 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
 
   /// [clientTypeCompany], [clientTypeIndividual] or '' (not set).
   String _clientType = '';
+
+  /// Label of the main location (`mainLocationType`).
+  String _mainType = '';
   final _notes = TextEditingController();
   String? _assignedTo;
 
@@ -99,6 +103,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     _vat.text = c.vat;
     _companyId.text = c.companyId;
     _clientType = c.clientType;
+    _mainType = c.mainLocationType;
     _notes.text = c.notes;
     _loaded = true;
   }
@@ -188,6 +193,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       'city': _city.text.trim(),
       'lat': double.tryParse(_lat.text.trim()),
       'lng': double.tryParse(_lng.text.trim()),
+      'mainLocationType': _mainType,
       'notes': _notes.text.trim(),
       if (manage || _isNew) 'vat': _vat.text.replaceAll(RegExp(r'\s'), ''),
       if (manage || _isNew) 'companyId': _companyId.text.replaceAll(RegExp(r'\s'), ''),
@@ -198,6 +204,12 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       // existing client is saved as a transfer below.
       if (_isNew) 'assignedTo': manage ? _assignedTo : me.id,
     };
+    // Main coordinates cleared while extra locations exist: the first extra
+    // one becomes the main location instead of all of them disappearing.
+    final existing = ref.read(allClientsProvider).value?.where((c) => c.id == widget.clientId).firstOrNull;
+    if (data['lat'] == null && existing != null && existing.extraLocations.isNotEmpty) {
+      data.addAll(locationsUpdate(existing.extraLocations));
+    }
 
     if (_isNew) {
       final clients = ref.read(allClientsProvider).value ?? const <Client>[];
@@ -263,6 +275,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     final l10n = AppLocalizations.of(context);
     final manage =
         ref.watch(currentUserProvider).value?.role.isSupervisor ?? false;
+    final locationTypes = ref.watch(tagListProvider(TagList.locationTypes)).value ?? defaultLocationTypes;
     if (!_loaded && !_isNew) {
       final client = ref
           .watch(allClientsProvider)
@@ -358,6 +371,23 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
             section(l10n.locationSection),
             field(_address, l10n.address),
             field(_city, l10n.city),
+            // Label of the main location; more locations are added on the client page.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: DropdownButtonFormField<String>(
+                initialValue: locationTypes.any((t) => t.id == _mainType) ? _mainType : '',
+                decoration: InputDecoration(
+                  labelText: l10n.mainLocationType,
+                  helperText: l10n.moreLocationsOnClientPage,
+                ),
+                items: [
+                  DropdownMenuItem(value: '', child: Text(l10n.noLocationType)),
+                  for (final t in locationTypes)
+                    DropdownMenuItem(value: t.id, child: Text(t.label(Localizations.localeOf(context).languageCode))),
+                ],
+                onChanged: (v) => setState(() => _mainType = v ?? ''),
+              ),
+            ),
             Row(
               children: [
                 Expanded(
@@ -416,6 +446,16 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
               icon: const Icon(Icons.link),
               label: Text(l10n.pasteMapsLink),
             ),
+            // More locations (factory, showroom, …), saved right away.
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(l10n.otherLocations, style: Theme.of(context).textTheme.titleSmall),
+            ),
+            if (_isNew)
+              ListTile(dense: true, leading: const Icon(Icons.info_outline), title: Text(l10n.saveClientFirstForLocations))
+            else if (ref.watch(allClientsProvider).value?.where((c) => c.id == widget.clientId).firstOrNull
+                case final client?)
+              ClientLocationsList(client: client, canEdit: true, extrasOnly: true),
             section(l10n.notes),
             field(_notes, l10n.notes, maxLines: 5),
             if (manage) ...[

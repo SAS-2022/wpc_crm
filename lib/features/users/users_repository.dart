@@ -34,7 +34,8 @@ final roleMirrorProvider = Provider<void>((ref) {
   if (users == null || users.isEmpty) return;
   FirebaseDatabase.instance
       .ref('roles')
-      .update({for (final u in users) u.id: u.role.value})
+      // Unknown roles (from a newer app version) are left as they are.
+      .update({for (final u in users) if (u.role != UserRole.unknown) u.id: u.role.value})
       .catchError((Object e) => debugPrint('Role mirror failed: $e'));
 });
 

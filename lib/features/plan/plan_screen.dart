@@ -13,6 +13,8 @@ import '../clients/client_location_dialog.dart';
 import '../clients/clients_repository.dart';
 import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
+import '../visits/call_chip.dart';
+import '../visits/visits_repository.dart';
 import 'add_task_sheet.dart';
 import 'checklist.dart';
 import 'plan_repository.dart';
@@ -213,6 +215,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                         onVisit: isOwner && t.isVisit && !t.done && t.approval == TaskApproval.approved
                             ? () => context.push('/clients/${t.clientId}/visit')
                             : null,
+                        onCall: isOwner && t.isVisit && !t.done && t.approval == TaskApproval.approved
+                            ? () => context.push('/clients/${t.clientId}/call')
+                            : null,
                         onEdit: canManage ? () => _editTitle(me, owner, t) : null,
                         canTickChecklist: isOwner && t.approval == TaskApproval.approved,
                         canEditChecklist: (isOwner || canManage) && t.approval != TaskApproval.rejected,
@@ -289,6 +294,7 @@ class PlanTaskTile extends ConsumerWidget {
     this.onApprove,
     this.onDelete,
     this.onVisit,
+    this.onCall,
     this.onEdit,
     this.subtitlePrefix,
     this.canTickChecklist = false,
@@ -304,6 +310,9 @@ class PlanTaskTile extends ConsumerWidget {
   final ValueChanged<TaskApproval>? onApprove;
   final VoidCallback? onDelete;
   final VoidCallback? onVisit;
+
+  /// Log a phone call with the client instead of visiting; also ticks the item.
+  final VoidCallback? onCall;
 
   /// Tap to edit the note (KAM / managers).
   final VoidCallback? onEdit;
@@ -323,10 +332,16 @@ class PlanTaskTile extends ConsumerWidget {
     final client = task.isVisit
         ? ref.watch(allClientsProvider).value?.where((c) => c.id == task.clientId).firstOrNull
         : null;
+    // Done by a phone call rather than a visit.
+    final byCall = task.done &&
+        task.visitId != null &&
+        (ref.watch(visitProvider(task.visitId!)).value?.isCall ?? false);
     final status = switch (task.approval) {
       TaskApproval.pending => (l10n.waitingApproval, Colors.orange.shade800),
       TaskApproval.rejected => (l10n.rejected, scheme.error),
-      TaskApproval.approved => task.done ? (l10n.done, Colors.green.shade700) : (l10n.toDo, scheme.onSurfaceVariant),
+      TaskApproval.approved => task.done
+          ? (byCall ? '${l10n.done} · ${l10n.call}' : l10n.done, byCall ? callColor : Colors.green.shade700)
+          : (l10n.toDo, scheme.onSurfaceVariant),
     };
     final title = task.isVisit ? task.clientName ?? '' : task.title;
     final note = task.isVisit ? task.title : '';
@@ -334,8 +349,16 @@ class PlanTaskTile extends ConsumerWidget {
     final Widget leading = canTick && !task.isVisit
         ? Checkbox(value: task.done, onChanged: (v) => onTick?.call(v ?? false))
         : Icon(
-            task.isVisit ? Icons.store : Icons.checklist,
-            color: task.done ? Colors.green.shade700 : scheme.onSurfaceVariant,
+            byCall
+                ? Icons.call
+                : task.isVisit
+                    ? Icons.store
+                    : Icons.checklist,
+            color: byCall
+                ? callColor
+                : task.done
+                    ? Colors.green.shade700
+                    : scheme.onSurfaceVariant,
           );
 
     final tile = ListTile(
@@ -368,6 +391,7 @@ class PlanTaskTile extends ConsumerWidget {
           if (client != null) ClientLocationButton(client: client),
           if (onVisit != null)
             IconButton(icon: const Icon(Icons.add_location_alt), tooltip: l10n.addVisit, onPressed: onVisit),
+          if (onCall != null) IconButton(icon: const Icon(Icons.add_call), tooltip: l10n.logCall, onPressed: onCall),
           if (canApprove) ...[
             IconButton(
               icon: Icon(Icons.check_circle, color: Colors.green.shade700),

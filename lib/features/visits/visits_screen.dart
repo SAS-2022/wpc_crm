@@ -11,10 +11,51 @@ import '../clients/client_widgets.dart';
 import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
 import '../users/users_repository.dart';
+import '../clients/client_tags.dart';
+import 'call_chip.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
 
 enum _Period { today, week, month, all }
+
+/// A salesperson's visits and calls on one day, shown as a sub-header.
+typedef PersonGroup = ({String uid, int visits, int calls});
+
+/// The rows of the visits list: a day (DateTime) before each day's visits,
+/// and with [byPerson] a [PersonGroup] before each salesperson's visits of
+/// that day (people by name, their visits newest first). [list] is newest first.
+List<Object> visitListItems(
+  List<Visit> list, {
+  required DateTime now,
+  required bool byPerson,
+  required String Function(String uid) nameOf,
+}) {
+  final days = <DateTime, List<Visit>>{};
+  for (final v in list) {
+    final t = v.checkedInAt ?? now; // pending server time = just now
+    days.putIfAbsent(DateTime(t.year, t.month, t.day), () => []).add(v);
+  }
+  final items = <Object>[];
+  for (final MapEntry(key: day, value: visits) in days.entries) {
+    items.add(day);
+    if (!byPerson) {
+      items.addAll(visits);
+      continue;
+    }
+    final people = <String, List<Visit>>{};
+    for (final v in visits) {
+      people.putIfAbsent(v.salesExecId, () => []).add(v);
+    }
+    final order = people.keys.toList()..sort((a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()));
+    for (final uid in order) {
+      final mine = people[uid]!;
+      final calls = mine.where((v) => v.isCall).length;
+      items.add((uid: uid, visits: mine.length - calls, calls: calls));
+      items.addAll(mine);
+    }
+  }
+  return items;
+}
 
 /// Own visits for sales executives; everyone's (filterable) for KAM / managers.
 /// Search, period and visitor filters, a summary strip, and visits grouped by
@@ -32,6 +73,9 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
   _Period _period = _Period.all;
   String _query = '';
 
+  /// null = visits and calls.
+  VisitType? _type;
+
   bool _inPeriod(Visit v, DateTime now) {
     final t = v.checkedInAt ?? now; // pending server time = just now
     final today = DateTime(now.year, now.month, now.day);
@@ -43,7 +87,8 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     };
   }
 
-  Future<void> _newVisit() async {
+  /// Picks a client and opens the check-in, or with [call] the call log.
+  Future<void> _newVisit({bool call = false}) async {
     final clientId = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -51,7 +96,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
       showDragHandle: true,
       builder: (_) => const _ClientPickerSheet(),
     );
-    if (clientId != null && mounted) context.push('/visits/new/$clientId');
+    if (clientId != null && mounted) context.push(call ? '/visits/call/$clientId' : '/visits/new/$clientId');
   }
 
   @override
@@ -66,6 +111,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     final hidden = ref.watch(hiddenClientIdsProvider);
     final locale = Localizations.localeOf(context).toString();
     final now = DateTime.now();
+    final locationTypes = ref.watch(locationTypesByIdProvider);
 
     final periodLabels = {
       _Period.today: l10n.today,
@@ -76,10 +122,24 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.visits)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _newVisit,
-        icon: const Icon(Icons.add_location_alt),
-        label: Text(l10n.newVisit),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'logCall',
+            tooltip: l10n.logCall,
+            onPressed: () => _newVisit(call: true),
+            child: const Icon(Icons.add_call),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'newVisit',
+            onPressed: _newVisit,
+            icon: const Icon(Icons.add_location_alt),
+            label: Text(l10n.newVisit),
+          ),
+        ],
       ),
       body: visits.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -90,21 +150,21 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
               .where((v) => !hidden.contains(v.clientId))
               .where((v) => _visitor == null || v.salesExecId == _visitor || v.kamId == _visitor)
               .where((v) => _inPeriod(v, now))
+              .where((v) => _type == null || v.type == _type)
               .where((v) => q.isEmpty || v.clientName.toLowerCase().contains(q) || v.notes.toLowerCase().contains(q))
               .toList();
           final flagged = list.where((v) => v.isFlagged).length;
+          final calls = list.where((v) => v.isCall).length;
           final withKam = list.where((v) => v.kamId != null).length;
 
-          // Day headers between visits of different days.
-          final items = <Object>[];
-          DateTime? lastDay;
-          for (final v in list) {
-            final t = v.checkedInAt ?? now;
-            final day = DateTime(t.year, t.month, t.day);
-            if (day != lastDay) items.add(day);
-            lastDay = day;
-            items.add(v);
-          }
+          // By day; within a day by salesperson when the list shows everyone.
+          final byPerson = (me?.role.isSupervisor ?? false) && _visitor == null;
+          final items = visitListItems(
+            list,
+            now: now,
+            byPerson: byPerson,
+            nameOf: (uid) => users[uid]?.name ?? '',
+          );
 
           return CustomScrollView(
             slivers: [
@@ -132,6 +192,21 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                             label: Text(periodLabels[p]!),
                             selected: _period == p,
                             onSelected: (_) => setState(() => _period = p),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      for (final (type, label, icon) in [
+                        (null, l10n.visitsAndCalls, null),
+                        (VisitType.visit, l10n.visits, Icons.where_to_vote),
+                        (VisitType.call, l10n.calls, Icons.call),
+                      ])
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 8),
+                          child: ChoiceChip(
+                            avatar: icon == null ? null : Icon(icon, size: 18),
+                            label: Text(label),
+                            selected: _type == type,
+                            onSelected: (_) => setState(() => _type = type),
                           ),
                         ),
                     ],
@@ -174,7 +249,9 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Row(
                     children: [
-                      _StatTile(icon: Icons.event_available, label: l10n.visitsTotal, value: list.length, color: theme.colorScheme.primary),
+                      _StatTile(icon: Icons.event_available, label: l10n.visitsTotal, value: list.length - calls, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      _StatTile(icon: Icons.call, label: l10n.calls, value: calls, color: callColor),
                       const SizedBox(width: 8),
                       _StatTile(icon: Icons.flag, label: l10n.flaggedVisits, value: flagged, color: theme.colorScheme.error),
                       const SizedBox(width: 8),
@@ -198,8 +275,14 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                     itemCount: items.length,
                     itemBuilder: (_, i) => switch (items[i]) {
                       final DateTime day => _DayHeader(day: day, now: now, locale: locale),
+                      final PersonGroup g => _PersonHeader(
+                          name: users[g.uid]?.name ?? '?',
+                          visits: g.visits,
+                          calls: g.calls,
+                        ),
                       final Visit v => _VisitCard(
                           visit: v,
+                          place: locationTypes[v.locationTypeId]?.label(locale.split('_').first),
                           visitor: users[v.salesExecId]?.name ?? '',
                           kam: users[v.kamId]?.name,
                           locale: locale,
@@ -217,8 +300,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
 }
 
 extension on Visit {
-  bool get isFar => distanceMeters != null && distanceMeters! > visitRadiusMeters;
-  bool get isFlagged => isFar || mocked;
+  bool get isFar => !isCall && distanceMeters != null && distanceMeters! > visitRadiusMeters;
 }
 
 class _StatTile extends StatelessWidget {
@@ -280,10 +362,51 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
+/// "Sami Mansour · 4 visits · 1 call" above one person's visits of a day.
+class _PersonHeader extends StatelessWidget {
+  const _PersonHeader({required this.name, required this.visits, required this.calls});
+
+  final String name;
+  final int visits;
+  final int calls;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+      child: Row(children: [
+        _Initials(name: name, radius: 11),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(name,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          [l10n.visitsCount(visits), if (calls > 0) l10n.callsCount(calls)].join(' · '),
+          style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ]),
+    );
+  }
+}
+
 class _VisitCard extends StatelessWidget {
-  const _VisitCard({required this.visit, required this.visitor, required this.kam, required this.locale});
+  const _VisitCard({
+    required this.visit,
+    required this.visitor,
+    required this.kam,
+    required this.locale,
+    this.place,
+  });
 
   final Visit visit;
+
+  /// Which of the client's locations (Factory, Showroom, …), when labelled.
+  final String? place;
   final String visitor;
   final String? kam;
   final String locale;
@@ -293,7 +416,11 @@ class _VisitCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final accent = visit.isFlagged ? scheme.error : Colors.green.shade600;
+    final accent = visit.isCall
+        ? callColor
+        : visit.isFlagged
+            ? scheme.error
+            : Colors.green.shade600;
     final time = visit.checkedInAt == null ? '' : DateFormat.jm(locale).format(visit.checkedInAt!);
 
     Widget chip(IconData icon, String text, Color color) => Container(
@@ -328,7 +455,14 @@ class _VisitCard extends StatelessWidget {
                       CircleAvatar(
                         radius: 22,
                         backgroundColor: accent.withValues(alpha: 0.12),
-                        child: Icon(visit.isFlagged ? Icons.wrong_location : Icons.where_to_vote, color: accent),
+                        child: Icon(
+                          visit.isCall
+                              ? Icons.call
+                              : visit.isFlagged
+                                  ? Icons.wrong_location
+                                  : Icons.where_to_vote,
+                          color: accent,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -339,7 +473,7 @@ class _VisitCard extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    visit.clientName,
+                                    place == null ? visit.clientName : '${visit.clientName} · $place',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -367,6 +501,7 @@ class _VisitCard extends StatelessWidget {
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(visit.notes, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
                               ),
+                            if (visit.isCall) Padding(padding: const EdgeInsets.only(top: 6), child: CallChip(visit: visit)),
                             if (kam != null || visit.isFlagged)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),

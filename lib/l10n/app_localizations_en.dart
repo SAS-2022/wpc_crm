@@ -1638,4 +1638,516 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateNow => 'Update now';
+
+  @override
+  String get exportClients => 'Export to Excel';
+
+  @override
+  String get exportClientsTitle => 'Export clients to Excel';
+
+  @override
+  String exportClientsBody(int count) {
+    return '$count clients (the current list with its search and filters). Choose the columns:';
+  }
+
+  @override
+  String exportColumnsCount(int selected, int total) {
+    return '$selected of $total columns';
+  }
+
+  @override
+  String get exportSelectNone => 'Clear';
+
+  @override
+  String get exportButton => 'Export';
+
+  @override
+  String get exportLegalName => 'Legal name';
+
+  @override
+  String get exportVisitStatus => 'Visit status';
+
+  @override
+  String get exportDaysSinceVisit => 'Days since last visit';
+
+  @override
+  String get exportOtherContacts => 'Other contacts';
+
+  @override
+  String get exportMapsLink => 'Google Maps link';
+
+  @override
+  String get exportGooglePin => 'Odoo Google Pin';
+
+  @override
+  String get exportOdooTags => 'Odoo tags';
+
+  @override
+  String get exportCurrency => 'Currency';
+
+  @override
+  String get exportSource => 'Source';
+
+  @override
+  String get exportSourceImport => 'Odoo import';
+
+  @override
+  String get exportHidden => 'Hidden';
+
+  @override
+  String get exportAddedOn => 'Added on';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get call => 'Call';
+
+  @override
+  String get calls => 'Calls';
+
+  @override
+  String get logCall => 'Log call';
+
+  @override
+  String get saveCall => 'Save call';
+
+  @override
+  String get callSaved => 'Call saved';
+
+  @override
+  String get callNotes => 'What was discussed on the call';
+
+  @override
+  String get callNotesHint => 'Orders, follow-ups, next visit…';
+
+  @override
+  String get callNotesRequired => 'Write what was discussed on the call';
+
+  @override
+  String get callFromApp => 'Called from the app';
+
+  @override
+  String get callLoggedByHand => 'Logged by hand';
+
+  @override
+  String callDuration(String duration) {
+    return 'About $duration away from the app';
+  }
+
+  @override
+  String get notThisCall => 'Not this call';
+
+  @override
+  String logThisCall(String duration) {
+    return 'Back from a call ($duration). Log it?';
+  }
+
+  @override
+  String calledBy(String name) {
+    return 'Call by $name';
+  }
+
+  @override
+  String get visitsAndCalls => 'Visits and calls';
+
+  @override
+  String get visitsPlusCalls => 'Visits + calls';
+
+  @override
+  String visitsAndCallsDetail(int visits, int calls) {
+    return '$visits visits + $calls calls';
+  }
+
+  @override
+  String barTooltipCalls(
+    String name,
+    int done,
+    int calls,
+    int target,
+    int expected,
+  ) {
+    return '$name: $done visits + $calls calls · target $target · expected by today $expected';
+  }
+
+  @override
+  String get roleHr => 'HR';
+
+  @override
+  String get roleAccounting => 'Accounting';
+
+  @override
+  String get roleProcurement => 'Procurement';
+
+  @override
+  String get roleUnknown => 'Unknown role';
+
+  @override
+  String get updateAppForRole =>
+      'Your account uses a role this version of the app doesn\'t know yet. Please update the app (Google Play / TestFlight) or reload the web page.';
+
+  @override
+  String get backOfficeHomeBody =>
+      'Your attendance and leave requests will appear here.';
+
+  @override
+  String get hrArea => 'HR';
+
+  @override
+  String get myLeave => 'My leave';
+
+  @override
+  String get myLeaveHint => 'Balances and requests';
+
+  @override
+  String get myRequests => 'My requests';
+
+  @override
+  String get newLeaveRequest => 'New request';
+
+  @override
+  String get noLeaveRequests => 'No requests';
+
+  @override
+  String get leaveRequests => 'Requests';
+
+  @override
+  String get leaveBalances => 'Balances';
+
+  @override
+  String get leaveTypesAndHolidays => 'Leave types & holidays';
+
+  @override
+  String leaveBalanceYear(int year) {
+    return 'Leave balance $year';
+  }
+
+  @override
+  String leavePendingDays(String days) {
+    return '$days days waiting for approval';
+  }
+
+  @override
+  String leaveRemainingOf(String left, String total) {
+    return '$left of $total left';
+  }
+
+  @override
+  String leaveDaysCount(String days) {
+    return '$days days';
+  }
+
+  @override
+  String leaveLeftAfter(String days) {
+    return '$days left after this';
+  }
+
+  @override
+  String get leaveOverBalance =>
+      'This is more than the days left. HR decides whether it is allowed.';
+
+  @override
+  String waitingFor(String who) {
+    return 'Waiting for $who';
+  }
+
+  @override
+  String get waitingForMe => 'Waiting for me';
+
+  @override
+  String get pendingStatus => 'Pending';
+
+  @override
+  String get leaveApprovedStatus => 'Approved';
+
+  @override
+  String get leaveCancelledStatus => 'Cancelled';
+
+  @override
+  String leaveWaitingForYou(int count) {
+    return 'Requests waiting for your approval ($count)';
+  }
+
+  @override
+  String get requestType => 'Type';
+
+  @override
+  String get pickLeaveDates => 'Choose the dates';
+
+  @override
+  String get halfDay => 'Half day';
+
+  @override
+  String get countsCalendarDays => 'Counts every calendar day';
+
+  @override
+  String get countsWorkDays => 'Counts work days only';
+
+  @override
+  String get leaveReasonOptional => 'Reason (optional)';
+
+  @override
+  String get leaveRequestDetails => 'What do you need?';
+
+  @override
+  String get leaveReasonRequired => 'Write what you need';
+
+  @override
+  String leaveDocumentRequired(String document) {
+    return 'Required: $document';
+  }
+
+  @override
+  String get approvalOrder => 'Approval order';
+
+  @override
+  String get noApproverYet =>
+      'Nobody can approve this request yet. Ask the GM to add an HR user.';
+
+  @override
+  String get leaveAcrossYears =>
+      'A request can\'t cross the new year. Send one request per year.';
+
+  @override
+  String get leaveNoWorkDays => 'These dates have no work days.';
+
+  @override
+  String get sendRequest => 'Send request';
+
+  @override
+  String get leaveRequestSent => 'Request sent';
+
+  @override
+  String get approveRequest => 'Approve request';
+
+  @override
+  String get rejectRequest => 'Reject request';
+
+  @override
+  String get rejectReason => 'Reason';
+
+  @override
+  String get cancelRequest => 'Cancel request';
+
+  @override
+  String get leaveAlreadyDecided => 'Someone already decided this step.';
+
+  @override
+  String get leaveTypesHint =>
+      'Starting values follow Saudi labour law – HR should check them. Tap a type to edit it.';
+
+  @override
+  String get noYearlyLimit => 'No yearly limit';
+
+  @override
+  String daysPerYear(int days) {
+    return '$days days a year';
+  }
+
+  @override
+  String get unpaid => 'Unpaid';
+
+  @override
+  String get otherRequest => 'Request (no days)';
+
+  @override
+  String needsDocumentNamed(String document) {
+    return 'Needs: $document';
+  }
+
+  @override
+  String get addLeaveType => 'Add type';
+
+  @override
+  String get editLeaveType => 'Edit type';
+
+  @override
+  String get nameEnglish => 'Name (English)';
+
+  @override
+  String get nameArabic => 'Name (Arabic)';
+
+  @override
+  String get isLeaveType => 'Leave (has dates)';
+
+  @override
+  String get isLeaveTypeHint => 'Off for requests like a salary certificate';
+
+  @override
+  String get daysPerYearLabel => 'Days per year';
+
+  @override
+  String get daysPerYearHelper => 'Empty = no limit';
+
+  @override
+  String get paidLeave => 'Paid';
+
+  @override
+  String get needsDocument => 'Needs a document';
+
+  @override
+  String get documentNameEnglish => 'Document (English)';
+
+  @override
+  String get documentNameArabic => 'Document (Arabic)';
+
+  @override
+  String get publicHolidays => 'Public holidays';
+
+  @override
+  String get publicHolidaysHint => 'These days don\'t count as leave days.';
+
+  @override
+  String get addHoliday => 'Add holiday';
+
+  @override
+  String get tapTypeToEdit =>
+      'Tap a type to set this person\'s days or add an adjustment.';
+
+  @override
+  String get daysThisYear => 'Days this year for this person';
+
+  @override
+  String daysThisYearHelper(int days) {
+    return 'Empty = the type\'s $days days';
+  }
+
+  @override
+  String get adjustDays => 'Add or remove days';
+
+  @override
+  String get adjustDaysHelper => 'e.g. 5 carried over, or -2';
+
+  @override
+  String get adjustNote => 'Note';
+
+  @override
+  String get adjustments => 'Adjustments';
+
+  @override
+  String notifLeaveRequested(String owner) {
+    return 'Request from $owner – waiting for your approval';
+  }
+
+  @override
+  String notifLeaveApproved(String name) {
+    return '$name approved your request';
+  }
+
+  @override
+  String notifLeaveRejected(String name) {
+    return '$name rejected your request';
+  }
+
+  @override
+  String get addLocation => 'Add location';
+
+  @override
+  String get editLocation => 'Edit location';
+
+  @override
+  String get locationType => 'Label';
+
+  @override
+  String get noLocationType => 'No label';
+
+  @override
+  String get mainLocationType => 'Main location label';
+
+  @override
+  String get moreLocationsOnClientPage =>
+      'Add more locations (factory, showroom, …) on the client page';
+
+  @override
+  String get mainLocation => 'Main';
+
+  @override
+  String get makeMainLocation => 'Make main location';
+
+  @override
+  String locationNumber(int n) {
+    return 'Location $n';
+  }
+
+  @override
+  String deleteLocationTitle(String name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get visitLocation => 'Visit location';
+
+  @override
+  String get nearestLocation => 'nearest';
+
+  @override
+  String get locationTypes => 'Location types';
+
+  @override
+  String get locationTypesHelp =>
+      'Labels for a client\'s locations, e.g. Office, Factory, Showroom. Deleting one leaves those locations unlabelled.';
+
+  @override
+  String get otherLocations => 'Other locations';
+
+  @override
+  String get saveClientFirstForLocations =>
+      'Save the client first, then add more locations here.';
+
+  @override
+  String get setMainLocationFirst =>
+      'Set and save the main location first, then add more locations.';
+
+  @override
+  String visitsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count visits',
+      one: '1 visit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String callsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count calls',
+      one: '1 call',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteClient => 'Delete client';
+
+  @override
+  String deleteClientTitle(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get deleteClientBody =>
+      'The client, its plan items and its photos / files will be deleted. This can\'t be undone.';
+
+  @override
+  String deleteClientWithVisits(int count) {
+    return 'This client has $count visits. The visits stay in the visits list and reports; the client, its plan items and its photos / files are deleted. This can\'t be undone.\n\nEnter your password to confirm.';
+  }
+
+  @override
+  String get yourPassword => 'Your password';
+
+  @override
+  String get wrongPassword => 'Wrong password';
+
+  @override
+  String clientDeleted(String name) {
+    return '$name deleted';
+  }
 }

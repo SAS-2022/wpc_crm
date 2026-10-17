@@ -6,10 +6,8 @@ import '../../core/providers.dart';
 import '../clients/client.dart';
 import '../plan/plan_repository.dart';
 import '../plan/plan_task.dart';
+import 'app_calls.dart';
 import 'visit.dart';
-
-/// Check-ins farther than this from the client are flagged.
-const visitRadiusMeters = 300.0;
 
 /// Visits of one client, newest first. Sales execs only see their own.
 final clientVisitsProvider = StreamProvider.family<List<Visit>, String>((ref, clientId) {
@@ -60,17 +58,19 @@ class VisitsRepository {
 
   /// Saves the visit and marks the client visited (its marker turns green).
   /// With [setClientLocation], the check-in position becomes the client's location.
-  /// Returns the new visit's id.
+  /// [location]: which of the client's locations the visit is at (distance
+  /// is measured to it); null = the main one. Returns the new visit's id.
   Future<String> add({
     required Client client,
     required String userId,
     required Position position,
     required String notes,
     required bool setClientLocation,
+    ClientLocation? location,
   }) async {
-    final distance = client.hasLocation
-        ? Geolocator.distanceBetween(position.latitude, position.longitude, client.lat!, client.lng!)
-        : null;
+    final at = location ?? client.locations.firstOrNull;
+    final distance =
+        at == null ? null : Geolocator.distanceBetween(position.latitude, position.longitude, at.lat, at.lng);
     final now = DateTime.now();
     final visitRef = _db.collection('visits').doc();
     final batch = _db.batch();
@@ -85,6 +85,8 @@ class VisitsRepository {
       'accuracy': position.accuracy,
       'mocked': position.isMocked,
       'distanceMeters': distance,
+      if (at != null) 'locationId': at.id,
+      if (at != null) 'locationTypeId': at.typeId,
       'notes': notes,
       'status': 'completed',
     });
@@ -94,17 +96,47 @@ class VisitsRepository {
       if (setClientLocation) 'lng': position.longitude,
     });
     await batch.commit();
+    await _completePlan(userId, client.id, visitRef.id, now);
+    return visitRef.id;
+  }
+
+  /// Saves a phone call with the client. It counts like a visit (the client
+  /// turns green, today's plan item for the client is done) but has no
+  /// position. [appCall]: the call was dialled from the app, with its length.
+  Future<String> addCall({
+    required Client client,
+    required String userId,
+    required String notes,
+    AppCall? appCall,
+  }) async {
+    final now = DateTime.now();
+    final visitRef = _db.collection('visits').doc();
+    final batch = _db.batch();
+    batch.set(visitRef, {
+      'type': VisitType.call.name,
+      'month': monthKey(now),
+      'clientId': client.id,
+      'clientName': client.name,
+      'salesExecId': userId,
+      'checkedInAt': FieldValue.serverTimestamp(),
+      'notes': notes,
+      'status': 'completed',
+      'callFromApp': appCall != null,
+      if (appCall != null) 'callSeconds': appCall.seconds,
+      if (appCall != null) 'callStartedAt': Timestamp.fromDate(appCall.startedAt),
+    });
+    batch.update(_db.collection('clients').doc(client.id), {'lastVisitAt': FieldValue.serverTimestamp()});
+    await batch.commit();
+    await _completePlan(userId, client.id, visitRef.id, now);
+    return visitRef.id;
+  }
+
+  Future<void> _completePlan(String userId, String clientId, String visitId, DateTime day) async {
     try {
-      await PlanRepository().completeVisitTasks(
-        ownerId: userId,
-        clientId: client.id,
-        visitId: visitRef.id,
-        day: now,
-      );
+      await PlanRepository().completeVisitTasks(ownerId: userId, clientId: clientId, visitId: visitId, day: day);
     } catch (_) {
       // The visit is saved; a failed plan update must not fail the visit.
     }
-    return visitRef.id;
   }
 
   /// Sales manager / GM: deletes a visit (e.g. a test). Plan items it ticked

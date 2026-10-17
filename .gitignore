@@ -54,3 +54,4 @@ functions/node_modules/
 .firebase/
 android/build/
 .github/modernize/
+test_rules/node_modules/

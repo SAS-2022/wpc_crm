@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'merge.dart';
@@ -45,6 +47,9 @@ class Client {
     this.transfers = const [],
     this.notDuplicates = const [],
     this.mergedFrom = const [],
+    this.mainLocationType = '',
+    this.extraLocations = const [],
+    this.createdAt,
   });
 
   final String id;
@@ -119,7 +124,25 @@ class Client {
   /// Clients merged into this one, with what they had absorbed before.
   final List<MergedClient> mergedFrom;
 
+  /// Label of the main location ([lat], [lng]): a `settings/locationTypes`
+  /// id such as 'office'; empty = unlabelled.
+  final String mainLocationType;
+
+  /// More places of the same client (factory, showroom, …), each labelled.
+  /// Only kept while the client has a main location.
+  final List<ClientLocation> extraLocations;
+
+  final DateTime? createdAt;
+
+  /// The main location. Imports, duplicates and plans use this one.
   bool get hasLocation => lat != null && lng != null;
+
+  /// Every location, main first; empty without a main location.
+  List<ClientLocation> get locations => [
+        if (hasLocation)
+          ClientLocation(id: ClientLocation.mainId, typeId: mainLocationType, lat: lat!, lng: lng!),
+        if (hasLocation) ...extraLocations,
+      ];
 
   static String normalizeName(String name) =>
       name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -172,8 +195,97 @@ class Client {
         for (final m in d['mergedFrom'] as List? ?? const [])
           if (m is Map) MergedClient.fromMap(m),
       ],
+      mainLocationType: d['mainLocationType'] as String? ?? '',
+      extraLocations: [
+        for (final l in d['extraLocations'] as List? ?? const [])
+          if (l is Map && l['lat'] is num && l['lng'] is num) ClientLocation.fromMap(l),
+      ],
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }
+}
+
+/// One place of a client. The main one is the client's own `lat` / `lng`
+/// (id [mainId]); others are in `clients.extraLocations`.
+class ClientLocation {
+  const ClientLocation({
+    required this.id,
+    required this.typeId,
+    required this.lat,
+    required this.lng,
+    this.address = '',
+  });
+
+  static const mainId = 'main';
+
+  factory ClientLocation.fromMap(Map<dynamic, dynamic> m) => ClientLocation(
+        id: m['id'] as String? ?? '',
+        typeId: m['typeId'] as String? ?? '',
+        lat: (m['lat'] as num).toDouble(),
+        lng: (m['lng'] as num).toDouble(),
+        address: m['address'] as String? ?? '',
+      );
+
+  final String id;
+
+  /// `settings/locationTypes` id; empty = unlabelled.
+  final String typeId;
+  final double lat;
+  final double lng;
+  final String address;
+
+  bool get isMain => id == mainId;
+
+  ClientLocation copyWith({String? id, String? typeId, double? lat, double? lng, String? address}) => ClientLocation(
+        id: id ?? this.id,
+        typeId: typeId ?? this.typeId,
+        lat: lat ?? this.lat,
+        lng: lng ?? this.lng,
+        address: address ?? this.address,
+      );
+
+  Map<String, dynamic> toMap() => {'id': id, 'typeId': typeId, 'lat': lat, 'lng': lng, 'address': address};
+}
+
+/// Great-circle distance in meters.
+double metersBetween(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371000.0;
+  double rad(double d) => d * math.pi / 180;
+  final dLat = rad(lat2 - lat1);
+  final dLng = rad(lng2 - lng1);
+  final a = math.pow(math.sin(dLat / 2), 2) +
+      math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.pow(math.sin(dLng / 2), 2);
+  return 2 * r * math.asin(math.sqrt(a));
+}
+
+/// The client's location closest to (lat, lng), or null when it has none.
+ClientLocation? nearestLocation(Client client, double lat, double lng) {
+  ClientLocation? best;
+  var bestDistance = double.infinity;
+  for (final l in client.locations) {
+    final d = metersBetween(lat, lng, l.lat, l.lng);
+    if (d < bestDistance) {
+      best = l;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+/// Firestore fields for a client's whole location list: the first becomes
+/// the main location (`lat`, `lng`, `mainLocationType`), the rest
+/// `extraLocations`. An empty list removes all locations.
+Map<String, dynamic> locationsUpdate(List<ClientLocation> list) {
+  final main = list.firstOrNull;
+  return {
+    'lat': main?.lat,
+    'lng': main?.lng,
+    'mainLocationType': main?.typeId ?? '',
+    'extraLocations': [
+      for (final (i, l) in list.skip(1).indexed)
+        (l.isMain ? l.copyWith(id: 'l${DateTime.now().millisecondsSinceEpoch}_$i') : l).toMap(),
+    ],
+  };
 }
 
 class ClientContact {

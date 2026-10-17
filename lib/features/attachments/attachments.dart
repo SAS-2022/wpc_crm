@@ -6,10 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Max upload size, same limit as `storage.rules`.
 const maxAttachmentBytes = 20 * 1024 * 1024;
 
-/// Photos and files belong to a client or a visit.
-enum AttachmentParent { clients, visits }
+/// Photos and files belong to a client, a visit or a leave request (e.g. a
+/// hospital report).
+enum AttachmentParent {
+  clients('clients'),
+  visits('visits'),
+  leaveRequests('leave_requests');
 
-/// A key for one parent's attachments: (`clients` | `visits`, doc id).
+  const AttachmentParent(this.collection);
+
+  /// Firestore collection and Storage folder.
+  final String collection;
+}
+
+/// A key for one parent's attachments: (parent, doc id).
 typedef AttachmentOwner = ({AttachmentParent parent, String id});
 
 class Attachment {
@@ -79,7 +89,7 @@ String contentTypeOf(String fileName) {
 }
 
 CollectionReference<Map<String, dynamic>> _collection(AttachmentOwner owner) => FirebaseFirestore.instance
-    .collection(owner.parent.name)
+    .collection(owner.parent.collection)
     .doc(owner.id)
     .collection('attachments');
 
@@ -90,14 +100,14 @@ final attachmentsProvider = StreamProvider.family<List<Attachment>, AttachmentOw
 
 final attachmentsRepositoryProvider = Provider((ref) => AttachmentsRepository());
 
-/// Files in Storage at `{clients|visits}/{id}/{file}`, listed in Firestore
-/// `{clients|visits}/{id}/attachments`.
+/// Files in Storage at `{collection}/{id}/{file}`, listed in Firestore
+/// `{collection}/{id}/attachments`.
 class AttachmentsRepository {
   final _storage = FirebaseStorage.instance;
 
   Future<void> upload(AttachmentOwner owner, PendingFile file, String userId) async {
     final safeName = file.name.replaceAll(RegExp(r'[^\w.\-]+'), '_');
-    final path = '${owner.parent.name}/${owner.id}/${DateTime.now().millisecondsSinceEpoch}_$safeName';
+    final path = '${owner.parent.collection}/${owner.id}/${DateTime.now().millisecondsSinceEpoch}_$safeName';
     final ref = _storage.ref(path);
     await ref.putData(file.bytes, SettableMetadata(contentType: file.contentType));
     await _collection(owner).add({

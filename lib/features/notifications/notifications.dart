@@ -33,6 +33,14 @@ enum NotificationType {
   /// (`fromId`) turned off GPS, reduced the location permission or turned on
   /// battery optimization during work hours. See [AppNotification.issue].
   trackingIssue,
+
+  /// A leave request by `ownerId` reached the recipient's approval step
+  /// ([AppNotification.ref] = request id).
+  leaveRequested,
+
+  /// The recipient's leave request was approved by every step / rejected.
+  leaveApproved,
+  leaveRejected,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -46,6 +54,7 @@ class AppNotification {
     required this.date,
     required this.count,
     this.issue = '',
+    this.ref = '',
     required this.read,
     required this.createdAt,
   });
@@ -63,6 +72,9 @@ class AppNotification {
   /// For [NotificationType.trackingIssue]: 'gpsOff', 'locationDenied',
   /// 'notAlways', 'battery' or 'offline' (offline 30 min, `offlineAlerts`).
   final String issue;
+
+  /// The document it is about, e.g. a leave request id.
+  final String ref;
   final bool read;
   final DateTime? createdAt;
 
@@ -76,6 +88,7 @@ class AppNotification {
       date: d['date'] as String? ?? '',
       count: (d['count'] as num?)?.toInt() ?? 0,
       issue: d['issue'] as String? ?? '',
+      ref: d['ref'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -116,6 +129,7 @@ Future<void> sendNotifications({
   required String ownerId,
   required String date,
   required int count,
+  String? ref,
 }) async {
   final batch = FirebaseFirestore.instance.batch();
   for (final to in toIds.toSet()) {
@@ -127,6 +141,7 @@ Future<void> sendNotifications({
       'ownerId': ownerId,
       'date': date,
       'count': count,
+      'ref': ?ref,
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });

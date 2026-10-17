@@ -1,0 +1,138 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wpc_crm/core/app_user.dart';
+import 'package:wpc_crm/features/hr/leave_rules.dart';
+import 'package:wpc_crm/features/tracking/work_hours.dart';
+
+AppUser _u(String id, UserRole role, {String? kamId, bool active = true}) => AppUser(
+      id: id,
+      name: id,
+      email: '',
+      phone: '',
+      role: role,
+      kamId: kamId,
+      active: active,
+    );
+
+void main() {
+  final workDays = WorkHours.defaults.days; // Saturday–Thursday
+
+  group('leaveDays', () {
+    // 2026-10-15 is a Thursday, 10-16 Friday, 10-17 Saturday.
+    test('work-day types skip Fridays and holidays', () {
+      expect(
+        leaveDays(
+          from: DateTime(2026, 10, 15),
+          to: DateTime(2026, 10, 18),
+          calendarDays: false,
+          workDays: workDays,
+          holidays: const {},
+        ),
+        3,
+      );
+      expect(
+        leaveDays(
+          from: DateTime(2026, 10, 15),
+          to: DateTime(2026, 10, 18),
+          calendarDays: false,
+          workDays: workDays,
+          holidays: const {'2026-10-17'},
+        ),
+        2,
+      );
+    });
+
+    test('calendar-day types count every day', () {
+      expect(
+        leaveDays(
+          from: DateTime(2026, 10, 15),
+          to: DateTime(2026, 10, 18),
+          calendarDays: true,
+          workDays: workDays,
+          holidays: const {'2026-10-17'},
+        ),
+        4,
+      );
+    });
+
+    test('half day only for a single work day', () {
+      double half(DateTime d) =>
+          leaveDays(from: d, to: d, calendarDays: false, workDays: workDays, holidays: const {}, halfDay: true);
+      expect(half(DateTime(2026, 10, 15)), 0.5);
+      expect(half(DateTime(2026, 10, 16)), 0); // Friday
+    });
+  });
+
+  group('approvalChain', () {
+    final users = [
+      _u('exec', UserRole.salesExec, kamId: 'kam'),
+      _u('kam', UserRole.kam),
+      _u('sm', UserRole.salesManager),
+      _u('gm', UserRole.gm),
+      _u('hr', UserRole.hr),
+      _u('acc', UserRole.accounting),
+    ];
+    List<String> chain(String id, [List<AppUser>? list]) {
+      final all = list ?? users;
+      return [for (final s in approvalChain(all.firstWhere((u) => u.id == id), all)) s.awaitingKey];
+    }
+
+    test('in order per the user\'s rule', () {
+      expect(chain('exec'), ['uid:kam', 'role:sales_manager', 'role:gm', 'role:hr']);
+      expect(chain('kam'), ['role:sales_manager', 'role:gm', 'role:hr']);
+      expect(chain('sm'), ['role:gm', 'role:hr']);
+      expect(chain('acc'), ['role:gm', 'role:hr']);
+      expect(chain('hr'), ['role:gm']);
+      expect(chain('gm'), ['role:hr']);
+    });
+
+    test('steps nobody can take are left out', () {
+      final noHr = users.where((u) => u.role != UserRole.hr).toList();
+      expect(chain('exec', noHr), ['uid:kam', 'role:sales_manager', 'role:gm']);
+      expect(chain('gm', noHr), isEmpty);
+      final kamGone = [for (final u in users) u.id == 'kam' ? _u('kam', UserRole.kam, active: false) : u];
+      expect(chain('exec', kamGone), ['role:sales_manager', 'role:gm', 'role:hr']);
+      // No sales manager: a KAM's request goes straight to the GM.
+      expect(chain('kam', [...users.where((u) => u.id != 'sm')]), ['role:gm', 'role:hr']);
+    });
+
+    test('only the current step\'s person decides, never the requester', () {
+      final sm = users.firstWhere((u) => u.id == 'sm');
+      expect(canDecide(me: sm, requesterId: 'exec', awaitingKey: 'role:sales_manager'), isTrue);
+      expect(canDecide(me: sm, requesterId: 'exec', awaitingKey: 'uid:kam'), isFalse);
+      expect(canDecide(me: sm, requesterId: 'sm', awaitingKey: 'role:sales_manager'), isFalse);
+      expect(canDecide(me: sm, requesterId: 'exec', awaitingKey: null), isFalse);
+    });
+  });
+
+  test('balances: entitled (person or type) + adjustments − approved − pending, per year', () {
+    final b = leaveBalances(
+      types: LeaveType.defaults,
+      year: 2026,
+      entitledOverride: const {'annual': 30},
+      adjustments: const [(typeId: 'annual', days: 5), (typeId: 'sick', days: -1)],
+      requests: const [
+        (typeId: 'annual', year: 2026, days: 3, status: LeaveStatus.approved),
+        (typeId: 'annual', year: 2026, days: 2, status: LeaveStatus.pending),
+        (typeId: 'annual', year: 2026, days: 9, status: LeaveStatus.rejected),
+        (typeId: 'annual', year: 2026, days: 4, status: LeaveStatus.cancelled),
+        (typeId: 'annual', year: 2025, days: 7, status: LeaveStatus.approved),
+      ],
+    );
+    expect(b['annual']!.entitled, 35);
+    expect(b['annual']!.used, 3);
+    expect(b['annual']!.pending, 2);
+    expect(b['annual']!.remaining, 30);
+    expect(b['sick']!.entitled, 119);
+    // Unpaid leave and non-leave requests keep no balance.
+    expect(b.containsKey('unpaid'), isFalse);
+    expect(b.containsKey('salaryCertificate'), isFalse);
+  });
+
+  test('leave types survive a save / load round trip', () {
+    for (final t in LeaveType.defaults) {
+      final back = LeaveType.fromMap(t.toMap());
+      expect(back.toMap(), t.toMap());
+    }
+    expect(LeaveType.defaults.map((t) => t.id).toSet().length, LeaveType.defaults.length);
+  });
+}

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
+import 'client_locations_section.dart';
 
-/// Shows where [client] is on a small map, with directions in Google Maps.
-/// Only for clients with a location.
+/// Shows where [client] is on a small map (a pin per location), with
+/// directions in Google Maps. Only for clients with a location.
 Future<void> showClientLocation(BuildContext context, Client client) {
   final l10n = AppLocalizations.of(context);
   final position = LatLng(client.lat!, client.lng!);
+  final several = client.locations.length > 1;
   return showDialog<void>(
     context: context,
     builder: (dialog) => AlertDialog(
@@ -21,8 +22,10 @@ Future<void> showClientLocation(BuildContext context, Client client) {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: GoogleMap(
-            initialCameraPosition: CameraPosition(target: position, zoom: 16),
-            markers: {Marker(markerId: MarkerId(client.id), position: position)},
+            initialCameraPosition: CameraPosition(target: position, zoom: several ? 12 : 16),
+            markers: {
+              for (final l in client.locations) Marker(markerId: MarkerId(l.id), position: LatLng(l.lat, l.lng)),
+            },
             mapToolbarEnabled: false,
             myLocationButtonEnabled: false,
           ),
@@ -33,10 +36,7 @@ Future<void> showClientLocation(BuildContext context, Client client) {
         FilledButton.icon(
           icon: const Icon(Icons.directions),
           label: Text(l10n.directions),
-          onPressed: () => launchUrl(
-            Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${client.lat},${client.lng}'),
-            mode: LaunchMode.externalApplication,
-          ),
+          onPressed: () => directionsToClient(context, client),
         ),
       ],
     ),

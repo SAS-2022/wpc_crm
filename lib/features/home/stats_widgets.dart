@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../visits/call_chip.dart';
 import 'stats.dart';
 
 /// Chart colours (reference palette): one series hue, neutral ink for the
@@ -15,6 +16,9 @@ const inkSecondary = Color(0xFF52514E);
 const statusGood = Color(0xFF0CA30C);
 const statusWarning = Color(0xFFFAB219);
 const statusCritical = Color(0xFFD03B3B);
+
+/// "190" or "190 + 30": visits, then calls when there are any.
+String visitsAndCallsText(int visits, int calls) => calls > 0 ? '$visits + $calls' : '$visits';
 
 (IconData, Color, String) paceStyle(Pace pace, AppLocalizations l10n) => switch (pace) {
       Pace.onTrack => (Icons.check_circle, statusGood, l10n.paceOnTrack),
@@ -82,13 +86,19 @@ class PersonProgress {
     required this.id,
     required this.name,
     required this.done,
+    this.calls = 0,
     required this.target,
     required this.expected,
   });
 
   final String id;
   final String name;
+
+  /// Visits made; [calls] count toward the target too but are drawn apart.
   final int done;
+  final int calls;
+
+  int get total => done + calls;
 
   /// Target for the selected range (0 = none set).
   final double target;
@@ -117,7 +127,8 @@ class _Legend extends StatelessWidget {
       );
 }
 
-/// Horizontal bullet bars: visits completed (blue) with the target as a tick.
+/// Horizontal bullet bars: visits (blue) and calls (purple) stacked, with the
+/// target as a tick.
 /// Tap a row to focus on that person.
 class TargetBars extends StatelessWidget {
   const TargetBars({super.key, required this.rows, required this.onSelect});
@@ -129,9 +140,9 @@ class TargetBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final scale = rows.fold<double>(1, (m, r) => math.max(m, math.max(r.done.toDouble(), r.target)));
+    final scale = rows.fold<double>(1, (m, r) => math.max(m, math.max(r.total.toDouble(), r.target)));
     final sorted = [...rows]..sort((a, b) {
-        double ratio(PersonProgress r) => r.target > 0 ? r.done / r.target : -1;
+        double ratio(PersonProgress r) => r.target > 0 ? r.total / r.target : -1;
         return ratio(b).compareTo(ratio(a));
       });
 
@@ -140,12 +151,16 @@ class TargetBars extends StatelessWidget {
       children: [
         _Legend([
           (Container(width: 12, height: 12, decoration: BoxDecoration(color: seriesBlue, borderRadius: BorderRadius.circular(3))), l10n.completedVisits),
+          if (rows.any((r) => r.calls > 0))
+            (Container(width: 12, height: 12, decoration: BoxDecoration(color: callColor, borderRadius: BorderRadius.circular(3))), l10n.calls),
           (Container(width: 3, height: 14, color: inkPrimary), l10n.target),
         ]),
         const SizedBox(height: 12),
         for (final r in sorted)
           Tooltip(
-            message: l10n.barTooltip(r.name, r.done, r.target.round(), r.expected.round()),
+            message: r.calls > 0
+                ? l10n.barTooltipCalls(r.name, r.done, r.calls, r.target.round(), r.expected.round())
+                : l10n.barTooltip(r.name, r.done, r.target.round(), r.expected.round()),
             child: InkWell(
               onTap: () => onSelect(r.id),
               borderRadius: BorderRadius.circular(8),
@@ -173,6 +188,13 @@ class TargetBars extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
+                              // Calls first and as long as visits + calls; visits drawn over them.
+                              if (r.calls > 0)
+                                Container(
+                                  width: w * r.total / scale,
+                                  height: 14,
+                                  decoration: BoxDecoration(color: callColor, borderRadius: BorderRadius.circular(4)),
+                                ),
                               Container(
                                 width: w * r.done / scale,
                                 height: 14,
@@ -190,17 +212,17 @@ class TargetBars extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     SizedBox(
-                      width: 64,
+                      width: 84,
                       child: Text(
-                        r.target > 0 ? '${r.done}/${r.target.round()}' : '${r.done}',
+                        [visitsAndCallsText(r.done, r.calls), if (r.target > 0) '${r.target.round()}'].join('/'),
                         textAlign: TextAlign.end,
                         style: theme.textTheme.labelLarge,
                       ),
                     ),
                     const SizedBox(width: 4),
                     if (r.target > 0)
-                      Icon(paceStyle(paceOf(r.done, r.expected), l10n).$1,
-                          size: 18, color: paceStyle(paceOf(r.done, r.expected), l10n).$2)
+                      Icon(paceStyle(paceOf(r.total, r.expected), l10n).$1,
+                          size: 18, color: paceStyle(paceOf(r.total, r.expected), l10n).$2)
                     else
                       const SizedBox(width: 18),
                   ],
@@ -215,12 +237,19 @@ class TargetBars extends StatelessWidget {
 
 /// One person's visits building up over the range against the target pace.
 class ProgressLine extends StatelessWidget {
-  const ProgressLine({super.key, required this.range, required this.visitDays, required this.monthlyTarget});
+  const ProgressLine({
+    super.key,
+    required this.range,
+    required this.visitDays,
+    this.callDays = const [],
+    required this.monthlyTarget,
+  });
 
   final StatsRange range;
 
-  /// The day of each visit.
+  /// The day of each visit, and of each call (drawn as visits + calls).
   final List<DateTime> visitDays;
+  final List<DateTime> callDays;
   final int monthlyTarget;
 
   @override
@@ -230,24 +259,36 @@ class ProgressLine extends StatelessWidget {
     final locale = Localizations.localeOf(context).toString();
     final days = range.dayList;
     final today = DateTime.now();
-    final perDay = <DateTime, int>{};
-    for (final d in visitDays) {
-      final k = DateTime(d.year, d.month, d.day);
-      perDay[k] = (perDay[k] ?? 0) + 1;
+    Map<DateTime, int> perDay(List<DateTime> list) {
+      final m = <DateTime, int>{};
+      for (final d in list) {
+        final k = DateTime(d.year, d.month, d.day);
+        m[k] = (m[k] ?? 0) + 1;
+      }
+      return m;
     }
 
+    final visitsPerDay = perDay(visitDays);
+    final callsPerDay = perDay(callDays);
+    final hasCalls = callDays.isNotEmpty;
     final actual = <FlSpot>[];
+    final withCalls = <FlSpot>[];
     final pace = <FlSpot>[];
     var cumulative = 0;
+    var cumulativeAll = 0;
     var targetSoFar = 0.0;
     for (var i = 0; i < days.length; i++) {
       final d = days[i];
-      cumulative += perDay[d] ?? 0;
+      cumulative += visitsPerDay[d] ?? 0;
+      cumulativeAll += (visitsPerDay[d] ?? 0) + (callsPerDay[d] ?? 0);
       targetSoFar += monthlyTarget / DateTime(d.year, d.month + 1, 0).day;
-      if (!d.isAfter(today)) actual.add(FlSpot(i.toDouble(), cumulative.toDouble()));
+      if (!d.isAfter(today)) {
+        actual.add(FlSpot(i.toDouble(), cumulative.toDouble()));
+        withCalls.add(FlSpot(i.toDouble(), cumulativeAll.toDouble()));
+      }
       pace.add(FlSpot(i.toDouble(), targetSoFar));
     }
-    final maxY = math.max(4.0, math.max(cumulative.toDouble(), targetSoFar) * 1.1);
+    final maxY = math.max(4.0, math.max(cumulativeAll.toDouble(), targetSoFar) * 1.1);
     final step = math.max(1, (days.length / 5).ceil());
 
     return Column(
@@ -255,6 +296,7 @@ class ProgressLine extends StatelessWidget {
       children: [
         _Legend([
           (Container(width: 16, height: 3, color: seriesBlue), l10n.completedVisits),
+          if (hasCalls) (Container(width: 16, height: 3, color: callColor), l10n.visitsPlusCalls),
           if (monthlyTarget > 0)
             (const SizedBox(width: 16, child: Text('- -', style: TextStyle(color: inkSecondary, height: 1))), l10n.targetPace),
         ]),
@@ -308,9 +350,12 @@ class ProgressLine extends StatelessWidget {
                   getTooltipItems: (spots) => [
                     for (final s in spots)
                       LineTooltipItem(
-                        s.barIndex == 0
-                            ? '${DateFormat.MMMd(locale).format(days[s.x.toInt()])}\n${l10n.completedVisits}: ${s.y.toInt()}'
-                            : '${l10n.targetPace}: ${s.y.round()}',
+                        switch (s.bar.color) {
+                          seriesBlue =>
+                            '${DateFormat.MMMd(locale).format(days[s.x.toInt()])}\n${l10n.completedVisits}: ${s.y.toInt()}',
+                          callColor => '${l10n.visitsPlusCalls}: ${s.y.toInt()}',
+                          _ => '${l10n.targetPace}: ${s.y.round()}',
+                        },
                         TextStyle(color: theme.colorScheme.onInverseSurface, fontSize: 12),
                       ),
                   ],
@@ -332,6 +377,14 @@ class ProgressLine extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (hasCalls)
+                  LineChartBarData(
+                    spots: withCalls,
+                    color: callColor,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                  ),
                 if (monthlyTarget > 0)
                   LineChartBarData(
                     spots: pace,

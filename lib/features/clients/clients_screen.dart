@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
+import 'client_export_dialog.dart';
 import 'client_filters.dart';
 import 'client_tags.dart';
 import 'client_widgets.dart';
@@ -169,6 +171,14 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 tooltip: l10n.clientTags,
                 onPressed: ticked.isEmpty || _busy ? null : () => _tagSelected(ticked.toList()),
               ),
+              if (kIsWeb)
+                IconButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: l10n.exportClients,
+                  onPressed: ticked.isEmpty || _busy
+                      ? null
+                      : () => showClientExportDialog(context, ref, [for (final c in list) if (ticked.contains(c.id)) c]),
+                ),
               IconButton(
                 icon: const Icon(Icons.swap_horiz),
                 tooltip: l10n.transferClients,
@@ -199,6 +209,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   icon: const Icon(Icons.checklist),
                   tooltip: l10n.selectClients,
                   onPressed: () => setState(() => _selected = {}),
+                ),
+              // Web dashboard only: the current list (search, status and filters).
+              if (kIsWeb && supervisor && !_showDuplicates)
+                IconButton(
+                  icon: const Icon(Icons.download),
+                  tooltip: l10n.exportClients,
+                  onPressed: list.isEmpty ? null : () => showClientExportDialog(context, ref, list),
                 ),
               IconButton(icon: const Icon(Icons.map), tooltip: l10n.map, onPressed: () => context.go('/map')),
               if (me?.role.isAdmin ?? false)

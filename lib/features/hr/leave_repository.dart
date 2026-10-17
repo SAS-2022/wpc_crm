@@ -1,0 +1,354 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/app_user.dart';
+import '../../core/providers.dart';
+import '../attachments/attachments.dart';
+import '../notifications/notifications.dart';
+import 'leave_rules.dart';
+
+/// A leave or other employee request in Firestore `leave_requests`. The type's
+/// names are copied in, so history reads right after HR renames a type.
+class LeaveRequest {
+  const LeaveRequest({
+    required this.id,
+    required this.uid,
+    required this.typeId,
+    required this.typeEn,
+    required this.typeAr,
+    required this.isLeave,
+    required this.from,
+    required this.to,
+    required this.halfDay,
+    required this.days,
+    required this.year,
+    required this.reason,
+    required this.status,
+    required this.steps,
+    required this.stepIndex,
+    required this.awaitingKey,
+    required this.createdAt,
+  });
+
+  final String id;
+
+  /// Who asked.
+  final String uid;
+  final String typeId;
+  final String typeEn;
+  final String typeAr;
+  final bool isLeave;
+
+  /// 'yyyy-MM-dd'; null for requests without dates.
+  final String? from;
+  final String? to;
+  final bool halfDay;
+  final double days;
+  final int year;
+  final String reason;
+  final LeaveStatus status;
+  final List<ApprovalStep> steps;
+  final int stepIndex;
+
+  /// Who may act now ('uid:…' / 'role:…'); null once decided or cancelled.
+  final String? awaitingKey;
+  final DateTime? createdAt;
+
+  String typeName(String lang) => lang == 'ar' && typeAr.isNotEmpty ? typeAr : typeEn;
+
+  ApprovalStep? get currentStep => status == LeaveStatus.pending && stepIndex < steps.length ? steps[stepIndex] : null;
+
+  LeaveUse get use => (typeId: typeId, year: year, days: days, status: status);
+
+  factory LeaveRequest.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data() ?? const {};
+    return LeaveRequest(
+      id: doc.id,
+      uid: d['uid'] as String? ?? '',
+      typeId: d['typeId'] as String? ?? '',
+      typeEn: d['typeEn'] as String? ?? '',
+      typeAr: d['typeAr'] as String? ?? '',
+      isLeave: d['isLeave'] as bool? ?? true,
+      from: d['from'] as String?,
+      to: d['to'] as String?,
+      halfDay: d['halfDay'] as bool? ?? false,
+      days: (d['days'] as num?)?.toDouble() ?? 0,
+      year: (d['year'] as num?)?.toInt() ?? 0,
+      reason: d['reason'] as String? ?? '',
+      status: LeaveStatus.values.asNameMap()[d['status']] ?? LeaveStatus.pending,
+      steps: [
+        for (final s in d['steps'] as List<dynamic>? ?? const [])
+          if (s is Map<String, dynamic>)
+            ApprovalStep(
+              role: UserRole.fromValue(s['role'] as String?),
+              uid: s['uid'] as String?,
+              status: LeaveStatus.values.asNameMap()[s['status']] ?? LeaveStatus.pending,
+              byId: s['byId'] as String?,
+              at: (s['at'] as Timestamp?)?.toDate(),
+              comment: s['comment'] as String? ?? '',
+            ),
+      ],
+      stepIndex: (d['stepIndex'] as num?)?.toInt() ?? 0,
+      awaitingKey: d['awaitingKey'] as String?,
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+Map<String, dynamic> _stepMap(ApprovalStep s) => {
+      'role': s.role.value,
+      'uid': s.uid,
+      'status': s.status.name,
+      'byId': s.byId,
+      'at': s.at == null ? null : Timestamp.fromDate(s.at!),
+      'comment': s.comment,
+    };
+
+final _db = FirebaseFirestore.instance;
+final _requests = _db.collection('leave_requests');
+final _typesDoc = _db.doc('settings/leaveTypes');
+final _holidaysDoc = _db.doc('settings/holidays');
+
+List<LeaveRequest> _newestFirst(QuerySnapshot<Map<String, dynamic>> s) {
+  final list = s.docs.map(LeaveRequest.fromDoc).toList();
+  final now = DateTime.now();
+  list.sort((a, b) => (b.createdAt ?? now).compareTo(a.createdAt ?? now));
+  return list;
+}
+
+/// Leave types set by HR, or the Saudi-law defaults until HR saves a list.
+final leaveTypesProvider = StreamProvider<List<LeaveType>>((ref) => _typesDoc.snapshots().map((s) {
+      final list = s.data()?['types'] as List<dynamic>?;
+      if (list == null) return LeaveType.defaults;
+      return [for (final t in list) if (t is Map<String, dynamic>) LeaveType.fromMap(t)];
+    }));
+
+/// Public holidays ('yyyy-MM-dd') entered by HR; they don't count as leave days.
+final holidaysProvider = StreamProvider<Set<String>>((ref) => _holidaysDoc
+    .snapshots()
+    .map((s) => {for (final d in s.data()?['dates'] as List<dynamic>? ?? const []) if (d is String) d}));
+
+/// The signed-in user's own requests.
+final myLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null) return Stream.value(const []);
+  return _requests.where('uid', isEqualTo: me.id).snapshots().map(_newestFirst);
+});
+
+/// One person's requests (HR area: balances of someone else).
+final userLeaveRequestsProvider = StreamProvider.family<List<LeaveRequest>, String>(
+    (ref, uid) => _requests.where('uid', isEqualTo: uid).snapshots().map(_newestFirst));
+
+/// Every request, newest first (HR area only, by the rules).
+final allLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.role.canSeeHr) return Stream.value(const []);
+  return _requests.orderBy('createdAt', descending: true).limit(500).snapshots().map(_newestFirst);
+});
+
+final leaveRequestProvider = StreamProvider.family<LeaveRequest?, String>(
+    (ref, id) => _requests.doc(id).snapshots().map((s) => s.exists ? LeaveRequest.fromDoc(s) : null));
+
+/// Requests whose current step is the signed-in user's. A KAM may only read
+/// their team's requests (by `kamId`), so theirs are filtered here.
+final leaveAwaitingMeProvider = StreamProvider<List<LeaveRequest>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null) return Stream.value(const []);
+  final keys = ['uid:${me.id}', 'role:${me.role.value}'];
+  final Query<Map<String, dynamic>> query;
+  if (me.role.canSeeHr) {
+    query = _requests.where('awaitingKey', whereIn: keys);
+  } else if (me.role == UserRole.kam) {
+    query = _requests.where('kamId', isEqualTo: me.id);
+  } else {
+    return Stream.value(const []);
+  }
+  return query.snapshots().map((s) => _newestFirst(s)
+      .where((r) => canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey))
+      .toList());
+});
+
+/// HR's numbers for one person and year: `leave_balances/{uid}_{year}`.
+class LeaveBalanceRecord {
+  const LeaveBalanceRecord({required this.entitled, required this.adjustments});
+
+  static const empty = LeaveBalanceRecord(entitled: {}, adjustments: []);
+
+  /// Days per type id for this person (overrides the type's yearly days).
+  final Map<String, num> entitled;
+  final List<({String typeId, double days, String note, String byId, DateTime? at})> adjustments;
+
+  List<LeaveAdjustment> get forBalance => [for (final a in adjustments) (typeId: a.typeId, days: a.days)];
+
+  factory LeaveBalanceRecord.fromMap(Map<String, dynamic>? d) {
+    if (d == null) return empty;
+    return LeaveBalanceRecord(
+      entitled: {
+        for (final e in (d['entitled'] as Map<String, dynamic>? ?? const {}).entries)
+          if (e.value is num) e.key: e.value as num,
+      },
+      adjustments: [
+        for (final a in d['adjustments'] as List<dynamic>? ?? const [])
+          if (a is Map<String, dynamic>)
+            (
+              typeId: a['typeId'] as String? ?? '',
+              days: (a['days'] as num?)?.toDouble() ?? 0,
+              note: a['note'] as String? ?? '',
+              byId: a['byId'] as String? ?? '',
+              at: (a['at'] as Timestamp?)?.toDate(),
+            ),
+      ],
+    );
+  }
+}
+
+String balanceDocId(String uid, int year) => '${uid}_$year';
+
+final leaveBalanceRecordProvider = StreamProvider.family<LeaveBalanceRecord, (String, int)>((ref, key) => _db
+    .collection('leave_balances')
+    .doc(balanceDocId(key.$1, key.$2))
+    .snapshots()
+    .map((s) => LeaveBalanceRecord.fromMap(s.data())));
+
+final leaveRepositoryProvider = Provider((ref) => LeaveRepository());
+
+class LeaveRepository {
+  /// Saves a new request at the first step of [chain] and tells that step's
+  /// approvers. Files (e.g. a hospital report) are uploaded after the request
+  /// exists, since Storage rules check the request's owner. Returns its id.
+  Future<String> submit({
+    required AppUser me,
+    required LeaveType type,
+    required String? from,
+    required String? to,
+    required bool halfDay,
+    required double days,
+    required String reason,
+    required List<ApprovalStep> chain,
+    required List<PendingFile> files,
+    required List<AppUser> users,
+  }) async {
+    final doc = _requests.doc();
+    await doc.set({
+      'uid': me.id,
+      'kamId': chain.where((s) => s.role == UserRole.kam).firstOrNull?.uid,
+      'typeId': type.id,
+      'typeEn': type.en,
+      'typeAr': type.ar,
+      'isLeave': type.isLeave,
+      'paid': type.paid,
+      'from': from,
+      'to': to,
+      'halfDay': halfDay,
+      'days': days,
+      'year': from == null ? DateTime.now().year : int.parse(from.substring(0, 4)),
+      'reason': reason,
+      'status': LeaveStatus.pending.name,
+      'steps': [for (final s in chain) _stepMap(s)],
+      'stepIndex': 0,
+      'awaitingKey': chain.first.awaitingKey,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    final attachments = AttachmentsRepository();
+    for (final f in files) {
+      await attachments.upload((parent: AttachmentParent.leaveRequests, id: doc.id), f, me.id);
+    }
+    await _notifyStep(chain.first, fromId: me.id, ownerId: me.id, requestId: doc.id, users: users);
+    return doc.id;
+  }
+
+  /// The owner withdraws a request that is still waiting.
+  Future<void> cancel(String id) => _requests.doc(id).update({
+        'status': LeaveStatus.cancelled.name,
+        'awaitingKey': null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  /// The current approver approves (the request moves to the next step, or is
+  /// approved after the last) or rejects (it ends). In a transaction, so two
+  /// managers with the same role can't both decide the same step.
+  Future<void> decide({
+    required String id,
+    required AppUser me,
+    required bool approve,
+    required String comment,
+    required List<AppUser> users,
+  }) async {
+    final next = await _db.runTransaction<(LeaveRequest, ApprovalStep?)?>((tx) async {
+      final snap = await tx.get(_requests.doc(id));
+      final r = LeaveRequest.fromDoc(snap);
+      if (!canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey)) return null;
+      final steps = [...r.steps];
+      steps[r.stepIndex] = steps[r.stepIndex].decide(approve: approve, byId: me.id, at: DateTime.now(), comment: comment);
+      final nextStep = approve && r.stepIndex + 1 < steps.length ? steps[r.stepIndex + 1] : null;
+      tx.update(snap.reference, {
+        'steps': [for (final s in steps) _stepMap(s)],
+        'stepIndex': nextStep == null ? r.stepIndex : r.stepIndex + 1,
+        'awaitingKey': nextStep?.awaitingKey,
+        'status': nextStep != null
+            ? LeaveStatus.pending.name
+            : (approve ? LeaveStatus.approved : LeaveStatus.rejected).name,
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (nextStep == null) 'decidedAt': FieldValue.serverTimestamp(),
+      });
+      return (r, nextStep);
+    });
+    if (next == null) throw StateError('already decided');
+    final (r, nextStep) = next;
+    if (nextStep != null) {
+      await _notifyStep(nextStep, fromId: me.id, ownerId: r.uid, requestId: id, users: users);
+    } else {
+      await sendNotifications(
+        toIds: [r.uid],
+        type: approve ? NotificationType.leaveApproved : NotificationType.leaveRejected,
+        fromId: me.id,
+        ownerId: r.uid,
+        date: '',
+        count: 0,
+        ref: id,
+      );
+    }
+  }
+
+  Future<void> _notifyStep(
+    ApprovalStep step, {
+    required String fromId,
+    required String ownerId,
+    required String requestId,
+    required List<AppUser> users,
+  }) =>
+      sendNotifications(
+        toIds: step.uid != null
+            ? [step.uid!]
+            : [for (final u in users) if (u.active && u.role == step.role && u.id != ownerId) u.id],
+        type: NotificationType.leaveRequested,
+        fromId: fromId,
+        ownerId: ownerId,
+        date: '',
+        count: 0,
+        ref: requestId,
+      );
+
+  Future<void> saveTypes(List<LeaveType> types) => _typesDoc.set({'types': [for (final t in types) t.toMap()]});
+
+  Future<void> saveHolidays(Set<String> dates) => _holidaysDoc.set({'dates': (dates.toList()..sort())});
+
+  /// HR sets [uid]'s days for [typeId] in [year]; null = back to the type's number.
+  Future<void> setEntitled(String uid, int year, String typeId, num? days) =>
+      _db.collection('leave_balances').doc(balanceDocId(uid, year)).set({
+        'uid': uid,
+        'year': year,
+        'entitled': {typeId: days ?? FieldValue.delete()},
+      }, SetOptions(merge: true));
+
+  /// HR adds (or with negative [days] removes) days, e.g. carried over from last year.
+  Future<void> addAdjustment(String uid, int year, String typeId, double days, String note, String byId) =>
+      _db.collection('leave_balances').doc(balanceDocId(uid, year)).set({
+        'uid': uid,
+        'year': year,
+        'adjustments': FieldValue.arrayUnion([
+          {'typeId': typeId, 'days': days, 'note': note, 'byId': byId, 'at': Timestamp.now()},
+        ]),
+      }, SetOptions(merge: true));
+}

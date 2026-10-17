@@ -14,6 +14,8 @@ import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
+import 'client_locations_section.dart';
+import 'client_tags.dart';
 import 'client_filters.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
@@ -97,7 +99,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     final legend = perPerson.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     int count(_Status s) => s == _Status.all ? located.length : located.where((c) => statusOf(c) == s).length;
     final clients = _status == _Status.all ? located : located.where((c) => statusOf(c) == _status).toList();
-    final points = [for (final c in clients) LatLng(c.lat!, c.lng!)];
+    // One pin per location (main, factory, showroom, …), all in the client's colour.
+    final points = [for (final c in clients) for (final l in c.locations) LatLng(l.lat, l.lng)];
+    final types = ref.watch(locationTypesByIdProvider);
+    final lang = Localizations.localeOf(context).languageCode;
 
     // Re-centre on the visible clients when a filter changes what is shown
     // (not on first load, which starts at the user's location).
@@ -133,20 +138,25 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             },
             markers: {
               for (final c in clients)
-                Marker(
-                  markerId: MarkerId(c.id),
-                  position: LatLng(c.lat!, c.lng!),
-                  anchor: const Offset(0.5, 0.5),
-                  icon: _icons.circle(
-                    context: context,
-                    fill: colorOf(c),
-                    // Salesperson mode: their initials; otherwise the category letter.
-                    text: byPerson ? styleOf(c).initials : c.category,
-                    // Dark letter on yellow, white on the darker colours.
-                    textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                for (final (i, loc) in c.locations.indexed)
+                  Marker(
+                    markerId: MarkerId('${c.id}/${loc.id}'),
+                    position: LatLng(loc.lat, loc.lng),
+                    anchor: const Offset(0.5, 0.5),
+                    icon: _icons.circle(
+                      context: context,
+                      fill: colorOf(c),
+                      // Salesperson mode: their initials; otherwise the category letter.
+                      text: byPerson ? styleOf(c).initials : c.category,
+                      // Dark letter on yellow, white on the darker colours.
+                      textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                    ),
+                    onTap: () => _showClient(
+                      context,
+                      c,
+                      c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
+                    ),
                   ),
-                  onTap: () => _showClient(context, c),
-                ),
             },
           ),
           PositionedDirectional(
@@ -254,7 +264,8 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     );
   }
 
-  void _showClient(BuildContext context, Client c) {
+  /// [place]: which of the client's locations was tapped, when it has several.
+  void _showClient(BuildContext context, Client c, [String? place]) {
     final l10n = AppLocalizations.of(context);
     final me = ref.read(currentUserProvider).value;
     final usersById = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
@@ -270,7 +281,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(c.name, style: Theme.of(context).textTheme.titleMedium),
-                if (c.city.isNotEmpty) Text(c.city),
+                if (place != null || c.city.isNotEmpty) Text([?place, if (c.city.isNotEmpty) c.city].join(' · ')),
                 const SizedBox(height: 8),
                 Builder(
                   builder: (context) {
@@ -310,6 +321,15 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    context.push('/clients/${c.id}/call');
+                  },
+                  icon: const Icon(Icons.add_call),
+                  label: Text(l10n.logCall),
                 ),
                 if (ref.read(currentUserProvider).value?.role.isTracked ?? false) ...[
                   const SizedBox(height: 12),

@@ -19,6 +19,18 @@ service firebase.storage {
             && firestore.get(/databases/(default)/documents/visits/$(parentId)).data.salesExecId == request.auth.uid));
     }
 
+    // Leave request documents: the owner and HR / GM / SM add; the HR area,
+    // the owner and their KAM read.
+    match /leave_requests/{requestId}/{fileName} {
+      function req() { return firestore.get(/databases/(default)/documents/leave_requests/$(requestId)).data; }
+      function hrArea() { return request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']; }
+      allow read: if hrArea() || (request.auth != null && (req().uid == request.auth.uid || req().kamId == request.auth.uid));
+      allow create: if request.resource.size < 20 * 1024 * 1024
+        && (req().uid == request.auth.uid
+            || (request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']));
+      allow delete: if request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager'];
+    }
+
     // Client and visit attachments, max 20 MB each.
     match /{folder}/{parentId}/{fileName} {
       allow read: if folder in ['clients', 'visits'] && canAccess(folder, parentId);

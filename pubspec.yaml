@@ -61,6 +61,7 @@ dependencies:
   google_maps_flutter: ^2.18.2
   pointer_interceptor: ^0.10.1+3
   in_app_update: ^5.0.0
+  web: ^1.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

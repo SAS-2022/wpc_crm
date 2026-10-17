@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'app_user.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/status_screens.dart';
+import '../features/clients/client_tags.dart';
 import '../features/clients/client_tags_screen.dart';
 import '../features/clients/client_detail_screen.dart';
 import '../features/clients/client_edit_screen.dart';
@@ -15,6 +17,11 @@ import '../features/home/home_screen.dart';
 import '../features/home/more_screen.dart';
 import '../features/import/import_screen.dart';
 import '../features/import/location_import_screen.dart';
+import '../features/hr/employee_leave_screen.dart';
+import '../features/hr/hr_screen.dart';
+import '../features/hr/leave_request_form.dart';
+import '../features/hr/leave_request_screen.dart';
+import '../features/hr/my_leave_screen.dart';
 import '../features/users/profile_screen.dart';
 import '../features/users/user_form_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -52,9 +59,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (profile.isLoading) return goTo('/splash');
 
       final me = profile.value;
-      if (me == null || !me.active) return goTo('/no-access');
+      // Unknown role: a newer app version is needed (see UserRole.unknown).
+      if (me == null || !me.active || me.role == UserRole.unknown) return goTo('/no-access');
       if (const ['/splash', '/login', '/no-access'].contains(loc)) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/client-tags' || loc == '/work-hours') && !me.role.isAdmin) return '/';
+      // HR, accounting, procurement: no sales pages (clients, visits, plans, maps).
+      if (me.role.isBackOffice &&
+          !const ['/', '/more', '/profile', '/notifications'].contains(loc) &&
+          !loc.startsWith('/leave') &&
+          !loc.startsWith('/hr')) {
+        return '/';
+      }
+      if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours') && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
@@ -111,6 +127,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                       path: 'visit',
                       builder: (_, state) => AddVisitScreen(clientId: state.pathParameters['id']!),
                     ),
+                    GoRoute(
+                      path: 'call',
+                      builder: (_, state) => AddVisitScreen(clientId: state.pathParameters['id']!, call: true),
+                    ),
                   ],
                 ),
               ],
@@ -128,6 +148,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   builder: (_, state) => AddVisitScreen(clientId: state.pathParameters['clientId']!),
                 ),
                 GoRoute(
+                  path: 'call/:clientId',
+                  builder: (_, state) => AddVisitScreen(clientId: state.pathParameters['clientId']!, call: true),
+                ),
+                GoRoute(
                   path: ':id',
                   builder: (_, state) => VisitDetailScreen(visitId: state.pathParameters['id']!),
                 ),
@@ -137,6 +161,28 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(preload: true, routes: [
             GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
             GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+            GoRoute(
+              path: '/leave',
+              builder: (_, _) => const MyLeaveScreen(),
+              routes: [
+                // Before ':id' so "new" isn't read as a request id.
+                GoRoute(path: 'new', builder: (_, _) => const LeaveRequestForm()),
+                GoRoute(path: ':id', builder: (_, state) => LeaveRequestScreen(id: state.pathParameters['id']!)),
+              ],
+            ),
+            GoRoute(
+              path: '/hr',
+              builder: (_, _) => const HrScreen(),
+              routes: [
+                GoRoute(
+                  path: 'employee/:uid',
+                  builder: (_, state) => EmployeeLeaveScreen(
+                    uid: state.pathParameters['uid']!,
+                    year: int.tryParse(state.uri.queryParameters['year'] ?? '') ?? DateTime.now().year,
+                  ),
+                ),
+              ],
+            ),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(
@@ -152,6 +198,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(path: '/visit-rules', builder: (_, _) => const VisitRulesScreen()),
             GoRoute(path: '/client-tags', builder: (_, _) => const ClientTagsScreen()),
+            GoRoute(
+              path: '/location-types',
+              builder: (_, _) => const ClientTagsScreen(kind: TagList.locationTypes),
+            ),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
             GoRoute(
               path: '/import',

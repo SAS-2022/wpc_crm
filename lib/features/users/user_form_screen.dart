@@ -45,7 +45,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _name.text = u.name;
     _email.text = u.email;
     _phone.text = u.phone;
-    _role = u.role;
+    // An unknown role (from a newer app) is shown as sales exec; saving sets it.
+    _role = u.role == UserRole.unknown ? UserRole.salesExec : u.role;
     _kamId = u.kamId;
     _active = u.active;
     _odooName.text = u.odooName;
@@ -182,7 +183,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               initialValue: _role,
               decoration: InputDecoration(labelText: l10n.role),
               items: [
-                for (final r in UserRole.values)
+                for (final r in UserRole.assignable)
                   DropdownMenuItem(value: r, child: Text(r.label(l10n))),
               ],
               onChanged: (r) => setState(() => _role = r!),

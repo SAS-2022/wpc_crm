@@ -255,7 +255,7 @@ class _TeamTableState extends State<_TeamTable> {
 
   static final _sortKeys = <Comparable<Object> Function(PersonReport)>[
     (r) => r.user.name.toLowerCase(),
-    (r) => r.visits,
+    (r) => r.contacts,
     (r) => r.clientsVisited,
     (r) => r.coverage ?? -1,
     (r) => r.assigned == 0 ? -1 : r.onSchedule / r.assigned,
@@ -293,9 +293,9 @@ class _TeamTableState extends State<_TeamTable> {
         DataColumn(label: Text(label), numeric: numeric, onSort: sort);
 
     Widget visitsCell(PersonReport r) {
-      final text = Text(r.target > 0 ? '${r.visits}/${r.target.round()}' : '${r.visits}');
+      final text = Text([visitsAndCallsText(r.visits, r.calls), if (r.target > 0) '${r.target.round()}'].join('/'));
       if (r.target <= 0) return text;
-      final (icon, color, label) = paceStyle(paceOf(r.visits, expected(r.user)), l10n);
+      final (icon, color, label) = paceStyle(paceOf(r.contacts, expected(r.user)), l10n);
       return Row(mainAxisSize: MainAxisSize.min, children: [
         Tooltip(message: label, child: Icon(icon, size: 16, color: color)),
         const SizedBox(width: 6),
@@ -312,7 +312,7 @@ class _TeamTableState extends State<_TeamTable> {
         columnSpacing: 28,
         columns: [
           column(l10n.person, numeric: false),
-          column(l10n.visits),
+          column(l10n.visitsPlusCalls),
           column(l10n.clientsVisitedColumn),
           column(l10n.ownClientsVisited),
           column(l10n.onSchedule),
@@ -355,7 +355,8 @@ class _TeamTableState extends State<_TeamTable> {
             DataRow(cells: [
               DataCell(Text(l10n.everyone, style: bold)),
               DataCell(Text(
-                target > 0 ? '${sum((r) => r.visits)}/${target.round()}' : '${sum((r) => r.visits)}',
+                [visitsAndCallsText(sum((r) => r.visits), sum((r) => r.calls)), if (target > 0) '${target.round()}']
+                    .join('/'),
                 style: bold,
               )),
               DataCell(Text('${sum((r) => r.clientsVisited)}', style: bold)),

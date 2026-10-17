@@ -81,6 +81,9 @@ const TEXTS = {
     tracking_notAlways: (n) => `${n} allowed location only while using the app – tracking stops in the background`,
     tracking_battery: (n) => `${n} turned on battery optimization for WPC CRM – tracking may stop`,
     tracking_offline: (n) => `${n} has been offline for over 30 minutes during work hours`,
+    leaveRequested: (n, c, d, o) => `Leave request from ${o} – waiting for your approval`,
+    leaveApproved: (n) => `${n} approved your request`,
+    leaveRejected: (n) => `${n} rejected your request`,
   },
   ar: {
     title: 'WPC CRM',
@@ -96,6 +99,9 @@ const TEXTS = {
     tracking_notAlways: (n) => `سمح ${n} بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية`,
     tracking_battery: (n) => `فعّل ${n} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع`,
     tracking_offline: (n) => `${n} غير متصل منذ أكثر من 30 دقيقة خلال ساعات العمل`,
+    leaveRequested: (n, c, d, o) => `طلب من ${o} – بانتظار موافقتك`,
+    leaveApproved: (n) => `وافق ${n} على طلبك`,
+    leaveRejected: (n) => `رفض ${n} طلبك`,
   },
 };
 
@@ -113,8 +119,9 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const n = event.data?.data();
   if (!n?.toId) return;
   const db = admin.firestore();
-  // For client transfers ownerId is the other sales executive (empty = unassigned).
-  const other = n.type === 'clientsTransferredOut' && n.ownerId ? `users/${n.ownerId}` : null;
+  // For client transfers ownerId is the other sales executive (empty = unassigned);
+  // for leave requests it is the person who asked.
+  const other = ['clientsTransferredOut', 'leaveRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -138,7 +145,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
       notification: { title: t.title, body },
-      data: { route: '/notifications', notificationId: event.params.id },
+      data: { route: n.ref && n.type.startsWith('leave') ? `/leave/${n.ref}` : '/notifications', notificationId: event.params.id },
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },
     });

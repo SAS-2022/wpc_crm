@@ -1636,4 +1636,520 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updateNow => 'حدّث الآن';
+
+  @override
+  String get exportClients => 'تصدير إلى Excel';
+
+  @override
+  String get exportClientsTitle => 'تصدير العملاء إلى Excel';
+
+  @override
+  String exportClientsBody(int count) {
+    return '$count عميل (القائمة الحالية مع البحث والفلاتر). اختر الأعمدة:';
+  }
+
+  @override
+  String exportColumnsCount(int selected, int total) {
+    return '$selected من $total عمود';
+  }
+
+  @override
+  String get exportSelectNone => 'مسح';
+
+  @override
+  String get exportButton => 'تصدير';
+
+  @override
+  String get exportLegalName => 'الاسم القانوني';
+
+  @override
+  String get exportVisitStatus => 'حالة الزيارة';
+
+  @override
+  String get exportDaysSinceVisit => 'أيام منذ آخر زيارة';
+
+  @override
+  String get exportOtherContacts => 'جهات اتصال أخرى';
+
+  @override
+  String get exportMapsLink => 'رابط خرائط Google';
+
+  @override
+  String get exportGooglePin => 'دبوس Google من Odoo';
+
+  @override
+  String get exportOdooTags => 'وسوم Odoo';
+
+  @override
+  String get exportCurrency => 'العملة';
+
+  @override
+  String get exportSource => 'المصدر';
+
+  @override
+  String get exportSourceImport => 'استيراد Odoo';
+
+  @override
+  String get exportHidden => 'مخفي';
+
+  @override
+  String get exportAddedOn => 'تاريخ الإضافة';
+
+  @override
+  String get yes => 'نعم';
+
+  @override
+  String get no => 'لا';
+
+  @override
+  String get call => 'مكالمة';
+
+  @override
+  String get calls => 'مكالمات';
+
+  @override
+  String get logCall => 'تسجيل مكالمة';
+
+  @override
+  String get saveCall => 'حفظ المكالمة';
+
+  @override
+  String get callSaved => 'تم حفظ المكالمة';
+
+  @override
+  String get callNotes => 'ما الذي تمت مناقشته في المكالمة';
+
+  @override
+  String get callNotesHint => 'طلبات، متابعات، الزيارة القادمة…';
+
+  @override
+  String get callNotesRequired => 'اكتب ما تمت مناقشته في المكالمة';
+
+  @override
+  String get callFromApp => 'اتصال من التطبيق';
+
+  @override
+  String get callLoggedByHand => 'مسجلة يدويًا';
+
+  @override
+  String callDuration(String duration) {
+    return 'حوالي $duration خارج التطبيق';
+  }
+
+  @override
+  String get notThisCall => 'ليست هذه المكالمة';
+
+  @override
+  String logThisCall(String duration) {
+    return 'عدت من مكالمة ($duration). هل تريد تسجيلها؟';
+  }
+
+  @override
+  String calledBy(String name) {
+    return 'مكالمة بواسطة $name';
+  }
+
+  @override
+  String get visitsAndCalls => 'الزيارات والمكالمات';
+
+  @override
+  String get visitsPlusCalls => 'الزيارات + المكالمات';
+
+  @override
+  String visitsAndCallsDetail(int visits, int calls) {
+    return '$visits زيارة + $calls مكالمة';
+  }
+
+  @override
+  String barTooltipCalls(
+    String name,
+    int done,
+    int calls,
+    int target,
+    int expected,
+  ) {
+    return '$name: $done زيارة + $calls مكالمة · الهدف $target · المتوقع حتى اليوم $expected';
+  }
+
+  @override
+  String get roleHr => 'الموارد البشرية';
+
+  @override
+  String get roleAccounting => 'المحاسبة';
+
+  @override
+  String get roleProcurement => 'المشتريات';
+
+  @override
+  String get roleUnknown => 'دور غير معروف';
+
+  @override
+  String get updateAppForRole =>
+      'حسابك يستخدم دورًا لا يعرفه هذا الإصدار من التطبيق. يرجى تحديث التطبيق (Google Play / TestFlight) أو إعادة تحميل صفحة الويب.';
+
+  @override
+  String get backOfficeHomeBody => 'سيظهر هنا حضورك وطلبات إجازاتك.';
+
+  @override
+  String get hrArea => 'الموارد البشرية';
+
+  @override
+  String get myLeave => 'إجازاتي';
+
+  @override
+  String get myLeaveHint => 'الأرصدة والطلبات';
+
+  @override
+  String get myRequests => 'طلباتي';
+
+  @override
+  String get newLeaveRequest => 'طلب جديد';
+
+  @override
+  String get noLeaveRequests => 'لا توجد طلبات';
+
+  @override
+  String get leaveRequests => 'الطلبات';
+
+  @override
+  String get leaveBalances => 'الأرصدة';
+
+  @override
+  String get leaveTypesAndHolidays => 'أنواع الإجازات والعطل';
+
+  @override
+  String leaveBalanceYear(int year) {
+    return 'رصيد الإجازات $year';
+  }
+
+  @override
+  String leavePendingDays(String days) {
+    return '$days يوم بانتظار الموافقة';
+  }
+
+  @override
+  String leaveRemainingOf(String left, String total) {
+    return 'متبقي $left من $total';
+  }
+
+  @override
+  String leaveDaysCount(String days) {
+    return '$days يوم';
+  }
+
+  @override
+  String leaveLeftAfter(String days) {
+    return 'يتبقى $days بعد هذا الطلب';
+  }
+
+  @override
+  String get leaveOverBalance =>
+      'هذا أكثر من الأيام المتبقية. الموارد البشرية تقرر ما إذا كان مسموحًا.';
+
+  @override
+  String waitingFor(String who) {
+    return 'بانتظار $who';
+  }
+
+  @override
+  String get waitingForMe => 'بانتظاري';
+
+  @override
+  String get pendingStatus => 'قيد الانتظار';
+
+  @override
+  String get leaveApprovedStatus => 'موافق عليه';
+
+  @override
+  String get leaveCancelledStatus => 'ملغى';
+
+  @override
+  String leaveWaitingForYou(int count) {
+    return 'طلبات بانتظار موافقتك ($count)';
+  }
+
+  @override
+  String get requestType => 'النوع';
+
+  @override
+  String get pickLeaveDates => 'اختر التواريخ';
+
+  @override
+  String get halfDay => 'نصف يوم';
+
+  @override
+  String get countsCalendarDays => 'تُحسب كل الأيام';
+
+  @override
+  String get countsWorkDays => 'تُحسب أيام العمل فقط';
+
+  @override
+  String get leaveReasonOptional => 'السبب (اختياري)';
+
+  @override
+  String get leaveRequestDetails => 'ما الذي تحتاجه؟';
+
+  @override
+  String get leaveReasonRequired => 'اكتب ما تحتاجه';
+
+  @override
+  String leaveDocumentRequired(String document) {
+    return 'مطلوب: $document';
+  }
+
+  @override
+  String get approvalOrder => 'ترتيب الموافقات';
+
+  @override
+  String get noApproverYet =>
+      'لا يوجد من يوافق على هذا الطلب بعد. اطلب من المدير العام إضافة مستخدم للموارد البشرية.';
+
+  @override
+  String get leaveAcrossYears =>
+      'لا يمكن أن يتجاوز الطلب نهاية السنة. أرسل طلبًا لكل سنة.';
+
+  @override
+  String get leaveNoWorkDays => 'لا توجد أيام عمل في هذه التواريخ.';
+
+  @override
+  String get sendRequest => 'إرسال الطلب';
+
+  @override
+  String get leaveRequestSent => 'تم إرسال الطلب';
+
+  @override
+  String get approveRequest => 'الموافقة على الطلب';
+
+  @override
+  String get rejectRequest => 'رفض الطلب';
+
+  @override
+  String get rejectReason => 'السبب';
+
+  @override
+  String get cancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get leaveAlreadyDecided => 'تم اتخاذ قرار في هذه الخطوة مسبقًا.';
+
+  @override
+  String get leaveTypesHint =>
+      'القيم المبدئية حسب نظام العمل السعودي – يرجى من الموارد البشرية مراجعتها. اضغط على النوع لتعديله.';
+
+  @override
+  String get noYearlyLimit => 'بدون حد سنوي';
+
+  @override
+  String daysPerYear(int days) {
+    return '$days يوم في السنة';
+  }
+
+  @override
+  String get unpaid => 'بدون راتب';
+
+  @override
+  String get otherRequest => 'طلب (بدون أيام)';
+
+  @override
+  String needsDocumentNamed(String document) {
+    return 'يتطلب: $document';
+  }
+
+  @override
+  String get addLeaveType => 'إضافة نوع';
+
+  @override
+  String get editLeaveType => 'تعديل النوع';
+
+  @override
+  String get nameEnglish => 'الاسم (إنجليزي)';
+
+  @override
+  String get nameArabic => 'الاسم (عربي)';
+
+  @override
+  String get isLeaveType => 'إجازة (لها تواريخ)';
+
+  @override
+  String get isLeaveTypeHint => 'أوقفه لطلبات مثل تعريف بالراتب';
+
+  @override
+  String get daysPerYearLabel => 'أيام في السنة';
+
+  @override
+  String get daysPerYearHelper => 'فارغ = بدون حد';
+
+  @override
+  String get paidLeave => 'مدفوعة الأجر';
+
+  @override
+  String get needsDocument => 'يتطلب مستندًا';
+
+  @override
+  String get documentNameEnglish => 'المستند (إنجليزي)';
+
+  @override
+  String get documentNameArabic => 'المستند (عربي)';
+
+  @override
+  String get publicHolidays => 'العطل الرسمية';
+
+  @override
+  String get publicHolidaysHint => 'لا تُحسب هذه الأيام من الإجازة.';
+
+  @override
+  String get addHoliday => 'إضافة عطلة';
+
+  @override
+  String get tapTypeToEdit =>
+      'اضغط على النوع لتحديد أيام هذا الموظف أو إضافة تعديل.';
+
+  @override
+  String get daysThisYear => 'أيام هذه السنة لهذا الموظف';
+
+  @override
+  String daysThisYearHelper(int days) {
+    return 'فارغ = $days يوم حسب النوع';
+  }
+
+  @override
+  String get adjustDays => 'إضافة أو خصم أيام';
+
+  @override
+  String get adjustDaysHelper => 'مثال: 5 مرحّلة، أو -2';
+
+  @override
+  String get adjustNote => 'ملاحظة';
+
+  @override
+  String get adjustments => 'التعديلات';
+
+  @override
+  String notifLeaveRequested(String owner) {
+    return 'طلب من $owner – بانتظار موافقتك';
+  }
+
+  @override
+  String notifLeaveApproved(String name) {
+    return 'وافق $name على طلبك';
+  }
+
+  @override
+  String notifLeaveRejected(String name) {
+    return 'رفض $name طلبك';
+  }
+
+  @override
+  String get addLocation => 'إضافة موقع';
+
+  @override
+  String get editLocation => 'تعديل الموقع';
+
+  @override
+  String get locationType => 'التصنيف';
+
+  @override
+  String get noLocationType => 'بدون تصنيف';
+
+  @override
+  String get mainLocationType => 'تصنيف الموقع الرئيسي';
+
+  @override
+  String get moreLocationsOnClientPage =>
+      'أضف مواقع أخرى (مصنع، معرض، …) من صفحة العميل';
+
+  @override
+  String get mainLocation => 'رئيسي';
+
+  @override
+  String get makeMainLocation => 'جعله الموقع الرئيسي';
+
+  @override
+  String locationNumber(int n) {
+    return 'الموقع $n';
+  }
+
+  @override
+  String deleteLocationTitle(String name) {
+    return 'حذف \"$name\"؟';
+  }
+
+  @override
+  String get visitLocation => 'موقع الزيارة';
+
+  @override
+  String get nearestLocation => 'الأقرب';
+
+  @override
+  String get locationTypes => 'أنواع المواقع';
+
+  @override
+  String get locationTypesHelp =>
+      'تصنيفات مواقع العميل، مثل مكتب ومصنع ومعرض. حذف تصنيف يترك مواقعه بدون تصنيف.';
+
+  @override
+  String get otherLocations => 'مواقع أخرى';
+
+  @override
+  String get saveClientFirstForLocations =>
+      'احفظ العميل أولاً، ثم أضف مواقع أخرى هنا.';
+
+  @override
+  String get setMainLocationFirst =>
+      'حدد الموقع الرئيسي واحفظه أولاً، ثم أضف مواقع أخرى.';
+
+  @override
+  String visitsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count زيارة',
+      few: '$count زيارات',
+      two: 'زيارتان',
+      one: 'زيارة واحدة',
+      zero: 'لا زيارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String callsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مكالمة',
+      few: '$count مكالمات',
+      two: 'مكالمتان',
+      one: 'مكالمة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteClient => 'حذف العميل';
+
+  @override
+  String deleteClientTitle(String name) {
+    return 'حذف $name؟';
+  }
+
+  @override
+  String get deleteClientBody =>
+      'سيتم حذف العميل وعناصر الخطط والصور والملفات الخاصة به. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String deleteClientWithVisits(int count) {
+    return 'لدى هذا العميل $count زيارة. تبقى الزيارات في قائمة الزيارات والتقارير، ويُحذف العميل وعناصر الخطط والصور والملفات الخاصة به. لا يمكن التراجع عن ذلك.\n\nأدخل كلمة المرور للتأكيد.';
+  }
+
+  @override
+  String get yourPassword => 'كلمة المرور الخاصة بك';
+
+  @override
+  String get wrongPassword => 'كلمة المرور غير صحيحة';
+
+  @override
+  String clientDeleted(String name) {
+    return 'تم حذف $name';
+  }
 }

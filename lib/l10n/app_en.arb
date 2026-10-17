@@ -350,24 +350,54 @@
   "clientTags": "Client tags",
   "tagFilterAny": "Shows clients with any of the selected tags.",
   "tagClientsTitle": "Tags for {count} clients",
-  "@tagClientsTitle": {"placeholders": {"count": {"type": "int"}}},
+  "@tagClientsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tagClientsHelp": "Tap a tag once to add it, twice to remove it. Other tags stay as they are.",
   "tagWillAdd": "Will be added",
   "tagWillRemove": "Will be removed",
   "tagsUpdatedCount": "Tags updated for {count} clients",
-  "@tagsUpdatedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@tagsUpdatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "addTag": "Add tag",
   "editTag": "Edit tag",
   "tagNameEn": "Name (English)",
   "tagNameAr": "Name (Arabic)",
   "tagDuplicate": "A tag with this name already exists",
   "deleteTagTitle": "Delete \"{name}\"?",
-  "@deleteTagTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteTagTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteTagBody": "It is removed from {count} clients. This cannot be undone.",
-  "@deleteTagBody": {"placeholders": {"count": {"type": "int"}}},
+  "@deleteTagBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clientTagsHelp": "Tags describe the client's business (factory, showroom, …). Use them to filter the client list and map. Tag clients on their edit screen, or select several in the client list.",
   "clientsCountShort": "{count} clients",
-  "@clientsCountShort": {"placeholders": {"count": {"type": "int"}}},
+  "@clientsCountShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "addToPlan": "Add to plan",
   "today": "Today",
   "nothingPlanned": "Nothing planned for this day",
@@ -1197,5 +1227,364 @@
   "tooManyAttempts": "Too many attempts. Try again later.",
   "updateRequiredTitle": "Update required",
   "updateRequiredBody": "A new version of WPC CRM is available. Please update the app to continue.",
-  "updateNow": "Update now"
+  "updateNow": "Update now",
+  "exportClients": "Export to Excel",
+  "exportClientsTitle": "Export clients to Excel",
+  "exportClientsBody": "{count} clients (the current list with its search and filters). Choose the columns:",
+  "@exportClientsBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportColumnsCount": "{selected} of {total} columns",
+  "@exportColumnsCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSelectNone": "Clear",
+  "exportButton": "Export",
+  "exportLegalName": "Legal name",
+  "exportVisitStatus": "Visit status",
+  "exportDaysSinceVisit": "Days since last visit",
+  "exportOtherContacts": "Other contacts",
+  "exportMapsLink": "Google Maps link",
+  "exportGooglePin": "Odoo Google Pin",
+  "exportOdooTags": "Odoo tags",
+  "exportCurrency": "Currency",
+  "exportSource": "Source",
+  "exportSourceImport": "Odoo import",
+  "exportHidden": "Hidden",
+  "exportAddedOn": "Added on",
+  "yes": "Yes",
+  "no": "No",
+  "call": "Call",
+  "calls": "Calls",
+  "logCall": "Log call",
+  "saveCall": "Save call",
+  "callSaved": "Call saved",
+  "callNotes": "What was discussed on the call",
+  "callNotesHint": "Orders, follow-ups, next visit…",
+  "callNotesRequired": "Write what was discussed on the call",
+  "callFromApp": "Called from the app",
+  "callLoggedByHand": "Logged by hand",
+  "callDuration": "About {duration} away from the app",
+  "@callDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "notThisCall": "Not this call",
+  "logThisCall": "Back from a call ({duration}). Log it?",
+  "@logThisCall": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "calledBy": "Call by {name}",
+  "@calledBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "visitsAndCalls": "Visits and calls",
+  "visitsPlusCalls": "Visits + calls",
+  "visitsAndCallsDetail": "{visits} visits + {calls} calls",
+  "@visitsAndCallsDetail": {
+    "placeholders": {
+      "visits": {
+        "type": "int"
+      },
+      "calls": {
+        "type": "int"
+      }
+    }
+  },
+  "barTooltipCalls": "{name}: {done} visits + {calls} calls · target {target} · expected by today {expected}",
+  "@barTooltipCalls": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "calls": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "roleHr": "HR",
+  "roleAccounting": "Accounting",
+  "roleProcurement": "Procurement",
+  "roleUnknown": "Unknown role",
+  "updateAppForRole": "Your account uses a role this version of the app doesn't know yet. Please update the app (Google Play / TestFlight) or reload the web page.",
+  "backOfficeHomeBody": "Your attendance and leave requests will appear here.",
+  "hrArea": "HR",
+  "myLeave": "My leave",
+  "myLeaveHint": "Balances and requests",
+  "myRequests": "My requests",
+  "newLeaveRequest": "New request",
+  "noLeaveRequests": "No requests",
+  "leaveRequests": "Requests",
+  "leaveBalances": "Balances",
+  "leaveTypesAndHolidays": "Leave types & holidays",
+  "leaveBalanceYear": "Leave balance {year}",
+  "@leaveBalanceYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "leavePendingDays": "{days} days waiting for approval",
+  "@leavePendingDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveRemainingOf": "{left} of {total} left",
+  "@leaveRemainingOf": {
+    "placeholders": {
+      "left": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveDaysCount": "{days} days",
+  "@leaveDaysCount": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveLeftAfter": "{days} left after this",
+  "@leaveLeftAfter": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveOverBalance": "This is more than the days left. HR decides whether it is allowed.",
+  "waitingFor": "Waiting for {who}",
+  "@waitingFor": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingForMe": "Waiting for me",
+  "pendingStatus": "Pending",
+  "leaveApprovedStatus": "Approved",
+  "leaveCancelledStatus": "Cancelled",
+  "leaveWaitingForYou": "Requests waiting for your approval ({count})",
+  "@leaveWaitingForYou": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestType": "Type",
+  "pickLeaveDates": "Choose the dates",
+  "halfDay": "Half day",
+  "countsCalendarDays": "Counts every calendar day",
+  "countsWorkDays": "Counts work days only",
+  "leaveReasonOptional": "Reason (optional)",
+  "leaveRequestDetails": "What do you need?",
+  "leaveReasonRequired": "Write what you need",
+  "leaveDocumentRequired": "Required: {document}",
+  "@leaveDocumentRequired": {
+    "placeholders": {
+      "document": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalOrder": "Approval order",
+  "noApproverYet": "Nobody can approve this request yet. Ask the GM to add an HR user.",
+  "leaveAcrossYears": "A request can't cross the new year. Send one request per year.",
+  "leaveNoWorkDays": "These dates have no work days.",
+  "sendRequest": "Send request",
+  "leaveRequestSent": "Request sent",
+  "approveRequest": "Approve request",
+  "rejectRequest": "Reject request",
+  "rejectReason": "Reason",
+  "cancelRequest": "Cancel request",
+  "leaveAlreadyDecided": "Someone already decided this step.",
+  "leaveTypesHint": "Starting values follow Saudi labour law – HR should check them. Tap a type to edit it.",
+  "noYearlyLimit": "No yearly limit",
+  "daysPerYear": "{days} days a year",
+  "@daysPerYear": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "unpaid": "Unpaid",
+  "otherRequest": "Request (no days)",
+  "needsDocumentNamed": "Needs: {document}",
+  "@needsDocumentNamed": {
+    "placeholders": {
+      "document": {
+        "type": "String"
+      }
+    }
+  },
+  "addLeaveType": "Add type",
+  "editLeaveType": "Edit type",
+  "nameEnglish": "Name (English)",
+  "nameArabic": "Name (Arabic)",
+  "isLeaveType": "Leave (has dates)",
+  "isLeaveTypeHint": "Off for requests like a salary certificate",
+  "daysPerYearLabel": "Days per year",
+  "daysPerYearHelper": "Empty = no limit",
+  "paidLeave": "Paid",
+  "needsDocument": "Needs a document",
+  "documentNameEnglish": "Document (English)",
+  "documentNameArabic": "Document (Arabic)",
+  "publicHolidays": "Public holidays",
+  "publicHolidaysHint": "These days don't count as leave days.",
+  "addHoliday": "Add holiday",
+  "tapTypeToEdit": "Tap a type to set this person's days or add an adjustment.",
+  "daysThisYear": "Days this year for this person",
+  "daysThisYearHelper": "Empty = the type's {days} days",
+  "@daysThisYearHelper": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "adjustDays": "Add or remove days",
+  "adjustDaysHelper": "e.g. 5 carried over, or -2",
+  "adjustNote": "Note",
+  "adjustments": "Adjustments",
+  "notifLeaveRequested": "Request from {owner} – waiting for your approval",
+  "@notifLeaveRequested": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveApproved": "{name} approved your request",
+  "@notifLeaveApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveRejected": "{name} rejected your request",
+  "@notifLeaveRejected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addLocation": "Add location",
+  "editLocation": "Edit location",
+  "locationType": "Label",
+  "noLocationType": "No label",
+  "mainLocationType": "Main location label",
+  "moreLocationsOnClientPage": "Add more locations (factory, showroom, …) on the client page",
+  "mainLocation": "Main",
+  "makeMainLocation": "Make main location",
+  "locationNumber": "Location {n}",
+  "@locationNumber": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteLocationTitle": "Delete \"{name}\"?",
+  "@deleteLocationTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "visitLocation": "Visit location",
+  "nearestLocation": "nearest",
+  "locationTypes": "Location types",
+  "locationTypesHelp": "Labels for a client's locations, e.g. Office, Factory, Showroom. Deleting one leaves those locations unlabelled.",
+  "otherLocations": "Other locations",
+  "saveClientFirstForLocations": "Save the client first, then add more locations here.",
+  "setMainLocationFirst": "Set and save the main location first, then add more locations.",
+  "visitsCount": "{count, plural, =1{1 visit} other{{count} visits}}",
+  "@visitsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "callsCount": "{count, plural, =1{1 call} other{{count} calls}}",
+  "@callsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteClient": "Delete client",
+  "deleteClientTitle": "Delete {name}?",
+  "@deleteClientTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteClientBody": "The client, its plan items and its photos / files will be deleted. This can't be undone.",
+  "deleteClientWithVisits": "This client has {count} visits. The visits stay in the visits list and reports; the client, its plan items and its photos / files are deleted. This can't be undone.\n\nEnter your password to confirm.",
+  "@deleteClientWithVisits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "yourPassword": "Your password",
+  "wrongPassword": "Wrong password",
+  "clientDeleted": "{name} deleted",
+  "@clientDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }
