@@ -1411,6 +1411,97 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitDetails => 'Visit details';
 
   @override
+  String get otherPhoneTitle => 'Your location is shared from another phone';
+
+  @override
+  String get otherPhoneBody =>
+      'Another phone signed in to your account shares your location, so this phone sends nothing. If this is the phone you work with, tap \"Use this phone\".';
+
+  @override
+  String get useThisPhone => 'Use this phone';
+
+  @override
+  String otherTrackIgnored(int count) {
+    return '$count points from another phone ignored';
+  }
+
+  @override
+  String reportNewClients(int count) {
+    return 'New clients ($count)';
+  }
+
+  @override
+  String get reportNoNewClients => 'No clients were added in this period.';
+
+  @override
+  String get reportAddedInApp => 'Added in the app';
+
+  @override
+  String get reportImported => 'Imported';
+
+  @override
+  String reportAddedBy(String name) {
+    return 'added by $name';
+  }
+
+  @override
+  String get reportRouting => 'Routing performance & efficiency';
+
+  @override
+  String get reportNoRoutingDays =>
+      'No day with two or more visits in this period.';
+
+  @override
+  String get reportAvgEfficiency => 'Average efficiency';
+
+  @override
+  String get reportDaysCounted => 'Days';
+
+  @override
+  String get reportVisitsPerDay => 'Visits / day';
+
+  @override
+  String get reportShortestOrderDays => 'Shortest order';
+
+  @override
+  String get reportExtraDistance => 'Extra distance';
+
+  @override
+  String get reportNeededTook => 'Needed / took';
+
+  @override
+  String get reportLowestDays => 'Lowest days';
+
+  @override
+  String get reportRoutingHelp =>
+      'Counts days with two or more visits. Efficiency = time needed (shortest route through the same clients + 30 min per visit) ÷ time from the first to the last visit, at most 100%. Extra distance = straight-line km more than the shortest order between the visits.';
+
+  @override
+  String get reportCatalogs => 'Catalog distribution';
+
+  @override
+  String get reportNoCatalogs =>
+      'No catalogs or stands were handed over in this period.';
+
+  @override
+  String get reportTotal => 'Total';
+
+  @override
+  String get reportClientsReached => 'Clients';
+
+  @override
+  String get reportCatalogsDue => 'Clients due for a new one';
+
+  @override
+  String reportDueNever(String item, int due, int never) {
+    return '$item: $due due · $never never given';
+  }
+
+  @override
+  String get reportCatalogsHelp =>
+      'From hand-overs at visits and recorded on client pages, counted for the person who gave them. Tap an item to see its due clients.';
+
+  @override
   String get givenSwitchCatalog => 'Swatch catalog';
 
   @override
@@ -1418,6 +1509,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get givenDisplayStand => 'Display stand';
+
+  @override
+  String get givenA4Samples => 'A4 samples';
 
   @override
   String get itemsGiven => 'Catalogs & stands given';
@@ -1458,6 +1552,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get givenDueFilter => 'New catalog / stand due';
+
+  @override
+  String get givenHistory => 'History';
+
+  @override
+  String get givenRecord => 'Record catalog / stand given';
+
+  @override
+  String get givenRecordedByHand => 'recorded';
+
+  @override
+  String get givenAtVisit => 'at a visit';
+
+  @override
+  String get givenOn => 'Given on';
+
+  @override
+  String get quantity => 'Quantity';
 
   @override
   String get notAssignedTitle => 'Not assigned to a sales executive';

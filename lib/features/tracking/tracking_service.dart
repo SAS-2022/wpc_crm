@@ -99,6 +99,14 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
         );
       }
     },
+    onStandby: () {
+      if (service is AndroidServiceInstance) {
+        service.setForegroundNotificationInfo(
+          title: 'WPC CRM',
+          content: 'Not sharing – your location is shared from another phone',
+        );
+      }
+    },
   );
   await tracker.start();
 }

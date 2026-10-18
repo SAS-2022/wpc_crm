@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
 import '../clients/clients_repository.dart';
+import '../clients/given_items.dart';
 import '../clients/visit_rules.dart';
 import '../home/dashboard_cards.dart';
 import '../home/stats.dart';
@@ -16,12 +17,15 @@ import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
 import 'report.dart';
+import 'report_sections.dart';
+import 'report_sections_view.dart';
 import 'reports_data.dart';
 
 enum _Period { thisMonth, lastMonth, custom }
 
 /// Web dashboard (also on phones from More): a table of the team's numbers
-/// for a period, the clients nobody visited in it, and the latest imports.
+/// for a period, routing efficiency, new clients, catalog distribution, the
+/// clients nobody visited in it, and the latest imports.
 /// KAMs see their team, managers / GM all field staff.
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -105,6 +109,27 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       visits: visits,
       range: _range,
     );
+    final ids = {for (final u in people) u.id};
+    final newClients = newClientsReport(
+      clients: clients,
+      people: ids,
+      range: _range,
+      // Managers looking at everyone also see imports nobody owns yet.
+      includeUnowned: _person == null && me.role.isAdmin,
+    );
+    final routing = routingReport(
+      people: people,
+      visits: visits,
+      clients: {for (final c in clients) c.id: c},
+      range: _range,
+    );
+    final catalogs = catalogReport(
+      people: people,
+      clients: clients,
+      range: _range,
+      rules: ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults,
+      now: now,
+    );
     final rangeLabel = _period == _Period.custom
         ? '${DateFormat.yMMMd(locale).format(_range.start)} – ${DateFormat.yMMMd(locale).format(_range.end)}'
         : DateFormat.yMMMM(locale).format(_range.start);
@@ -154,6 +179,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               onSelect: (id) => setState(() => _person = id),
             ),
           ),
+          const SizedBox(height: 12),
+          RoutingCard(rows: routing),
+          const SizedBox(height: 12),
+          LayoutBuilder(builder: (context, c) {
+            final added = NewClientsCard(report: newClients, users: {for (final u in users) u.id: u});
+            final given = CatalogCard(report: catalogs, person: _person);
+            if (c.maxWidth < 900) return Column(children: [added, const SizedBox(height: 12), given]);
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 2, child: added),
+                const SizedBox(width: 12),
+                Expanded(flex: 3, child: given),
+              ],
+            );
+          }),
           const SizedBox(height: 12),
           LayoutBuilder(builder: (context, c) {
             final unvisitedCard = _Section(

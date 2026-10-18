@@ -46,12 +46,13 @@ service cloud.firestore {
         || (isSales() && request.resource.data.assignedTo == request.auth.uid
             && request.resource.data.source == 'manual');
       allow delete: if isAdmin();
-      // `given`: catalogs / stands handed over, updated with each visit.
+      // `givenLog` (`given` = older summary): catalogs / stands handed over, at
+      // visits or recorded on the client page.
       allow update: if isSupervisor()
         || (active() && resource.data.assignedTo == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
-              'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given']));
+              'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given', 'givenLog']));
 
       match /attachments/{attachmentId} {
         allow read, create: if isSupervisor() || ownsClient(clientId);

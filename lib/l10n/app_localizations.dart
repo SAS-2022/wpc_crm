@@ -2492,6 +2492,162 @@ abstract class AppLocalizations {
   /// **'Visit details'**
   String get visitDetails;
 
+  /// No description provided for @otherPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location is shared from another phone'**
+  String get otherPhoneTitle;
+
+  /// No description provided for @otherPhoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Another phone signed in to your account shares your location, so this phone sends nothing. If this is the phone you work with, tap \"Use this phone\".'**
+  String get otherPhoneBody;
+
+  /// No description provided for @useThisPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this phone'**
+  String get useThisPhone;
+
+  /// No description provided for @otherTrackIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} points from another phone ignored'**
+  String otherTrackIgnored(int count);
+
+  /// No description provided for @reportNewClients.
+  ///
+  /// In en, this message translates to:
+  /// **'New clients ({count})'**
+  String reportNewClients(int count);
+
+  /// No description provided for @reportNoNewClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients were added in this period.'**
+  String get reportNoNewClients;
+
+  /// No description provided for @reportAddedInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Added in the app'**
+  String get reportAddedInApp;
+
+  /// No description provided for @reportImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported'**
+  String get reportImported;
+
+  /// No description provided for @reportAddedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'added by {name}'**
+  String reportAddedBy(String name);
+
+  /// No description provided for @reportRouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing performance & efficiency'**
+  String get reportRouting;
+
+  /// No description provided for @reportNoRoutingDays.
+  ///
+  /// In en, this message translates to:
+  /// **'No day with two or more visits in this period.'**
+  String get reportNoRoutingDays;
+
+  /// No description provided for @reportAvgEfficiency.
+  ///
+  /// In en, this message translates to:
+  /// **'Average efficiency'**
+  String get reportAvgEfficiency;
+
+  /// No description provided for @reportDaysCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get reportDaysCounted;
+
+  /// No description provided for @reportVisitsPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits / day'**
+  String get reportVisitsPerDay;
+
+  /// No description provided for @reportShortestOrderDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest order'**
+  String get reportShortestOrderDays;
+
+  /// No description provided for @reportExtraDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra distance'**
+  String get reportExtraDistance;
+
+  /// No description provided for @reportNeededTook.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed / took'**
+  String get reportNeededTook;
+
+  /// No description provided for @reportLowestDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest days'**
+  String get reportLowestDays;
+
+  /// No description provided for @reportRoutingHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts days with two or more visits. Efficiency = time needed (shortest route through the same clients + 30 min per visit) ÷ time from the first to the last visit, at most 100%. Extra distance = straight-line km more than the shortest order between the visits.'**
+  String get reportRoutingHelp;
+
+  /// No description provided for @reportCatalogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog distribution'**
+  String get reportCatalogs;
+
+  /// No description provided for @reportNoCatalogs.
+  ///
+  /// In en, this message translates to:
+  /// **'No catalogs or stands were handed over in this period.'**
+  String get reportNoCatalogs;
+
+  /// No description provided for @reportTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get reportTotal;
+
+  /// No description provided for @reportClientsReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients'**
+  String get reportClientsReached;
+
+  /// No description provided for @reportCatalogsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients due for a new one'**
+  String get reportCatalogsDue;
+
+  /// No description provided for @reportDueNever.
+  ///
+  /// In en, this message translates to:
+  /// **'{item}: {due} due · {never} never given'**
+  String reportDueNever(String item, int due, int never);
+
+  /// No description provided for @reportCatalogsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'From hand-overs at visits and recorded on client pages, counted for the person who gave them. Tap an item to see its due clients.'**
+  String get reportCatalogsHelp;
+
   /// No description provided for @givenSwitchCatalog.
   ///
   /// In en, this message translates to:
@@ -2509,6 +2665,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Display stand'**
   String get givenDisplayStand;
+
+  /// No description provided for @givenA4Samples.
+  ///
+  /// In en, this message translates to:
+  /// **'A4 samples'**
+  String get givenA4Samples;
 
   /// No description provided for @itemsGiven.
   ///
@@ -2575,6 +2737,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New catalog / stand due'**
   String get givenDueFilter;
+
+  /// No description provided for @givenHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get givenHistory;
+
+  /// No description provided for @givenRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record catalog / stand given'**
+  String get givenRecord;
+
+  /// No description provided for @givenRecordedByHand.
+  ///
+  /// In en, this message translates to:
+  /// **'recorded'**
+  String get givenRecordedByHand;
+
+  /// No description provided for @givenAtVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'at a visit'**
+  String get givenAtVisit;
+
+  /// No description provided for @givenOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Given on'**
+  String get givenOn;
+
+  /// No description provided for @quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantity;
 
   /// No description provided for @notAssignedTitle.
   ///

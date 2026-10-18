@@ -312,6 +312,9 @@ class ClientDetailScreen extends ConsumerWidget {
                 client.contacts.isEmpty)
               ListTile(dense: true, title: Text(l10n.noContactDetails)),
           ]),
+          // Catalogs / display stands: what the client got, when a new one is
+          // due, and recording one (backdated if needed).
+          section(l10n.itemsGiven, [GivenItemsSection(client: client, canEdit: canEdit)]),
           section(l10n.accountSection, [
             if (client.receivable != 0)
               row(Icons.account_balance_wallet, l10n.receivable, _money(client.receivable, client.currency, locale)),
@@ -355,8 +358,6 @@ class ClientDetailScreen extends ConsumerWidget {
             // Every location (main, factory, showroom, …), each labelled.
             ClientLocationsList(client: client, canEdit: canEdit),
           ]),
-          // Catalogs / display stands given at visits and when a new one is due.
-          section(l10n.itemsGiven, [GivenItemsSection(client: client)]),
           section(l10n.notes, [row(Icons.notes, l10n.notes, client.notes)]),
           AttachmentsSection(
             owner: (parent: AttachmentParent.clients, id: clientId),

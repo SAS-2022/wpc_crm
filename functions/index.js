@@ -4,6 +4,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
+const { coordsFromPlusCode } = require('./plusCode');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
@@ -31,7 +32,8 @@ function coordsFromUrl(url) {
     const lng = Number(m[2]);
     if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
   }
-  return null;
+  // Place links shared without coordinates carry a Plus Code instead.
+  return coordsFromPlusCode(s);
 }
 
 async function resolve(url) {
@@ -481,12 +483,43 @@ function metersBetween(a, b) {
   return 2 * 6371000 * Math.asin(Math.sqrt(h));
 }
 
-/** Fixes worth routing between: good accuracy, per run of continuous tracking, stops collapsed. */
+const TRACK_MAX_KMH = 200; // same as _maxTrackKmh in report.dart
+
+/**
+ * The points of one continuous track (same as mainTrack in report.dart):
+ * drops a second phone signed in to the same account elsewhere, and far
+ * GPS glitches. [path] is sorted by time.
+ */
+function mainTrack(path) {
+  const tracks = [];
+  for (const p of path) {
+    let best = null;
+    for (const track of tracks) {
+      const last = track[track.length - 1];
+      const m = metersBetween(last, p);
+      const hours = (p.t - last.t) / 3600000;
+      const ok = m <= 5000 || m / 1000 <= TRACK_MAX_KMH * hours; // 5 km: queued offline points share one time
+      if (ok && (!best || last.t > best[best.length - 1].t)) best = track;
+    }
+    if (best) best.push(p); else tracks.push([p]);
+  }
+  if (tracks.length < 2) return path;
+  tracks.sort((a, b) => b.length - a.length);
+  const main = tracks[0];
+  const first = main[0].t;
+  const last = main[main.length - 1].t;
+  return [
+    ...main,
+    ...tracks.slice(1).filter((t) => t.length >= 5 && (t[t.length - 1].t < first || t[0].t > last)).flat(),
+  ].sort((a, b) => a.t - b.t);
+}
+
+/** Fixes worth routing between: good accuracy, one phone's track, per run of continuous tracking, stops collapsed. */
 function routeLegs(raw) {
-  const path = Object.values(raw || {})
+  const path = mainTrack(Object.values(raw || {})
     .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
     .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
-    .sort((a, b) => a.t - b.t);
+    .sort((a, b) => a.t - b.t));
   const legs = [];
   let last = null; // last kept fix
   let prev = null; // last fix seen
@@ -591,3 +624,6 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   await outRef.update(updates);
   return { snapped: Object.keys(updates).length - 1 };
 });
+
+// For tests.
+exports._mainTrack = mainTrack;

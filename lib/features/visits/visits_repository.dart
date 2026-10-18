@@ -95,7 +95,7 @@ class VisitsRepository {
     });
     batch.update(_db.collection('clients').doc(client.id), {
       'lastVisitAt': FieldValue.serverTimestamp(),
-      ...givenClientUpdate(given),
+      if (given.isNotEmpty) 'givenLog': FieldValue.arrayUnion(visitGivenEntries(visitRef.id, userId, now, given)),
       if (setClientLocation) 'lat': position.latitude,
       if (setClientLocation) 'lng': position.longitude,
     });
@@ -158,15 +158,9 @@ class VisitsRepository {
         .map((d) => d.data()['checkedInAt'])
         .whereType<Timestamp>()
         .fold<Timestamp?>(null, (a, b) => a == null || b.compareTo(a) > 0 ? b : a);
-    await _db.collection('clients').doc(visit.clientId).update({
-      'lastVisitAt': latest,
-      // Catalogs / stands from the visits left.
-      if (visit.given.isNotEmpty)
-        'given': givenFromVisits(left.docs.map((d) => (
-              at: (d.data()['checkedInAt'] as Timestamp?)?.toDate(),
-              given: parseGiven(d.data()['given']),
-            ))),
-    });
+    await _db.collection('clients').doc(visit.clientId).update({'lastVisitAt': latest});
+    // Catalogs / stands handed over at this visit leave the client's log.
+    if (visit.given.isNotEmpty) await removeGivenEntries(visit.clientId, (m) => m['visitId'] == visit.id);
   }
 
   /// A KAM marks that they were at the visit (or removes the mark with null).

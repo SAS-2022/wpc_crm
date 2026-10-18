@@ -130,6 +130,50 @@ class RoutePoint {
   final bool mocked;
 }
 
+/// Faster than this between two points means they can't be the same phone.
+const _maxTrackKmh = 200.0;
+
+/// Points that belong to one continuous track: with two phones signed in to
+/// one account (e.g. a manager opening it in another city), both phones'
+/// positions end up in the same day and the route zigzags between them.
+/// Each point joins the track whose last point it could have driven from
+/// (≤ [_maxTrackKmh], or within 5 km: points queued while offline arrive
+/// together with one server time); the track with the most points is
+/// kept, plus tracks of 5+ points that don't overlap it in time (e.g. a
+/// new phone later in the day). Same logic as `mainTrack` in
+/// functions/index.js.
+///
+/// Rough fixes (accuracy over 100 m) are left out first, as everywhere else
+/// on the route.
+List<RoutePoint> mainTrack(List<RoutePoint> points) {
+  final sorted = points.where((p) => (p.accuracy ?? 0) <= _maxAccuracy).toList()..sort((a, b) => a.t.compareTo(b.t));
+  final tracks = <List<RoutePoint>>[];
+  for (final p in sorted) {
+    List<RoutePoint>? best;
+    for (final track in tracks) {
+      final last = track.last;
+      final meters = distanceBetween(last.lat, last.lng, p.lat, p.lng);
+      final hours = p.t.difference(last.t).inMilliseconds / 3600000;
+      final ok = meters <= 5000 || meters / 1000 <= _maxTrackKmh * hours;
+      if (ok && (best == null || last.t.isAfter(best.last.t))) best = track;
+    }
+    if (best == null) {
+      tracks.add([p]);
+    } else {
+      best.add(p);
+    }
+  }
+  if (tracks.length < 2) return sorted;
+  tracks.sort((a, b) => b.length.compareTo(a.length));
+  final main = tracks.first;
+  final kept = [
+    ...main,
+    for (final t in tracks.skip(1))
+      if (t.length >= 5 && (t.last.t.isBefore(main.first.t) || t.first.t.isAfter(main.last.t))) ...t,
+  ]..sort((a, b) => a.t.compareTo(b.t));
+  return kept;
+}
+
 class RouteSummary {
   const RouteSummary({required this.path, required this.distanceMeters, required this.mockedPoints});
 

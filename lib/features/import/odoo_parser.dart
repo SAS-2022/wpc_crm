@@ -1,4 +1,5 @@
 import '../clients/client.dart';
+import 'plus_code.dart';
 
 /// One contact row from the Odoo "Contact (res.partner)" export.
 class ImportRow {
@@ -149,7 +150,8 @@ bool isShortLink(String url) =>
     _shortLinkHosts.contains(Uri.tryParse(url)?.host.toLowerCase());
 
 /// Reads coordinates from a full Google Maps URL. Place coordinates
-/// (`!3d..!4d..`) win over query params, which win over the `@` viewport.
+/// (`!3d..!4d..`) win over query params, which win over the `@` viewport;
+/// last resort: a Plus Code in the place name.
 ({double lat, double lng})? coordsFromUrl(String url) {
   final s = Uri.decodeFull(url.replaceAll('+', ' '));
   const n = r'(-?\d{1,3}\.\d+)';
@@ -164,7 +166,8 @@ bool isShortLink(String url) =>
     final lng = double.parse(m.group(2)!);
     if (lat.abs() <= 90 && lng.abs() <= 180) return (lat: lat, lng: lng);
   }
-  return null;
+  // Place links shared without coordinates carry a Plus Code instead.
+  return coordsFromPlusCode(s);
 }
 
 /// "Is a Company" cell → client type; empty when the cell is empty or unknown.

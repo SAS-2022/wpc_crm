@@ -1409,6 +1409,97 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitDetails => 'تفاصيل الزيارة';
 
   @override
+  String get otherPhoneTitle => 'موقعك يُشارك من هاتف آخر';
+
+  @override
+  String get otherPhoneBody =>
+      'هاتف آخر مسجّل الدخول بحسابك يشارك موقعك، لذلك لا يرسل هذا الهاتف شيئًا. إذا كان هذا هو هاتف عملك، اضغط \"استخدم هذا الهاتف\".';
+
+  @override
+  String get useThisPhone => 'استخدم هذا الهاتف';
+
+  @override
+  String otherTrackIgnored(int count) {
+    return 'تم تجاهل $count نقطة من هاتف آخر';
+  }
+
+  @override
+  String reportNewClients(int count) {
+    return 'عملاء جدد ($count)';
+  }
+
+  @override
+  String get reportNoNewClients => 'لم تتم إضافة عملاء في هذه الفترة.';
+
+  @override
+  String get reportAddedInApp => 'أضيفوا في التطبيق';
+
+  @override
+  String get reportImported => 'مستوردون';
+
+  @override
+  String reportAddedBy(String name) {
+    return 'أضافه $name';
+  }
+
+  @override
+  String get reportRouting => 'أداء المسارات والكفاءة';
+
+  @override
+  String get reportNoRoutingDays =>
+      'لا يوجد يوم فيه زيارتان أو أكثر في هذه الفترة.';
+
+  @override
+  String get reportAvgEfficiency => 'متوسط الكفاءة';
+
+  @override
+  String get reportDaysCounted => 'الأيام';
+
+  @override
+  String get reportVisitsPerDay => 'زيارات / يوم';
+
+  @override
+  String get reportShortestOrderDays => 'أقصر ترتيب';
+
+  @override
+  String get reportExtraDistance => 'مسافة إضافية';
+
+  @override
+  String get reportNeededTook => 'المطلوب / الفعلي';
+
+  @override
+  String get reportLowestDays => 'أقل الأيام';
+
+  @override
+  String get reportRoutingHelp =>
+      'تُحسب الأيام التي فيها زيارتان أو أكثر. الكفاءة = الوقت المطلوب (أقصر مسار بين نفس العملاء + 30 دقيقة لكل زيارة) ÷ الوقت من أول زيارة إلى آخر زيارة، بحد أقصى 100%. المسافة الإضافية = الكيلومترات المستقيمة الزائدة عن أقصر ترتيب بين الزيارات.';
+
+  @override
+  String get reportCatalogs => 'توزيع الكتالوجات';
+
+  @override
+  String get reportNoCatalogs =>
+      'لم يتم تسليم كتالوجات أو ستاندات في هذه الفترة.';
+
+  @override
+  String get reportTotal => 'الإجمالي';
+
+  @override
+  String get reportClientsReached => 'العملاء';
+
+  @override
+  String get reportCatalogsDue => 'عملاء مستحقون لواحد جديد';
+
+  @override
+  String reportDueNever(String item, int due, int never) {
+    return '$item: $due مستحق · $never لم يُسلَّم';
+  }
+
+  @override
+  String get reportCatalogsHelp =>
+      'من التسليمات في الزيارات والمسجّلة في صفحات العملاء، محسوبة لمن سلّمها. اضغط على صنف لرؤية العملاء المستحقين.';
+
+  @override
   String get givenSwitchCatalog => 'كتالوج سواتش';
 
   @override
@@ -1416,6 +1507,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get givenDisplayStand => 'ستاند عرض';
+
+  @override
+  String get givenA4Samples => 'عينات A4';
 
   @override
   String get itemsGiven => 'الكتالوجات والستاندات المسلّمة';
@@ -1456,6 +1550,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get givenDueFilter => 'مستحق كتالوج / ستاند جديد';
+
+  @override
+  String get givenHistory => 'السجل';
+
+  @override
+  String get givenRecord => 'تسجيل كتالوج / ستاند مسلّم';
+
+  @override
+  String get givenRecordedByHand => 'مسجّل يدويًا';
+
+  @override
+  String get givenAtVisit => 'في زيارة';
+
+  @override
+  String get givenOn => 'تاريخ التسليم';
+
+  @override
+  String get quantity => 'الكمية';
 
   @override
   String get notAssignedTitle => 'غير مُسند إلى مندوب مبيعات';

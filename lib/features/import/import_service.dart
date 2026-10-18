@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'import_plan.dart';
 import 'location_import.dart';
 import 'odoo_parser.dart';
+import 'plus_code.dart';
 
 /// Reads the first sheet of an .xlsx, or a .csv, into rows of strings.
 List<List<String>> readTable(String fileName, Uint8List bytes) {
@@ -60,7 +61,8 @@ Future<Coords?> coordsFromPastedText(String text) async {
   final plain = coordsFromText(text);
   if (plain != null) return plain;
   final url = extractUrl(text.trim());
-  if (url.isEmpty) return null;
+  // No link: maybe a Plus Code with its city ("RH8W+2QH الرياض").
+  if (url.isEmpty) return coordsFromPlusCode(text);
   final direct = coordsFromUrl(url);
   if (direct != null || !isShortLink(url)) return direct;
   return (await resolveShortLinks([url], (_) {})).coords[url];

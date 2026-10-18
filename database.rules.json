@@ -40,6 +40,14 @@
         ".read": "auth != null && auth.uid === $uid"
       }
     },
+    "tracking_device": {
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && ((auth.uid === $uid && root.child('roles').child(auth.uid).exists()) || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'sales_manager')",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id']) && newData.child('id').isString())"
+      }
+    },
     "tracking_events": {
       ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'"
     },

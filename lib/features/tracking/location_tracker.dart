@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'tracking_device.dart';
 import 'work_hours.dart';
 
 /// How often a position is sent (user decision 2026-10-18: every 30 seconds,
@@ -24,14 +25,26 @@ const heartbeatInterval = Duration(minutes: 2);
 /// live position is removed. GPS, permission and (Android) battery
 /// optimization and notification permission in `presence` drive the `trackingAlerts` Cloud Function,
 /// which warns the KAM, sales managers and GM.
+///
+/// Only the phone registered in `tracking_device/{uid}` sends anything
+/// (see tracking_device.dart); on any other phone signed in to the same
+/// account the tracker waits silently until that phone is chosen.
 class LocationTracker {
-  LocationTracker(this.uid, {this.onDutyChanged});
+  LocationTracker(this.uid, {this.onDutyChanged, this.onStandby});
 
   final String uid;
 
   /// Called when work hours start (true) or end (false), e.g. to change the
   /// Android service notification.
   final void Function(bool onDuty)? onDutyChanged;
+
+  /// Called when another phone shares this account's location.
+  final VoidCallback? onStandby;
+  StreamSubscription<DatabaseEvent>? _deviceSub;
+  String _deviceId = '';
+
+  /// This phone is the one sharing the location.
+  bool _active = false;
   final _subscriptions = <StreamSubscription<Object?>>[];
   StreamSubscription<Position>? _positions;
   Timer? _heartbeat;
@@ -46,6 +59,28 @@ class LocationTracker {
   DatabaseReference get _presence => FirebaseDatabase.instance.ref('presence/$uid');
 
   Future<void> start() async {
+    _deviceId = await localDeviceId();
+    _deviceSub = trackingDeviceRef(uid).onValue.listen((event) async {
+      final owner = (event.snapshot.value as Map?)?['id'];
+      if (owner == null) {
+        // First phone of this account (or after a reset): it shares.
+        await claimTracking(uid, _deviceId).catchError((_) {});
+        return;
+      }
+      if (owner == _deviceId && !_active) {
+        _active = true;
+        await _startSharing();
+      } else if (owner != _deviceId && _active) {
+        _active = false;
+        await _stopSharing();
+        onStandby?.call();
+      } else if (owner != _deviceId) {
+        onStandby?.call();
+      }
+    });
+  }
+
+  Future<void> _startSharing() async {
     _subscriptions.add(FirebaseDatabase.instance.ref('.info/connected').onValue.listen((event) async {
       _connected = event.snapshot.value == true;
       if (!_connected) return;
@@ -98,6 +133,16 @@ class LocationTracker {
   }
 
   Future<void> stop() async {
+    await _deviceSub?.cancel();
+    _deviceSub = null;
+    if (!_active) return; // another phone owns the presence
+    _active = false;
+    await _stopSharing();
+    await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
+  }
+
+  /// Stops sending without touching the presence (another phone may own it).
+  Future<void> _stopSharing() async {
     for (final s in _subscriptions) {
       await s.cancel();
     }
@@ -108,13 +153,12 @@ class LocationTracker {
     _heartbeat?.cancel();
     _dutyCheck?.cancel();
     await _presence.onDisconnect().cancel();
-    await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
   }
 
   /// Status heartbeat; silent outside work hours (user decision): only the
   /// connection itself (online / offline) is kept by the server then.
   Future<void> _beat() async {
-    if (_onDuty != true) return;
+    if (_onDuty != true || !_active) return;
     var gpsOn = false;
     var permission = LocationPermission.denied;
     bool? batteryOptimized;
@@ -147,7 +191,7 @@ class LocationTracker {
   }
 
   Future<void> _send(Position p) async {
-    if (_onDuty != true) return;
+    if (_onDuty != true || !_active) return;
     final now = DateTime.now();
     // The OS may deliver fixes more often than asked for; keep one per interval.
     if (_lastSent != null && now.difference(_lastSent!) < trackingInterval * 0.75) return;
@@ -169,6 +213,8 @@ class LocationTracker {
     await FirebaseDatabase.instance.ref('location_history/$uid/$day').push().set({
       ...point,
       't': ServerValue.timestamp,
+      // Which phone sent it, to tell phones apart if two ever send.
+      'd': _deviceId,
     });
   }
 

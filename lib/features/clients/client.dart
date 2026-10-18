@@ -36,6 +36,7 @@ class Client {
     this.email = '',
     this.notes = '',
     this.source = 'import',
+    this.createdBy = '',
     this.legalName = '',
     this.street = '',
     this.state = '',
@@ -51,6 +52,7 @@ class Client {
     this.mainLocationType = '',
     this.extraLocations = const [],
     this.given = const {},
+    this.givenLog = const [],
     this.createdAt,
   });
 
@@ -100,6 +102,9 @@ class Client {
   /// 'import' (from Odoo) or 'manual' (added in the app).
   final String source;
 
+  /// Who added the client in the app (`source: 'manual'`); '' for imports.
+  final String createdBy;
+
   /// From Odoo: registered name, address parts and account balances.
   final String legalName;
   final String street;
@@ -136,6 +141,9 @@ class Client {
 
   /// Catalogs and display stands given at visits: last date, quantity, total.
   final Map<GivenItem, GivenRecord> given;
+
+  /// Every hand-over (visits and client-page entries), newest first.
+  final List<GivenEntry> givenLog;
 
   final DateTime? createdAt;
 
@@ -179,6 +187,7 @@ class Client {
       email: d['email'] as String? ?? '',
       notes: d['notes'] as String? ?? '',
       source: d['source'] as String? ?? 'import',
+      createdBy: d['createdBy'] as String? ?? '',
       legalName: d['legalName'] as String? ?? '',
       street: d['street'] as String? ?? '',
       state: d['state'] as String? ?? '',
@@ -205,7 +214,8 @@ class Client {
         for (final l in d['extraLocations'] as List? ?? const [])
           if (l is Map && l['lat'] is num && l['lng'] is num) ClientLocation.fromMap(l),
       ],
-      given: GivenRecord.parse(d['given']),
+      givenLog: parseGivenLog(d['givenLog']),
+      given: summarizeGiven(parseGivenLog(d['givenLog']), GivenRecord.parse(d['given'])),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }

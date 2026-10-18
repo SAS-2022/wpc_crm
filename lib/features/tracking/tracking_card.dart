@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import 'tracking_device.dart';
 import 'tracking_status.dart';
 
 /// Home card for field staff: is location sharing on, and what to fix if not.
@@ -38,9 +40,45 @@ class _TrackingCardState extends ConsumerState<TrackingCard> {
         TrackingIssue.battery => l10n.issueBattery,
       };
 
+  Widget _otherPhone(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.tertiaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.phonelink_lock),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l10n.otherPhoneTitle, style: Theme.of(context).textTheme.titleSmall)),
+            ]),
+            const SizedBox(height: 6),
+            Text(l10n.otherPhoneBody),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.tonal(
+                onPressed: () async {
+                  final me = ref.read(currentUserProvider).value;
+                  if (me == null) return;
+                  await claimTracking(me.id, await localDeviceId());
+                },
+                child: Text(l10n.useThisPhone),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Another phone signed in to this account shares the location.
+    if (ref.watch(thisPhoneTracksProvider).value == false) return _otherPhone(context);
     final status = ref.watch(trackingStatusProvider).value;
     if (status == null) return const SizedBox.shrink();
     final ok = status.running && status.issues.isEmpty;

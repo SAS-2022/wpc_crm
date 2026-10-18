@@ -100,16 +100,19 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final day = DateTime.tryParse(widget.date ?? '') ?? today;
     final dayStr = dayKey(day);
 
-    final points = person == null
+    final allPoints = person == null
         ? const <RoutePoint>[]
         : ref.watch(routePointsProvider((person.id, dayStr))).value ?? const <RoutePoint>[];
+    // Points from a second phone on the same account are left out.
+    final points = mainTrack(allPoints);
+    final ignored = allPoints.where((p) => (p.accuracy ?? 0) <= 100).length - points.length;
     final route = summarizeRoute(points);
     final snapped = person == null
         ? const SnappedRoute()
         : ref.watch(snappedRouteProvider((person.id, dayStr))).value;
-    if (person != null && snapped != null && points.length > 1 && snapped.handled != points.length) {
+    if (person != null && snapped != null && points.length > 1 && snapped.handled != allPoints.length) {
       // Today a fix comes every 30 s: ask about every 2 minutes, not per fix.
-      _snap(person.id, dayStr, day == today ? points.length ~/ 4 : points.length);
+      _snap(person.id, dayStr, day == today ? allPoints.length ~/ 4 : allPoints.length);
     }
     final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final hidden = ref.watch(hiddenClientIdsProvider);
@@ -212,6 +215,13 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
               _Fact(icon: Icons.scatter_plot, label: l10n.locationPointsCount(route.path.length), value: ''),
               if (runs.length > 1)
                 _Fact(icon: Icons.signal_wifi_off, label: l10n.trackingGaps(runs.length - 1), value: ''),
+              if (ignored > 0)
+                _Fact(
+                  icon: Icons.phonelink_erase,
+                  label: l10n.otherTrackIgnored(ignored),
+                  value: '',
+                  color: theme.colorScheme.error,
+                ),
               if (route.mockedPoints > 0)
                 _Fact(
                   icon: Icons.gps_off,

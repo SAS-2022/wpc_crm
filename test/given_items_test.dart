@@ -28,18 +28,30 @@ void main() {
     expect(parseGiven(null), isEmpty);
   });
 
-  test('rebuilt from visits: latest date and quantity, and the sum', () {
-    final out = givenFromVisits([
-      (at: DateTime(2026, 9, 1), given: {GivenItem.switchCatalog: 2}),
-      (at: DateTime(2026, 10, 1), given: {GivenItem.switchCatalog: 1, GivenItem.displayStand: 1}),
-      (at: DateTime(2026, 8, 1), given: const <GivenItem, int>{}),
+  test('summary from the log plus the older summary: latest date and quantity, and the sum', () {
+    final log = parseGivenLog([
+      GivenEntry(id: 'a', item: GivenItem.switchCatalog, qty: 2, at: DateTime(2026, 9, 1), byId: 'u', visitId: 'v1').toMap(),
+      // Backdated entry recorded on the client page.
+      GivenEntry(id: 'b', item: GivenItem.switchCatalog, qty: 1, at: DateTime(2026, 3, 1), byId: 'k').toMap(),
+      GivenEntry(id: 'c', item: GivenItem.displayStand, qty: 1, at: DateTime(2026, 10, 1), byId: 'u', visitId: 'v2').toMap(),
+      {'item': 'unknown', 'qty': 1, 'at': Timestamp.fromDate(DateTime(2026, 1, 1))},
     ]);
-    expect(out.keys, unorderedEquals(['switchCatalog', 'displayStand']));
-    final sw = out['switchCatalog']! as Map;
-    expect((sw['at'] as Timestamp).toDate(), DateTime(2026, 10, 1));
-    expect(sw['qty'], 1);
-    expect(sw['total'], 3);
-    expect(givenFromVisits(const []), isEmpty);
+    expect(log.map((e) => e.id), ['c', 'a', 'b']); // newest first, bad entry dropped
+    expect(log.last.manual, isTrue);
+    final legacy = {GivenItem.switchCatalog: GivenRecord(at: DateTime(2026, 5, 1), qty: 4, total: 4)};
+    final sum = summarizeGiven(log, legacy);
+    expect(sum[GivenItem.switchCatalog]!.at, DateTime(2026, 9, 1));
+    expect(sum[GivenItem.switchCatalog]!.qty, 2);
+    expect(sum[GivenItem.switchCatalog]!.total, 7);
+    expect(sum[GivenItem.displayStand]!.total, 1);
+    expect(sum.containsKey(GivenItem.bookletCatalog), isFalse);
+  });
+
+  test('visit entries: one per item given, keyed by the visit', () {
+    final e = visitGivenEntries('v9', 'u', DateTime(2026, 10, 18), {GivenItem.bookletCatalog: 3});
+    expect(e.single['id'], 'v9_bookletCatalog');
+    expect(e.single['visitId'], 'v9');
+    expect(visitGivenEntries('v9', 'u', DateTime(2026, 10, 18), const {}), isEmpty);
   });
 
   test('client record parsing', () {

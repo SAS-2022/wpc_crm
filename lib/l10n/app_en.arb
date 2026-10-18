@@ -1072,9 +1072,58 @@
     }
   },
   "visitDetails": "Visit details",
+  "otherPhoneTitle": "Your location is shared from another phone",
+  "otherPhoneBody": "Another phone signed in to your account shares your location, so this phone sends nothing. If this is the phone you work with, tap \"Use this phone\".",
+  "useThisPhone": "Use this phone",
+  "otherTrackIgnored": "{count} points from another phone ignored",
+  "@otherTrackIgnored": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "reportNewClients": "New clients ({count})",
+  "@reportNewClients": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "reportNoNewClients": "No clients were added in this period.",
+  "reportAddedInApp": "Added in the app",
+  "reportImported": "Imported",
+  "reportAddedBy": "added by {name}",
+  "@reportAddedBy": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "reportRouting": "Routing performance & efficiency",
+  "reportNoRoutingDays": "No day with two or more visits in this period.",
+  "reportAvgEfficiency": "Average efficiency",
+  "reportDaysCounted": "Days",
+  "reportVisitsPerDay": "Visits / day",
+  "reportShortestOrderDays": "Shortest order",
+  "reportExtraDistance": "Extra distance",
+  "reportNeededTook": "Needed / took",
+  "reportLowestDays": "Lowest days",
+  "reportRoutingHelp": "Counts days with two or more visits. Efficiency = time needed (shortest route through the same clients + 30 min per visit) ÷ time from the first to the last visit, at most 100%. Extra distance = straight-line km more than the shortest order between the visits.",
+  "reportCatalogs": "Catalog distribution",
+  "reportNoCatalogs": "No catalogs or stands were handed over in this period.",
+  "reportTotal": "Total",
+  "reportClientsReached": "Clients",
+  "reportCatalogsDue": "Clients due for a new one",
+  "reportDueNever": "{item}: {due} due · {never} never given",
+  "@reportDueNever": {
+    "placeholders": {
+      "item": {"type": "String"},
+      "due": {"type": "int"},
+      "never": {"type": "int"}
+    }
+  },
+  "reportCatalogsHelp": "From hand-overs at visits and recorded on client pages, counted for the person who gave them. Tap an item to see its due clients.",
   "givenSwitchCatalog": "Swatch catalog",
   "givenBookletCatalog": "Booklet catalog",
   "givenDisplayStand": "Display stand",
+  "givenA4Samples": "A4 samples",
   "itemsGiven": "Catalogs & stands given",
   "givenNever": "Never given",
   "givenLast": "Last: {qty} on {date}",
@@ -1102,6 +1151,12 @@
   "givenItemsHelp": "After how many days a client should get a new one. Clients past this show \"Due\" on their page, at check-in and in the filter.",
   "givenEveryDaysSuffix": "days",
   "givenDueFilter": "New catalog / stand due",
+  "givenHistory": "History",
+  "givenRecord": "Record catalog / stand given",
+  "givenRecordedByHand": "recorded",
+  "givenAtVisit": "at a visit",
+  "givenOn": "Given on",
+  "quantity": "Quantity",
   "notAssignedTitle": "Not assigned to a sales executive",
   "notAssignedBody": "{count} of the selected clients have no sales executive, so they can't go on a plan: {names}. Move them to someone first.",
   "@notAssignedBody": {
