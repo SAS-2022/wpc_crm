@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,12 +33,14 @@ class MoreScreen extends ConsumerWidget {
             onTap: () => context.push('/profile'),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.beach_access),
-            title: Text(l10n.myLeave),
-            onTap: () => context.push('/leave'),
-          ),
-          if (me.role.canSeeHr && !wide)
+          // My leave hidden for now (user request 2026-10-18).
+          // ListTile(
+          //   leading: const Icon(Icons.beach_access),
+          //   title: Text(l10n.myLeave),
+          //   onTap: () => context.push('/leave'),
+          // ),
+          // Hidden on the web for now (user request 2026-10-18).
+          if (me.role.canSeeHr && !wide && !kIsWeb)
             ListTile(
               leading: const Icon(Icons.badge),
               title: Text(l10n.hrArea),
@@ -102,6 +105,11 @@ class MoreScreen extends ConsumerWidget {
               leading: const Icon(Icons.timelapse),
               title: Text(l10n.visitFrequency),
               onTap: () => context.push('/visit-rules'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: Text(l10n.givenItemsSettings),
+              onTap: () => context.push('/given-items'),
             ),
             ListTile(
               leading: const Icon(Icons.schedule),

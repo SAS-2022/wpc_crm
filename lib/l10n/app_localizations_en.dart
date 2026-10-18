@@ -451,7 +451,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get openClient => 'Open client';
+  String get openClient => 'Open';
 
   @override
   String get comments => 'Comments';
@@ -1406,6 +1406,166 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifLocationNotAlways(String name) {
     return '$name allowed location only while using the app – tracking stops in the background';
   }
+
+  @override
+  String get visitDetails => 'Visit details';
+
+  @override
+  String get givenSwitchCatalog => 'Swatch catalog';
+
+  @override
+  String get givenBookletCatalog => 'Booklet catalog';
+
+  @override
+  String get givenDisplayStand => 'Display stand';
+
+  @override
+  String get itemsGiven => 'Catalogs & stands given';
+
+  @override
+  String get givenNever => 'Never given';
+
+  @override
+  String givenLast(int qty, String date) {
+    return 'Last: $qty on $date';
+  }
+
+  @override
+  String givenTotal(int count) {
+    return '$count in all';
+  }
+
+  @override
+  String givenDueOn(String date) {
+    return 'new one due $date';
+  }
+
+  @override
+  String get givenDue => 'Due';
+
+  @override
+  String get givenDueSoon => 'Due soon';
+
+  @override
+  String get givenItemsSettings => 'Catalogs & stands';
+
+  @override
+  String get givenItemsHelp =>
+      'After how many days a client should get a new one. Clients past this show \"Due\" on their page, at check-in and in the filter.';
+
+  @override
+  String get givenEveryDaysSuffix => 'days';
+
+  @override
+  String get givenDueFilter => 'New catalog / stand due';
+
+  @override
+  String get notAssignedTitle => 'Not assigned to a sales executive';
+
+  @override
+  String notAssignedBody(int count, String names) {
+    return '$count of the selected clients have no sales executive, so they can\'t go on a plan: $names. Move them to someone first.';
+  }
+
+  @override
+  String get moveThemFirst => 'Move them';
+
+  @override
+  String planTheOthers(int count) {
+    return 'Plan the other $count';
+  }
+
+  @override
+  String planNotAllowed(int count) {
+    return '$count clients belong to people outside your team and are left out.';
+  }
+
+  @override
+  String planSelectedTitle(int count) {
+    return 'Add $count clients to plans';
+  }
+
+  @override
+  String get planSelectedHint =>
+      'Each client goes on the plan of the salesperson it belongs to, approved; they are notified.';
+
+  @override
+  String plannedFromSelection(int count, int plans) {
+    return 'Added $count clients to $plans plans';
+  }
+
+  @override
+  String alreadyOnPlanCount(int count) {
+    return '$count already on the plan';
+  }
+
+  @override
+  String get dupSameCompanyId => 'Same CR number';
+
+  @override
+  String get duplicatesFoundBody =>
+      'These clients look like the one you are adding:';
+
+  @override
+  String get duplicateOverrideHint =>
+      'If you checked and it is a different client, you can add it.';
+
+  @override
+  String get duplicateAskManager =>
+      'If it is a different client, ask a sales manager to add it.';
+
+  @override
+  String get notDuplicateAdd => 'Not a duplicate – add';
+
+  @override
+  String get useThisClient => 'Use this client';
+
+  @override
+  String addNewClientNamed(String name) {
+    return 'Add \"$name\" as a new client';
+  }
+
+  @override
+  String get selectClientsToMove => 'Select clients to plan or move';
+
+  @override
+  String get tapPinsToSelect => 'Tap pins to select clients';
+
+  @override
+  String get selectSeveralToMove => 'Select several clients to plan or move';
+
+  @override
+  String get showRouteMap => 'Show on route map';
+
+  @override
+  String get shortestOrderHint => 'Numbers follow the shortest route';
+
+  @override
+  String get efficiency => 'Efficiency';
+
+  @override
+  String efficiencyDetail(String needed, String took) {
+    return 'Needed about $needed (shortest route + 30 min per visit), took $took from the first to the last visit';
+  }
+
+  @override
+  String get efficiencyBestOrder => 'Visits made in the shortest order';
+
+  @override
+  String efficiencyOtherOrder(String shortest, String taken) {
+    return 'Shortest order: $shortest between visits instead of $taken';
+  }
+
+  @override
+  String notifNotificationsOff(String name) {
+    return '$name turned off notifications for WPC CRM';
+  }
+
+  @override
+  String get logNotificationsOff => 'Notifications turned off';
+
+  @override
+  String get logNotificationsOn => 'Notifications turned on';
 
   @override
   String notifBatteryOptimized(String name) {

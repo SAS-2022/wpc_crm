@@ -447,7 +447,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get openClient => 'فتح العميل';
+  String get openClient => 'فتح';
 
   @override
   String get comments => 'التعليقات';
@@ -1404,6 +1404,165 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifLocationNotAlways(String name) {
     return 'سمح $name بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية';
   }
+
+  @override
+  String get visitDetails => 'تفاصيل الزيارة';
+
+  @override
+  String get givenSwitchCatalog => 'كتالوج سواتش';
+
+  @override
+  String get givenBookletCatalog => 'كتالوج كتيّب';
+
+  @override
+  String get givenDisplayStand => 'ستاند عرض';
+
+  @override
+  String get itemsGiven => 'الكتالوجات والستاندات المسلّمة';
+
+  @override
+  String get givenNever => 'لم يُسلَّم';
+
+  @override
+  String givenLast(int qty, String date) {
+    return 'آخر مرة: $qty في $date';
+  }
+
+  @override
+  String givenTotal(int count) {
+    return '$count إجمالًا';
+  }
+
+  @override
+  String givenDueOn(String date) {
+    return 'الجديد مستحق في $date';
+  }
+
+  @override
+  String get givenDue => 'مستحق';
+
+  @override
+  String get givenDueSoon => 'مستحق قريبًا';
+
+  @override
+  String get givenItemsSettings => 'الكتالوجات والستاندات';
+
+  @override
+  String get givenItemsHelp =>
+      'بعد كم يومًا يجب أن يحصل العميل على واحد جديد. العملاء الذين تجاوزوا ذلك يظهر لهم \"مستحق\" في صفحتهم وعند تسجيل الزيارة وفي الفلتر.';
+
+  @override
+  String get givenEveryDaysSuffix => 'يوم';
+
+  @override
+  String get givenDueFilter => 'مستحق كتالوج / ستاند جديد';
+
+  @override
+  String get notAssignedTitle => 'غير مُسند إلى مندوب مبيعات';
+
+  @override
+  String notAssignedBody(int count, String names) {
+    return '$count من العملاء المختارين بدون مندوب مبيعات، فلا يمكن إضافتهم إلى خطة: $names. انقلهم إلى أحد المندوبين أولًا.';
+  }
+
+  @override
+  String get moveThemFirst => 'نقلهم';
+
+  @override
+  String planTheOthers(int count) {
+    return 'خطط للـ $count الباقين';
+  }
+
+  @override
+  String planNotAllowed(int count) {
+    return '$count عملاء يتبعون أشخاصًا خارج فريقك ولن تتم إضافتهم.';
+  }
+
+  @override
+  String planSelectedTitle(int count) {
+    return 'إضافة $count عملاء إلى الخطط';
+  }
+
+  @override
+  String get planSelectedHint =>
+      'يُضاف كل عميل إلى خطة المندوب الذي يتبعه، معتمدًا، ويتم إشعاره.';
+
+  @override
+  String plannedFromSelection(int count, int plans) {
+    return 'تمت إضافة $count عملاء إلى $plans خطط';
+  }
+
+  @override
+  String alreadyOnPlanCount(int count) {
+    return '$count موجودون في الخطة مسبقًا';
+  }
+
+  @override
+  String get dupSameCompanyId => 'نفس رقم السجل التجاري';
+
+  @override
+  String get duplicatesFoundBody => 'هؤلاء العملاء يشبهون العميل الذي تضيفه:';
+
+  @override
+  String get duplicateOverrideHint =>
+      'إذا تحققت وكان عميلًا مختلفًا، يمكنك إضافته.';
+
+  @override
+  String get duplicateAskManager =>
+      'إذا كان عميلًا مختلفًا، اطلب من مدير المبيعات إضافته.';
+
+  @override
+  String get notDuplicateAdd => 'ليس مكررًا – أضف';
+
+  @override
+  String get useThisClient => 'استخدم هذا العميل';
+
+  @override
+  String addNewClientNamed(String name) {
+    return 'إضافة \"$name\" كعميل جديد';
+  }
+
+  @override
+  String get selectClientsToMove => 'اختيار عملاء للتخطيط أو النقل';
+
+  @override
+  String get tapPinsToSelect => 'اضغط على الدبابيس لاختيار العملاء';
+
+  @override
+  String get selectSeveralToMove => 'اختيار عدة عملاء للتخطيط أو النقل';
+
+  @override
+  String get showRouteMap => 'عرض على خريطة المسار';
+
+  @override
+  String get shortestOrderHint => 'الأرقام تتبع أقصر مسار';
+
+  @override
+  String get efficiency => 'الكفاءة';
+
+  @override
+  String efficiencyDetail(String needed, String took) {
+    return 'المطلوب نحو $needed (أقصر مسار + 30 دقيقة لكل زيارة)، واستغرق $took من أول زيارة إلى آخر زيارة';
+  }
+
+  @override
+  String get efficiencyBestOrder => 'تمت الزيارات بترتيب أقصر مسار';
+
+  @override
+  String efficiencyOtherOrder(String shortest, String taken) {
+    return 'أقصر ترتيب: $shortest بين الزيارات بدلًا من $taken';
+  }
+
+  @override
+  String notifNotificationsOff(String name) {
+    return 'أوقف $name الإشعارات لتطبيق WPC CRM';
+  }
+
+  @override
+  String get logNotificationsOff => 'تم إيقاف الإشعارات';
+
+  @override
+  String get logNotificationsOn => 'تم تشغيل الإشعارات';
 
   @override
   String notifBatteryOptimized(String name) {

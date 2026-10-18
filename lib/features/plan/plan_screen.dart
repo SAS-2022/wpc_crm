@@ -19,6 +19,7 @@ import 'add_task_sheet.dart';
 import 'checklist.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
+import 'route_order.dart';
 
 /// A person's plan for one day. The owner adds tasks (waiting for approval if
 /// they are a sales exec) and ticks free tasks; KAM / managers add, approve,
@@ -90,7 +91,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final locale = Localizations.localeOf(context).toString();
     final clients = {for (final c in ref.read(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final open = tasks.where((t) => t.approval != TaskApproval.rejected).toList();
-    final visits = open.where((t) => t.isVisit).toList();
+    final visits = inRouteOrder(open.where((t) => t.isVisit).toList(), planStopNumbers(open, clients));
     final located = [for (final t in visits) if (clients[t.clientId]?.hasLocation ?? false) clients[t.clientId]!];
     String maps(Client c) => 'https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}';
     final lines = <String>[
@@ -184,6 +185,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
               error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
               data: (list) {
                 if (list.isEmpty) return Center(child: Text(l10n.nothingPlanned));
+                final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
+                final numbers = planStopNumbers(list, clients);
                 final approved = list.where((t) => t.approval == TaskApproval.approved).toList();
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 88),
@@ -196,9 +199,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                         list.where((t) => t.approval == TaskApproval.pending).length,
                       )),
                     ),
-                    for (final t in list)
+                    for (final t in inRouteOrder(list, numbers))
                       PlanTaskTile(
                         task: t,
+                        number: numbers[t.id],
                         canTick: isOwner && t.approval == TaskApproval.approved,
                         canApprove: canManage && t.approval == TaskApproval.pending,
                         canDelete: canManage || (isOwner && t.approval != TaskApproval.approved),
@@ -297,6 +301,7 @@ class PlanTaskTile extends ConsumerWidget {
     this.onCall,
     this.onEdit,
     this.subtitlePrefix,
+    this.number,
     this.canTickChecklist = false,
     this.canEditChecklist = false,
     this.onChecklistChanged,
@@ -319,6 +324,9 @@ class PlanTaskTile extends ConsumerWidget {
 
   /// e.g. the owner's name in the approvals list.
   final String? subtitlePrefix;
+
+  /// Stop number in the plan's shortest route ([planStopNumbers]).
+  final int? number;
 
   /// A visit's task checklist: the owner ticks, the owner / KAM / managers add.
   final bool canTickChecklist;
@@ -348,6 +356,12 @@ class PlanTaskTile extends ConsumerWidget {
 
     final Widget leading = canTick && !task.isVisit
         ? Checkbox(value: task.done, onChanged: (v) => onTick?.call(v ?? false))
+        : number != null && !byCall
+        ? CircleAvatar(
+            radius: 13,
+            backgroundColor: task.done ? Colors.green.shade700 : scheme.primary,
+            child: Text('$number', style: TextStyle(color: scheme.onPrimary, fontSize: 12)),
+          )
         : Icon(
             byCall
                 ? Icons.call

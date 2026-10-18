@@ -10,11 +10,13 @@ import '../../core/map_controls.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_sheet.dart';
 import '../clients/clients_repository.dart';
 import '../home/dashboard_cards.dart';
 import '../home/stats.dart';
 import '../home/stats_widgets.dart';
 import '../plan/plan_task.dart';
+import '../plan/route_order.dart';
 import '../tracking/tracking_log.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
@@ -106,7 +108,8 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
         ? const SnappedRoute()
         : ref.watch(snappedRouteProvider((person.id, dayStr))).value;
     if (person != null && snapped != null && points.length > 1 && snapped.handled != points.length) {
-      _snap(person.id, dayStr, points.length);
+      // Today a fix comes every 30 s: ask about every 2 minutes, not per fix.
+      _snap(person.id, dayStr, day == today ? points.length ~/ 4 : points.length);
     }
     final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final hidden = ref.watch(hiddenClientIdsProvider);
@@ -127,15 +130,25 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       return c != null && c.hasLocation ? LatLng(c.lat!, c.lng!) : null;
     }
 
+    // Time used between the first and last visit vs the shortest route
+    // through the same clients + 30 min per visit.
+    final efficiency = dayEfficiency([
+      for (final v in visits)
+        if (visitPoint(v) case final p?) (at: v.checkedInAt!, place: (p.latitude, p.longitude)),
+    ]);
+
     final path = [for (final p in route.path) LatLng(p.lat, p.lng)];
     LatLng latLng(RoutePoint p) => LatLng(p.lat, p.lng);
     final runs = splitAtGaps(route.path);
     final lines = routeLines(runs, snapped?.legs ?? const []);
-    final everything = [...path, for (final v in visits) ?visitPoint(v)];
-    final fitKey = '${person?.id}|$dayStr|${everything.isNotEmpty}';
-    if (_map != null && _fitted != fitKey && everything.isNotEmpty) {
+    // Zoom to the visited clients; the whole route (which may start at home
+    // or include far-off fixes) only when there are no visits.
+    final visitPoints = [for (final v in visits) ?visitPoint(v)];
+    final focus = visitPoints.isNotEmpty ? visitPoints : path;
+    final fitKey = '${person?.id}|$dayStr|${visitPoints.length}|${focus.isNotEmpty}';
+    if (_map != null && _fitted != fitKey && focus.isNotEmpty) {
       _fitted = fitKey;
-      WidgetsBinding.instance.addPostFrameCallback((_) => fitPoints(_map!, everything, padding: 48));
+      WidgetsBinding.instance.addPostFrameCallback((_) => fitPoints(_map!, focus, padding: 48));
     }
 
     final time = DateFormat.jm(locale);
@@ -185,6 +198,17 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
               _Fact(icon: Icons.play_arrow, label: l10n.firstLocation, value: time.format(route.first!)),
               _Fact(icon: Icons.stop, label: l10n.lastLocation, value: time.format(route.last!)),
               _Fact(icon: Icons.event_available, label: l10n.visits, value: '${visits.length}'),
+              if (efficiency != null)
+                _Fact(
+                  icon: Icons.speed,
+                  label: l10n.efficiency,
+                  value: '${(efficiency.rate * 100).round()}%',
+                  color: efficiency.rate >= 0.8
+                      ? statusGood
+                      : efficiency.rate >= 0.6
+                          ? Colors.orange.shade800
+                          : theme.colorScheme.error,
+                ),
               _Fact(icon: Icons.scatter_plot, label: l10n.locationPointsCount(route.path.length), value: ''),
               if (runs.length > 1)
                 _Fact(icon: Icons.signal_wifi_off, label: l10n.trackingGaps(runs.length - 1), value: ''),
@@ -201,6 +225,20 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final visitList = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (efficiency != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: Text(
+              [
+                l10n.efficiencyDetail(formatLasted(l10n, efficiency.needed), formatLasted(l10n, efficiency.took)),
+                efficiency.bestOrder
+                    ? l10n.efficiencyBestOrder
+                    : l10n.efficiencyOtherOrder(
+                        formatDistance(efficiency.shortestMeters), formatDistance(efficiency.takenMeters)),
+              ].join('\n'),
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
         for (final (i, v) in visits.indexed)
           ListTile(
             dense: true,
@@ -271,7 +309,11 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                 text: '${i + 1}',
                 ring: v.isFlagged ? theme.colorScheme.error : Colors.white,
               ),
-              infoWindow: InfoWindow(title: v.clientName, snippet: time.format(v.checkedInAt!)),
+              // Same sheet as the clients map; a deleted client keeps the label.
+              onTap: clients[v.clientId] == null ? null : () => showClientSheet(context, ref, clients[v.clientId]!, null, v),
+              infoWindow: clients[v.clientId] == null
+                  ? InfoWindow(title: v.clientName, snippet: time.format(v.checkedInAt!))
+                  : InfoWindow.noText,
             ),
       },
     );

@@ -5,6 +5,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_edit_screen.dart';
 import '../clients/client_location_dialog.dart';
 import '../clients/client_widgets.dart';
 import '../clients/clients_repository.dart';
@@ -74,7 +75,29 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
   final _checklist = <String>[];
   bool _visit = true;
   String _query = '';
+
+  /// The search as typed, offered as the name of a new client.
+  String _typed = '';
   bool _busy = false;
+
+  /// A client added from here (user decision 2026-10-18: typing a client
+  /// that isn't there offers to add it); selected once it has loaded.
+  String? _pendingId;
+
+  Future<void> _addClient() async {
+    final me = ref.read(currentUserProvider).value;
+    if (me == null) return;
+    final id = await Navigator.of(context).push<String>(MaterialPageRoute(
+      builder: (_) => ClientEditScreen(
+        clientId: null,
+        initialName: _typed.trim(),
+        // A KAM / manager planning for a sales exec adds the client for them.
+        initialAssignedTo: me.role.isSupervisor && widget.owner.role == UserRole.salesExec ? widget.owner.id : null,
+        pickFor: widget.owner,
+      ),
+    ));
+    if (id != null && mounted) setState(() => _pendingId = id);
+  }
 
   @override
   void dispose() {
@@ -129,6 +152,13 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final now = DateTime.now();
     final all = ref.watch(clientsProvider).value ?? const <Client>[];
+    if (_pendingId != null) {
+      final added = all.where((c) => c.id == _pendingId).firstOrNull;
+      if (added != null) {
+        if (!widget.alreadyPlanned.contains(added.id)) _selected[added.id] = added;
+        _pendingId = null;
+      }
+    }
     // A sales exec plans their own clients; a KAM's own plan can include any client.
     final candidates = all
         .where((c) => widget.owner.role != UserRole.salesExec || c.assignedTo == widget.owner.id)
@@ -164,7 +194,10 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                   if (_visit)
                     TextField(
                       decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.search),
-                      onChanged: (v) => setState(() => _query = Client.normalizeName(v)),
+                      onChanged: (v) => setState(() {
+                        _typed = v;
+                        _query = Client.normalizeName(v);
+                      }),
                     ),
                   TextField(
                     controller: _title,
@@ -187,11 +220,21 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
             Expanded(
               child: !_visit
                   ? const SizedBox.shrink()
-                  : candidates.isEmpty
+                  : candidates.isEmpty && _typed.trim().isEmpty
                       ? Center(child: Text(l10n.noClients))
                       : ListView.builder(
-                          itemCount: candidates.length,
+                          // Last row while searching: add the typed name as a new client.
+                          itemCount: candidates.length + (_typed.trim().isEmpty ? 0 : 1),
                           itemBuilder: (_, i) {
+                            if (i == candidates.length) {
+                              return ListTile(
+                                leading: const Icon(Icons.add_business),
+                                title: Text(l10n.addNewClientNamed(_typed.trim())),
+                                textColor: Theme.of(context).colorScheme.primary,
+                                iconColor: Theme.of(context).colorScheme.primary,
+                                onTap: _addClient,
+                              );
+                            }
                             final c = candidates[i];
                             final selected = _selected.containsKey(c.id);
                             void toggle() => setState(() => selected ? _selected.remove(c.id) : _selected[c.id] = c);

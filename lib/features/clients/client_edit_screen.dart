@@ -14,6 +14,7 @@ import 'client.dart';
 import 'client_locations_section.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
+import 'duplicate_check.dart';
 import 'location_picker_screen.dart';
 import 'transfer.dart';
 import 'visit_rules.dart';
@@ -21,10 +22,23 @@ import 'visit_rules.dart';
 /// Add (clientId == null) or edit a client. Sales execs edit contact details,
 /// location and notes of their own clients and add new clients for
 /// themselves; KAM / managers also set category and assignment.
+///
+/// Every new client is checked for duplicates on the server first; only the
+/// sales manager / GM can add one that looks like an existing client.
 class ClientEditScreen extends ConsumerStatefulWidget {
-  const ClientEditScreen({super.key, required this.clientId});
+  const ClientEditScreen({super.key, required this.clientId, this.initialName, this.initialAssignedTo, this.pickFor});
 
   final String? clientId;
+
+  /// New client: name typed elsewhere (e.g. the plan's client search).
+  final String? initialName;
+
+  /// New client added by a KAM / manager: preselected salesperson.
+  final String? initialAssignedTo;
+
+  /// Opened from a plan's add sheet for this person: closes with the id of
+  /// the new client, or of an existing one picked from the duplicate check.
+  final AppUser? pickFor;
 
   @override
   ConsumerState<ClientEditScreen> createState() => _ClientEditScreenState();
@@ -77,6 +91,15 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   ];
 
   bool get _isNew => widget.clientId == null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isNew) {
+      _name.text = widget.initialName ?? '';
+      _assignedTo = widget.initialAssignedTo;
+    }
+  }
 
   @override
   void dispose() {
@@ -212,36 +235,44 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     }
 
     if (_isNew) {
-      final clients = ref.read(allClientsProvider).value ?? const <Client>[];
-      final key = Client.normalizeName(data['name'] as String);
-      final vat = data['vat'] as String;
-      final duplicate = clients
-          .where(
-            (c) =>
-                c.nameKey == key ||
-                c.aliases.any((a) => Client.normalizeName(a) == key) ||
-                (vat.isNotEmpty && c.vat == vat),
-          )
-          .firstOrNull;
-      if (duplicate != null) {
-        final go = await showDialog<bool>(
-          context: context,
-          builder: (dialog) => AlertDialog(
-            title: Text(l10n.possibleDuplicate),
-            content: Text(l10n.possibleDuplicateBody(duplicate.name)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialog, false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialog, true),
-                child: Text(l10n.addAnyway),
-              ),
-            ],
-          ),
+      setState(() => _busy = true);
+      List<DuplicateMatch> matches;
+      try {
+        matches = await findClientDuplicates(data);
+      } catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+        return;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      if (!mounted) return;
+      if (matches.isNotEmpty) {
+        final pickFor = widget.pickFor;
+        final choice = await showDuplicatesDialog(
+          context,
+          matches: matches,
+          canOverride: me.role.isAdmin,
+          // Plan: a sales exec's plan holds only their own clients.
+          canUse: (m) => pickFor == null
+              ? manage || m.assignedTo == me.id
+              : pickFor.role != UserRole.salesExec || m.assignedTo == pickFor.id,
+          useLabel: pickFor == null ? l10n.openClient : l10n.useThisClient,
         );
-        if (go != true) return;
+        if (!mounted) return;
+        switch (choice) {
+          case null:
+            return;
+          case UseExisting(:final match):
+            if (pickFor != null) {
+              Navigator.pop(context, match.id);
+            } else {
+              context.pushReplacement('/clients/${match.id}');
+            }
+            return;
+          case AddAnyway():
+            // Checked by the sales manager / GM: kept out of "Possible duplicates".
+            data['notDuplicates'] = [for (final m in matches) m.id];
+        }
       }
     }
 
@@ -251,7 +282,12 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       if (_isNew) {
         final id = await repo.create(data, createdBy: me.id);
         messenger.showSnackBar(SnackBar(content: Text(l10n.clientAdded)));
-        if (mounted) context.pushReplacement('/clients/$id');
+        if (!mounted) return;
+        if (widget.pickFor != null) {
+          Navigator.pop(context, id);
+        } else {
+          context.pushReplacement('/clients/$id');
+        }
       } else {
         await repo.update(widget.clientId!, data);
         final original = _original;
@@ -516,7 +552,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
                 items: [
                   if (offerUnassigned) DropdownMenuItem(value: null, child: Text(l10n.unassigned)),
                   for (final u in execs)
-                    DropdownMenuItem(value: u.id, child: Text(u.name)),
+                    DropdownMenuItem(value: u.id, child: Text(transferTargetName(u, UserRole.kam.label(l10n)))),
                 ],
                 onChanged: canAssign ? (v) => setState(() => _assignedTo = v) : null,
               ),

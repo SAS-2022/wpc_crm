@@ -28,4 +28,11 @@ void main() {
     expect(e(9, 0, 'permission', 'always').isProblem, isFalse);
     expect(e(9, 0, 'online').isProblem, isFalse);
   });
+
+  test('notifications off is a problem ended by notifications on', () {
+    final log = trackingLog([e(11, 0, 'notificationsOff'), e(11, 20, 'notificationsOn')]);
+    expect(log.first.event.isProblem, isTrue);
+    expect(log.first.lasted, const Duration(minutes: 20));
+    expect(log.last.event.isProblem, isFalse);
+  });
 }

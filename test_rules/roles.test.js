@@ -88,6 +88,13 @@ describe('sales team keeps its access', () => {
     await assertFails(updateDoc(doc(fs('exec'), 'clients/c2'), locations));
   });
 
+  test('sales exec records catalogs / stands given on own clients only', async () => {
+    const given = { 'given.switchCatalog.at': serverTimestamp(), 'given.switchCatalog.qty': 2, lastVisitAt: serverTimestamp() };
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), given));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'clients/c2'), { name: 'Other', assignedTo: 'someoneElse' }));
+    await assertFails(updateDoc(doc(fs('exec'), 'clients/c2'), given));
+  });
+
     test('KAM and managers read clients, visits and live locations', async () => {
     for (const uid of ['kam', 'sm', 'gm']) {
       await assertSucceeds(getDoc(doc(fs(uid), 'clients/c1')));

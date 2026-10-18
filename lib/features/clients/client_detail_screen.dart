@@ -16,6 +16,7 @@ import '../visits/visit.dart';
 import '../visits/visits_repository.dart';
 import 'client.dart';
 import 'client_locations_section.dart';
+import 'given_items_widgets.dart';
 import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
@@ -354,6 +355,8 @@ class ClientDetailScreen extends ConsumerWidget {
             // Every location (main, factory, showroom, …), each labelled.
             ClientLocationsList(client: client, canEdit: canEdit),
           ]),
+          // Catalogs / display stands given at visits and when a new one is due.
+          section(l10n.itemsGiven, [GivenItemsSection(client: client)]),
           section(l10n.notes, [row(Icons.notes, l10n.notes, client.notes)]),
           AttachmentsSection(
             owner: (parent: AttachmentParent.clients, id: clientId),

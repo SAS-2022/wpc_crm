@@ -1071,6 +1071,122 @@
       }
     }
   },
+  "visitDetails": "Visit details",
+  "givenSwitchCatalog": "Swatch catalog",
+  "givenBookletCatalog": "Booklet catalog",
+  "givenDisplayStand": "Display stand",
+  "itemsGiven": "Catalogs & stands given",
+  "givenNever": "Never given",
+  "givenLast": "Last: {qty} on {date}",
+  "@givenLast": {
+    "placeholders": {
+      "qty": {"type": "int"},
+      "date": {"type": "String"}
+    }
+  },
+  "givenTotal": "{count} in all",
+  "@givenTotal": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "givenDueOn": "new one due {date}",
+  "@givenDueOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "givenDue": "Due",
+  "givenDueSoon": "Due soon",
+  "givenItemsSettings": "Catalogs & stands",
+  "givenItemsHelp": "After how many days a client should get a new one. Clients past this show \"Due\" on their page, at check-in and in the filter.",
+  "givenEveryDaysSuffix": "days",
+  "givenDueFilter": "New catalog / stand due",
+  "notAssignedTitle": "Not assigned to a sales executive",
+  "notAssignedBody": "{count} of the selected clients have no sales executive, so they can't go on a plan: {names}. Move them to someone first.",
+  "@notAssignedBody": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "names": {"type": "String"}
+    }
+  },
+  "moveThemFirst": "Move them",
+  "planTheOthers": "Plan the other {count}",
+  "@planTheOthers": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "planNotAllowed": "{count} clients belong to people outside your team and are left out.",
+  "@planNotAllowed": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "planSelectedTitle": "Add {count} clients to plans",
+  "@planSelectedTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "planSelectedHint": "Each client goes on the plan of the salesperson it belongs to, approved; they are notified.",
+  "plannedFromSelection": "Added {count} clients to {plans} plans",
+  "@plannedFromSelection": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "plans": {"type": "int"}
+    }
+  },
+  "alreadyOnPlanCount": "{count} already on the plan",
+  "@alreadyOnPlanCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dupSameCompanyId": "Same CR number",
+  "duplicatesFoundBody": "These clients look like the one you are adding:",
+  "duplicateOverrideHint": "If you checked and it is a different client, you can add it.",
+  "duplicateAskManager": "If it is a different client, ask a sales manager to add it.",
+  "notDuplicateAdd": "Not a duplicate – add",
+  "useThisClient": "Use this client",
+  "openClient": "Open",
+  "addNewClientNamed": "Add \"{name}\" as a new client",
+  "@addNewClientNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "selectClientsToMove": "Select clients to plan or move",
+  "tapPinsToSelect": "Tap pins to select clients",
+  "selectSeveralToMove": "Select several clients to plan or move",
+  "showRouteMap": "Show on route map",
+  "shortestOrderHint": "Numbers follow the shortest route",
+  "efficiency": "Efficiency",
+  "efficiencyDetail": "Needed about {needed} (shortest route + 30 min per visit), took {took} from the first to the last visit",
+  "@efficiencyDetail": {
+    "placeholders": {
+      "needed": {"type": "String"},
+      "took": {"type": "String"}
+    }
+  },
+  "efficiencyBestOrder": "Visits made in the shortest order",
+  "efficiencyOtherOrder": "Shortest order: {shortest} between visits instead of {taken}",
+  "@efficiencyOtherOrder": {
+    "placeholders": {
+      "shortest": {"type": "String"},
+      "taken": {"type": "String"}
+    }
+  },
+  "notifNotificationsOff": "{name} turned off notifications for WPC CRM",
+  "@notifNotificationsOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logNotificationsOff": "Notifications turned off",
+  "logNotificationsOn": "Notifications turned on",
   "notifBatteryOptimized": "{name} turned on battery optimization for WPC CRM – tracking may stop",
   "@notifBatteryOptimized": {
     "placeholders": {

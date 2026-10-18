@@ -32,12 +32,12 @@ void main() {
   final byId = {for (final u in users) u.id: u};
 
   group('transferTargets', () {
-    test('a KAM moves clients to active members of their own team only', () {
-      expect(transferTargets(kam, users).map((u) => u.id), ['sami', 'eddy']);
+    test('a KAM moves clients to themselves and active members of their own team only', () {
+      expect(transferTargets(kam, users).map((u) => u.id), ['kam', 'sami', 'eddy']);
     });
 
-    test('the GM / sales manager moves clients to any active sales exec', () {
-      expect(transferTargets(gm, users).map((u) => u.id), ['sami', 'eddy', 'omar']);
+    test('the GM / sales manager moves clients to any active sales exec or KAM', () {
+      expect(transferTargets(gm, users).map((u) => u.id), ['kam', 'kam2', 'sami', 'eddy', 'omar']);
     });
 
     test('a sales exec moves nothing', () {

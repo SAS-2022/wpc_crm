@@ -11,6 +11,8 @@ import '../attachments/attachments_section.dart';
 import '../clients/client.dart';
 import '../clients/client_locations_section.dart';
 import '../clients/client_tags.dart';
+import '../clients/given_items.dart';
+import '../clients/given_items_widgets.dart';
 import '../clients/clients_repository.dart';
 import '../plan/checklist.dart';
 import '../plan/plan_repository.dart';
@@ -46,6 +48,9 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
 
   /// Location chosen by the user; null = the one nearest to the phone.
   String? _locationId;
+
+  /// Catalogs / display stands handed over (visits only).
+  Map<GivenItem, int> _given = const {};
 
   @override
   void initState() {
@@ -135,6 +140,7 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
           notes: _notes.text.trim(),
           setClientLocation: !client.hasLocation && _setClientLocation,
           location: _location(client),
+          given: _given,
         );
       }
       // The visit is saved; a failed photo shows an error but the visit stays.
@@ -268,6 +274,10 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
                 canEdit: true,
                 onChanged: (items) => ref.read(planRepositoryProvider).setChecklist(t.id, items),
               ),
+            const SizedBox(height: 16),
+          ],
+          if (!widget.call) ...[
+            GivenItemsPicker(client: client, values: _given, onChanged: (v) => setState(() => _given = v)),
             const SizedBox(height: 16),
           ],
           TextField(

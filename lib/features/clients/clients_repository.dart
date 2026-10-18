@@ -9,6 +9,7 @@ import '../import/location_import.dart';
 import '../notifications/notifications.dart';
 import '../plan/plan_task.dart';
 import 'client.dart';
+import 'given_items.dart';
 import 'duplicates.dart';
 import 'merge.dart';
 import 'transfer.dart';
@@ -76,15 +77,32 @@ class TagFilter extends Notifier<Set<String>> {
   void clear() => state = const {};
 }
 
-/// Salesperson, company / individual and tag filters together.
+/// Clients due for a new catalog / display stand: any of these items given
+/// longer ago than its renewal days (`settings/givenItems`); empty = all.
+final givenDueFilterProvider = NotifierProvider<GivenDueFilter, Set<GivenItem>>(GivenDueFilter.new);
+
+class GivenDueFilter extends Notifier<Set<GivenItem>> {
+  @override
+  Set<GivenItem> build() => const {};
+
+  void toggle(GivenItem item) => state = state.contains(item) ? ({...state}..remove(item)) : {...state, item};
+
+  void clear() => state = const {};
+}
+
+/// Salesperson, company / individual, tag and "catalog due" filters together.
 bool Function(Client) _clientFilter(Ref ref) {
   final sales = ref.watch(salesFilterProvider);
   final type = ref.watch(clientTypeFilterProvider);
   final tags = ref.watch(tagFilterProvider);
+  final due = ref.watch(givenDueFilterProvider);
+  final givenRules = ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults;
+  final now = DateTime.now();
   return (c) =>
       matchesSalesFilter(c, sales) &&
       (type == null || c.clientType == type) &&
-      (tags.isEmpty || c.tagIds.any(tags.contains));
+      (tags.isEmpty || c.tagIds.any(tags.contains)) &&
+      (due.isEmpty || due.any((item) => givenStatus(c.given[item], item, givenRules, now) == GivenStatus.due));
 }
 
 final filteredClientsProvider = Provider<AsyncValue<List<Client>>>((ref) {

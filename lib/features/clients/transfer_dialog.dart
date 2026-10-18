@@ -10,10 +10,17 @@ import 'client.dart';
 import 'clients_repository.dart';
 import 'transfer.dart';
 
-/// Asks which sales executive to move [clients] to, then moves them. A KAM
-/// only moves clients of their team, to their team; others are skipped.
-/// Returns true when clients were moved.
-Future<bool> showTransferDialog(BuildContext context, WidgetRef ref, List<Client> clients) async {
+/// Asks which sales exec or KAM to move [clients] to, then moves them. A KAM
+/// only moves clients of their team, to their team or themselves; others
+/// are skipped.
+/// Returns true when clients were moved; [onMoved] gets the clients moved
+/// and the new owner (null = unassigned).
+Future<bool> showTransferDialog(
+  BuildContext context,
+  WidgetRef ref,
+  List<Client> clients, {
+  void Function(List<Client> moved, String? toId)? onMoved,
+}) async {
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final me = ref.read(currentUserProvider).value;
@@ -28,7 +35,7 @@ Future<bool> showTransferDialog(BuildContext context, WidgetRef ref, List<Client
   // '' = unassigned. The current owner is left out when all share one.
   final owners = {for (final c in allowed) c.assignedTo ?? ''};
   final options = [
-    for (final u in transferTargets(me, users)) (id: u.id, name: u.name),
+    for (final u in transferTargets(me, users)) (id: u.id, name: transferTargetName(u, UserRole.kam.label(l10n))),
     if (canUnassign(me)) (id: '', name: l10n.unassigned),
   ].where((o) => owners.length > 1 || o.id != owners.single).toList();
   if (options.isEmpty) {
@@ -81,6 +88,7 @@ Future<bool> showTransferDialog(BuildContext context, WidgetRef ref, List<Client
   try {
     final toId = target.isEmpty ? null : target;
     final moved = await ref.read(clientsRepositoryProvider).transfer(allowed, toId: toId, by: me);
+    onMoved?.call(allowed, toId);
     final name = toId == null ? l10n.unassigned : byId[toId]?.name ?? '';
     messenger.showSnackBar(SnackBar(content: Text(l10n.clientsTransferredCount(moved, name))));
     return true;

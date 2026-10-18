@@ -16,6 +16,7 @@ import '../notifications/notifications.dart';
 import '../users/users_repository.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
+import 'route_order.dart';
 
 /// The clients of one day's plan as numbered markers: blue = planned,
 /// yellow = waiting for approval, green = visited. KAM / managers can
@@ -68,10 +69,9 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
     final tasks = (ref.watch(dayTasksProvider((widget.userId, widget.date))).value ?? const <PlanTask>[])
         .where((t) => t.isVisit && t.approval != TaskApproval.rejected)
         .toList();
-    final located = [
-      for (final t in tasks)
-        if (clients[t.clientId]?.hasLocation ?? false) t,
-    ];
+    // Numbered in the shortest order through the stops.
+    final numbers = planStopNumbers(tasks, clients);
+    final located = inRouteOrder(tasks, numbers).where((t) => numbers.containsKey(t.id)).toList();
     final points = [for (final t in located) LatLng(clients[t.clientId]!.lat!, clients[t.clientId]!.lng!)];
     final missing = tasks.length - located.length;
 
@@ -94,6 +94,17 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
             onMapCreated: (controller) => setState(() => _map = controller),
+            // The suggested order, as a thin line from stop to stop.
+            polylines: {
+              if (points.length > 1)
+                Polyline(
+                  polylineId: const PolylineId('order'),
+                  points: points,
+                  color: plannedColor.withValues(alpha: 0.6),
+                  width: 3,
+                  patterns: [PatternItem.dash(14), PatternItem.gap(8)],
+                ),
+            },
             markers: {
               for (final (i, t) in located.indexed)
                 Marker(
@@ -147,6 +158,10 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
                             ),
                         ],
                       ),
+                      if (points.length > 2) ...[
+                        const SizedBox(height: 4),
+                        Text(l10n.shortestOrderHint, style: Theme.of(context).textTheme.bodySmall),
+                      ],
                       if (missing > 0) ...[
                         const SizedBox(height: 4),
                         Text(l10n.planClientsWithoutLocation(missing), style: Theme.of(context).textTheme.bodySmall),

@@ -12,6 +12,7 @@ import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
 import '../users/users_repository.dart';
 import '../clients/client_tags.dart';
+import '../plan/plan_task.dart';
 import 'call_chip.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
@@ -19,7 +20,7 @@ import 'visits_repository.dart';
 enum _Period { today, week, month, all }
 
 /// A salesperson's visits and calls on one day, shown as a sub-header.
-typedef PersonGroup = ({String uid, int visits, int calls});
+typedef PersonGroup = ({String uid, DateTime day, int visits, int calls});
 
 /// The rows of the visits list: a day (DateTime) before each day's visits,
 /// and with [byPerson] a [PersonGroup] before each salesperson's visits of
@@ -50,7 +51,7 @@ List<Object> visitListItems(
     for (final uid in order) {
       final mine = people[uid]!;
       final calls = mine.where((v) => v.isCall).length;
-      items.add((uid: uid, visits: mine.length - calls, calls: calls));
+      items.add((uid: uid, day: day, visits: mine.length - calls, calls: calls));
       items.addAll(mine);
     }
   }
@@ -279,6 +280,8 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                           name: users[g.uid]?.name ?? '?',
                           visits: g.visits,
                           calls: g.calls,
+                          // That person's route and visits of that day.
+                          onMap: () => context.go('/history?uid=${g.uid}&date=${dayKey(g.day)}'),
                         ),
                       final Visit v => _VisitCard(
                           visit: v,
@@ -364,30 +367,42 @@ class _DayHeader extends StatelessWidget {
 
 /// "Sami Mansour · 4 visits · 1 call" above one person's visits of a day.
 class _PersonHeader extends StatelessWidget {
-  const _PersonHeader({required this.name, required this.visits, required this.calls});
+  const _PersonHeader({required this.name, required this.visits, required this.calls, required this.onMap});
 
   final String name;
   final int visits;
   final int calls;
+  final VoidCallback onMap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 8, 0),
       child: Row(children: [
         _Initials(name: name, radius: 11),
         const SizedBox(width: 8),
-        Flexible(
-          child: Text(name,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+        // Name and counts take the row, so the map button sits at the end.
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: Text(name,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              [l10n.visitsCount(visits), if (calls > 0) l10n.callsCount(calls)].join(' · '),
+              style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ]),
         ),
-        const SizedBox(width: 8),
-        Text(
-          [l10n.visitsCount(visits), if (calls > 0) l10n.callsCount(calls)].join(' · '),
-          style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        IconButton(
+          tooltip: l10n.showRouteMap,
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.map_outlined, size: 20),
+          onPressed: onMap,
         ),
       ]),
     );

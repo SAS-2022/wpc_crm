@@ -14,6 +14,7 @@ import '../users/users_repository.dart';
 import '../clients/client_tags.dart';
 import '../clients/clients_repository.dart';
 import 'call_chip.dart';
+import '../clients/given_items_widgets.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
 
@@ -194,6 +195,21 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   child: SelectableText(visit.notes, style: Theme.of(context).textTheme.bodyLarge),
                 ),
+                if (visit.given.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final MapEntry(key: item, value: qty) in visit.given.entries)
+                          Chip(
+                            avatar: Icon(givenItemIcon(item), size: 18),
+                            label: Text('$qty × ${givenItemLabel(l10n, item)}'),
+                          ),
+                      ],
+                    ),
+                  ),
                 if (planTasks.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),

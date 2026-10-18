@@ -3,6 +3,9 @@ const { onDocumentCreated, onDocumentDeleted } = require('firebase-functions/v2/
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
+const { findMatches } = require('./duplicates');
+
+const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
 admin.initializeApp();
 
@@ -65,6 +68,48 @@ exports.resolvePins = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (re
   return results;
 });
 
+/**
+ * Before a client is added in the app: clients that look like it (see
+ * duplicates.js). Runs on the server because a sales exec can only read
+ * their own clients. Returns {matches: [{id, name, city, assignedTo,
+ * ownerName, reasons}]}, at most 5.
+ */
+exports.findClientDuplicates = onCall({ maxInstances: 5 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
+  const db = admin.firestore();
+  const me = await db.doc(`users/${req.auth.uid}`).get();
+  if (!me.exists || me.get('active') !== true || !SALES_ROLES.includes(me.get('role'))) {
+    throw new HttpsError('permission-denied', 'Sales users only');
+  }
+  const d = req.data || {};
+  const str = (v) => (typeof v === 'string' ? v.slice(0, 200) : '');
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const draft = {
+    name: str(d.name), vat: str(d.vat), companyId: str(d.companyId),
+    phone: str(d.phone), mobile: str(d.mobile), lat: num(d.lat), lng: num(d.lng),
+  };
+  if (!draft.name.trim()) return { matches: [] };
+  const snap = await db.collection('clients')
+    .select('name', 'aliases', 'vat', 'companyId', 'phone', 'mobile', 'lat', 'lng', 'city', 'assignedTo')
+    .get();
+  const clients = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const matches = findMatches(draft, clients);
+  const owners = new Map();
+  await Promise.all([...new Set(matches.map((m) => m.client.assignedTo).filter(Boolean))].map(async (uid) => {
+    owners.set(uid, (await db.doc(`users/${uid}`).get()).get('name') || '');
+  }));
+  return {
+    matches: matches.map(({ client: c, reasons }) => ({
+      id: c.id,
+      name: c.name || '',
+      city: c.city || '',
+      assignedTo: c.assignedTo || null,
+      ownerName: owners.get(c.assignedTo) || '',
+      reasons,
+    })),
+  };
+});
+
 // Push texts, same wording as the in-app list (app_en.arb / app_ar.arb).
 const TEXTS = {
   en: {
@@ -80,6 +125,7 @@ const TEXTS = {
     tracking_locationDenied: (n) => `${n} removed the app's location permission`,
     tracking_notAlways: (n) => `${n} allowed location only while using the app – tracking stops in the background`,
     tracking_battery: (n) => `${n} turned on battery optimization for WPC CRM – tracking may stop`,
+    tracking_notificationsOff: (n) => `${n} turned off notifications for WPC CRM`,
     tracking_offline: (n) => `${n} has been offline for over 30 minutes during work hours`,
     leaveRequested: (n, c, d, o) => `Leave request from ${o} – waiting for your approval`,
     leaveApproved: (n) => `${n} approved your request`,
@@ -98,6 +144,7 @@ const TEXTS = {
     tracking_locationDenied: (n) => `ألغى ${n} إذن الموقع للتطبيق`,
     tracking_notAlways: (n) => `سمح ${n} بالموقع أثناء استخدام التطبيق فقط – يتوقف التتبع في الخلفية`,
     tracking_battery: (n) => `فعّل ${n} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع`,
+    tracking_notificationsOff: (n) => `أوقف ${n} الإشعارات لتطبيق WPC CRM`,
     tracking_offline: (n) => `${n} غير متصل منذ أكثر من 30 دقيقة خلال ساعات العمل`,
     leaveRequested: (n, c, d, o) => `طلب من ${o} – بانتظار موافقتك`,
     leaveApproved: (n) => `وافق ${n} على طلبك`,
@@ -159,7 +206,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   await Promise.all(stale.map((token) => db.doc(`users/${n.toId}/devices/${token}`).delete()));
 });
 
-// Tracking problems of a sales exec, from their presence (written by the phone).
+// Tracking problems of a sales exec or KAM, from their presence (written by the phone).
 // Only while online and on duty: outside work hours location may be off.
 function trackingIssues(p) {
   if (!p || p.online === false || p.onDuty !== true) return [];
@@ -168,6 +215,7 @@ function trackingIssues(p) {
   if (p.permission === 'denied' || p.permission === 'deniedForever') issues.push('locationDenied');
   else if (p.permission === 'whileInUse') issues.push('notAlways');
   if (p.batteryOptimized === true) issues.push('battery');
+  if (p.notifications === false) issues.push('notificationsOff');
   return issues;
 }
 
@@ -197,6 +245,10 @@ function presenceEvents(before, after) {
     && b.batteryOptimized !== after.batteryOptimized) {
     events.push({ type: after.batteryOptimized ? 'batteryOn' : 'batteryOff' });
   }
+  if (typeof after.notifications === 'boolean' && typeof b.notifications === 'boolean'
+    && b.notifications !== after.notifications) {
+    events.push({ type: after.notifications ? 'notificationsOn' : 'notificationsOff' });
+  }
   return events;
 }
 
@@ -205,10 +257,11 @@ const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
 
 /**
  * On every presence change: writes the tracking log (RTDB
- * `tracking_events/{uid}/{day}`, kept EVENT_DAYS), and warns the sales exec's
- * KAM and the sales managers (in-app + push through sendPush) when the exec
- * turns off GPS, reduces the location permission or turns on battery
- * optimization during work hours. Going offline is warned about by
+ * `tracking_events/{uid}/{day}`, kept EVENT_DAYS), and warns the sales
+ * managers, the GM and, for a sales exec, their KAM (in-app + push through
+ * sendPush) when a sales exec or KAM turns off GPS, reduces the location
+ * permission, turns off notifications or turns on battery optimization during
+ * work hours. Going offline is warned about by
  * offlineAlerts, only after OFFLINE_ALERT_MS. Outside work hours (server
  * clock, RTDB settings/workHours) nothing is logged or sent.
  */
@@ -237,7 +290,8 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   const uid = event.params.uid;
   const db = admin.firestore();
   const user = await db.doc(`users/${uid}`).get();
-  if (user.get('role') !== 'sales_exec' || user.get('active') !== true) return;
+  const role = user.get('role');
+  if ((role !== 'sales_exec' && role !== 'kam') || user.get('active') !== true) return;
 
   const sentRef = admin.database().ref(`tracking_alerts/${uid}`);
   const sent = (await sentRef.get()).val() || {};
@@ -245,9 +299,9 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   const issues = fresh.filter((i) => !(sent[i] > now - ALERT_COOLDOWN_MS));
   if (issues.length === 0) return;
 
-  const managers = await db.collection('users').where('role', '==', 'sales_manager').where('active', '==', true).get();
+  const managers = await db.collection('users').where('role', 'in', ['sales_manager', 'gm']).where('active', '==', true).get();
   const to = new Set(managers.docs.map((d) => d.id));
-  const kamId = user.get('kamId');
+  const kamId = role === 'sales_exec' ? user.get('kamId') : null;
   if (kamId) {
     const kam = await db.doc(`users/${kamId}`).get();
     if (kam.get('active') === true) to.add(kamId);
@@ -413,6 +467,9 @@ exports.cleanDeletedVisit = onDocumentDeleted({ document: 'visits/{id}', maxInst
 const ROUTE_MAX_ACCURACY = 100; // same as _maxAccuracy in report.dart
 const ROUTE_GAP_MS = 15 * 60 * 1000; // same as routeGap in report.dart
 const ROUTE_MIN_MOVE = 150; // closer fixes count as standing still (no routing between them)
+// Fixes come every 30 s (2 min before 2026-10-18); routing between waypoints
+// at least this far apart in time keeps the Routes API calls as before.
+const ROUTE_MIN_GAP_MS = 100 * 1000;
 const ROUTE_LEGS_PER_CALL = 10; // ≤10 intermediate waypoints stays on the cheaper Routes SKU
 const ROUTE_MAX_LEGS = 400; // per call, a safety cap on cost
 
@@ -436,7 +493,8 @@ function routeLegs(raw) {
   for (const p of path) {
     if (!prev || p.t - prev.t > ROUTE_GAP_MS) {
       last = p; // new run
-    } else if (metersBetween(last, p) > Math.max(ROUTE_MIN_MOVE, (last.accuracy || 0) + (p.accuracy || 0))) {
+    } else if (p.t - last.t >= ROUTE_MIN_GAP_MS
+      && metersBetween(last, p) > Math.max(ROUTE_MIN_MOVE, (last.accuracy || 0) + (p.accuracy || 0))) {
       legs.push([last, p]);
       last = p;
     }

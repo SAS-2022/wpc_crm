@@ -5,23 +5,20 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-import '../../core/app_user.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
-import '../plan/add_task_sheet.dart';
-import '../plan/plan_repository.dart';
-import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
 import 'client_locations_section.dart';
+import 'client_sheet.dart';
 import 'client_tags.dart';
 import 'client_filters.dart';
+import '../plan/plan_selection.dart';
 import 'client_widgets.dart';
+import 'transfer_dialog.dart';
 import 'clients_repository.dart';
 import 'person_style.dart';
-import 'transfer.dart';
-import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
@@ -45,6 +42,34 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
   /// KAM / managers: pins coloured by salesperson instead of visit status.
   bool _byPerson = false;
+
+  /// Web, KAM / managers: tapping pins picks clients to move or plan together.
+  bool _selecting = false;
+  final _selected = <String>{};
+  bool _moving = false;
+
+  /// Each picked client onto its salesperson's plan for a chosen day.
+  Future<void> _planSelected(List<Client> all) async {
+    final picked = [for (final c in all) if (_selected.contains(c.id)) c];
+    setState(() => _moving = true);
+    final done = await addSelectionToPlans(context, ref, picked);
+    if (!mounted) return;
+    setState(() {
+      _moving = false;
+      if (done) _selected.clear();
+    });
+  }
+
+  Future<void> _moveSelected(List<Client> all) async {
+    final picked = [for (final c in all) if (_selected.contains(c.id)) c];
+    setState(() => _moving = true);
+    final moved = await showTransferDialog(context, ref, picked);
+    if (!mounted) return;
+    setState(() {
+      _moving = false;
+      if (moved) _selected.clear();
+    });
+  }
 
   @override
   void dispose() {
@@ -102,11 +127,20 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     // One pin per location (main, factory, showroom, …), all in the client's colour.
     final points = [for (final c in clients) for (final l in c.locations) LatLng(l.lat, l.lng)];
     final types = ref.watch(locationTypesByIdProvider);
+    // Moving clients from the map: web dashboard, KAM / managers.
+    final canSelect = kIsWeb && (me?.role.isSupervisor ?? false);
     final lang = Localizations.localeOf(context).languageCode;
 
-    // Re-centre on the visible clients when a filter changes what is shown
-    // (not on first load, which starts at the user's location).
-    final signature = Object.hashAll(clients.map((c) => c.id));
+    // Re-centre on the visible clients when a filter changes (not on first
+    // load, which starts at the user's location, and not when the data
+    // changes, e.g. after moving clients to another salesperson).
+    final signature = Object.hash(
+      _status,
+      filter,
+      ref.watch(clientTypeFilterProvider),
+      Object.hashAllUnordered(ref.watch(tagFilterProvider)),
+      Object.hashAllUnordered(ref.watch(givenDueFilterProvider)),
+    );
     if (_fittedTo == null && clients.isNotEmpty) {
       _fittedTo = signature;
     } else if (_map != null && _fittedTo != null && signature != _fittedTo) {
@@ -146,16 +180,30 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     icon: _icons.circle(
                       context: context,
                       fill: colorOf(c),
+                      // Picked for moving: thick dark ring, slightly bigger.
+                      ring: _selected.contains(c.id) ? Colors.black : Colors.white,
+                      ringWidth: _selected.contains(c.id) ? 5 : 2,
+                      size: _selected.contains(c.id) ? 38 : 30,
                       // Salesperson mode: their initials; otherwise the category letter.
                       text: byPerson ? styleOf(c).initials : c.category,
                       // Dark letter on yellow, white on the darker colours.
                       textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
                     ),
-                    onTap: () => _showClient(
-                      context,
-                      c,
-                      c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
-                    ),
+                    onTap: () => _selecting
+                        ? setState(() => _selected.contains(c.id) ? _selected.remove(c.id) : _selected.add(c.id))
+                        : showClientSheet(
+                            context,
+                            ref,
+                            c,
+                            c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
+                            null,
+                            canSelect
+                                ? () => setState(() {
+                                      _selecting = true;
+                                      _selected.add(c.id);
+                                    })
+                                : null,
+                          ),
                   ),
             },
           ),
@@ -176,6 +224,18 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                         child: Row(
                           children: [
                             const ClientFiltersButton(),
+                            if (canSelect) ...[
+                              const SizedBox(width: 4),
+                              IconButton(
+                                tooltip: l10n.selectClientsToMove,
+                                isSelected: _selecting,
+                                icon: const Icon(Icons.checklist),
+                                onPressed: () => setState(() {
+                                  _selecting = !_selecting;
+                                  _selected.clear();
+                                }),
+                              ),
+                            ],
                             if (me?.role.isSupervisor ?? false) ...[
                               const SizedBox(width: 12),
                               Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
@@ -254,6 +314,49 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
               ),
             ),
           ),
+          if (_selecting)
+            PositionedDirectional(
+              start: 12,
+              end: 72,
+              bottom: 24,
+              child: PointerInterceptor(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          _selected.isEmpty ? l10n.tapPinsToSelect : l10n.selectedCount(_selected.length),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        FilledButton.icon(
+                          onPressed: _selected.isEmpty || _moving ? null : () => _planSelected(located),
+                          icon: const Icon(Icons.playlist_add),
+                          label: Text(l10n.addToPlan),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed: _selected.isEmpty || _moving ? null : () => _moveSelected(located),
+                          icon: const Icon(Icons.swap_horiz),
+                          label: Text(l10n.moveToSalesperson),
+                        ),
+                        if (_selected.isNotEmpty)
+                          TextButton(onPressed: () => setState(_selected.clear), child: Text(l10n.clear)),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _selecting = false;
+                            _selected.clear();
+                          }),
+                          child: Text(l10n.done),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           PositionedDirectional(
             end: 12,
             bottom: 32,
@@ -261,143 +364,6 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  /// [place]: which of the client's locations was tapped, when it has several.
-  void _showClient(BuildContext context, Client c, [String? place]) {
-    final l10n = AppLocalizations.of(context);
-    final me = ref.read(currentUserProvider).value;
-    final usersById = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
-    final canMove = me != null && canTransferFrom(me, c.assignedTo, usersById);
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheet) => PointerInterceptor(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(c.name, style: Theme.of(context).textTheme.titleMedium),
-                if (place != null || c.city.isNotEmpty) Text([?place, if (c.city.isNotEmpty) c.city].join(' · ')),
-                const SizedBox(height: 8),
-                Builder(
-                  builder: (context) {
-                    final name =
-                        ref.read(usersProvider).value?.where((u) => u.id == c.assignedTo).firstOrNull?.name ??
-                        l10n.unassigned;
-                    return Row(
-                      children: [
-                        PersonBadge(userId: c.assignedTo, name: name, size: 24),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(name)),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(sheet);
-                          context.push('/clients/${c.id}');
-                        },
-                        child: Text(l10n.details),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheet);
-                          context.push('/clients/${c.id}/visit');
-                        },
-                        icon: const Icon(Icons.add_location_alt),
-                        label: Text(l10n.addVisit),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(sheet);
-                    context.push('/clients/${c.id}/call');
-                  },
-                  icon: const Icon(Icons.add_call),
-                  label: Text(l10n.logCall),
-                ),
-                if (ref.read(currentUserProvider).value?.role.isTracked ?? false) ...[
-                  const SizedBox(height: 12),
-                  _AddToTodayButton(client: c),
-                ],
-                // Web dashboard: KAM / managers move the client to another salesperson.
-                if (kIsWeb && canMove) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheet);
-                      showTransferDialog(context, ref, [c]);
-                    },
-                    icon: const Icon(Icons.swap_horiz),
-                    label: Text(l10n.moveToSalesperson),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One tap puts the client on the user's plan for today; shows "On today's
-/// plan" once it's there (any approval state, not done).
-class _AddToTodayButton extends ConsumerStatefulWidget {
-  const _AddToTodayButton({required this.client});
-
-  final Client client;
-
-  @override
-  ConsumerState<_AddToTodayButton> createState() => _AddToTodayButtonState();
-}
-
-class _AddToTodayButtonState extends ConsumerState<_AddToTodayButton> {
-  bool _busy = false;
-
-  Future<void> _add(AppUser me) async {
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _busy = true);
-    try {
-      final approved = await addClientToTodayPlan(ref, me, widget.client);
-      messenger.showSnackBar(SnackBar(content: Text(approved ? l10n.planUpdated(1) : l10n.planSentForApproval(1))));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final me = ref.watch(currentUserProvider).value;
-    if (me == null) return const SizedBox.shrink();
-    final tasks = ref.watch(dayTasksProvider((me.id, dayKey(DateTime.now())))).value;
-    final onPlan =
-        tasks?.any((t) => t.clientId == widget.client.id && !t.done && t.approval != TaskApproval.rejected) ?? false;
-    return FilledButton.tonalIcon(
-      onPressed: onPlan || _busy || tasks == null ? null : () => _add(me),
-      icon: _busy
-          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(onPlan ? Icons.event_available : Icons.playlist_add),
-      label: Text(onPlan ? l10n.onTodaysPlan : l10n.addToTodaysPlan),
     );
   }
 }

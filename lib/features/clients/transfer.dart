@@ -28,13 +28,20 @@ class ClientTransfer {
       };
 }
 
-/// Active sales executives [me] may move clients to: anyone for the sales
-/// manager / GM, only their own team for a KAM.
+/// Active people [me] may move clients to: any sales exec or KAM for the
+/// sales manager / GM; for a KAM their own team and themselves (clients the
+/// KAM follows directly; user decision 2026-10-18).
 List<AppUser> transferTargets(AppUser me, List<AppUser> users) => [
       for (final u in users)
-        if (u.active && u.role == UserRole.salesExec && (me.role.isAdmin || (me.role == UserRole.kam && u.kamId == me.id)))
+        if (u.active &&
+            (me.role.isAdmin
+                ? u.role == UserRole.salesExec || u.role == UserRole.kam
+                : me.role == UserRole.kam && (u.id == me.id || (u.role == UserRole.salesExec && u.kamId == me.id))))
           u,
     ];
+
+/// Name for transfer lists; KAMs marked so they stand out from their team.
+String transferTargetName(AppUser u, String kamLabel) => u.role == UserRole.kam ? '${u.name} ($kamLabel)' : u.name;
 
 /// Whether [me] may move a client away from [ownerId] (null = unassigned):
 /// the sales manager / GM always, a KAM only from themselves (clients Odoo

@@ -9,17 +9,21 @@ import 'client.dart';
 import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
+import 'given_items.dart';
+import 'given_items_widgets.dart';
 
 /// Number of active filters (salesperson, type, each tag).
 int _activeCount(WidgetRef ref) =>
     (ref.watch(salesFilterProvider) == null ? 0 : 1) +
     (ref.watch(clientTypeFilterProvider) == null ? 0 : 1) +
-    ref.watch(tagFilterProvider).length;
+    ref.watch(tagFilterProvider).length +
+    ref.watch(givenDueFilterProvider).length;
 
 void _clearAll(WidgetRef ref) {
   ref.read(salesFilterProvider.notifier).set(null);
   ref.read(clientTypeFilterProvider.notifier).set(null);
   ref.read(tagFilterProvider.notifier).clear();
+  ref.read(givenDueFilterProvider.notifier).clear();
 }
 
 String _typeLabel(AppLocalizations l10n, String type) =>
@@ -117,6 +121,20 @@ class _FiltersSheet extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Text(l10n.tagFilterAny, style: theme.textTheme.bodySmall),
             ),
+          heading(l10n.givenDueFilter),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final item in GivenItem.values)
+                FilterChip(
+                  avatar: Icon(givenItemIcon(item), size: 18),
+                  label: Text(givenItemLabel(l10n, item)),
+                  selected: ref.watch(givenDueFilterProvider).contains(item),
+                  onSelected: (_) => ref.read(givenDueFilterProvider.notifier).toggle(item),
+                ),
+            ],
+          ),
           const SizedBox(height: 20),
           FilledButton(onPressed: () => Navigator.pop(context), child: Text(l10n.done)),
         ],
@@ -137,7 +155,8 @@ class ActiveClientFilters extends ConsumerWidget {
     final sales = ref.watch(salesFilterProvider);
     final type = ref.watch(clientTypeFilterProvider);
     final tagFilter = ref.watch(tagFilterProvider);
-    if (sales == null && type == null && tagFilter.isEmpty) return const SizedBox.shrink();
+    final due = ref.watch(givenDueFilterProvider);
+    if (sales == null && type == null && tagFilter.isEmpty && due.isEmpty) return const SizedBox.shrink();
     final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
     final tags = ref.watch(clientTagsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
@@ -164,6 +183,9 @@ class ActiveClientFilters extends ConsumerWidget {
                 () => ref.read(clientTypeFilterProvider.notifier).set(null)),
           for (final id in tagFilter)
             chip(Icons.sell_outlined, tags[id]?.label(lang) ?? '?', () => ref.read(tagFilterProvider.notifier).toggle(id)),
+          for (final item in due)
+            chip(givenItemIcon(item), '${givenItemLabel(l10n, item)} · ${l10n.givenDue}',
+                () => ref.read(givenDueFilterProvider.notifier).toggle(item)),
           TextButton(onPressed: () => _clearAll(ref), child: Text(l10n.clearFilters)),
         ],
       ),

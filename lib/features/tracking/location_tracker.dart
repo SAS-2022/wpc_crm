@@ -8,16 +8,22 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'work_hours.dart';
 
-/// How often a position is sent (user decision: every 2 minutes).
-const trackingInterval = Duration(minutes: 2);
+/// How often a position is sent (user decision 2026-10-18: every 30 seconds,
+/// to test on the new build; was 2 minutes).
+const trackingInterval = Duration(seconds: 30);
+
+/// How often GPS / permission / battery / notification state is re-checked.
+/// Each presence write runs the `trackingAlerts` Cloud Function, so it stays
+/// slower than the position updates.
+const heartbeatInterval = Duration(minutes: 2);
 
 /// Sends the user's position to RTDB every [trackingInterval] during work
 /// hours ([WorkHours]) and keeps their presence honest: the server marks them
 /// offline as soon as the connection drops, and a heartbeat reports when GPS
 /// is off even without new fixes. Outside work hours nothing is sent and the
 /// live position is removed. GPS, permission and (Android) battery
-/// optimization in `presence` drive the `trackingAlerts` Cloud Function,
-/// which warns the KAM and sales managers.
+/// optimization and notification permission in `presence` drive the `trackingAlerts` Cloud Function,
+/// which warns the KAM, sales managers and GM.
 class LocationTracker {
   LocationTracker(this.uid, {this.onDutyChanged});
 
@@ -65,7 +71,7 @@ class LocationTracker {
       _subscriptions.add(Geolocator.getServiceStatusStream().listen((_) => _beat(), onError: (_) {}));
     }
     _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
-    _heartbeat = Timer.periodic(trackingInterval, (_) => _beat());
+    _heartbeat = Timer.periodic(heartbeatInterval, (_) => _beat());
     await _applyDuty();
   }
 
@@ -112,6 +118,7 @@ class LocationTracker {
     var gpsOn = false;
     var permission = LocationPermission.denied;
     bool? batteryOptimized;
+    bool? notifications;
     try {
       gpsOn = await Geolocator.isLocationServiceEnabled();
       permission = await Geolocator.checkPermission();
@@ -125,8 +132,14 @@ class LocationTracker {
         // Unknown: not reported.
       }
     }
+    try {
+      notifications = await Permission.notification.isGranted;
+    } catch (_) {
+      // Unknown: not reported.
+    }
     await _presence.update({
       'lastSeen': ServerValue.timestamp,
+      'notifications': ?notifications,
       'gpsOn': gpsOn,
       'permission': permission.name,
       'batteryOptimized': ?batteryOptimized,
@@ -137,7 +150,7 @@ class LocationTracker {
     if (_onDuty != true) return;
     final now = DateTime.now();
     // The OS may deliver fixes more often than asked for; keep one per interval.
-    if (_lastSent != null && now.difference(_lastSent!) < trackingInterval - const Duration(seconds: 15)) return;
+    if (_lastSent != null && now.difference(_lastSent!) < trackingInterval * 0.75) return;
     _lastSent = now;
     final point = {
       'lat': p.latitude,

@@ -47,6 +47,7 @@ class NotificationsScreen extends ConsumerWidget {
             'locationDenied' => l10n.notifLocationDenied(from),
             'notAlways' => l10n.notifLocationNotAlways(from),
             'offline' => l10n.notifTrackingOffline(from),
+            'notificationsOff' => l10n.notifNotificationsOff(from),
             _ => l10n.notifBatteryOptimized(from),
           },
       };
@@ -89,6 +90,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
+                        'notificationsOff' => Icons.notifications_off,
                         _ => Icons.location_off,
                       },
                   }, color: n.type == NotificationType.trackingIssue ? Theme.of(context).colorScheme.error : null),

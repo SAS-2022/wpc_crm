@@ -5,10 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
 import '../../l10n/app_localizations.dart';
+import '../clients/client.dart';
+import '../clients/clients_repository.dart';
 import '../notifications/notifications.dart';
 import '../plan/plan_repository.dart';
 import '../plan/plan_screen.dart';
 import '../plan/plan_task.dart';
+import '../plan/route_order.dart';
 import '../users/users_repository.dart';
 
 class _DashCard extends StatelessWidget {
@@ -48,7 +51,10 @@ class TodayPlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final tasks = ref.watch(dayTasksProvider((user.id, dayKey(DateTime.now())))).value ?? const <PlanTask>[];
+    final dayTasks = ref.watch(dayTasksProvider((user.id, dayKey(DateTime.now())))).value ?? const <PlanTask>[];
+    final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
+    final numbers = planStopNumbers(dayTasks, clients);
+    final tasks = inRouteOrder(dayTasks, numbers);
     final approved = tasks.where((t) => t.approval == TaskApproval.approved).toList();
     final repo = ref.read(planRepositoryProvider);
     return _DashCard(
@@ -71,6 +77,7 @@ class TodayPlanCard extends ConsumerWidget {
                 for (final t in tasks.take(5))
                   PlanTaskTile(
                     task: t,
+                    number: numbers[t.id],
                     canTick: t.approval == TaskApproval.approved,
                     onTick: (v) => repo.setDone(t.id, v),
                     onVisit: t.isVisit && !t.done && t.approval == TaskApproval.approved

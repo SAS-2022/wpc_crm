@@ -881,7 +881,7 @@ abstract class AppLocalizations {
   /// No description provided for @openClient.
   ///
   /// In en, this message translates to:
-  /// **'Open client'**
+  /// **'Open'**
   String get openClient;
 
   /// No description provided for @comments.
@@ -2485,6 +2485,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} allowed location only while using the app – tracking stops in the background'**
   String notifLocationNotAlways(String name);
+
+  /// No description provided for @visitDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit details'**
+  String get visitDetails;
+
+  /// No description provided for @givenSwitchCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Swatch catalog'**
+  String get givenSwitchCatalog;
+
+  /// No description provided for @givenBookletCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Booklet catalog'**
+  String get givenBookletCatalog;
+
+  /// No description provided for @givenDisplayStand.
+  ///
+  /// In en, this message translates to:
+  /// **'Display stand'**
+  String get givenDisplayStand;
+
+  /// No description provided for @itemsGiven.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogs & stands given'**
+  String get itemsGiven;
+
+  /// No description provided for @givenNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never given'**
+  String get givenNever;
+
+  /// No description provided for @givenLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last: {qty} on {date}'**
+  String givenLast(int qty, String date);
+
+  /// No description provided for @givenTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} in all'**
+  String givenTotal(int count);
+
+  /// No description provided for @givenDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'new one due {date}'**
+  String givenDueOn(String date);
+
+  /// No description provided for @givenDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get givenDue;
+
+  /// No description provided for @givenDueSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Due soon'**
+  String get givenDueSoon;
+
+  /// No description provided for @givenItemsSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogs & stands'**
+  String get givenItemsSettings;
+
+  /// No description provided for @givenItemsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'After how many days a client should get a new one. Clients past this show \"Due\" on their page, at check-in and in the filter.'**
+  String get givenItemsHelp;
+
+  /// No description provided for @givenEveryDaysSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get givenEveryDaysSuffix;
+
+  /// No description provided for @givenDueFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'New catalog / stand due'**
+  String get givenDueFilter;
+
+  /// No description provided for @notAssignedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned to a sales executive'**
+  String get notAssignedTitle;
+
+  /// No description provided for @notAssignedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of the selected clients have no sales executive, so they can\'t go on a plan: {names}. Move them to someone first.'**
+  String notAssignedBody(int count, String names);
+
+  /// No description provided for @moveThemFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Move them'**
+  String get moveThemFirst;
+
+  /// No description provided for @planTheOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan the other {count}'**
+  String planTheOthers(int count);
+
+  /// No description provided for @planNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients belong to people outside your team and are left out.'**
+  String planNotAllowed(int count);
+
+  /// No description provided for @planSelectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {count} clients to plans'**
+  String planSelectedTitle(int count);
+
+  /// No description provided for @planSelectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each client goes on the plan of the salesperson it belongs to, approved; they are notified.'**
+  String get planSelectedHint;
+
+  /// No description provided for @plannedFromSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} clients to {plans} plans'**
+  String plannedFromSelection(int count, int plans);
+
+  /// No description provided for @alreadyOnPlanCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} already on the plan'**
+  String alreadyOnPlanCount(int count);
+
+  /// No description provided for @dupSameCompanyId.
+  ///
+  /// In en, this message translates to:
+  /// **'Same CR number'**
+  String get dupSameCompanyId;
+
+  /// No description provided for @duplicatesFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These clients look like the one you are adding:'**
+  String get duplicatesFoundBody;
+
+  /// No description provided for @duplicateOverrideHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you checked and it is a different client, you can add it.'**
+  String get duplicateOverrideHint;
+
+  /// No description provided for @duplicateAskManager.
+  ///
+  /// In en, this message translates to:
+  /// **'If it is a different client, ask a sales manager to add it.'**
+  String get duplicateAskManager;
+
+  /// No description provided for @notDuplicateAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a duplicate – add'**
+  String get notDuplicateAdd;
+
+  /// No description provided for @useThisClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this client'**
+  String get useThisClient;
+
+  /// No description provided for @addNewClientNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Add \"{name}\" as a new client'**
+  String addNewClientNamed(String name);
+
+  /// No description provided for @selectClientsToMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Select clients to plan or move'**
+  String get selectClientsToMove;
+
+  /// No description provided for @tapPinsToSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap pins to select clients'**
+  String get tapPinsToSelect;
+
+  /// No description provided for @selectSeveralToMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Select several clients to plan or move'**
+  String get selectSeveralToMove;
+
+  /// No description provided for @showRouteMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on route map'**
+  String get showRouteMap;
+
+  /// No description provided for @shortestOrderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Numbers follow the shortest route'**
+  String get shortestOrderHint;
+
+  /// No description provided for @efficiency.
+  ///
+  /// In en, this message translates to:
+  /// **'Efficiency'**
+  String get efficiency;
+
+  /// No description provided for @efficiencyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed about {needed} (shortest route + 30 min per visit), took {took} from the first to the last visit'**
+  String efficiencyDetail(String needed, String took);
+
+  /// No description provided for @efficiencyBestOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits made in the shortest order'**
+  String get efficiencyBestOrder;
+
+  /// No description provided for @efficiencyOtherOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest order: {shortest} between visits instead of {taken}'**
+  String efficiencyOtherOrder(String shortest, String taken);
+
+  /// No description provided for @notifNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} turned off notifications for WPC CRM'**
+  String notifNotificationsOff(String name);
+
+  /// No description provided for @logNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications turned off'**
+  String get logNotificationsOff;
+
+  /// No description provided for @logNotificationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications turned on'**
+  String get logNotificationsOn;
 
   /// No description provided for @notifBatteryOptimized.
   ///

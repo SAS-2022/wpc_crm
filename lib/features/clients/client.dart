@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'given_items.dart';
 import 'merge.dart';
 import 'transfer.dart';
 
@@ -49,6 +50,7 @@ class Client {
     this.mergedFrom = const [],
     this.mainLocationType = '',
     this.extraLocations = const [],
+    this.given = const {},
     this.createdAt,
   });
 
@@ -132,6 +134,9 @@ class Client {
   /// Only kept while the client has a main location.
   final List<ClientLocation> extraLocations;
 
+  /// Catalogs and display stands given at visits: last date, quantity, total.
+  final Map<GivenItem, GivenRecord> given;
+
   final DateTime? createdAt;
 
   /// The main location. Imports, duplicates and plans use this one.
@@ -200,6 +205,7 @@ class Client {
         for (final l in d['extraLocations'] as List? ?? const [])
           if (l is Map && l['lat'] is num && l['lng'] is num) ClientLocation.fromMap(l),
       ],
+      given: GivenRecord.parse(d['given']),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../clients/given_items.dart';
+
 /// Check-ins farther than this from the client are flagged.
 const visitRadiusMeters = 300.0;
 
@@ -33,6 +35,7 @@ class Visit {
     this.callFromApp = false,
     this.callSeconds,
     this.locationTypeId = '',
+    this.given = const {},
   });
 
   final String id;
@@ -74,6 +77,9 @@ class Visit {
   /// id), e.g. 'factory'; empty for calls, unlabelled or older visits.
   final String locationTypeId;
 
+  /// Catalogs / display stands handed over at this visit.
+  final Map<GivenItem, int> given;
+
   bool get isCall => type == VisitType.call;
 
   /// Far from the client or fake GPS. Calls have no position, so never.
@@ -101,6 +107,7 @@ class Visit {
       callFromApp: d['callFromApp'] as bool? ?? false,
       callSeconds: (d['callSeconds'] as num?)?.toInt(),
       locationTypeId: d['locationTypeId'] as String? ?? '',
+      given: parseGiven(d['given']),
     );
   }
 }

@@ -13,7 +13,7 @@ class TrackingEvent {
   final DateTime at;
 
   /// online, offline, gpsOn, gpsOff, onDuty, offDuty, permission (see
-  /// [value]), batteryOn, batteryOff.
+  /// [value]), batteryOn, batteryOff, notificationsOff, notificationsOn.
   final String type;
 
   /// For 'permission': always, whileInUse, denied, deniedForever.
@@ -21,14 +21,20 @@ class TrackingEvent {
 
   /// Something that stops or may stop tracking.
   bool get isProblem =>
-      const {'offline', 'gpsOff', 'batteryOn'}.contains(type) || (type == 'permission' && value != 'always');
+      const {'offline', 'gpsOff', 'batteryOn', 'notificationsOff'}.contains(type) || (type == 'permission' && value != 'always');
 }
 
-/// A log row: the event and, for offline / GPS off / battery optimization,
+/// A log row: the event and, for offline / GPS off / battery optimization /
+/// notifications off,
 /// how long it lasted (null while it lasts or when it ran past the day).
 typedef TrackingLogEntry = ({TrackingEvent event, Duration? lasted});
 
-const _endedBy = {'offline': 'online', 'gpsOff': 'gpsOn', 'batteryOn': 'batteryOff'};
+const _endedBy = {
+  'offline': 'online',
+  'gpsOff': 'gpsOn',
+  'batteryOn': 'batteryOff',
+  'notificationsOff': 'notificationsOn',
+};
 
 /// The day's events in time order, each problem paired with the event that
 /// ended it.
@@ -83,6 +89,8 @@ class TrackingLogList extends ConsumerWidget {
         'offDuty' => l10n.logOffDuty,
         'batteryOn' => l10n.logBatteryOn,
         'batteryOff' => l10n.logBatteryOff,
+        'notificationsOff' => l10n.logNotificationsOff,
+        'notificationsOn' => l10n.logNotificationsOn,
         'permission' => l10n.logPermission(switch (e.value) {
             'always' => l10n.permissionAlways,
             'whileInUse' => l10n.permissionWhileInUse,
@@ -98,6 +106,8 @@ class TrackingLogList extends ConsumerWidget {
         'gpsOn' => Icons.location_on,
         'onDuty' || 'offDuty' => Icons.schedule,
         'batteryOn' || 'batteryOff' => Icons.battery_alert,
+        'notificationsOff' => Icons.notifications_off,
+        'notificationsOn' => Icons.notifications_active,
         _ => Icons.lock_outline,
       };
 

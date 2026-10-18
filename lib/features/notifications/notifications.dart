@@ -70,7 +70,7 @@ class AppNotification {
   final int count;
 
   /// For [NotificationType.trackingIssue]: 'gpsOff', 'locationDenied',
-  /// 'notAlways', 'battery' or 'offline' (offline 30 min, `offlineAlerts`).
+  /// 'notAlways', 'battery', 'notificationsOff' or 'offline' (offline 30 min, `offlineAlerts`).
   final String issue;
 
   /// The document it is about, e.g. a leave request id.

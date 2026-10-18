@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'app_user.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/status_screens.dart';
+import '../features/clients/given_items_widgets.dart';
 import '../features/clients/client_tags.dart';
 import '../features/clients/client_tags_screen.dart';
 import '../features/clients/client_detail_screen.dart';
@@ -70,7 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/';
       }
       if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours') && !me.role.isAdmin) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours') && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
@@ -197,6 +198,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ),
             GoRoute(path: '/visit-rules', builder: (_, _) => const VisitRulesScreen()),
+            GoRoute(path: '/given-items', builder: (_, _) => const GivenItemRulesScreen()),
             GoRoute(path: '/client-tags', builder: (_, _) => const ClientTagsScreen()),
             GoRoute(
               path: '/location-types',

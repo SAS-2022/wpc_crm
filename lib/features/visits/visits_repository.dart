@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../core/providers.dart';
 import '../clients/client.dart';
+import '../clients/given_items.dart';
 import '../plan/plan_repository.dart';
 import '../plan/plan_task.dart';
 import 'app_calls.dart';
@@ -67,6 +68,7 @@ class VisitsRepository {
     required String notes,
     required bool setClientLocation,
     ClientLocation? location,
+    Map<GivenItem, int> given = const {},
   }) async {
     final at = location ?? client.locations.firstOrNull;
     final distance =
@@ -89,9 +91,11 @@ class VisitsRepository {
       if (at != null) 'locationTypeId': at.typeId,
       'notes': notes,
       'status': 'completed',
+      if (given.isNotEmpty) 'given': {for (final e in given.entries) e.key.name: e.value},
     });
     batch.update(_db.collection('clients').doc(client.id), {
       'lastVisitAt': FieldValue.serverTimestamp(),
+      ...givenClientUpdate(given),
       if (setClientLocation) 'lat': position.latitude,
       if (setClientLocation) 'lng': position.longitude,
     });
@@ -154,7 +158,15 @@ class VisitsRepository {
         .map((d) => d.data()['checkedInAt'])
         .whereType<Timestamp>()
         .fold<Timestamp?>(null, (a, b) => a == null || b.compareTo(a) > 0 ? b : a);
-    await _db.collection('clients').doc(visit.clientId).update({'lastVisitAt': latest});
+    await _db.collection('clients').doc(visit.clientId).update({
+      'lastVisitAt': latest,
+      // Catalogs / stands from the visits left.
+      if (visit.given.isNotEmpty)
+        'given': givenFromVisits(left.docs.map((d) => (
+              at: (d.data()['checkedInAt'] as Timestamp?)?.toDate(),
+              given: parseGiven(d.data()['given']),
+            ))),
+    });
   }
 
   /// A KAM marks that they were at the visit (or removes the mark with null).
