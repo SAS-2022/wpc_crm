@@ -63,6 +63,8 @@ class AppShell extends ConsumerWidget {
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],
+      if (role?.canSeeHr ?? false)
+        (path: '/attendance', icon: Icons.how_to_reg_outlined, selected: Icons.how_to_reg, label: l10n.attendance),
       // HR entry hidden on the web for now (user request 2026-10-18).
       // if (role?.canSeeHr ?? false) (path: '/hr', icon: Icons.badge_outlined, selected: Icons.badge, label: l10n.hrArea),
       (path: '/more', icon: Icons.menu, selected: Icons.menu_open, label: l10n.more),

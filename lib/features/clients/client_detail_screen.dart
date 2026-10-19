@@ -25,6 +25,7 @@ import 'client_status_widgets.dart';
 import 'transfer.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
+import 'client_links_widgets.dart';
 
 /// Client page: quick actions (call, WhatsApp, directions, visit), contact,
 /// location, sales details, notes, photos & files and visit history.
@@ -360,6 +361,9 @@ class ClientDetailScreen extends ConsumerWidget {
                   t.at == null ? '' : DateFormat.yMMMd(locale).add_jm().format(t.at!),
                 )),
               ),
+          ]),
+          section(l10n.linkedClients, [
+            ClientLinksSection(client: client, canEdit: me?.role.isSupervisor ?? false),
           ]),
           section(l10n.clientStatusHistory, [
             if (client.statusLog.isNotEmpty) ClientStatusHistory(client: client),

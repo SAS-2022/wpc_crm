@@ -4,7 +4,7 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists())",
-        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement)$/)"
+        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver)$/)"
       }
     },
     "live_locations": {

@@ -26,9 +26,17 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if request.auth.uid == uid || active();
       allow create, update: if isAdmin();
-      // Profile page: everyone edits their own name and phone.
+      // Self-registration: a new account creates its own profile, inactive
+      // and pending, with no role; the sales manager / GM approve it.
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'position', 'companyId', 'role',
+             'active', 'approval', 'registeredAt'])
+        && request.resource.data.role == '' && request.resource.data.active == false
+        && request.resource.data.approval == 'pending';
+      // Profile page: everyone edits their own name and phone; the app saves
+      // the version it runs (`appVersions`). Update reminders are admin-only.
       allow update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions']);
       allow delete: if isGm() && request.auth.uid != uid;
 
       // Push tokens of the user's phones, written by the app, read by the sendPush function.
@@ -112,6 +120,31 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
 
+    // Companies people work for: listed on the registration form (before
+    // signing in), managed by the sales manager / GM.
+    match /companies/{companyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Work sites for attendance (sales manager / GM).
+    match /work_sites/{siteId} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+
+    // Attendance days `{uid}_{yyyy-MM-dd}`: the phone only adds events; the
+    // check-in / check-out result is written by Cloud Functions. Read: the
+    // person, the HR area and KAM / managers.
+    match /attendance/{dayId} {
+      allow read: if isHrArea() || isSupervisor() || (active() && resource.data.uid == request.auth.uid);
+      allow create: if active() && request.resource.data.uid == request.auth.uid
+        && dayId == request.auth.uid + '_' + request.resource.data.date
+        && request.resource.data.keys().hasOnly(['uid', 'date', 'month', 'events']);
+      allow update: if active() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['events']);
+    }
+
     // App settings such as visit frequency per client category.
     match /settings/{settingId} {
       allow read: if active();
@@ -123,6 +156,10 @@ service cloud.firestore {
     }
 
     // HR edits leave types and public holidays (everyone reads them, as settings).
+    // Job positions: listed on the registration form, before signing in.
+    match /settings/positions {
+      allow read: if true;
+    }
     match /settings/leaveTypes {
       allow write: if managesHr();
     }

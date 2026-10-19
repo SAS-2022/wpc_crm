@@ -7,6 +7,9 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
 import '../../core/saving.dart';
+import '../attendance/work_sites.dart';
+import 'companies.dart';
+import '../clients/client_tags.dart';
 
 /// Create (userId == null) or edit a user. Only reachable by sales manager / GM.
 class UserFormScreen extends ConsumerStatefulWidget {
@@ -27,6 +30,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   final _odooName = TextEditingController();
   final _target = TextEditingController();
   UserRole _role = UserRole.salesExec;
+  String _companyId = '';
+  String _position = '';
+  Set<String> _sites = {};
+  bool _overtime = false;
+
+  /// A self-registered account waiting for approval.
+  AppUser? _pending;
   String? _kamId;
   bool _active = true;
   bool _loaded = false;
@@ -52,10 +62,17 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _active = u.active;
     _odooName.text = u.odooName;
     _target.text = u.monthlyTarget > 0 ? '${u.monthlyTarget}' : '';
+    _position = u.position;
+    _companyId = u.companyId;
+    _sites = {...u.workSiteIds};
+    _overtime = u.overtimeAllowed;
+    _pending = u.isPendingApproval ? u : null;
+    // Registered accounts have no role yet: pick one before approving.
+    if (_pending != null) _role = UserRole.worker;
     _loaded = true;
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool approve = false}) async {
     if (!_form.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -70,10 +87,18 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       active: _active,
       odooName: _odooName.text.trim(),
       monthlyTarget: int.tryParse(_target.text.trim()) ?? 0,
+      companyId: _companyId,
+      position: _position,
+      workSiteIds: _sites.toList(),
+      overtimeAllowed: _overtime,
     );
     try {
       final repo = ref.read(usersRepositoryProvider);
-      final assigned = _isNew ? await repo.create(user, _password.text) : await repo.update(user);
+      final assigned = _isNew
+          ? await repo.create(user, _password.text)
+          : approve
+              ? await repo.approveRegistration(user)
+              : await repo.update(user);
       messenger.showSnackBar(SnackBar(
         content: Text(assigned > 0 ? l10n.savedWithClients(assigned) : l10n.saved),
       ));
@@ -83,6 +108,32 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
         duration: const Duration(seconds: 8),
         content: Text(l10n.emailInUse),
       ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reject() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        content: Text(l10n.rejectRegistrationConfirm(_name.text)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.reject)),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(usersRepositoryProvider).rejectRegistration(widget.userId!);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.registrationRejected)));
+      if (mounted) context.go('/users');
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
     } finally {
@@ -133,6 +184,10 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       _fill(existing);
     }
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
+    final companies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final positions = ref.watch(tagListProvider(TagList.positions)).value ?? defaultPositions;
+    final lang = Localizations.localeOf(context).languageCode;
+    final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     String? required(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
 
     return Scaffold(
@@ -155,6 +210,16 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (_pending != null)
+              Card(
+                color: Theme.of(context).colorScheme.tertiaryContainer,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.hourglass_top),
+                  title: Text(l10n.registrationPendingBanner),
+                  subtitle: Text(l10n.registrationPendingHelp),
+                ),
+              ),
             TextFormField(
               controller: _name,
               decoration: InputDecoration(labelText: l10n.name),
@@ -178,6 +243,27 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               controller: _phone,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(labelText: l10n.phone),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: _position,
+              decoration: InputDecoration(labelText: l10n.position),
+              items: [
+                DropdownMenuItem(value: '', child: Text(l10n.none)),
+                for (final p in positions) DropdownMenuItem(value: p.id, child: Text(p.label(lang))),
+                // Typed before positions became a list: kept until changed.
+                if (_position.isNotEmpty && !positions.any((p) => p.id == _position))
+                  DropdownMenuItem(value: _position, child: Text(_position)),
+              ],
+              onChanged: (v) => setState(() => _position = v ?? ''),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: companies.any((c) => c.id == _companyId) ? _companyId : '',
+              decoration: InputDecoration(labelText: l10n.company),
+              items: [
+                DropdownMenuItem(value: '', child: Text(l10n.none)),
+                for (final c in companies) DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ],
+              onChanged: (v) => setState(() => _companyId = v ?? ''),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<UserRole>(
@@ -215,17 +301,66 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 decoration: InputDecoration(labelText: l10n.monthlyVisitTarget, helperText: l10n.monthlyVisitTargetHelp),
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
               ),
+            // Attendance: where they check in, and whether time after the work day counts.
+            const SizedBox(height: 16),
+            Text(l10n.workSites, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (sites.isEmpty)
+              Text(l10n.noWorkSites, style: Theme.of(context).textTheme.bodySmall)
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final s in sites)
+                    FilterChip(
+                      avatar: const Icon(Icons.apartment, size: 16),
+                      label: Text(s.name),
+                      selected: _sites.contains(s.id),
+                      onSelected: (on) => setState(() => on ? _sites.add(s.id) : _sites.remove(s.id)),
+                    ),
+                ],
+              ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(l10n.active),
-              value: _active,
-              onChanged: (v) => setState(() => _active = v),
+              title: Text(l10n.overtimeAllowed),
+              subtitle: Text(l10n.overtimeAllowedHelp),
+              value: _overtime,
+              onChanged: (v) => setState(() => _overtime = v),
             ),
+            if (_pending == null)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.active),
+                value: _active,
+                onChanged: (v) => setState(() => _active = v),
+              ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _busy ? null : _save,
-              child: BusyLabel(busy: _busy, child: Text(l10n.save)),
-            ),
+            if (_pending != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _reject,
+                      icon: const Icon(Icons.close),
+                      label: Text(l10n.reject),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : () => _save(approve: true),
+                      icon: busyIcon(_busy, const Icon(Icons.check)),
+                      label: Text(l10n.approve),
+                    ),
+                  ),
+                ],
+              )
+            else
+              FilledButton(
+                onPressed: _busy ? null : _save,
+                child: BusyLabel(busy: _busy, child: Text(l10n.save)),
+              ),
           ],
         ),
       ),

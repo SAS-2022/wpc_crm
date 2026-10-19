@@ -219,7 +219,13 @@ List<ApprovalStep> approvalChain(AppUser requester, List<AppUser> users) {
     UserRole.salesManager => [UserRole.gm, UserRole.hr],
     UserRole.gm => [UserRole.hr],
     UserRole.hr => [UserRole.gm],
-    UserRole.accounting || UserRole.procurement || UserRole.unknown => [UserRole.gm, UserRole.hr],
+    UserRole.accounting ||
+    UserRole.procurement ||
+    UserRole.worker ||
+    UserRole.engineer ||
+    UserRole.driver ||
+    UserRole.unknown =>
+      [UserRole.gm, UserRole.hr],
   };
   bool anyone(UserRole role) => users.any((u) => u.active && u.role == role && u.id != requester.id);
   final steps = <ApprovalStep>[];

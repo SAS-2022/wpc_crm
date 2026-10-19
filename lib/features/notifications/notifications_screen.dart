@@ -9,6 +9,7 @@ import '../users/users_repository.dart';
 import 'notifications.dart';
 import '../clients/client_status.dart';
 import '../clients/client_status_widgets.dart';
+import '../../core/app_version.dart';
 
 /// Bell with the unread count; opens the notifications list.
 class NotificationsBell extends ConsumerWidget {
@@ -48,6 +49,8 @@ class NotificationsScreen extends ConsumerWidget {
           l10n.notifClientStatusRequested(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
         NotificationType.clientStatusApproved =>
           l10n.notifClientStatusApproved(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
+        NotificationType.updateReminder => l10n.notifUpdateReminder(from),
+        NotificationType.registrationRequested => l10n.notifRegistrationRequested(owner),
         NotificationType.clientStatusRejected =>
           l10n.notifClientStatusRejected(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
         NotificationType.trackingIssue => switch (n.issue) {
@@ -98,6 +101,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.clientStatusRequested => Icons.store_mall_directory_outlined,
                     NotificationType.clientStatusApproved => Icons.check_circle,
                     NotificationType.clientStatusRejected => Icons.cancel,
+                    NotificationType.updateReminder => Icons.system_update,
+                    NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -122,6 +127,10 @@ class NotificationsScreen extends ConsumerWidget {
                             NotificationType.clientStatusApproved ||
                             NotificationType.clientStatusRejected:
                         context.push('/clients/${n.ref}');
+                      case NotificationType.updateReminder:
+                        openAppStore();
+                      case NotificationType.registrationRequested:
+                        context.push('/users/${n.ownerId}');
                       default:
                         context.push('/plan/${n.ownerId}?date=${n.date}');
                     }

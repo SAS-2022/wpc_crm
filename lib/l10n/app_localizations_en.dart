@@ -2650,4 +2650,450 @@ class AppLocalizationsEn extends AppLocalizations {
   String motionIdleFor(String time) {
     return 'Idle for $time';
   }
+
+  @override
+  String get appVersion => 'App version';
+
+  @override
+  String get newerVersionAvailable => 'A newer version is available';
+
+  @override
+  String get updateApp => 'Update';
+
+  @override
+  String latestAppVersion(String version) {
+    return 'Latest version: $version';
+  }
+
+  @override
+  String get everyoneUpToDate => 'Everyone\'s phone is on the latest version';
+
+  @override
+  String peopleOnOlderVersion(int n) {
+    return '$n people on an older version';
+  }
+
+  @override
+  String remindAll(int n) {
+    return 'Remind ($n)';
+  }
+
+  @override
+  String get remindToUpdate => 'Remind to update';
+
+  @override
+  String remindedWait(int seconds) {
+    return 'Reminded – wait $seconds s';
+  }
+
+  @override
+  String get noAppVersion => 'App version not reported yet';
+
+  @override
+  String updateRemindersSent(int n) {
+    return 'Reminder sent to $n';
+  }
+
+  @override
+  String notifUpdateReminder(String name) {
+    return '$name asks you to update WPC CRM to the latest version – tap to update';
+  }
+
+  @override
+  String get linkedClients => 'Linked clients';
+
+  @override
+  String get mainCompany => 'Main company';
+
+  @override
+  String get branch => 'Branch';
+
+  @override
+  String get linkToMainCompany => 'Link to a main company';
+
+  @override
+  String get addBranch => 'Add branch';
+
+  @override
+  String get unlinkClient => 'Unlink';
+
+  @override
+  String moveBranchConfirm(String branch, String from, String to) {
+    return '$branch is a branch of $from. Move it under $to?';
+  }
+
+  @override
+  String get noLinkedClients =>
+      'No linked clients. Link a branch from the client page.';
+
+  @override
+  String branchCount(int n) {
+    return '$n branches';
+  }
+
+  @override
+  String get addCompany => 'Add company';
+
+  @override
+  String get addWorkSite => 'Add work site';
+
+  @override
+  String get allow => 'Allow';
+
+  @override
+  String get allowAlwaysForAttendance =>
+      'Allow location \"Always\" so you\'re checked in automatically when you arrive';
+
+  @override
+  String get atTheSite => 'At the work site';
+
+  @override
+  String get attendance => 'Attendance';
+
+  @override
+  String get autoCheckInHelp =>
+      'You\'re checked in automatically when you arrive at your work site.';
+
+  @override
+  String get checkIn => 'Check in';
+
+  @override
+  String get checkInAgain => 'Check in again';
+
+  @override
+  String get checkOut => 'Check out';
+
+  @override
+  String get checkOutAuto => 'closed automatically (no exit seen)';
+
+  @override
+  String get checkOutConfirm => 'Check out now? Your day ends at this time.';
+
+  @override
+  String get checkOutEndOfDay => 'end of the work day';
+
+  @override
+  String get checkOutLeft => 'left the site';
+
+  @override
+  String get checkOutLeftEarly => 'left early';
+
+  @override
+  String get checkOutManual => 'checked out by hand';
+
+  @override
+  String get companies => 'Companies';
+
+  @override
+  String get company => 'Company';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get createAccount => 'Create account';
+
+  @override
+  String get editWorkSite => 'Edit work site';
+
+  @override
+  String get noCompanies =>
+      'No companies yet. Add the companies people can choose when they register.';
+
+  @override
+  String get noOneAssignedToSites =>
+      'Nobody is assigned to a work site yet. Assign people at More → Work sites or on their user page.';
+
+  @override
+  String get noWorkSiteAssigned => 'You\'re not assigned to a work site.';
+
+  @override
+  String get noWorkSites => 'No work sites yet.';
+
+  @override
+  String get notCheckedIn => 'Not checked in';
+
+  @override
+  String get overtimeAllowed => 'Overtime allowed';
+
+  @override
+  String get overtimeAllowedHelp =>
+      'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.';
+
+  @override
+  String get position => 'Position';
+
+  @override
+  String get positionHint => 'e.g. Accountant, Driver, Site engineer';
+
+  @override
+  String get radiusHelp =>
+      'How close counts as \"at the site\". Phones need at least 100 m to notice arriving and leaving reliably.';
+
+  @override
+  String get registerEmailInUse =>
+      'This email already has an account. Sign in, or use \"Forgot password?\".';
+
+  @override
+  String get registerHelp =>
+      'For people without a company account. After you register, the sales manager or GM approves your account.';
+
+  @override
+  String get registrationPendingBanner =>
+      'Registered account – waiting for approval';
+
+  @override
+  String get registrationPendingHelp =>
+      'Check the details, choose the role, company and work sites, then approve.';
+
+  @override
+  String get registrationRejected => 'Registration turned down';
+
+  @override
+  String get registrationRejectedBody =>
+      'Your registration was not approved. Contact your manager if this is a mistake.';
+
+  @override
+  String get registrationRejectedShort => 'Not approved';
+
+  @override
+  String get registrationRejectedTitle => 'Registration not approved';
+
+  @override
+  String get renameCompany => 'Rename company';
+
+  @override
+  String get roleDriver => 'Driver';
+
+  @override
+  String get roleEngineer => 'Engineer';
+
+  @override
+  String get roleWorker => 'Worker';
+
+  @override
+  String get waitingForApprovalTitle => 'Waiting for approval';
+
+  @override
+  String get workSiteNameHint => 'e.g. Head office, Warehouse';
+
+  @override
+  String get workSiteNeedsNameAndPlace =>
+      'Give the work site a name and pick its place on the map.';
+
+  @override
+  String get workSiteNoPlace => 'No place picked yet';
+
+  @override
+  String get workSites => 'Work sites';
+
+  @override
+  String attendanceAbsent(int n) {
+    return 'Not in: $n';
+  }
+
+  @override
+  String attendanceIn(int n) {
+    return 'In: $n';
+  }
+
+  @override
+  String attendanceOut(int n) {
+    return 'Checked out: $n';
+  }
+
+  @override
+  String checkedInAt(String site) {
+    return 'Checked in at $site';
+  }
+
+  @override
+  String checkedInSince(String time, String site) {
+    return 'Checked in at $time · $site';
+  }
+
+  @override
+  String checkedOutAt(String time) {
+    return 'Checked out at $time';
+  }
+
+  @override
+  String deleteWorkSiteConfirm(String name) {
+    return 'Delete $name? People assigned to it are unassigned.';
+  }
+
+  @override
+  String inSince(String time) {
+    return 'In since $time';
+  }
+
+  @override
+  String leftSiteAt(String time) {
+    return 'Left the site at $time';
+  }
+
+  @override
+  String notAtWorkSite(String distance) {
+    return 'You\'re not at your work site ($distance away).';
+  }
+
+  @override
+  String notifRegistrationRequested(String name) {
+    return '$name registered an account – waiting for your approval';
+  }
+
+  @override
+  String overtimeTime(String time) {
+    return 'overtime $time';
+  }
+
+  @override
+  String peopleAtSite(int n) {
+    return 'People working here ($n)';
+  }
+
+  @override
+  String peopleCount(int n) {
+    return '$n people';
+  }
+
+  @override
+  String radiusMeters(int m) {
+    return 'Radius $m m';
+  }
+
+  @override
+  String rejectRegistrationConfirm(String name) {
+    return 'Turn down $name\'s registration? They can\'t use the app.';
+  }
+
+  @override
+  String waitingForApprovalBody(String name) {
+    return 'Thanks $name. Your account was created; the sales manager or GM will approve it. You\'ll be able to use the app then.';
+  }
+
+  @override
+  String workedTime(String time) {
+    return 'worked $time';
+  }
+
+  @override
+  String get positions => 'Positions';
+
+  @override
+  String get positionsHelp =>
+      'Job positions people choose when they register or that you set on their user page.';
+
+  @override
+  String get addPosition => 'Add position';
+
+  @override
+  String deletePositionBody(int count) {
+    return '$count people have this position; it will show as removed. This cannot be undone.';
+  }
+
+  @override
+  String get moreSectionSales => 'Sales';
+
+  @override
+  String get moreSectionPeople => 'People & attendance';
+
+  @override
+  String get moreSectionSettings => 'Settings';
+
+  @override
+  String get searchUsers => 'Search name, email, phone, position';
+
+  @override
+  String get olderAppVersion => 'Older app';
+
+  @override
+  String usersShown(int shown, int total) {
+    return '$shown of $total users';
+  }
+
+  @override
+  String get noUsersMatch => 'No users match the search or filters.';
+
+  @override
+  String get dayMissed => 'Missed – no check-in';
+
+  @override
+  String get dayOnLeave => 'On leave';
+
+  @override
+  String get dayOff => 'Day off or holiday';
+
+  @override
+  String daysAttended(int n) {
+    return 'Attended $n';
+  }
+
+  @override
+  String daysMissed(int n) {
+    return 'Missed $n';
+  }
+
+  @override
+  String get leaveLegend => 'Leave';
+
+  @override
+  String monthHours(String time) {
+    return '$time this month';
+  }
+
+  @override
+  String checkedInFor(String time) {
+    return '$time so far';
+  }
+
+  @override
+  String get noWorkSiteYet =>
+      'You\'re not assigned to a work site yet. Ask your manager to add you to one.';
+
+  @override
+  String sendGap(String from, String to) {
+    return 'Your location wasn\'t sent from $from to $to today – your phone paused the app. Check the settings below.';
+  }
+
+  @override
+  String get issueBackgroundRestricted =>
+      'Battery use for WPC CRM is set to “Restricted”: set it to “Unrestricted”';
+
+  @override
+  String get issueAppSleeping =>
+      'Android has put WPC CRM to sleep – allow it to run in the background';
+
+  @override
+  String get phoneSetupTitle => 'One more setting on this phone';
+
+  @override
+  String get phoneSetupXiaomi =>
+      'Xiaomi / Redmi / POCO pause apps on their own. Turn on Autostart for WPC CRM, and set Battery saver to “No restrictions”.';
+
+  @override
+  String get phoneSetupSamsung =>
+      'Samsung puts unused apps to sleep. In Settings → Battery → Background usage limits, remove WPC CRM from “Sleeping apps” and “Deep sleeping apps”, and add it to “Never sleeping apps”.';
+
+  @override
+  String get phoneSetupHuawei =>
+      'Huawei / Honor stop apps in the background. In Settings → Battery → App launch, set WPC CRM to manage manually and turn on Auto-launch, Secondary launch and Run in background.';
+
+  @override
+  String get phoneSetupOppo =>
+      'Oppo / Realme stop apps in the background. Allow Auto launch for WPC CRM, and in its Battery settings allow background activity.';
+
+  @override
+  String get phoneSetupVivo =>
+      'Vivo stops apps in the background. Allow Auto start and “High background power consumption” for WPC CRM.';
+
+  @override
+  String get phoneSetupOneplus =>
+      'OnePlus stops apps in the background. Set Battery optimization for WPC CRM to “Don\'t optimize” and allow Auto-launch.';
+
+  @override
+  String get openSettings => 'Open settings';
+
+  @override
+  String get phoneSetupDone => 'I\'ve done this';
 }

@@ -2651,4 +2651,449 @@ class AppLocalizationsAr extends AppLocalizations {
   String motionIdleFor(String time) {
     return 'متوقف منذ $time';
   }
+
+  @override
+  String get appVersion => 'إصدار التطبيق';
+
+  @override
+  String get newerVersionAvailable => 'يتوفر إصدار أحدث';
+
+  @override
+  String get updateApp => 'تحديث';
+
+  @override
+  String latestAppVersion(String version) {
+    return 'أحدث إصدار: $version';
+  }
+
+  @override
+  String get everyoneUpToDate => 'جميع الجوالات على أحدث إصدار';
+
+  @override
+  String peopleOnOlderVersion(int n) {
+    return '$n على إصدار أقدم';
+  }
+
+  @override
+  String remindAll(int n) {
+    return 'تذكير ($n)';
+  }
+
+  @override
+  String get remindToUpdate => 'تذكير بالتحديث';
+
+  @override
+  String remindedWait(int seconds) {
+    return 'تم التذكير – انتظر $seconds ث';
+  }
+
+  @override
+  String get noAppVersion => 'لم يُبلَّغ عن إصدار التطبيق بعد';
+
+  @override
+  String updateRemindersSent(int n) {
+    return 'تم إرسال التذكير إلى $n';
+  }
+
+  @override
+  String notifUpdateReminder(String name) {
+    return 'يطلب $name تحديث تطبيق WPC CRM إلى أحدث إصدار – اضغط للتحديث';
+  }
+
+  @override
+  String get linkedClients => 'العملاء المرتبطون';
+
+  @override
+  String get mainCompany => 'الشركة الرئيسية';
+
+  @override
+  String get branch => 'فرع';
+
+  @override
+  String get linkToMainCompany => 'ربط بشركة رئيسية';
+
+  @override
+  String get addBranch => 'إضافة فرع';
+
+  @override
+  String get unlinkClient => 'إلغاء الربط';
+
+  @override
+  String moveBranchConfirm(String branch, String from, String to) {
+    return '$branch فرع من $from. نقله ليصبح تحت $to؟';
+  }
+
+  @override
+  String get noLinkedClients =>
+      'لا يوجد عملاء مرتبطون. اربط فرعاً من صفحة العميل.';
+
+  @override
+  String branchCount(int n) {
+    return '$n فرع';
+  }
+
+  @override
+  String get addCompany => 'إضافة شركة';
+
+  @override
+  String get addWorkSite => 'إضافة موقع عمل';
+
+  @override
+  String get allow => 'سماح';
+
+  @override
+  String get allowAlwaysForAttendance =>
+      'اسمح بالموقع \"دائماً\" ليتم تسجيل حضورك تلقائياً عند وصولك';
+
+  @override
+  String get atTheSite => 'في موقع العمل';
+
+  @override
+  String get attendance => 'الحضور';
+
+  @override
+  String get autoCheckInHelp =>
+      'يُسجَّل حضورك تلقائياً عند وصولك إلى موقع العمل.';
+
+  @override
+  String get checkIn => 'تسجيل حضور';
+
+  @override
+  String get checkInAgain => 'تسجيل حضور مرة أخرى';
+
+  @override
+  String get checkOut => 'تسجيل انصراف';
+
+  @override
+  String get checkOutAuto => 'أُغلق تلقائياً (لم يُرصد خروج)';
+
+  @override
+  String get checkOutConfirm => 'تسجيل الانصراف الآن؟ ينتهي يومك في هذا الوقت.';
+
+  @override
+  String get checkOutEndOfDay => 'نهاية يوم العمل';
+
+  @override
+  String get checkOutLeft => 'غادر الموقع';
+
+  @override
+  String get checkOutLeftEarly => 'غادر مبكراً';
+
+  @override
+  String get checkOutManual => 'انصراف يدوي';
+
+  @override
+  String get companies => 'الشركات';
+
+  @override
+  String get company => 'الشركة';
+
+  @override
+  String get confirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get createAccount => 'إنشاء حساب';
+
+  @override
+  String get editWorkSite => 'تعديل موقع العمل';
+
+  @override
+  String get noCompanies =>
+      'لا توجد شركات بعد. أضف الشركات التي يمكن اختيارها عند التسجيل.';
+
+  @override
+  String get noOneAssignedToSites =>
+      'لم يُعيَّن أحد لموقع عمل بعد. عيّن الأشخاص من المزيد ← مواقع العمل أو من صفحة المستخدم.';
+
+  @override
+  String get noWorkSiteAssigned => 'لم يتم تعيينك لموقع عمل.';
+
+  @override
+  String get noWorkSites => 'لا توجد مواقع عمل بعد.';
+
+  @override
+  String get notCheckedIn => 'لم يسجّل حضوراً';
+
+  @override
+  String get overtimeAllowed => 'العمل الإضافي مسموح';
+
+  @override
+  String get overtimeAllowedHelp =>
+      'الوقت بعد نهاية يوم العمل يُحتسب عملاً إضافياً. عند الإيقاف: يُحتسب اليوم حتى نهاية يوم العمل فقط.';
+
+  @override
+  String get position => 'المسمى الوظيفي';
+
+  @override
+  String get positionHint => 'مثال: محاسب، سائق، مهندس موقع';
+
+  @override
+  String get radiusHelp =>
+      'المسافة التي تُعد \"في الموقع\". تحتاج الجوالات 100 م على الأقل لرصد الوصول والمغادرة بدقة.';
+
+  @override
+  String get registerEmailInUse =>
+      'هذا البريد لديه حساب بالفعل. سجّل الدخول أو استخدم \"نسيت كلمة المرور؟\".';
+
+  @override
+  String get registerHelp =>
+      'للأشخاص الذين ليس لديهم حساب في الشركة. بعد التسجيل يوافق مدير المبيعات أو المدير العام على حسابك.';
+
+  @override
+  String get registrationPendingBanner => 'حساب مسجّل – بانتظار الموافقة';
+
+  @override
+  String get registrationPendingHelp =>
+      'راجع البيانات واختر الدور والشركة ومواقع العمل ثم وافق.';
+
+  @override
+  String get registrationRejected => 'تم رفض التسجيل';
+
+  @override
+  String get registrationRejectedBody =>
+      'لم تتم الموافقة على تسجيلك. تواصل مع مديرك إذا كان ذلك خطأ.';
+
+  @override
+  String get registrationRejectedShort => 'غير موافق عليه';
+
+  @override
+  String get registrationRejectedTitle => 'لم تتم الموافقة على التسجيل';
+
+  @override
+  String get renameCompany => 'إعادة تسمية الشركة';
+
+  @override
+  String get roleDriver => 'سائق';
+
+  @override
+  String get roleEngineer => 'مهندس';
+
+  @override
+  String get roleWorker => 'عامل';
+
+  @override
+  String get waitingForApprovalTitle => 'بانتظار الموافقة';
+
+  @override
+  String get workSiteNameHint => 'مثال: المكتب الرئيسي، المستودع';
+
+  @override
+  String get workSiteNeedsNameAndPlace =>
+      'أدخل اسم موقع العمل واختر مكانه على الخريطة.';
+
+  @override
+  String get workSiteNoPlace => 'لم يُحدَّد المكان بعد';
+
+  @override
+  String get workSites => 'مواقع العمل';
+
+  @override
+  String attendanceAbsent(int n) {
+    return 'لم يحضر: $n';
+  }
+
+  @override
+  String attendanceIn(int n) {
+    return 'حاضر: $n';
+  }
+
+  @override
+  String attendanceOut(int n) {
+    return 'انصرف: $n';
+  }
+
+  @override
+  String checkedInAt(String site) {
+    return 'تم تسجيل الحضور في $site';
+  }
+
+  @override
+  String checkedInSince(String time, String site) {
+    return 'حضور الساعة $time · $site';
+  }
+
+  @override
+  String checkedOutAt(String time) {
+    return 'انصراف الساعة $time';
+  }
+
+  @override
+  String deleteWorkSiteConfirm(String name) {
+    return 'حذف $name؟ سيُلغى تعيين الأشخاص المرتبطين به.';
+  }
+
+  @override
+  String inSince(String time) {
+    return 'حاضر منذ $time';
+  }
+
+  @override
+  String leftSiteAt(String time) {
+    return 'غادر الموقع الساعة $time';
+  }
+
+  @override
+  String notAtWorkSite(String distance) {
+    return 'لست في موقع العمل (على بعد $distance).';
+  }
+
+  @override
+  String notifRegistrationRequested(String name) {
+    return 'سجّل $name حساباً – بانتظار موافقتك';
+  }
+
+  @override
+  String overtimeTime(String time) {
+    return 'إضافي $time';
+  }
+
+  @override
+  String peopleAtSite(int n) {
+    return 'العاملون هنا ($n)';
+  }
+
+  @override
+  String peopleCount(int n) {
+    return '$n شخص';
+  }
+
+  @override
+  String radiusMeters(int m) {
+    return 'نصف القطر $m م';
+  }
+
+  @override
+  String rejectRegistrationConfirm(String name) {
+    return 'رفض تسجيل $name؟ لن يتمكن من استخدام التطبيق.';
+  }
+
+  @override
+  String waitingForApprovalBody(String name) {
+    return 'شكراً $name. تم إنشاء حسابك وسيوافق عليه مدير المبيعات أو المدير العام، وبعدها يمكنك استخدام التطبيق.';
+  }
+
+  @override
+  String workedTime(String time) {
+    return 'عمل $time';
+  }
+
+  @override
+  String get positions => 'المسميات الوظيفية';
+
+  @override
+  String get positionsHelp =>
+      'المسميات الوظيفية التي يختارها الأشخاص عند التسجيل أو التي تحددها في صفحة المستخدم.';
+
+  @override
+  String get addPosition => 'إضافة مسمى';
+
+  @override
+  String deletePositionBody(int count) {
+    return 'لدى $count شخص هذا المسمى وسيظهر كمحذوف. لا يمكن التراجع عن ذلك.';
+  }
+
+  @override
+  String get moreSectionSales => 'المبيعات';
+
+  @override
+  String get moreSectionPeople => 'الموظفون والحضور';
+
+  @override
+  String get moreSectionSettings => 'الإعدادات';
+
+  @override
+  String get searchUsers => 'ابحث بالاسم أو البريد أو الهاتف أو المسمى';
+
+  @override
+  String get olderAppVersion => 'تطبيق قديم';
+
+  @override
+  String usersShown(int shown, int total) {
+    return '$shown من $total مستخدم';
+  }
+
+  @override
+  String get noUsersMatch => 'لا يوجد مستخدمون مطابقون للبحث أو الفلاتر.';
+
+  @override
+  String get dayMissed => 'غياب – لا يوجد تسجيل حضور';
+
+  @override
+  String get dayOnLeave => 'في إجازة';
+
+  @override
+  String get dayOff => 'يوم عطلة';
+
+  @override
+  String daysAttended(int n) {
+    return 'حضور $n';
+  }
+
+  @override
+  String daysMissed(int n) {
+    return 'غياب $n';
+  }
+
+  @override
+  String get leaveLegend => 'إجازة';
+
+  @override
+  String monthHours(String time) {
+    return '$time هذا الشهر';
+  }
+
+  @override
+  String checkedInFor(String time) {
+    return '$time حتى الآن';
+  }
+
+  @override
+  String get noWorkSiteYet =>
+      'لم يتم تعيينك في موقع عمل بعد. اطلب من مديرك إضافتك.';
+
+  @override
+  String sendGap(String from, String to) {
+    return 'لم يُرسل موقعك من $from إلى $to اليوم – أوقف الجوال التطبيق مؤقتاً. راجع الإعدادات أدناه.';
+  }
+
+  @override
+  String get issueBackgroundRestricted =>
+      'استخدام البطارية لتطبيق WPC CRM مضبوط على \"مقيّد\": اضبطه على \"غير مقيّد\"';
+
+  @override
+  String get issueAppSleeping =>
+      'وضع أندرويد تطبيق WPC CRM في وضع السكون – اسمح له بالعمل في الخلفية';
+
+  @override
+  String get phoneSetupTitle => 'إعداد إضافي على هذا الجوال';
+
+  @override
+  String get phoneSetupXiaomi =>
+      'تقوم أجهزة Xiaomi / Redmi / POCO بإيقاف التطبيقات تلقائياً. فعّل التشغيل التلقائي (Autostart) لتطبيق WPC CRM واضبط توفير البطارية على \"بلا قيود\".';
+
+  @override
+  String get phoneSetupSamsung =>
+      'تضع سامسونج التطبيقات في وضع السكون. من الإعدادات ← البطارية ← حدود الاستخدام في الخلفية، أزل WPC CRM من \"التطبيقات الخاملة\" و\"التطبيقات الخاملة بعمق\" وأضفه إلى \"التطبيقات التي لا تخمل أبداً\".';
+
+  @override
+  String get phoneSetupHuawei =>
+      'توقف أجهزة Huawei / Honor التطبيقات في الخلفية. من الإعدادات ← البطارية ← تشغيل التطبيقات، اضبط WPC CRM على الإدارة اليدوية وفعّل التشغيل التلقائي والتشغيل الثانوي والتشغيل في الخلفية.';
+
+  @override
+  String get phoneSetupOppo =>
+      'توقف أجهزة Oppo / Realme التطبيقات في الخلفية. اسمح بالتشغيل التلقائي لتطبيق WPC CRM، ومن إعدادات البطارية اسمح بالنشاط في الخلفية.';
+
+  @override
+  String get phoneSetupVivo =>
+      'توقف أجهزة Vivo التطبيقات في الخلفية. اسمح بالتشغيل التلقائي و\"استهلاك طاقة عالٍ في الخلفية\" لتطبيق WPC CRM.';
+
+  @override
+  String get phoneSetupOneplus =>
+      'توقف أجهزة OnePlus التطبيقات في الخلفية. اضبط تحسين البطارية لتطبيق WPC CRM على \"عدم التحسين\" واسمح بالتشغيل التلقائي.';
+
+  @override
+  String get openSettings => 'فتح الإعدادات';
+
+  @override
+  String get phoneSetupDone => 'تم الإعداد';
 }

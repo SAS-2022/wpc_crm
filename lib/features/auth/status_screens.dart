@@ -27,8 +27,34 @@ class NoAccessScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final me = ref.watch(currentUserProvider).value;
+    // Registered, waiting for the sales manager / GM (or turned down).
+    if (me != null && (me.isPendingApproval || me.approval == 'rejected')) {
+      final pending = me.isPendingApproval;
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(pending ? Icons.hourglass_top : Icons.block, size: 56, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(height: 16),
+                Text(pending ? l10n.waitingForApprovalTitle : l10n.registrationRejectedTitle,
+                    style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                Text(pending ? l10n.waitingForApprovalBody(me.name) : l10n.registrationRejectedBody,
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                OutlinedButton(onPressed: signOut, child: Text(l10n.signOut)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     // A role this version doesn't know: the account is fine, the app is old.
-    final outdated = ref.watch(currentUserProvider).value?.role == UserRole.unknown;
+    final outdated = me?.role == UserRole.unknown && me?.active == true;
     return Scaffold(
       body: Center(
         child: Padding(

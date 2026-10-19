@@ -41,6 +41,10 @@ import '../features/plan/plan_task.dart';
 import 'providers.dart';
 import '../features/clients/transfers_screen.dart';
 import '../features/plan/team_plan_map_screen.dart';
+import '../features/auth/register_screen.dart';
+import '../features/attendance/attendance_screen.dart';
+import '../features/attendance/work_sites_screen.dart';
+import '../features/users/companies_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -58,22 +62,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       String? goTo(String path) => loc == path ? null : path;
 
       if (auth.isLoading) return goTo('/splash');
-      if (auth.value == null) return goTo('/login');
-      if (profile.isLoading) return goTo('/splash');
+      if (auth.value == null) return loc == '/register' ? null : goTo('/login');
+      if (profile.isLoading) return loc == '/register' ? null : goTo('/splash');
 
       final me = profile.value;
+      // Just registered: the profile is being written.
+      if (me == null && loc == '/register') return null;
       // Unknown role: a newer app version is needed (see UserRole.unknown).
       if (me == null || !me.active || me.role == UserRole.unknown) return goTo('/no-access');
-      if (const ['/splash', '/login', '/no-access'].contains(loc)) return '/';
+      if (const ['/splash', '/login', '/register', '/no-access'].contains(loc)) return '/';
       // HR, accounting, procurement: no sales pages (clients, visits, plans, maps).
       if (me.role.isBackOffice &&
           !const ['/', '/more', '/profile', '/notifications'].contains(loc) &&
           !loc.startsWith('/leave') &&
-          !loc.startsWith('/hr')) {
+          !loc.startsWith('/hr') &&
+          !loc.startsWith('/attendance')) {
         return '/';
       }
-      if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours') && !me.role.isAdmin) return '/';
+      if ((loc.startsWith('/hr') || loc.startsWith('/attendance')) && !me.role.canSeeHr) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc == '/positions') && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
@@ -81,6 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/no-access', builder: (_, _) => const NoAccessScreen()),
       StatefulShellRoute(
         builder: (_, state, shell) => AppShell(shell: shell, location: state.uri.path),
@@ -216,6 +224,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const ClientTagsScreen(kind: TagList.locationTypes),
             ),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
+            GoRoute(path: '/work-sites', builder: (_, _) => const WorkSitesScreen()),
+            GoRoute(path: '/companies', builder: (_, _) => const CompaniesScreen()),
+            GoRoute(path: '/positions', builder: (_, _) => const ClientTagsScreen(kind: TagList.positions)),
+            GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
             GoRoute(
               path: '/import',
               builder: (_, _) => const ImportScreen(),

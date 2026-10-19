@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'tracking_device.dart';
 import 'work_hours.dart';
 import 'motion.dart';
+import 'device_health.dart';
 
 /// How often a position is sent (user decision 2026-10-18: every 30 seconds,
 /// to test on the new build; was 2 minutes).
@@ -229,6 +230,8 @@ class LocationTracker {
       // Which phone sent it, to tell phones apart if two ever send.
       'd': _deviceId,
     });
+    // Remembers long gaps (the phone paused the app) for the Home card.
+    await noteLocationSent(now);
   }
 
   LocationSettings _settings() => switch (defaultTargetPlatform) {

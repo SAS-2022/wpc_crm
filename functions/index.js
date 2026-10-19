@@ -1,10 +1,11 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentCreated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentDeleted, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
+const { deriveDay, saudiTime } = require('./attendance');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
@@ -135,6 +136,8 @@ const TEXTS = {
     clientStatusRequested: (n, c, d, o, x) => `${n} asked to mark ${x.client} as ${x.status} – waiting for your approval`,
     clientStatusApproved: (n, c, d, o, x) => `${n} approved: ${x.client} is now ${x.status}`,
     clientStatusRejected: (n, c, d, o, x) => `${n} rejected marking ${x.client} as ${x.status}`,
+    updateReminder: (n) => `${n} asks you to update WPC CRM to the latest version – tap to update`,
+    registrationRequested: (n, c, d, o) => `${o} registered an account – waiting for your approval`,
     status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
   },
   ar: {
@@ -158,6 +161,8 @@ const TEXTS = {
     clientStatusRequested: (n, c, d, o, x) => `طلب ${n} تحويل ${x.client} إلى ${x.status} – بانتظار موافقتك`,
     clientStatusApproved: (n, c, d, o, x) => `وافق ${n}: ${x.client} أصبح ${x.status}`,
     clientStatusRejected: (n, c, d, o, x) => `رفض ${n} تحويل ${x.client} إلى ${x.status}`,
+    updateReminder: (n) => `يطلب ${n} تحديث تطبيق WPC CRM إلى أحدث إصدار – اضغط للتحديث`,
+    registrationRequested: (n, c, d, o) => `سجّل ${o} حساباً – بانتظار موافقتك`,
     status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
   },
 };
@@ -178,7 +183,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const db = admin.firestore();
   // For client transfers ownerId is the other sales executive (empty = unassigned);
   // for leave requests it is the person who asked.
-  const other = ['clientsTransferredOut', 'leaveRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
+  const other = ['clientsTransferredOut', 'leaveRequested', 'registrationRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -204,7 +209,8 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       tokens,
       notification: { title: t.title, body },
       data: {
-        route: !n.ref ? '/notifications'
+        route: n.type === 'registrationRequested' ? `/users/${n.ownerId}`
+          : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
           : '/notifications',
@@ -647,3 +653,74 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
 
 // For tests.
 exports._mainTrack = mainTrack;
+
+// ---------------------------------------------------------------------------
+// Self-registration and attendance (user request 2026-10-19).
+
+/**
+ * A new self-registered account (`approval: 'pending'`) is announced to every
+ * active sales manager and GM, who approve it on the Users page. Written
+ * here because the pending user may not create notifications themselves.
+ */
+exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) => {
+  const u = event.data?.data();
+  if (!u || u.approval !== 'pending') return;
+  const db = admin.firestore();
+  const admins = await db.collection('users').where('role', 'in', ['gm', 'sales_manager']).get();
+  const batch = db.batch();
+  for (const a of admins.docs) {
+    if (a.get('active') !== true) continue;
+    batch.set(db.collection('notifications').doc(), {
+      toId: a.id, fromId: event.params.uid, ownerId: event.params.uid, type: 'registrationRequested',
+      date: '', count: 0, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  await batch.commit();
+});
+
+const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
+const DERIVED = ['checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
+  'closed', 'workedMin', 'countedMin', 'overtimeMin'];
+const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt'];
+
+/** Works the day out from its events (see attendance.js) and saves the result when it changed. */
+async function updateAttendance(ref, data, hours, now) {
+  if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
+  const user = (await admin.firestore().doc(`users/${data.uid}`).get()).data() || {};
+  const events = (data.events || []).map((e) => ({ ...e, at: e.at?.toMillis ? e.at.toMillis() : e.at }));
+  const d = deriveDay(events, {
+    endMs: saudiTime(data.date, hours.end),
+    closeAllMs: saudiTime(data.date, 23 * 60 + 55),
+    now,
+    leavesSite: LEAVES_SITE_ROLES.includes(user.role),
+    overtimeAllowed: user.overtimeAllowed === true,
+  });
+  const update = {};
+  for (const k of DERIVED) {
+    const v = TIME_FIELDS.includes(k) && d[k] !== null ? admin.firestore.Timestamp.fromMillis(d[k]) : d[k];
+    const old = data[k];
+    const same = old?.toMillis && v?.toMillis ? old.toMillis() === v.toMillis() : old === v || (old === undefined && v === null);
+    if (!same) update[k] = v;
+  }
+  if (Object.keys(update).length > 0) await ref.update(update);
+}
+
+/** Recalculates a day whenever a phone adds an event. */
+exports.attendanceUpdated = onDocumentWritten('attendance/{id}', async (event) => {
+  const after = event.data?.after;
+  if (!after?.exists) return;
+  const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+  await updateAttendance(after.ref, after.data(), hours, Date.now());
+});
+
+/** Every 10 minutes: closes open days whose time has come (end of the work day, late evening). */
+exports.closeAttendance = onSchedule(
+  { schedule: 'every 10 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const open = await admin.firestore().collection('attendance').where('closed', '==', false).get();
+    if (open.empty) return;
+    const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+    const now = Date.now();
+    for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now);
+  },
+);

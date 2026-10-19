@@ -76,6 +76,17 @@ class UsersRepository {
   /// Returns how many unassigned clients were given to the user.
   Future<int> update(AppUser user) => saving(() => _save(user.id, user));
 
+  /// A self-registered account: approved with the role and details chosen on
+  /// the form (it becomes active), or turned down.
+  Future<int> approveRegistration(AppUser user) => saving(() async {
+        final assigned = await _save(user.id, user);
+        await _users.doc(user.id).update({'approval': '', 'active': true});
+        return assigned;
+      });
+
+  Future<void> rejectRegistration(String uid) =>
+      saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false}));
+
   /// Removes the user's profile and role, which ends all their access, and
   /// unassigns their clients and sales team. Their visits stay as history.
   /// The login account itself can only be removed in Firebase Console →
@@ -101,7 +112,8 @@ class UsersRepository {
 
   // RTDB keeps a copy of the role because its rules cannot read Firestore.
   Future<int> _save(String uid, AppUser user) async {
-    await _users.doc(uid).set(user.toMap());
+    // Merged: keeps what the app writes itself (app versions, reminders).
+    await _users.doc(uid).set(user.toMap(), SetOptions(merge: true));
     await FirebaseDatabase.instance.ref('roles/$uid').set(user.role.value);
     return user.role.isTracked && user.active && user.odooName.isNotEmpty
         ? _assignOdooClients(uid, user.odooName)

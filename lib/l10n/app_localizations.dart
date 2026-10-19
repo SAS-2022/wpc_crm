@@ -4567,6 +4567,720 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Idle for {time}'**
   String motionIdleFor(String time);
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'App version'**
+  String get appVersion;
+
+  /// No description provided for @newerVersionAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A newer version is available'**
+  String get newerVersionAvailable;
+
+  /// No description provided for @updateApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateApp;
+
+  /// No description provided for @latestAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest version: {version}'**
+  String latestAppVersion(String version);
+
+  /// No description provided for @everyoneUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone\'s phone is on the latest version'**
+  String get everyoneUpToDate;
+
+  /// No description provided for @peopleOnOlderVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} people on an older version'**
+  String peopleOnOlderVersion(int n);
+
+  /// No description provided for @remindAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind ({n})'**
+  String remindAll(int n);
+
+  /// No description provided for @remindToUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind to update'**
+  String get remindToUpdate;
+
+  /// No description provided for @remindedWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminded – wait {seconds} s'**
+  String remindedWait(int seconds);
+
+  /// No description provided for @noAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'App version not reported yet'**
+  String get noAppVersion;
+
+  /// No description provided for @updateRemindersSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder sent to {n}'**
+  String updateRemindersSent(int n);
+
+  /// No description provided for @notifUpdateReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asks you to update WPC CRM to the latest version – tap to update'**
+  String notifUpdateReminder(String name);
+
+  /// No description provided for @linkedClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked clients'**
+  String get linkedClients;
+
+  /// No description provided for @mainCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Main company'**
+  String get mainCompany;
+
+  /// No description provided for @branch.
+  ///
+  /// In en, this message translates to:
+  /// **'Branch'**
+  String get branch;
+
+  /// No description provided for @linkToMainCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to a main company'**
+  String get linkToMainCompany;
+
+  /// No description provided for @addBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Add branch'**
+  String get addBranch;
+
+  /// No description provided for @unlinkClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlink'**
+  String get unlinkClient;
+
+  /// No description provided for @moveBranchConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'{branch} is a branch of {from}. Move it under {to}?'**
+  String moveBranchConfirm(String branch, String from, String to);
+
+  /// No description provided for @noLinkedClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No linked clients. Link a branch from the client page.'**
+  String get noLinkedClients;
+
+  /// No description provided for @branchCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} branches'**
+  String branchCount(int n);
+
+  /// No description provided for @addCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Add company'**
+  String get addCompany;
+
+  /// No description provided for @addWorkSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add work site'**
+  String get addWorkSite;
+
+  /// No description provided for @allow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get allow;
+
+  /// No description provided for @allowAlwaysForAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location \"Always\" so you\'re checked in automatically when you arrive'**
+  String get allowAlwaysForAttendance;
+
+  /// No description provided for @atTheSite.
+  ///
+  /// In en, this message translates to:
+  /// **'At the work site'**
+  String get atTheSite;
+
+  /// No description provided for @attendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get attendance;
+
+  /// No description provided for @autoCheckInHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re checked in automatically when you arrive at your work site.'**
+  String get autoCheckInHelp;
+
+  /// No description provided for @checkIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in'**
+  String get checkIn;
+
+  /// No description provided for @checkInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in again'**
+  String get checkInAgain;
+
+  /// No description provided for @checkOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out'**
+  String get checkOut;
+
+  /// No description provided for @checkOutAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'closed automatically (no exit seen)'**
+  String get checkOutAuto;
+
+  /// No description provided for @checkOutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out now? Your day ends at this time.'**
+  String get checkOutConfirm;
+
+  /// No description provided for @checkOutEndOfDay.
+  ///
+  /// In en, this message translates to:
+  /// **'end of the work day'**
+  String get checkOutEndOfDay;
+
+  /// No description provided for @checkOutLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'left the site'**
+  String get checkOutLeft;
+
+  /// No description provided for @checkOutLeftEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'left early'**
+  String get checkOutLeftEarly;
+
+  /// No description provided for @checkOutManual.
+  ///
+  /// In en, this message translates to:
+  /// **'checked out by hand'**
+  String get checkOutManual;
+
+  /// No description provided for @companies.
+  ///
+  /// In en, this message translates to:
+  /// **'Companies'**
+  String get companies;
+
+  /// No description provided for @company.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get company;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPassword;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get createAccount;
+
+  /// No description provided for @editWorkSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit work site'**
+  String get editWorkSite;
+
+  /// No description provided for @noCompanies.
+  ///
+  /// In en, this message translates to:
+  /// **'No companies yet. Add the companies people can choose when they register.'**
+  String get noCompanies;
+
+  /// No description provided for @noOneAssignedToSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody is assigned to a work site yet. Assign people at More → Work sites or on their user page.'**
+  String get noOneAssignedToSites;
+
+  /// No description provided for @noWorkSiteAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not assigned to a work site.'**
+  String get noWorkSiteAssigned;
+
+  /// No description provided for @noWorkSites.
+  ///
+  /// In en, this message translates to:
+  /// **'No work sites yet.'**
+  String get noWorkSites;
+
+  /// No description provided for @notCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked in'**
+  String get notCheckedIn;
+
+  /// No description provided for @overtimeAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime allowed'**
+  String get overtimeAllowed;
+
+  /// No description provided for @overtimeAllowedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.'**
+  String get overtimeAllowedHelp;
+
+  /// No description provided for @position.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get position;
+
+  /// No description provided for @positionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Accountant, Driver, Site engineer'**
+  String get positionHint;
+
+  /// No description provided for @radiusHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How close counts as \"at the site\". Phones need at least 100 m to notice arriving and leaving reliably.'**
+  String get radiusHelp;
+
+  /// No description provided for @registerEmailInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This email already has an account. Sign in, or use \"Forgot password?\".'**
+  String get registerEmailInUse;
+
+  /// No description provided for @registerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'For people without a company account. After you register, the sales manager or GM approves your account.'**
+  String get registerHelp;
+
+  /// No description provided for @registrationPendingBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered account – waiting for approval'**
+  String get registrationPendingBanner;
+
+  /// No description provided for @registrationPendingHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the details, choose the role, company and work sites, then approve.'**
+  String get registrationPendingHelp;
+
+  /// No description provided for @registrationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration turned down'**
+  String get registrationRejected;
+
+  /// No description provided for @registrationRejectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your registration was not approved. Contact your manager if this is a mistake.'**
+  String get registrationRejectedBody;
+
+  /// No description provided for @registrationRejectedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved'**
+  String get registrationRejectedShort;
+
+  /// No description provided for @registrationRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration not approved'**
+  String get registrationRejectedTitle;
+
+  /// No description provided for @renameCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename company'**
+  String get renameCompany;
+
+  /// No description provided for @roleDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver'**
+  String get roleDriver;
+
+  /// No description provided for @roleEngineer.
+  ///
+  /// In en, this message translates to:
+  /// **'Engineer'**
+  String get roleEngineer;
+
+  /// No description provided for @roleWorker.
+  ///
+  /// In en, this message translates to:
+  /// **'Worker'**
+  String get roleWorker;
+
+  /// No description provided for @waitingForApprovalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval'**
+  String get waitingForApprovalTitle;
+
+  /// No description provided for @workSiteNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Head office, Warehouse'**
+  String get workSiteNameHint;
+
+  /// No description provided for @workSiteNeedsNameAndPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Give the work site a name and pick its place on the map.'**
+  String get workSiteNeedsNameAndPlace;
+
+  /// No description provided for @workSiteNoPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'No place picked yet'**
+  String get workSiteNoPlace;
+
+  /// No description provided for @workSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Work sites'**
+  String get workSites;
+
+  /// No description provided for @attendanceAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in: {n}'**
+  String attendanceAbsent(int n);
+
+  /// No description provided for @attendanceIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In: {n}'**
+  String attendanceIn(int n);
+
+  /// No description provided for @attendanceOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked out: {n}'**
+  String attendanceOut(int n);
+
+  /// No description provided for @checkedInAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked in at {site}'**
+  String checkedInAt(String site);
+
+  /// No description provided for @checkedInSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked in at {time} · {site}'**
+  String checkedInSince(String time, String site);
+
+  /// No description provided for @checkedOutAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked out at {time}'**
+  String checkedOutAt(String time);
+
+  /// No description provided for @deleteWorkSiteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}? People assigned to it are unassigned.'**
+  String deleteWorkSiteConfirm(String name);
+
+  /// No description provided for @inSince.
+  ///
+  /// In en, this message translates to:
+  /// **'In since {time}'**
+  String inSince(String time);
+
+  /// No description provided for @leftSiteAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the site at {time}'**
+  String leftSiteAt(String time);
+
+  /// No description provided for @notAtWorkSite.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not at your work site ({distance} away).'**
+  String notAtWorkSite(String distance);
+
+  /// No description provided for @notifRegistrationRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} registered an account – waiting for your approval'**
+  String notifRegistrationRequested(String name);
+
+  /// No description provided for @overtimeTime.
+  ///
+  /// In en, this message translates to:
+  /// **'overtime {time}'**
+  String overtimeTime(String time);
+
+  /// No description provided for @peopleAtSite.
+  ///
+  /// In en, this message translates to:
+  /// **'People working here ({n})'**
+  String peopleAtSite(int n);
+
+  /// No description provided for @peopleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} people'**
+  String peopleCount(int n);
+
+  /// No description provided for @radiusMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'Radius {m} m'**
+  String radiusMeters(int m);
+
+  /// No description provided for @rejectRegistrationConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn down {name}\'s registration? They can\'t use the app.'**
+  String rejectRegistrationConfirm(String name);
+
+  /// No description provided for @waitingForApprovalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks {name}. Your account was created; the sales manager or GM will approve it. You\'ll be able to use the app then.'**
+  String waitingForApprovalBody(String name);
+
+  /// No description provided for @workedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'worked {time}'**
+  String workedTime(String time);
+
+  /// No description provided for @positions.
+  ///
+  /// In en, this message translates to:
+  /// **'Positions'**
+  String get positions;
+
+  /// No description provided for @positionsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Job positions people choose when they register or that you set on their user page.'**
+  String get positionsHelp;
+
+  /// No description provided for @addPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Add position'**
+  String get addPosition;
+
+  /// No description provided for @deletePositionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} people have this position; it will show as removed. This cannot be undone.'**
+  String deletePositionBody(int count);
+
+  /// No description provided for @moreSectionSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get moreSectionSales;
+
+  /// No description provided for @moreSectionPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'People & attendance'**
+  String get moreSectionPeople;
+
+  /// No description provided for @moreSectionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get moreSectionSettings;
+
+  /// No description provided for @searchUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name, email, phone, position'**
+  String get searchUsers;
+
+  /// No description provided for @olderAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Older app'**
+  String get olderAppVersion;
+
+  /// No description provided for @usersShown.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} of {total} users'**
+  String usersShown(int shown, int total);
+
+  /// No description provided for @noUsersMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No users match the search or filters.'**
+  String get noUsersMatch;
+
+  /// No description provided for @dayMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed – no check-in'**
+  String get dayMissed;
+
+  /// No description provided for @dayOnLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'On leave'**
+  String get dayOnLeave;
+
+  /// No description provided for @dayOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Day off or holiday'**
+  String get dayOff;
+
+  /// No description provided for @daysAttended.
+  ///
+  /// In en, this message translates to:
+  /// **'Attended {n}'**
+  String daysAttended(int n);
+
+  /// No description provided for @daysMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed {n}'**
+  String daysMissed(int n);
+
+  /// No description provided for @leaveLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get leaveLegend;
+
+  /// No description provided for @monthHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} this month'**
+  String monthHours(String time);
+
+  /// No description provided for @checkedInFor.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} so far'**
+  String checkedInFor(String time);
+
+  /// No description provided for @noWorkSiteYet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not assigned to a work site yet. Ask your manager to add you to one.'**
+  String get noWorkSiteYet;
+
+  /// No description provided for @sendGap.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location wasn\'t sent from {from} to {to} today – your phone paused the app. Check the settings below.'**
+  String sendGap(String from, String to);
+
+  /// No description provided for @issueBackgroundRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery use for WPC CRM is set to “Restricted”: set it to “Unrestricted”'**
+  String get issueBackgroundRestricted;
+
+  /// No description provided for @issueAppSleeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Android has put WPC CRM to sleep – allow it to run in the background'**
+  String get issueAppSleeping;
+
+  /// No description provided for @phoneSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One more setting on this phone'**
+  String get phoneSetupTitle;
+
+  /// No description provided for @phoneSetupXiaomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Xiaomi / Redmi / POCO pause apps on their own. Turn on Autostart for WPC CRM, and set Battery saver to “No restrictions”.'**
+  String get phoneSetupXiaomi;
+
+  /// No description provided for @phoneSetupSamsung.
+  ///
+  /// In en, this message translates to:
+  /// **'Samsung puts unused apps to sleep. In Settings → Battery → Background usage limits, remove WPC CRM from “Sleeping apps” and “Deep sleeping apps”, and add it to “Never sleeping apps”.'**
+  String get phoneSetupSamsung;
+
+  /// No description provided for @phoneSetupHuawei.
+  ///
+  /// In en, this message translates to:
+  /// **'Huawei / Honor stop apps in the background. In Settings → Battery → App launch, set WPC CRM to manage manually and turn on Auto-launch, Secondary launch and Run in background.'**
+  String get phoneSetupHuawei;
+
+  /// No description provided for @phoneSetupOppo.
+  ///
+  /// In en, this message translates to:
+  /// **'Oppo / Realme stop apps in the background. Allow Auto launch for WPC CRM, and in its Battery settings allow background activity.'**
+  String get phoneSetupOppo;
+
+  /// No description provided for @phoneSetupVivo.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivo stops apps in the background. Allow Auto start and “High background power consumption” for WPC CRM.'**
+  String get phoneSetupVivo;
+
+  /// No description provided for @phoneSetupOneplus.
+  ///
+  /// In en, this message translates to:
+  /// **'OnePlus stops apps in the background. Set Battery optimization for WPC CRM to “Don\'t optimize” and allow Auto-launch.'**
+  String get phoneSetupOneplus;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get openSettings;
+
+  /// No description provided for @phoneSetupDone.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve done this'**
+  String get phoneSetupDone;
 }
 
 class _AppLocalizationsDelegate

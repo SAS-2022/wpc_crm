@@ -49,6 +49,13 @@ enum NotificationType {
   /// The recipient's status request was approved / rejected.
   clientStatusApproved,
   clientStatusRejected,
+
+  /// An admin asks the recipient to install the latest app version.
+  updateReminder,
+
+  /// `ownerId` registered an account (written by the `registrationRequested`
+  /// Cloud Function for the sales managers / GMs).
+  registrationRequested,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud

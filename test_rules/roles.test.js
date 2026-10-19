@@ -98,6 +98,44 @@ describe('sales team keeps its access', () => {
     await assertFails(updateDoc(doc(fs('exec'), 'clients/c2'), log));
   });
 
+  test('a new account registers itself: inactive, pending, no role — nothing more', async () => {
+    const reg = { name: 'New', email: 'n@x.com', phone: '1', position: 'Driver', companyId: 'c1', role: '', active: false, approval: 'pending', registeredAt: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(fs('newbie'), 'users/newbie'), reg));
+    await assertFails(setDoc(doc(fs('newbie2'), 'users/newbie2'), { ...reg, role: 'gm' }));
+    await assertFails(setDoc(doc(fs('newbie3'), 'users/newbie3'), { ...reg, active: true }));
+    await assertFails(setDoc(doc(fs('newbie4'), 'users/someoneElse'), reg));
+    // Pending: no sales data, can read companies even signed out.
+    await assertFails(getDoc(doc(fs('newbie'), 'clients/c1')));
+    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'companies/x')));
+    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'settings/positions')));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'settings/visitRules')));
+    await assertFails(setDoc(doc(fs('exec'), 'settings/positions'), { tags: [] }));
+    await assertFails(setDoc(doc(fs('exec'), 'companies/x'), { name: 'X' }));
+    await assertSucceeds(setDoc(doc(fs('sm'), 'companies/x'), { name: 'X' }));
+  });
+
+  test('attendance: own day, events only; HR area reads; results only by the server', async () => {
+    const ev = { uid: 'acc', date: '2026-10-20', month: '2026-10', events: [{ type: 'in', at: new Date(), siteId: 's' }] };
+    await assertSucceeds(setDoc(doc(fs('acc'), 'attendance/acc_2026-10-20'), ev));
+    await assertFails(setDoc(doc(fs('acc'), 'attendance/exec_2026-10-20'), { ...ev, uid: 'exec' }));
+    await assertFails(setDoc(doc(fs('acc'), 'attendance/acc_2026-10-21'), ev)); // id ≠ date
+    await assertFails(updateDoc(doc(fs('acc'), 'attendance/acc_2026-10-20'), { checkOutAt: new Date() }));
+    await assertSucceeds(updateDoc(doc(fs('acc'), 'attendance/acc_2026-10-20'), { events: [] }));
+    await assertSucceeds(getDoc(doc(fs('hr'), 'attendance/acc_2026-10-20')));
+    await assertFails(getDoc(doc(fs('proc'), 'attendance/acc_2026-10-20')));
+    await assertFails(setDoc(doc(fs('exec'), 'work_sites/s'), { name: 'HQ' }));
+    await assertSucceeds(setDoc(doc(fs('gm'), 'work_sites/s'), { name: 'HQ' }));
+  });
+
+  test('everyone saves their own app version, not others\' and not the reminder time', async () => {
+    const v = { 'appVersions.android': { version: '1.0.4', build: 9, at: serverTimestamp() } };
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'users/exec'), v));
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'users/hr'), v));
+    await assertFails(updateDoc(doc(fs('exec'), 'users/kam'), v));
+    await assertFails(updateDoc(doc(fs('exec'), 'users/exec'), { updateRemindedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(fs('gm'), 'users/exec'), { updateRemindedAt: serverTimestamp() }));
+  });
+
   test('sales exec asks to close own client, never sets the status or asks as someone else', async () => {
     const ask = { statusRequest: { status: 'closed', byId: 'exec', at: serverTimestamp(), note: 'Shop shut' } };
     await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), ask));

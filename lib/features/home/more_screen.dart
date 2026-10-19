@@ -8,121 +8,102 @@ import '../../core/sign_out.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_shell.dart';
 
-/// More tab: tools the role can use, language and sign out.
+/// One tile of the More grid.
+typedef _Item = ({IconData icon, String label, VoidCallback onTap});
+
+/// More tab: the role's tools as a grid in sections (user request
+/// 2026-10-19: stays tidy as items are added), then language and sign out.
+/// Pages already in the side menu on wide screens are left out there.
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
     final locale = ref.watch(localeProvider) ?? Localizations.localeOf(context);
     // On wide screens these pages are in the side menu already.
     final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
+    final role = me.role;
+    _Item item(IconData icon, String label, String path, {bool go = false}) =>
+        (icon: icon, label: label, onTap: () => go ? context.go(path) : context.push(path));
+
+    final sections = <(String, List<_Item>)>[
+      (l10n.moreSectionSales, [
+        if (role.isTracked) item(Icons.today, l10n.myPlan, '/plan/${me.id}'),
+        if (!wide && role.isSales) item(Icons.map, l10n.map, '/map', go: true),
+        if (role.isSupervisor && !wide) ...[
+          item(Icons.groups, l10n.teamPlans, '/team-plans'),
+          item(Icons.my_location, l10n.liveTracking, '/live'),
+          item(Icons.table_chart, l10n.reports, '/reports'),
+          item(Icons.swap_horiz, l10n.transferredClients, '/transfers'),
+          item(Icons.route, l10n.routeHistory, '/history'),
+        ],
+      ]),
+      (l10n.moreSectionPeople, [
+        if (role.canSeeHr && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
+        // HR area hidden on the web for now (user request 2026-10-18).
+        if (role.canSeeHr && !wide && !kIsWeb) item(Icons.badge, l10n.hrArea, '/hr'),
+        if (role.isAdmin) ...[
+          item(Icons.people, l10n.users, '/users'),
+          item(Icons.apartment, l10n.workSites, '/work-sites'),
+          item(Icons.business, l10n.companies, '/companies'),
+          item(Icons.work_outline, l10n.positions, '/positions'),
+        ],
+      ]),
+      (l10n.moreSectionSettings, [
+        if (role.isAdmin) ...[
+          item(Icons.upload_file, l10n.importClients, '/import'),
+          item(Icons.sell_outlined, l10n.clientTags, '/client-tags'),
+          item(Icons.place_outlined, l10n.locationTypes, '/location-types'),
+          item(Icons.timelapse, l10n.visitFrequency, '/visit-rules'),
+          item(Icons.menu_book_outlined, l10n.givenItemsSettings, '/given-items'),
+          item(Icons.schedule, l10n.workHours, '/work-hours'),
+        ],
+      ]),
+    ];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.more)),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
         children: [
-          ListTile(
-            leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
-            title: Text(me.name),
-            subtitle: Text('${me.role.label(l10n)} · ${me.email}'),
-            trailing: Tooltip(message: l10n.profile, child: const Icon(Icons.chevron_right)),
-            onTap: () => context.push('/profile'),
+          Card(
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: ListTile(
+              leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
+              title: Text(me.name),
+              subtitle: Text('${role.label(l10n)} · ${me.email}'),
+              trailing: Tooltip(message: l10n.profile, child: const Icon(Icons.chevron_right)),
+              onTap: () => context.push('/profile'),
+            ),
           ),
-          const Divider(),
-          // My leave hidden for now (user request 2026-10-18).
-          // ListTile(
-          //   leading: const Icon(Icons.beach_access),
-          //   title: Text(l10n.myLeave),
-          //   onTap: () => context.push('/leave'),
-          // ),
-          // Hidden on the web for now (user request 2026-10-18).
-          if (me.role.canSeeHr && !wide && !kIsWeb)
-            ListTile(
-              leading: const Icon(Icons.badge),
-              title: Text(l10n.hrArea),
-              onTap: () => context.push('/hr'),
-            ),
-          if (me.role.isTracked)
-            ListTile(
-              leading: const Icon(Icons.today),
-              title: Text(l10n.myPlan),
-              onTap: () => context.push('/plan/${me.id}'),
-            ),
-          if (!wide && me.role.isSales)
-            ListTile(
-              leading: const Icon(Icons.map),
-              title: Text(l10n.map),
-              onTap: () => context.go('/map'),
-            ),
-          if (me.role.isSupervisor && !wide) ...[
-            ListTile(
-              leading: const Icon(Icons.groups),
-              title: Text(l10n.teamPlans),
-              onTap: () => context.push('/team-plans'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.my_location),
-              title: Text(l10n.liveTracking),
-              onTap: () => context.push('/live'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.table_chart),
-              title: Text(l10n.reports),
-              onTap: () => context.push('/reports'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: Text(l10n.transferredClients),
-              onTap: () => context.push('/transfers'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.route),
-              title: Text(l10n.routeHistory),
-              onTap: () => context.push('/history'),
-            ),
-          ],
-          if (me.role.isAdmin) ...[
-            ListTile(
-              leading: const Icon(Icons.upload_file),
-              title: Text(l10n.importClients),
-              onTap: () => context.push('/import'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people),
-              title: Text(l10n.users),
-              onTap: () => context.push('/users'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.sell_outlined),
-              title: Text(l10n.clientTags),
-              onTap: () => context.push('/client-tags'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.place_outlined),
-              title: Text(l10n.locationTypes),
-              onTap: () => context.push('/location-types'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.timelapse),
-              title: Text(l10n.visitFrequency),
-              onTap: () => context.push('/visit-rules'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text(l10n.givenItemsSettings),
-              onTap: () => context.push('/given-items'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: Text(l10n.workHours),
-              onTap: () => context.push('/work-hours'),
-            ),
-
-          ],
+          for (final (title, items) in sections)
+            if (items.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: LayoutBuilder(builder: (context, c) {
+                  // About 110 px per tile: 3 on a phone, more on wider screens.
+                  final columns = (c.maxWidth / 110).floor().clamp(3, 8);
+                  return GridView.count(
+                    crossAxisCount: columns,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 1,
+                    children: [for (final i in items) _Tile(item: i)],
+                  );
+                }),
+              ),
+            ],
+          const SizedBox(height: 16),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.language),
@@ -138,11 +119,50 @@ class MoreScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-            title: Text(l10n.signOut, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(l10n.signOut, style: TextStyle(color: theme.colorScheme.error)),
             onTap: signOut,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({required this.item});
+
+  final _Item item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: item.onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(item.icon, color: theme.colorScheme.onPrimaryContainer),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

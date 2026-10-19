@@ -7,6 +7,8 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
+import '../../core/app_version.dart';
+import 'package:flutter/foundation.dart';
 
 /// The signed-in user's own page: name and phone, password change (with the
 /// current password) or a reset link by email. Email, role, KAM and target
@@ -177,6 +179,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             title: Text(kam.name),
                             subtitle: Text(l10n.roleKam),
                           ),
+                        // Installed app version; on a phone behind the newest build, a way to update.
+                        Builder(builder: (context) {
+                          final info = ref.watch(packageInfoProvider).value;
+                          if (info == null) return const SizedBox.shrink();
+                          final own = ref.watch(ownBuildProvider);
+                          final latest = latestBuild(ref.watch(usersProvider).value ?? const <AppUser>[], own);
+                          final behind = !kIsWeb && own < latest;
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.info_outline, color: behind ? theme.colorScheme.error : null),
+                            title: Text('${info.version} (${info.buildNumber})'),
+                            subtitle: Text(behind ? l10n.newerVersionAvailable : l10n.appVersion),
+                            trailing: behind
+                                ? FilledButton.tonal(onPressed: openAppStore, child: Text(l10n.updateApp))
+                                : null,
+                          );
+                        }),
                         Text(l10n.emailChangeByAdmin, style: theme.textTheme.bodySmall),
                         const SizedBox(height: 12),
                         Align(

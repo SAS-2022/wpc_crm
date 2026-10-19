@@ -13,6 +13,8 @@ import 'features/users/users_repository.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'core/saving.dart';
+import 'core/app_version.dart';
+import 'features/attendance/geofences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +32,8 @@ class WpcCrmApp extends ConsumerWidget {
     ref.listen(trackingStatusProvider, (_, _) {});
     // Registers this phone for push notifications while signed in.
     ref.listen(pushProvider, (_, _) {});
+    ref.listen(appVersionReporterProvider, (_, _) {});
+    ref.listen(attendanceGeofencesProvider, (_, _) {});
     // GM / manager: keeps the RTDB role copies the database rules read in sync.
     ref.listen(roleMirrorProvider, (_, _) {});
     return MaterialApp.router(

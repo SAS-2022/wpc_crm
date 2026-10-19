@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/language_button.dart';
 import '../../core/text_input_dialog.dart';
@@ -127,6 +128,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   TextButton(onPressed: _busy ? null : _forgotPassword, child: Text(l10n.forgotPassword)),
+                  const Divider(height: 32),
+                  // People without a company account register and wait for approval.
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => context.go('/register'),
+                    icon: const Icon(Icons.person_add_alt),
+                    label: Text(l10n.createAccount),
+                  ),
                 ],
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
+import '../users/users_repository.dart';
 
 /// GM / sales manager: add, rename and delete client tags, or (with
 /// [TagList.locationTypes]) the labels of client locations. Names must be
@@ -78,7 +79,7 @@ class ClientTagsScreen extends ConsumerWidget {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(l10n.deleteTagTitle(label)),
-        content: Text(l10n.deleteTagBody(used)),
+        content: Text(kind == TagList.positions ? l10n.deletePositionBody(used) : l10n.deleteTagBody(used)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
           FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.delete)),
@@ -98,20 +99,22 @@ class ClientTagsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final tags = ref.watch(tagListProvider(kind)).value;
     final clients = ref.watch(allClientsProvider).value ?? const [];
+    final users = ref.watch(usersProvider).value ?? const [];
     final lang = Localizations.localeOf(context).languageCode;
     final locations = kind == TagList.locationTypes;
-    int used(String id) => clients
-        .where((c) => locations ? c.locations.any((l) => l.typeId == id) : c.tagIds.contains(id))
-        .length;
+    final positions = kind == TagList.positions;
+    int used(String id) => positions
+        ? users.where((u) => u.position == id).length
+        : clients.where((c) => locations ? c.locations.any((l) => l.typeId == id) : c.tagIds.contains(id)).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(locations ? l10n.locationTypes : l10n.clientTags)),
+      appBar: AppBar(title: Text(positions ? l10n.positions : locations ? l10n.locationTypes : l10n.clientTags)),
       floatingActionButton: tags == null
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _edit(context, tags),
               icon: const Icon(Icons.add),
-              label: Text(l10n.addTag),
+              label: Text(positions ? l10n.addPosition : l10n.addTag),
             ),
       body: tags == null
           ? const Center(child: CircularProgressIndicator())
@@ -120,13 +123,13 @@ class ClientTagsScreen extends ConsumerWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(locations ? l10n.locationTypesHelp : l10n.clientTagsHelp),
+                  child: Text(positions ? l10n.positionsHelp : locations ? l10n.locationTypesHelp : l10n.clientTagsHelp),
                 ),
                 for (final t in tags)
                   ListTile(
-                    leading: Icon(locations ? Icons.place_outlined : Icons.sell_outlined),
+                    leading: Icon(positions ? Icons.work_outline : locations ? Icons.place_outlined : Icons.sell_outlined),
                     title: Text(t.label(lang)),
-                    subtitle: Text([lang == 'ar' ? t.en : t.ar, l10n.clientsCountShort(used(t.id))]
+                    subtitle: Text([lang == 'ar' ? t.en : t.ar, positions ? l10n.peopleCount(used(t.id)) : l10n.clientsCountShort(used(t.id))]
                         .where((s) => s.isNotEmpty)
                         .join(' · ')),
                     onTap: () => _edit(context, tags, t),

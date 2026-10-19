@@ -20,6 +20,8 @@ import 'dashboard_cards.dart';
 import 'progress_charts.dart';
 import 'stats.dart';
 import 'stats_widgets.dart';
+import '../attendance/attendance_card.dart';
+import '../attendance/attendance_calendar_view.dart';
 
 enum _RangeKind { thisMonth, lastMonth, custom }
 
@@ -133,6 +135,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
           const TrackingCard(),
+          // Assigned to a work site: today's check-in / check-out.
+          AttendanceCard(me: me),
           // Leave requests waiting for this person's approval (hidden when none).
           const LeaveApprovalsCard(),
           // Filters: period and person, in one row above the numbers.
@@ -322,7 +326,6 @@ class _BackOfficeHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.welcome(me.name)), actions: const [NotificationsBell()]),
       body: ListView(
@@ -339,6 +342,9 @@ class _BackOfficeHome extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Today's check-in (big Check in / Check out button) and the month calendar.
+          AttendanceCard(me: me, prominent: true),
+          if (me.workSiteIds.isNotEmpty) MyAttendanceCalendar(me: me),
           // HR: requests waiting for them first.
           const LeaveApprovalsCard(),
           Card(
@@ -363,8 +369,7 @@ class _BackOfficeHome extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          Text(l10n.backOfficeHomeBody, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+
         ],
       ),
     );

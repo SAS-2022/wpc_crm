@@ -59,6 +59,7 @@ class Client {
     this.statusAt,
     this.statusRequest,
     this.statusLog = const [],
+    this.parentId,
   });
 
   final String id;
@@ -161,6 +162,9 @@ class Client {
 
   bool get isActive => status == ClientStatus.active;
 
+  /// The main company this client (e.g. a showroom) belongs to; null = none.
+  final String? parentId;
+
   /// The main location. Imports, duplicates and plans use this one.
   bool get hasLocation => lat != null && lng != null;
 
@@ -238,6 +242,7 @@ class Client {
         for (final s in d['statusLog'] as List? ?? const [])
           if (s is Map) StatusChange.fromMap(s),
       ],
+      parentId: d['parentId'] as String?,
     );
   }
 }

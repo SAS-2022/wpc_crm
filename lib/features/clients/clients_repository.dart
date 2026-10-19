@@ -15,6 +15,7 @@ import 'merge.dart';
 import 'transfer.dart';
 import '../../core/saving.dart';
 import 'client_status.dart';
+import 'client_links.dart';
 
 /// Every client the signed-in user may read (all for KAM/managers, own for
 /// sales execs), hidden ones included: for the client page, imports and
@@ -33,6 +34,11 @@ final allClientsProvider = StreamProvider<List<Client>>((ref) {
 /// ones left out.
 final clientsProvider = Provider<AsyncValue<List<Client>>>(
   (ref) => ref.watch(allClientsProvider).whenData((list) => list.where((c) => !c.hidden).toList()),
+);
+
+/// Every readable client by id (e.g. a branch's main company name).
+final clientsByIdProvider = Provider<Map<String, Client>>(
+  (ref) => {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c},
 );
 
 /// Ids of hidden clients, to leave their visits and plan items out of statistics.
@@ -267,6 +273,8 @@ class ClientsRepository {
       }
       await batch.commit();
     }
+    // Its branches go to its own main company (or stand alone).
+    await moveBranches(client.id, client.parentId);
     // Last, so a failure above leaves the client in place.
     await _clients.doc(client.id).delete();
   });
@@ -296,6 +304,10 @@ class ClientsRepository {
         op(batch);
       }
       await batch.commit();
+    }
+    // Branches of the merged clients now belong to the kept one.
+    for (final o in others) {
+      await moveBranches(o.id, keep.id);
     }
     // Last, so a failure above leaves both clients in place.
     final batch = _db.batch();

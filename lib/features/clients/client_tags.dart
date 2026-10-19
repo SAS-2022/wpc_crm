@@ -47,11 +47,29 @@ const defaultLocationTypes = [
   ClientTag(id: 'branch', en: 'Branch', ar: 'فرع'),
 ];
 
-/// The two editable label lists: business tags on clients, and the labels of
-/// a client's locations. Same shape ({tags: [{id, en, ar}]}), same editor.
+/// Job titles people pick when registering (user request 2026-10-19: a list,
+/// not typed), used until a GM / sales manager first saves the list
+/// (`settings/positions`, readable before sign-in). `users.position` holds the id.
+const defaultPositions = [
+  ClientTag(id: 'sales_executive', en: 'Sales Executive', ar: 'مندوب مبيعات'),
+  ClientTag(id: 'key_account_manager', en: 'Key Account Manager', ar: 'مدير حسابات رئيسية'),
+  ClientTag(id: 'accountant', en: 'Accountant', ar: 'محاسب'),
+  ClientTag(id: 'procurement_officer', en: 'Procurement Officer', ar: 'موظف مشتريات'),
+  ClientTag(id: 'hr_officer', en: 'HR Officer', ar: 'موظف موارد بشرية'),
+  ClientTag(id: 'engineer', en: 'Engineer', ar: 'مهندس'),
+  ClientTag(id: 'driver', en: 'Driver', ar: 'سائق'),
+  ClientTag(id: 'worker', en: 'Worker', ar: 'عامل'),
+  ClientTag(id: 'storekeeper', en: 'Storekeeper', ar: 'أمين مستودع'),
+  ClientTag(id: 'admin_assistant', en: 'Administrative Assistant', ar: 'مساعد إداري'),
+];
+
+/// The editable label lists: business tags on clients, the labels of a
+/// client's locations and job positions. Same shape ({tags: [{id, en, ar}]}),
+/// same editor.
 enum TagList {
   clientTags('settings/clientTags', defaultClientTags),
-  locationTypes('settings/locationTypes', defaultLocationTypes);
+  locationTypes('settings/locationTypes', defaultLocationTypes),
+  positions('settings/positions', defaultPositions);
 
   const TagList(this.path, this.defaults);
 
@@ -99,6 +117,16 @@ final clientTagsProvider = tagListProvider(TagList.clientTags);
 final locationTypesByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
       for (final t in ref.watch(tagListProvider(TagList.locationTypes)).value ?? defaultLocationTypes) t.id: t,
     });
+
+/// Position id → label; [positionLabel] shows it.
+final positionsByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
+      for (final t in ref.watch(tagListProvider(TagList.positions)).value ?? defaultPositions) t.id: t,
+    });
+
+/// A person's position in [lang]; text typed before positions became a list
+/// is shown as it is.
+String positionLabel(Map<String, ClientTag> positions, String position, String lang) =>
+    positions[position]?.label(lang) ?? position;
 
 /// Tag id → tag, for showing a client's tags.
 final clientTagsByIdProvider = Provider<Map<String, ClientTag>>((ref) => {

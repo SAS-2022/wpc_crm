@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../l10n/app_localizations.dart';
+import 'app_version.dart';
 
 enum UserRole {
   salesExec('sales_exec'),
@@ -10,6 +11,12 @@ enum UserRole {
   hr('hr'),
   accounting('accounting'),
   procurement('procurement'),
+
+  /// Attendance only (user request 2026-10-19). Drivers go out and come back
+  /// during the day, like the sales team.
+  worker('worker'),
+  engineer('engineer'),
+  driver('driver'),
 
   /// A role this app version doesn't know (added in a later version): no
   /// access until the app is updated. Never stored.
@@ -21,7 +28,7 @@ enum UserRole {
   final String value;
 
   /// Roles that can be given to a user (the user form's list).
-  static const assignable = [salesExec, kam, salesManager, gm, hr, accounting, procurement];
+  static const assignable = [salesExec, kam, salesManager, gm, hr, accounting, procurement, worker, engineer, driver];
 
   /// Unknown or missing values become [unknown], never a sales role: an old
   /// app must not treat a newer role as a sales executive (tracked, sees
@@ -41,9 +48,15 @@ enum UserRole {
   /// The sales team: uses clients, visits and plans.
   bool get isSales => isSupervisor || this == salesExec;
 
-  /// HR, accounting and procurement: no sales features; Home, Profile and
-  /// (later) attendance and leave.
-  bool get isBackOffice => this == hr || this == accounting || this == procurement;
+  /// HR, accounting, procurement, workers, engineers and drivers: no sales
+  /// features; Home (attendance, leave), Profile.
+  bool get isBackOffice =>
+      this == hr || this == accounting || this == procurement || this == worker || this == engineer || this == driver;
+
+  /// Attendance: people who leave the work site during the day (sales team,
+  /// drivers) aren't checked out when they leave before the end of the day;
+  /// office staff are (at the time they left).
+  bool get leavesSiteForWork => this == salesExec || this == kam || this == driver;
 
   /// HR or GM: run the HR area (attendance, payroll, leave, warnings).
   bool get isHr => this == hr || this == gm;
@@ -65,6 +78,9 @@ enum UserRole {
         hr => l10n.roleHr,
         accounting => l10n.roleAccounting,
         procurement => l10n.roleProcurement,
+        worker => l10n.roleWorker,
+        engineer => l10n.roleEngineer,
+        driver => l10n.roleDriver,
         unknown => l10n.roleUnknown,
       };
 }
@@ -80,6 +96,14 @@ class AppUser {
     required this.active,
     this.odooName = '',
     this.monthlyTarget = 0,
+    this.appVersions = const {},
+    this.updateRemindedAt,
+    this.companyId = '',
+    this.position = '',
+    this.approval = '',
+    this.registeredAt,
+    this.workSiteIds = const [],
+    this.overtimeAllowed = false,
   });
 
   final String id;
@@ -98,6 +122,27 @@ class AppUser {
   /// Visits per month expected from this person; 0 = no target.
   final int monthlyTarget;
 
+  /// Installed app per phone platform ('android' / 'ios'), reported by the app.
+  final Map<String, InstalledVersion> appVersions;
+
+  /// Last "please update" reminder (one a minute at most).
+  final DateTime? updateRemindedAt;
+
+  /// The company they work for (`companies/{id}`) and their job title.
+  final String companyId;
+  final String position;
+
+  /// Self-registration (2026-10-19): 'pending' until the sales manager / GM
+  /// approves, 'rejected', or '' (approved / created by an admin).
+  final String approval;
+  final DateTime? registeredAt;
+  bool get isPendingApproval => approval == 'pending';
+
+  /// Attendance: the work sites they check in at, and whether time after
+  /// the end of the work day counts (overtime).
+  final List<String> workSiteIds;
+  final bool overtimeAllowed;
+
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return AppUser(
@@ -110,6 +155,14 @@ class AppUser {
       active: d['active'] as bool? ?? false,
       odooName: d['odooName'] as String? ?? '',
       monthlyTarget: (d['monthlyTarget'] as num?)?.toInt() ?? 0,
+      appVersions: InstalledVersion.parseAll(d['appVersions']),
+      updateRemindedAt: (d['updateRemindedAt'] as Timestamp?)?.toDate(),
+      companyId: d['companyId'] as String? ?? '',
+      position: d['position'] as String? ?? '',
+      approval: d['approval'] as String? ?? '',
+      registeredAt: (d['registeredAt'] as Timestamp?)?.toDate(),
+      workSiteIds: List<String>.from(d['workSiteIds'] as List? ?? const []),
+      overtimeAllowed: d['overtimeAllowed'] == true,
     );
   }
 
@@ -122,5 +175,9 @@ class AppUser {
         'active': active,
         'odooName': odooName,
         'monthlyTarget': role.isTracked ? monthlyTarget : 0,
+        'companyId': companyId,
+        'position': position,
+        'workSiteIds': workSiteIds,
+        'overtimeAllowed': overtimeAllowed,
       };
 }

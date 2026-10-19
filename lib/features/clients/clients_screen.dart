@@ -19,6 +19,8 @@ import 'visit_rules.dart';
 import '../../core/app_user.dart';
 import 'client_status.dart';
 import 'client_status_widgets.dart';
+import 'client_links.dart';
+import 'client_links_widgets.dart';
 
 enum _Status { all, recent, dueSoon, overdue, noLocation }
 
@@ -41,6 +43,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   /// Clients with a status change waiting for [me]'s approval.
   bool _showStatusRequests = false;
+
+  /// Main companies and their branches as a tree.
+  bool _showLinked = false;
 
   /// Ids ticked for hiding / showing; null when not selecting.
   Set<String>? _selected;
@@ -160,6 +165,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
         )
         .toList();
     final list = searched.where((c) => _matches(c, rules, now, _status)).toList();
+    // Main companies with their branches; a tree shows when any of its
+    // clients passes the search and filters.
+    final shownIds = {for (final c in list) c.id};
+    final trees = [
+      for (final t in linkTrees(ref.watch(clientsProvider).value ?? const <Client>[]))
+        if (t.all.any((c) => shownIds.contains(c.id))) t,
+    ];
     final selected = _selected;
     // Ticked clients that are still in the list (filters may have changed).
     final ticked = selected == null
@@ -277,6 +289,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 showCheckmark: false,
                 onSelected: (v) => setState(() {
                   _showHidden = v;
+                  _showLinked = false;
                   _showDuplicates = false;
                   _showStatusRequests = false;
                   _selected = _selected == null ? null : {};
@@ -294,7 +307,26 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 showCheckmark: false,
                 onSelected: (v) => setState(() {
                   _showDuplicates = v;
+                  _showLinked = false;
                   _showHidden = false;
+                  _showStatusRequests = false;
+                  _selected = null;
+                }),
+              ),
+            ),
+          // Main companies and their branches, as a tree.
+          if (trees.isNotEmpty || _showLinked)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilterChip(
+                avatar: const Icon(Icons.account_tree_outlined, size: 16),
+                label: Text('${l10n.linkedClients} (${trees.length})'),
+                selected: _showLinked,
+                showCheckmark: false,
+                onSelected: (v) => setState(() {
+                  _showLinked = v;
+                  _showHidden = false;
+                  _showDuplicates = false;
                   _showStatusRequests = false;
                   _selected = null;
                 }),
@@ -311,6 +343,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 showCheckmark: false,
                 onSelected: (v) => setState(() {
                   _showStatusRequests = v;
+                  _showLinked = false;
                   _showHidden = false;
                   _showDuplicates = false;
                   _selected = null;
@@ -355,6 +388,15 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
               data: (_) {
+                if (_showLinked) {
+                  return Column(
+                    children: [
+                      chips,
+                      const SizedBox(height: 8),
+                      Expanded(child: LinkedClientsTree(trees: trees)),
+                    ],
+                  );
+                }
                 if (_showDuplicates) {
                   return Column(
                     children: [
@@ -488,6 +530,15 @@ class _ClientTile extends ConsumerWidget {
                   if (tags[id] case final t?) t.label(lang),
               ].where((s) => s.isNotEmpty).join(' · '),
             ),
+            // A branch: which main company it belongs to.
+            if (ref.watch(clientsByIdProvider)[client.parentId ?? ''] case final parent?) ...[
+              const TextSpan(text: '  '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Icon(Icons.account_tree_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              ),
+              TextSpan(text: ' ${parent.name}'),
+            ],
             if (client.statusRequest != null) ...[
               const TextSpan(text: '  '),
               WidgetSpan(
