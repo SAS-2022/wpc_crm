@@ -15,6 +15,7 @@ import '../users/users_repository.dart';
 import 'checklist.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
+import '../../core/saving.dart';
 
 /// Puts [client] on [me]'s plan for today in one tap (clients map). Same
 /// approval and notifications as the add sheet; returns whether it was
@@ -269,7 +270,10 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                     ),
                   FilledButton(
                     onPressed: _busy ? null : _save,
-                    child: Text(_visit && _selected.isNotEmpty ? l10n.saveCount(_selected.length) : l10n.save),
+                    child: BusyLabel(
+                      busy: _busy,
+                      child: Text(_visit && _selected.isNotEmpty ? l10n.saveCount(_selected.length) : l10n.save),
+                    ),
                   ),
                 ],
               ),

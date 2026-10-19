@@ -112,6 +112,18 @@ class Visit {
   }
 }
 
+/// One visit per client per day (user decision 2026-10-19): [userId]'s visit
+/// (not call) to the client of [visits] on [day]'s date, if any. A visit
+/// still waiting for its server time counts as now.
+Visit? sameDayVisit(Iterable<Visit> visits, String userId, DateTime day, {DateTime? now}) {
+  for (final v in visits) {
+    if (v.isCall || v.salesExecId != userId) continue;
+    final at = v.checkedInAt ?? now ?? DateTime.now();
+    if (at.year == day.year && at.month == day.month && at.day == day.day) return v;
+  }
+  return null;
+}
+
 class VisitComment {
   const VisitComment({required this.id, required this.authorId, required this.body, required this.createdAt});
 

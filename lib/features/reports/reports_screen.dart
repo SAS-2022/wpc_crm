@@ -126,6 +126,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final catalogs = catalogReport(
       people: people,
       clients: clients,
+      visits: visits,
       range: _range,
       rules: ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults,
       now: now,

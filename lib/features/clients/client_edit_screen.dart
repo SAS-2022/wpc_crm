@@ -8,9 +8,12 @@ import '../../core/location.dart';
 import '../../core/providers.dart';
 import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
+import '../attachments/attachments.dart';
 import '../import/import_service.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
+import 'client_documents.dart';
+import 'client_documents_section.dart';
 import 'client_locations_section.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
@@ -18,6 +21,7 @@ import 'duplicate_check.dart';
 import 'location_picker_screen.dart';
 import 'transfer.dart';
 import 'visit_rules.dart';
+import '../../core/saving.dart';
 
 /// Add (clientId == null) or edit a client. Sales execs edit contact details,
 /// location and notes of their own clients and add new clients for
@@ -74,6 +78,9 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   bool _loaded = false;
   bool _busy = false;
   bool _locating = false;
+
+  /// CR / VAT / National Address picked here, uploaded when the client is saved.
+  final _docs = <ClientDocType, PendingFile>{};
 
   List<TextEditingController> get _controllers => [
     _name,
@@ -200,6 +207,35 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     if (picked != null) _setCoords(picked.latitude, picked.longitude);
   }
 
+  /// Fields a document can fill, for this user: VAT and CR only where the
+  /// form shows them.
+  List<DocSuggestion> _suggest(DocFields f, AppLocalizations l10n, bool canIds) {
+    void set(TextEditingController c, String v) => setState(() => c.text = v);
+    return [
+      if (canIds && f.vat != null)
+        DocSuggestion(label: l10n.vat, value: f.vat!, current: _vat.text, apply: (v) => set(_vat, v)),
+      if (canIds && f.crNumber != null)
+        DocSuggestion(label: l10n.companyId, value: f.crNumber!, current: _companyId.text, apply: (v) => set(_companyId, v)),
+      if (f.addressLine case final line?)
+        DocSuggestion(label: l10n.address, value: line, current: _address.text, apply: (v) => set(_address, v)),
+      if (f.city != null)
+        DocSuggestion(label: l10n.city, value: f.city!, current: _city.text, apply: (v) => set(_city, v)),
+    ];
+  }
+
+  /// Uploads the picked documents to the saved client; a failed one shows an
+  /// error but the client stays saved.
+  Future<void> _uploadDocs(String clientId, String userId, ScaffoldMessengerState messenger, AppLocalizations l10n) async {
+    final repo = ref.read(attachmentsRepositoryProvider);
+    for (final MapEntry(key: type, value: file) in _docs.entries) {
+      try {
+        await repo.upload((parent: AttachmentParent.clients, id: clientId), file, userId, docType: type.key);
+      } catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context);
@@ -281,6 +317,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       final repo = ref.read(clientsRepositoryProvider);
       if (_isNew) {
         final id = await repo.create(data, createdBy: me.id);
+        await _uploadDocs(id, me.id, messenger, l10n);
         messenger.showSnackBar(SnackBar(content: Text(l10n.clientAdded)));
         if (!mounted) return;
         if (widget.pickFor != null) {
@@ -290,6 +327,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
         }
       } else {
         await repo.update(widget.clientId!, data);
+        await _uploadDocs(widget.clientId!, me.id, messenger, l10n);
         final original = _original;
         if (manage && original != null && _assignedTo != original.assignedTo) {
           await repo.transfer([original], toId: _assignedTo, by: me);
@@ -392,6 +430,13 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
               field(_vat, l10n.vat, type: TextInputType.number),
               field(_companyId, l10n.companyId, type: TextInputType.number),
             ],
+            section(l10n.documents),
+            ClientDocumentsSection(
+              clientId: widget.clientId,
+              pending: _docs,
+              onPicked: (type, file) => setState(() => file == null ? _docs.remove(type) : _docs[type] = file),
+              suggest: (f) => _suggest(f, l10n, manage || _isNew),
+            ),
             section(l10n.contact),
             field(_contactPerson, l10n.contactPerson),
             field(_phone, l10n.phone, type: TextInputType.phone),
@@ -560,7 +605,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(l10n.save),
+              child: BusyLabel(busy: _busy, child: Text(l10n.save)),
             ),
           ],
         ),

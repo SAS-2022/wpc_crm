@@ -11,6 +11,7 @@ import '../users/users_repository.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
 import 'leave_widgets.dart';
+import '../../core/saving.dart';
 
 /// One request: what, when, the approval steps in order (who decided, when,
 /// comment), its documents, and the buttons for whoever acts now: Approve /
@@ -156,7 +157,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
                     onPressed: _busy ? null : () => _decide(me, approve: false),
-                    icon: const Icon(Icons.close),
+                    icon: busyIcon(_busy, const Icon(Icons.close)),
                     label: Text(l10n.reject),
                   ),
                 ),
@@ -164,7 +165,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: _busy ? null : () => _decide(me, approve: true),
-                    icon: const Icon(Icons.check),
+                    icon: busyIcon(_busy, const Icon(Icons.check)),
                     label: Text(l10n.approve),
                   ),
                 ),

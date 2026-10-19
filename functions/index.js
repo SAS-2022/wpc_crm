@@ -254,8 +254,7 @@ function presenceEvents(before, after) {
   return events;
 }
 
-/** The same warning about one person is sent at most this often. */
-const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
+const { issuesToReport } = require('./trackingAlerts');
 
 /**
  * On every presence change: writes the tracking log (RTDB
@@ -271,8 +270,11 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   const beforeVal = event.data.before.val();
   const afterVal = event.data.after.val();
   const changes = presenceEvents(beforeVal, afterVal);
-  const freshIssues = trackingIssues(afterVal).filter((i) => !trackingIssues(beforeVal).includes(i));
-  if (changes.length === 0 && freshIssues.length === 0) return;
+  // Issues are judged only while online and on duty; the problems already
+  // reported are kept in tracking_alerts/{uid}/active, so a phone that keeps
+  // reconnecting with GPS still off is not reported again on every reconnect.
+  const checkIssues = !!afterVal && afterVal.online !== false && afterVal.onDuty === true;
+  if (changes.length === 0 && !checkIssues) return;
 
   // Silent outside work hours (user decision): nothing is logged or sent
   // except the start / end of duty itself.
@@ -286,20 +288,23 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
     await Promise.all(events.map((e) => dayRef.push({ ...e, t })));
   }
 
-  const fresh = working ? freshIssues : [];
-  if (fresh.length === 0) return;
+  if (!working || !checkIssues) return;
 
   const uid = event.params.uid;
+  const now = Date.now();
+  const today = saudiDay(now);
+  const current = trackingIssues(afterVal);
+  const sentRef = admin.database().ref(`tracking_alerts/${uid}`);
+  const sent = (await sentRef.get()).val() || {};
+  const active = sent.active || {};
+  const { issues, active: nextActive } = issuesToReport(current, active, sent, now, today);
+  if (JSON.stringify(nextActive) !== JSON.stringify(active)) await sentRef.child('active').set(nextActive);
+  if (issues.length === 0) return;
+
   const db = admin.firestore();
   const user = await db.doc(`users/${uid}`).get();
   const role = user.get('role');
   if ((role !== 'sales_exec' && role !== 'kam') || user.get('active') !== true) return;
-
-  const sentRef = admin.database().ref(`tracking_alerts/${uid}`);
-  const sent = (await sentRef.get()).val() || {};
-  const now = Date.now();
-  const issues = fresh.filter((i) => !(sent[i] > now - ALERT_COOLDOWN_MS));
-  if (issues.length === 0) return;
 
   const managers = await db.collection('users').where('role', 'in', ['sales_manager', 'gm']).where('active', '==', true).get();
   const to = new Set(managers.docs.map((d) => d.id));

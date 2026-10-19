@@ -130,15 +130,23 @@ class CatalogReport {
   final Map<GivenItem, int> neverGiven;
 }
 
-/// From the clients' hand-over logs (visits and recorded entries).
+/// From the clients' hand-over logs (visits and recorded entries) plus
+/// [visits]' `given`: older app versions saved hand-overs only on the visit
+/// (and the `clients.given` summary), never in the log. A visit whose
+/// entries are in a log is counted once.
 CatalogReport catalogReport({
   required List<AppUser> people,
   required List<Client> clients,
+  List<Visit> visits = const [],
   required StatsRange range,
   required GivenItemRules rules,
   required DateTime now,
 }) {
   final ids = {for (final u in people) u.id};
+  final logged = {
+    for (final c in clients)
+      for (final e in c.givenLog) ?e.visitId,
+  };
   final rows = [
     for (final u in people)
       () {
@@ -150,6 +158,15 @@ CatalogReport catalogReport({
             byItem[e.item] = (byItem[e.item] ?? 0) + e.qty;
             reached.add(c.id);
           }
+        }
+        for (final v in visits) {
+          final at = v.checkedInAt;
+          if (v.given.isEmpty || v.salesExecId != u.id || logged.contains(v.id)) continue;
+          if (at == null || !range.contains(at)) continue;
+          for (final MapEntry(key: item, value: qty) in v.given.entries) {
+            byItem[item] = (byItem[item] ?? 0) + qty;
+          }
+          reached.add(v.clientId);
         }
         return CatalogRow(user: u, byItem: byItem, clients: reached.length);
       }(),

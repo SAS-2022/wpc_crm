@@ -608,6 +608,24 @@ abstract class AppLocalizations {
   /// **'Visit saved'**
   String get visitSaved;
 
+  /// No description provided for @visitAlreadyTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Already visited today'**
+  String get visitAlreadyTodayTitle;
+
+  /// No description provided for @visitAlreadyToday.
+  ///
+  /// In en, this message translates to:
+  /// **'You already saved a visit to this client today at {time}. Only one visit per client per day: open it to add photos or comments.'**
+  String visitAlreadyToday(String time);
+
+  /// No description provided for @openVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Open visit'**
+  String get openVisit;
+
   /// No description provided for @gettingLocation.
   ///
   /// In en, this message translates to:
@@ -4207,6 +4225,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} deleted'**
   String clientDeleted(String name);
+
+  /// No description provided for @documents.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get documents;
+
+  /// No description provided for @docCr.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial Registration (CR)'**
+  String get docCr;
+
+  /// No description provided for @docVat.
+  ///
+  /// In en, this message translates to:
+  /// **'VAT certificate'**
+  String get docVat;
+
+  /// No description provided for @docNationalAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'National Address'**
+  String get docNationalAddress;
+
+  /// No description provided for @docsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload the PDF from the portal (best) or a clear photo. The app reads the numbers and the address and offers to fill the fields.'**
+  String get docsHelp;
+
+  /// No description provided for @docNotAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not added'**
+  String get docNotAdded;
+
+  /// No description provided for @docWillUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} – uploaded when you save'**
+  String docWillUpload(String name);
+
+  /// No description provided for @upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get upload;
+
+  /// No description provided for @replace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get replace;
+
+  /// No description provided for @docUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'The document was attached, but no text could be read from it. Fill the fields by hand.'**
+  String get docUnreadable;
+
+  /// No description provided for @docPhotoOnWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'The document was attached. Photos are read only in the phone app; on the web upload the PDF to fill the fields.'**
+  String get docPhotoOnWeb;
+
+  /// No description provided for @docNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'The document was attached, but no CR / VAT number or address was found in it.'**
+  String get docNothingFound;
+
+  /// No description provided for @docFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Found in the {document}'**
+  String docFoundTitle(String document);
+
+  /// No description provided for @docFoundHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the values before filling them in. Ticked fields replace what is in the form.'**
+  String get docFoundHelp;
+
+  /// No description provided for @docCurrentValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Now: {value}'**
+  String docCurrentValue(String value);
+
+  /// No description provided for @docFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in'**
+  String get docFill;
 }
 
 class _AppLocalizationsDelegate

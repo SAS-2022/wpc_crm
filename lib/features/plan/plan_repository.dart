@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../visits/visit.dart';
 import 'plan_task.dart';
+import '../../core/saving.dart';
 
 CollectionReference<Map<String, dynamic>> get _tasks => FirebaseFirestore.instance.collection('tasks');
 CollectionReference<Map<String, dynamic>> get _visits => FirebaseFirestore.instance.collection('visits');
@@ -66,7 +67,7 @@ class PlanRepository {
     required List<({String id, String name})> clients,
     String title = '',
     List<String> checklist = const [],
-  }) async {
+  }) => saving(() async {
     final batch = FirebaseFirestore.instance.batch();
     final items = clients.isEmpty ? [null] : clients;
     for (final c in items) {
@@ -87,10 +88,10 @@ class PlanRepository {
       });
     }
     await batch.commit();
-  }
+  });
 
   /// Approves every pending item of [tasks]; returns how many.
-  Future<int> approveAll(List<PlanTask> tasks, String approverId) async {
+  Future<int> approveAll(List<PlanTask> tasks, String approverId) => saving(() async {
     final pending = tasks.where((t) => t.approval == TaskApproval.pending).toList();
     final batch = FirebaseFirestore.instance.batch();
     for (final t in pending) {
@@ -102,34 +103,34 @@ class PlanRepository {
     }
     await batch.commit();
     return pending.length;
-  }
+  });
 
-  Future<void> setApproval(String taskId, TaskApproval approval, String approverId) => _tasks.doc(taskId).update({
+  Future<void> setApproval(String taskId, TaskApproval approval, String approverId) => saving(() => _tasks.doc(taskId).update({
         'approval': approval.name,
         'approvedBy': approverId,
         'approvedAt': FieldValue.serverTimestamp(),
-      });
+      }));
 
-  Future<void> setDone(String taskId, bool done) => _tasks.doc(taskId).update({
+  Future<void> setDone(String taskId, bool done) => saving(() => _tasks.doc(taskId).update({
         'done': done,
         'doneAt': done ? FieldValue.serverTimestamp() : null,
-      });
+      }));
 
-  Future<void> delete(String taskId) => _tasks.doc(taskId).delete();
+  Future<void> delete(String taskId) => saving(() => _tasks.doc(taskId).delete());
 
-  Future<void> setTitle(String taskId, String title) => _tasks.doc(taskId).update({'title': title});
+  Future<void> setTitle(String taskId, String title) => saving(() => _tasks.doc(taskId).update({'title': title}));
 
-  Future<void> setChecklist(String taskId, List<ChecklistItem> items) =>
-      _tasks.doc(taskId).update({'checklist': [for (final i in items) i.toMap()]});
+  Future<void> setChecklist(String taskId, List<ChecklistItem> items) => saving(() =>
+      _tasks.doc(taskId).update({'checklist': [for (final i in items) i.toMap()]}));
 
   /// Deletes [tasks] in one write.
-  Future<void> deleteAll(List<PlanTask> tasks) async {
+  Future<void> deleteAll(List<PlanTask> tasks) => saving(() async {
     final batch = FirebaseFirestore.instance.batch();
     for (final t in tasks) {
       batch.delete(_tasks.doc(t.id));
     }
     await batch.commit();
-  }
+  });
 
   /// Ticks today's visit tasks for this client once the visit is saved.
   Future<void> completeVisitTasks({

@@ -280,6 +280,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitSaved => 'Visit saved';
 
   @override
+  String get visitAlreadyTodayTitle => 'Already visited today';
+
+  @override
+  String visitAlreadyToday(String time) {
+    return 'You already saved a visit to this client today at $time. Only one visit per client per day: open it to add photos or comments.';
+  }
+
+  @override
+  String get openVisit => 'Open visit';
+
+  @override
   String get gettingLocation => 'Getting your location…';
 
   @override
@@ -2422,4 +2433,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String clientDeleted(String name) {
     return '$name deleted';
   }
+
+  @override
+  String get documents => 'Documents';
+
+  @override
+  String get docCr => 'Commercial Registration (CR)';
+
+  @override
+  String get docVat => 'VAT certificate';
+
+  @override
+  String get docNationalAddress => 'National Address';
+
+  @override
+  String get docsHelp =>
+      'Upload the PDF from the portal (best) or a clear photo. The app reads the numbers and the address and offers to fill the fields.';
+
+  @override
+  String get docNotAdded => 'Not added';
+
+  @override
+  String docWillUpload(String name) {
+    return '$name – uploaded when you save';
+  }
+
+  @override
+  String get upload => 'Upload';
+
+  @override
+  String get replace => 'Replace';
+
+  @override
+  String get docUnreadable =>
+      'The document was attached, but no text could be read from it. Fill the fields by hand.';
+
+  @override
+  String get docPhotoOnWeb =>
+      'The document was attached. Photos are read only in the phone app; on the web upload the PDF to fill the fields.';
+
+  @override
+  String get docNothingFound =>
+      'The document was attached, but no CR / VAT number or address was found in it.';
+
+  @override
+  String docFoundTitle(String document) {
+    return 'Found in the $document';
+  }
+
+  @override
+  String get docFoundHelp =>
+      'Check the values before filling them in. Ticked fields replace what is in the form.';
+
+  @override
+  String docCurrentValue(String value) {
+    return 'Now: $value';
+  }
+
+  @override
+  String get docFill => 'Fill in';
 }

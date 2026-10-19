@@ -3,6 +3,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'image_shrink.dart';
+import '../../core/saving.dart';
+
 /// Max upload size, same limit as `storage.rules`.
 const maxAttachmentBytes = 20 * 1024 * 1024;
 
@@ -32,6 +35,9 @@ class Attachment {
     required this.size,
     required this.uploadedBy,
     required this.createdAt,
+    this.thumbPath = '',
+    this.thumbUrl = '',
+    this.docType = '',
   });
 
   final String id;
@@ -42,6 +48,13 @@ class Attachment {
   final int size;
   final String uploadedBy;
   final DateTime? createdAt;
+
+  /// Small JPEG for photo grids ('' for files and older photos).
+  final String thumbPath;
+  final String thumbUrl;
+
+  /// Client documents: 'cr' | 'vat' | 'nationalAddress' ('' = other file).
+  final String docType;
 
   bool get isImage => contentType.startsWith('image/');
 
@@ -56,6 +69,9 @@ class Attachment {
       size: (d['size'] as num?)?.toInt() ?? 0,
       uploadedBy: d['uploadedBy'] as String? ?? '',
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      thumbPath: d['thumbPath'] as String? ?? '',
+      thumbUrl: d['thumbUrl'] as String? ?? '',
+      docType: d['docType'] as String? ?? '',
     );
   }
 }
@@ -105,28 +121,68 @@ final attachmentsRepositoryProvider = Provider((ref) => AttachmentsRepository())
 class AttachmentsRepository {
   final _storage = FirebaseStorage.instance;
 
-  Future<void> upload(AttachmentOwner owner, PendingFile file, String userId) async {
-    final safeName = file.name.replaceAll(RegExp(r'[^\w.\-]+'), '_');
+  /// Photos are scaled down (max 1600 px, JPEG) and get a small thumbnail
+  /// next to them (`…_thumb.jpg`). [docType]: a client document ('cr', …).
+  Future<void> upload(AttachmentOwner owner, PendingFile file, String userId, {String docType = ''}) => saving(() async {
+    var name = file.name;
+    var bytes = file.bytes;
+    var contentType = file.contentType;
+    ShrunkPhoto? shrunk;
+    if (const {'image/jpeg', 'image/png', 'image/webp'}.contains(contentType)) {
+      try {
+        shrunk = await shrinkPhotoAsync(bytes);
+      } catch (_) {
+        // Unreadable photo: uploaded as it is.
+      }
+      if (shrunk != null && shrunk.reencoded) {
+        bytes = shrunk.photo;
+        contentType = 'image/jpeg';
+        if (!RegExp(r'\.jpe?g$', caseSensitive: false).hasMatch(name)) name = '${name.replaceAll(RegExp(r'\.\w+$'), '')}.jpg';
+      }
+    }
+    final safeName = name.replaceAll(RegExp(r'[^\w.\-]+'), '_');
     final path = '${owner.parent.collection}/${owner.id}/${DateTime.now().millisecondsSinceEpoch}_$safeName';
     final ref = _storage.ref(path);
-    await ref.putData(file.bytes, SettableMetadata(contentType: file.contentType));
+    await ref.putData(bytes, SettableMetadata(contentType: contentType, cacheControl: 'public, max-age=31536000'));
+    String? thumbPath, thumbUrl;
+    if (shrunk != null) {
+      try {
+        thumbPath = '${path}_thumb.jpg';
+        final thumbRef = _storage.ref(thumbPath);
+        await thumbRef.putData(shrunk.thumb, SettableMetadata(contentType: 'image/jpeg', cacheControl: 'public, max-age=31536000'));
+        thumbUrl = await thumbRef.getDownloadURL();
+      } catch (_) {
+        // The grid then shows the full photo.
+        thumbPath = null;
+      }
+    }
     await _collection(owner).add({
       'storagePath': path,
       'url': await ref.getDownloadURL(),
-      'fileName': file.name,
-      'contentType': file.contentType,
-      'size': file.bytes.length,
+      'fileName': name,
+      'contentType': contentType,
+      'size': bytes.length,
       'uploadedBy': userId,
       'createdAt': FieldValue.serverTimestamp(),
+      'thumbPath': ?thumbPath,
+      'thumbUrl': ?thumbUrl,
+      if (docType.isNotEmpty) 'docType': docType,
     });
-  }
+  });
 
-  Future<void> delete(AttachmentOwner owner, Attachment attachment) async {
+  Future<void> delete(AttachmentOwner owner, Attachment attachment) => saving(() async {
     try {
       await _storage.ref(attachment.storagePath).delete();
     } on FirebaseException catch (e) {
       if (e.code != 'object-not-found') rethrow;
     }
+    if (attachment.thumbPath.isNotEmpty) {
+      try {
+        await _storage.ref(attachment.thumbPath).delete();
+      } on FirebaseException catch (_) {
+        // A missing thumbnail doesn't stop the delete.
+      }
+    }
     await _collection(owner).doc(attachment.id).delete();
-  }
+  });
 }

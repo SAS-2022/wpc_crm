@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'work_hours.dart';
+import '../../core/saving.dart';
 
 /// GM / sales manager: the days and hours when field staff locations are shared.
 class WorkHoursScreen extends ConsumerStatefulWidget {
@@ -113,7 +114,7 @@ class _WorkHoursScreenState extends ConsumerState<WorkHoursScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          FilledButton(onPressed: _busy ? null : _save, child: Text(l10n.save)),
+          FilledButton(onPressed: _busy ? null : _save, child: BusyLabel(busy: _busy, child: Text(l10n.save))),
         ],
       ),
     );

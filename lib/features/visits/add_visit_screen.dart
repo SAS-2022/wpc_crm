@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/location.dart';
 import '../../core/providers.dart';
@@ -20,6 +21,7 @@ import '../plan/plan_task.dart';
 import 'app_calls.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
+import '../../core/saving.dart';
 
 /// Check in at a client: GPS position, notes and optional photos. Saving turns
 /// the marker green. With [call], logs a phone call instead: no position, and
@@ -128,6 +130,14 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
     try {
       final userId = ref.read(currentUserProvider).value!.id;
       final repo = ref.read(visitsRepositoryProvider);
+      if (!widget.call) {
+        // Checked again here: the list on screen may be out of date.
+        final existing = await repo.todaysVisit(client.id, userId);
+        if (existing != null) {
+          if (mounted) await _showAlreadyVisited(existing);
+          return;
+        }
+      }
       final String visitId;
       if (widget.call) {
         visitId = await repo.addCall(client: client, userId: userId, notes: _notes.text.trim(), appCall: _appCall);
@@ -161,6 +171,25 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
     }
   }
 
+  Future<void> _showAlreadyVisited(Visit visit) async {
+    final l10n = AppLocalizations.of(context);
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.visitAlreadyTodayTitle),
+        content: Text(l10n.visitAlreadyToday(_time(visit))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.close)),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.openVisit)),
+        ],
+      ),
+    );
+    if (open == true && mounted) context.pushReplacement('/visits/${visit.id}');
+  }
+
+  String _time(Visit v) =>
+      DateFormat.jm(Localizations.localeOf(context).toString()).format(v.checkedInAt ?? DateTime.now());
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -171,6 +200,10 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
     final distance = _distance(client);
     final error = Theme.of(context).colorScheme.error;
     final me = ref.watch(currentUserProvider).value;
+    // One visit per client per day: today's visit, if there is one already.
+    final visitedToday = widget.call || me == null
+        ? null
+        : sameDayVisit(ref.watch(clientVisitsProvider(client.id)).value ?? const [], me.id, DateTime.now());
     // Tasks for this client on today's plan: ticked here, saved at once.
     final planned = me == null
         ? const <PlanTask>[]
@@ -263,6 +296,21 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
           Text(client.name, style: Theme.of(context).textTheme.titleLarge),
           if (client.city.isNotEmpty) Text(client.city),
           const SizedBox(height: 8),
+          if (visitedToday != null) ...[
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: ListTile(
+                leading: Icon(Icons.event_busy, color: Theme.of(context).colorScheme.onErrorContainer),
+                title: Text(l10n.visitAlreadyTodayTitle),
+                subtitle: Text(l10n.visitAlreadyToday(_time(visitedToday))),
+                trailing: TextButton(
+                  onPressed: () => context.pushReplacement('/visits/${visitedToday.id}'),
+                  child: Text(l10n.openVisit),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Card(child: locationStatus),
           const SizedBox(height: 16),
           if (planned.isNotEmpty) ...[
@@ -336,8 +384,8 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _busy || (!widget.call && _position == null) ? null : () => _save(client),
-            icon: const Icon(Icons.check),
+            onPressed: _busy || visitedToday != null || (!widget.call && _position == null) ? null : () => _save(client),
+            icon: busyIcon(_busy, const Icon(Icons.check)),
             label: Text(widget.call ? l10n.saveCall : l10n.saveVisit),
           ),
         ],

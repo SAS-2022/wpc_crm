@@ -12,6 +12,7 @@ import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
 import '../users/users_repository.dart';
 import '../clients/client_tags.dart';
+import '../clients/given_items_widgets.dart';
 import '../plan/plan_task.dart';
 import 'call_chip.dart';
 import 'visit.dart';
@@ -496,6 +497,7 @@ class _VisitCard extends StatelessWidget {
                                 ),
                                 if (time.isNotEmpty)
                                   Text(time, style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                                if (visit.given.isNotEmpty) GivenIcons(given: visit.given),
                               ],
                             ),
                             if (visitor.isNotEmpty)

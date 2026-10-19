@@ -13,6 +13,7 @@ import 'given_items.dart';
 import 'duplicates.dart';
 import 'merge.dart';
 import 'transfer.dart';
+import '../../core/saving.dart';
 
 /// Every client the signed-in user may read (all for KAM/managers, own for
 /// sales execs), hidden ones included: for the client page, imports and
@@ -142,7 +143,7 @@ class ClientsRepository {
   CollectionReference<Map<String, dynamic>> get _clients => _db.collection('clients');
 
   /// Adds a client by hand (not from Odoo); returns its id.
-  Future<String> create(Map<String, dynamic> data, {required String createdBy}) async {
+  Future<String> create(Map<String, dynamic> data, {required String createdBy}) => saving(() async {
     final ref = await _clients.add({
       ...data,
       'nameKey': Client.normalizeName(data['name'] as String),
@@ -156,17 +157,17 @@ class ClientsRepository {
       'createdAt': FieldValue.serverTimestamp(),
     });
     return ref.id;
-  }
+  });
 
-  Future<void> update(String clientId, Map<String, dynamic> data) =>
-      _clients.doc(clientId).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+  Future<void> update(String clientId, Map<String, dynamic> data) => saving(() =>
+      _clients.doc(clientId).update({...data, 'updatedAt': FieldValue.serverTimestamp()}));
 
   /// KAM / managers hide a client from lists and statistics, or show it again.
-  Future<void> setHidden(String clientId, {required bool hidden, required String by}) =>
-      setHiddenMany([clientId], hidden: hidden, by: by);
+  Future<void> setHidden(String clientId, {required bool hidden, required String by}) => saving(() =>
+      setHiddenMany([clientId], hidden: hidden, by: by));
 
   /// [setHidden] for several clients, in batches (500 writes per batch max).
-  Future<void> setHiddenMany(List<String> clientIds, {required bool hidden, required String by}) async {
+  Future<void> setHiddenMany(List<String> clientIds, {required bool hidden, required String by}) => saving(() async {
     for (var i = 0; i < clientIds.length; i += 400) {
       final batch = _db.batch();
       for (final id in clientIds.skip(i).take(400)) {
@@ -179,10 +180,10 @@ class ClientsRepository {
       }
       await batch.commit();
     }
-  }
+  });
 
   /// Adds [add] and removes [remove] tag ids on several clients, in batches.
-  Future<void> setTagsMany(List<String> clientIds, {Set<String> add = const {}, Set<String> remove = const {}}) async {
+  Future<void> setTagsMany(List<String> clientIds, {Set<String> add = const {}, Set<String> remove = const {}}) => saving(() async {
     // Firestore can't arrayUnion and arrayRemove one field in one update.
     for (final (field, ids) in [(FieldValue.arrayUnion, add), (FieldValue.arrayRemove, remove)]) {
       if (ids.isEmpty) continue;
@@ -194,11 +195,11 @@ class ClientsRepository {
         await batch.commit();
       }
     }
-  }
+  });
 
   /// Marks [clients] as different customers, so they stop showing as
   /// possible duplicates of each other.
-  Future<void> markNotDuplicates(List<Client> clients) async {
+  Future<void> markNotDuplicates(List<Client> clients) => saving(() async {
     final batch = _db.batch();
     for (final c in clients) {
       batch.update(_clients.doc(c.id), {
@@ -206,7 +207,7 @@ class ClientsRepository {
       });
     }
     await batch.commit();
-  }
+  });
 
   /// How many visits (and calls) were made to the client, by anyone.
   Future<int> visitCount(String clientId) async =>
@@ -215,7 +216,7 @@ class ClientsRepository {
   /// Sales manager / GM: deletes the client with its plan items and its
   /// photos / files. Its visits stay (they carry the client's name), so
   /// visit history, reports and targets don't change (user decision 2026-10-17).
-  Future<void> delete(Client client) async {
+  Future<void> delete(Client client) => saving(() async {
     final files = AttachmentsRepository();
     final owner = (parent: AttachmentParent.clients, id: client.id);
     for (final d in (await _clients.doc(client.id).collection('attachments').get()).docs) {
@@ -231,13 +232,13 @@ class ClientsRepository {
     }
     // Last, so a failure above leaves the client in place.
     await _clients.doc(client.id).delete();
-  }
+  });
 
   /// Sales manager / GM: merges [others] into [keep]. Their visits, plan
   /// items and attachments move to [keep] (files stay where they are; the
   /// download links keep working), [keep] gets their details (see
   /// [mergeUpdate]) and they are deleted.
-  Future<void> merge(Client keep, List<Client> others, {required String byId}) async {
+  Future<void> merge(Client keep, List<Client> others, {required String byId}) => saving(() async {
     final ops = <void Function(WriteBatch)>[];
     for (final o in others) {
       for (final collection in ['visits', 'tasks']) {
@@ -269,13 +270,13 @@ class ClientsRepository {
       batch.delete(_clients.doc(o.id));
     }
     await batch.commit();
-  }
+  });
 
   /// Moves [clients] to the sales executive [toId] (null = unassigned):
   /// logs the move on each client, removes the previous owner's open plan
   /// items for them from today on, and notifies both people. Clients already
   /// with [toId] are skipped; returns how many were moved.
-  Future<int> transfer(List<Client> clients, {required String? toId, required AppUser by}) async {
+  Future<int> transfer(List<Client> clients, {required String? toId, required AppUser by}) => saving(() async {
     final moved = clients.where((c) => c.assignedTo != toId).toList();
     if (moved.isEmpty) return 0;
     final now = DateTime.now();
@@ -334,10 +335,10 @@ class ClientsRepository {
       );
     }
     return moved.length;
-  }
+  });
 
   /// Sets the location of matched clients (from a "name → location" sheet).
-  Future<void> updateLocations(List<LocationUpdate> updates) async {
+  Future<void> updateLocations(List<LocationUpdate> updates) => saving(() async {
     for (var i = 0; i < updates.length; i += 400) {
       final batch = _db.batch();
       for (final u in updates.skip(i).take(400)) {
@@ -350,7 +351,7 @@ class ClientsRepository {
       }
       await batch.commit();
     }
-  }
+  });
 
   /// Adds the unmatched rows of a "name → location" sheet as new clients,
   /// assigned through `users.odooName`, and records an `import_batches` entry.
@@ -360,7 +361,7 @@ class ClientsRepository {
     required String fileName,
     required String importedBy,
     required String defaultCategory,
-  }) async {
+  }) => saving(() async {
     final batchRef = _db.collection('import_batches').doc();
     for (var i = 0; i < rows.length; i += 400) {
       final batch = _db.batch();
@@ -399,7 +400,7 @@ class ClientsRepository {
       'withoutLocation': rows.where((r) => r.coords == null).length,
       'createdAt': FieldValue.serverTimestamp(),
     });
-  }
+  });
 
   /// Writes the plan in batches (Firestore allows 500 writes per batch) and
   /// records an `import_batches` entry for the dashboard.
@@ -408,7 +409,7 @@ class ClientsRepository {
     required String fileName,
     required String importedBy,
     required String defaultCategory,
-  }) async {
+  }) => saving(() async {
     final batchRef = _db.collection('import_batches').doc();
     final ops = <void Function(WriteBatch)>[
       for (final w in plan.creates)
@@ -440,5 +441,5 @@ class ClientsRepository {
       'withoutLocation': plan.newWithoutPin.length + plan.newWithUnreadablePin.length,
       'createdAt': FieldValue.serverTimestamp(),
     });
-  }
+  });
 }

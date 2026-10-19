@@ -280,6 +280,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitSaved => 'تم حفظ الزيارة';
 
   @override
+  String get visitAlreadyTodayTitle => 'تمت زيارته اليوم';
+
+  @override
+  String visitAlreadyToday(String time) {
+    return 'لقد حفظت زيارة لهذا العميل اليوم الساعة $time. زيارة واحدة فقط لكل عميل في اليوم: افتحها لإضافة صور أو تعليقات.';
+  }
+
+  @override
+  String get openVisit => 'فتح الزيارة';
+
+  @override
   String get gettingLocation => 'جارٍ تحديد موقعك…';
 
   @override
@@ -2423,4 +2434,63 @@ class AppLocalizationsAr extends AppLocalizations {
   String clientDeleted(String name) {
     return 'تم حذف $name';
   }
+
+  @override
+  String get documents => 'المستندات';
+
+  @override
+  String get docCr => 'السجل التجاري';
+
+  @override
+  String get docVat => 'شهادة ضريبة القيمة المضافة';
+
+  @override
+  String get docNationalAddress => 'العنوان الوطني';
+
+  @override
+  String get docsHelp =>
+      'ارفع ملف PDF من المنصة (الأفضل) أو صورة واضحة. يقرأ التطبيق الأرقام والعنوان ويعرض تعبئة الحقول.';
+
+  @override
+  String get docNotAdded => 'غير مضاف';
+
+  @override
+  String docWillUpload(String name) {
+    return '$name – يُرفع عند الحفظ';
+  }
+
+  @override
+  String get upload => 'رفع';
+
+  @override
+  String get replace => 'استبدال';
+
+  @override
+  String get docUnreadable =>
+      'تم إرفاق المستند، لكن تعذّرت قراءة أي نص منه. عبّئ الحقول يدويًا.';
+
+  @override
+  String get docPhotoOnWeb =>
+      'تم إرفاق المستند. تُقرأ الصور في تطبيق الجوال فقط؛ على الويب ارفع ملف PDF لتعبئة الحقول.';
+
+  @override
+  String get docNothingFound =>
+      'تم إرفاق المستند، لكن لم يُعثر فيه على رقم سجل أو رقم ضريبي أو عنوان.';
+
+  @override
+  String docFoundTitle(String document) {
+    return 'ما تم العثور عليه في $document';
+  }
+
+  @override
+  String get docFoundHelp =>
+      'تحقق من القيم قبل تعبئتها. الحقول المحددة تستبدل ما في النموذج.';
+
+  @override
+  String docCurrentValue(String value) {
+    return 'الحالي: $value';
+  }
+
+  @override
+  String get docFill => 'تعبئة';
 }

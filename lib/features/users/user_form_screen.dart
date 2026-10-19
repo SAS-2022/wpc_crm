@@ -6,6 +6,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
+import '../../core/saving.dart';
 
 /// Create (userId == null) or edit a user. Only reachable by sales manager / GM.
 class UserFormScreen extends ConsumerStatefulWidget {
@@ -223,7 +224,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: Text(l10n.save),
+              child: BusyLabel(busy: _busy, child: Text(l10n.save)),
             ),
           ],
         ),

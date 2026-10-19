@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/saving.dart';
 
 /// Marketing items handed to clients at visits (user request 2026-10-18).
 /// The enum name is the key in `visits.given`, `clients.given` and
@@ -161,23 +162,23 @@ List<Map<String, Object>> visitGivenEntries(String visitId, String byId, DateTim
 DocumentReference<Map<String, dynamic>> _client(String id) => FirebaseFirestore.instance.collection('clients').doc(id);
 
 /// Client page: records a hand-over, possibly backdated.
-Future<void> addGivenEntry(String clientId, GivenEntry entry) =>
-    _client(clientId).update({'givenLog': FieldValue.arrayUnion([entry.toMap()])});
+Future<void> addGivenEntry(String clientId, GivenEntry entry) => saving(() =>
+    _client(clientId).update({'givenLog': FieldValue.arrayUnion([entry.toMap()])}));
 
 /// Removes log entries matching [test] (a manual entry, or a deleted visit's).
-Future<void> removeGivenEntries(String clientId, bool Function(Map<Object?, Object?> raw) test) =>
+Future<void> removeGivenEntries(String clientId, bool Function(Map<Object?, Object?> raw) test) => saving(() =>
     FirebaseFirestore.instance.runTransaction((tx) async {
       final snap = await tx.get(_client(clientId));
       final log = snap.data()?['givenLog'];
       if (log is! List) return;
       final kept = [for (final m in log) if (m is! Map || !test(m)) m];
       if (kept.length != log.length) tx.update(_client(clientId), {'givenLog': kept});
-    });
+    }));
 
 final givenItemRulesProvider = StreamProvider<GivenItemRules>((ref) => FirebaseFirestore.instance
     .doc('settings/givenItems')
     .snapshots()
     .map((s) => GivenItemRules.fromMap(s.data())));
 
-Future<void> saveGivenItemRules(GivenItemRules rules) =>
-    FirebaseFirestore.instance.doc('settings/givenItems').set(rules.toMap());
+Future<void> saveGivenItemRules(GivenItemRules rules) => saving(() =>
+    FirebaseFirestore.instance.doc('settings/givenItems').set(rules.toMap()));

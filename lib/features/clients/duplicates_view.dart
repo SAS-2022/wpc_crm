@@ -11,6 +11,7 @@ import 'clients_repository.dart';
 import 'duplicates.dart';
 import 'merge.dart';
 import 'person_style.dart';
+import '../../core/saving.dart';
 
 String duplicateReasonLabel(DuplicateReason r, AppLocalizations l10n) => switch (r) {
       DuplicateReason.sameVat => l10n.dupSameVat,
@@ -161,7 +162,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
                   if (me?.role.isAdmin ?? false)
                     FilledButton.icon(
                       onPressed: _busy ? null : () => _merge(me!),
-                      icon: const Icon(Icons.merge),
+                      icon: busyIcon(_busy, const Icon(Icons.merge)),
                       label: Text(l10n.mergeClients),
                     ),
                 ],

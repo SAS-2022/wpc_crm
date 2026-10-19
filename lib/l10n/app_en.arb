@@ -129,6 +129,10 @@
   "visitNotesHint": "Products discussed, orders, follow-ups…",
   "visitNotesRequired": "Write what was done at the visit",
   "visitSaved": "Visit saved",
+  "visitAlreadyTodayTitle": "Already visited today",
+  "visitAlreadyToday": "You already saved a visit to this client today at {time}. Only one visit per client per day: open it to add photos or comments.",
+  "@visitAlreadyToday": {"placeholders": {"time": {"type": "String"}}},
+  "openVisit": "Open visit",
   "gettingLocation": "Getting your location…",
   "locationUnavailable": "Location unavailable. Turn on GPS and try again.",
   "locationPermissionDenied": "Location permission denied. Allow it in the phone settings.",
@@ -1757,5 +1761,24 @@
         "type": "String"
       }
     }
-  }
+  },
+  "documents": "Documents",
+  "docCr": "Commercial Registration (CR)",
+  "docVat": "VAT certificate",
+  "docNationalAddress": "National Address",
+  "docsHelp": "Upload the PDF from the portal (best) or a clear photo. The app reads the numbers and the address and offers to fill the fields.",
+  "docNotAdded": "Not added",
+  "docWillUpload": "{name} – uploaded when you save",
+  "@docWillUpload": {"placeholders": {"name": {"type": "String"}}},
+  "upload": "Upload",
+  "replace": "Replace",
+  "docUnreadable": "The document was attached, but no text could be read from it. Fill the fields by hand.",
+  "docPhotoOnWeb": "The document was attached. Photos are read only in the phone app; on the web upload the PDF to fill the fields.",
+  "docNothingFound": "The document was attached, but no CR / VAT number or address was found in it.",
+  "docFoundTitle": "Found in the {document}",
+  "@docFoundTitle": {"placeholders": {"document": {"type": "String"}}},
+  "docFoundHelp": "Check the values before filling them in. Ticked fields replace what is in the form.",
+  "docCurrentValue": "Now: {value}",
+  "@docCurrentValue": {"placeholders": {"value": {"type": "String"}}},
+  "docFill": "Fill in"
 }

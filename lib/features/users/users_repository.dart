@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../firebase_options.dart';
+import '../../core/saving.dart';
 
 final usersProvider = StreamProvider<List<AppUser>>((ref) {
   return FirebaseFirestore.instance
@@ -45,7 +46,7 @@ class UsersRepository {
   /// Creates the Auth account through a secondary Firebase app so the
   /// signed-in manager is not signed out.
   /// Returns how many unassigned clients were given to the new user.
-  Future<int> create(AppUser user, String password) async {
+  Future<int> create(AppUser user, String password) => saving(() async {
     const appName = 'user-creator';
     final app = Firebase.apps.any((a) => a.name == appName)
         ? Firebase.app(appName)
@@ -70,16 +71,16 @@ class UsersRepository {
     final uid = cred.user!.uid;
     await auth.signOut();
     return _save(uid, user);
-  }
+  });
 
   /// Returns how many unassigned clients were given to the user.
-  Future<int> update(AppUser user) => _save(user.id, user);
+  Future<int> update(AppUser user) => saving(() => _save(user.id, user));
 
   /// Removes the user's profile and role, which ends all their access, and
   /// unassigns their clients and sales team. Their visits stay as history.
   /// The login account itself can only be removed in Firebase Console →
   /// Authentication (client apps can't delete other users' accounts).
-  Future<void> delete(String uid) async {
+  Future<void> delete(String uid) => saving(() async {
     final db = FirebaseFirestore.instance;
     final clients = await db.collection('clients').where('assignedTo', isEqualTo: uid).get();
     final team = await _users.where('kamId', isEqualTo: uid).get();
@@ -96,7 +97,7 @@ class UsersRepository {
     }
     await FirebaseDatabase.instance.ref('roles/$uid').remove();
     await _users.doc(uid).delete();
-  }
+  });
 
   // RTDB keeps a copy of the role because its rules cannot read Firestore.
   Future<int> _save(String uid, AppUser user) async {

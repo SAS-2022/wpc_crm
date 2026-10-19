@@ -114,4 +114,38 @@ void main() {
     expect(r.neverGiven[GivenItem.bookletCatalog], 2);
     expect(r.dueNow[GivenItem.switchCatalog], 0); // latest switch catalog is from Oct 2026
   });
+
+  test('catalogs: visits saved by older apps (no log entry) count too, logged ones once', () {
+    Visit gave(String id, String by, DateTime at, Map<GivenItem, int> given) => Visit(
+          id: id,
+          clientId: 'c$id',
+          clientName: '',
+          salesExecId: by,
+          checkedInAt: at,
+          notes: '',
+          distanceMeters: null,
+          accuracy: null,
+          mocked: false,
+          given: given,
+        );
+    final clients = [
+      client('a', owner: 'sami', log: [
+        GivenEntry(id: 'v1_switchCatalog', item: GivenItem.switchCatalog, qty: 2, at: DateTime(2026, 10, 3), byId: 'sami', visitId: 'v1'),
+      ]),
+    ];
+    final r = catalogReport(
+      people: [sami],
+      clients: clients,
+      visits: [
+        gave('v1', 'sami', DateTime(2026, 10, 3), {GivenItem.switchCatalog: 2}), // in the log already
+        gave('v2', 'sami', DateTime(2026, 10, 18), {GivenItem.switchCatalog: 3, GivenItem.displayStand: 1}),
+        gave('v3', 'sami', DateTime(2026, 9, 18), {GivenItem.switchCatalog: 9}), // before the period
+      ],
+      range: range,
+      rules: GivenItemRules.defaults,
+      now: DateTime(2026, 10, 18),
+    );
+    expect(r.rows.single.byItem, {GivenItem.switchCatalog: 5, GivenItem.displayStand: 1});
+    expect(r.rows.single.clients, 2);
+  });
 }

@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../attachments/attachments.dart';
 import '../notifications/notifications.dart';
 import 'leave_rules.dart';
+import '../../core/saving.dart';
 
 /// A leave or other employee request in Firestore `leave_requests`. The type's
 /// names are copied in, so history reads right after HR renames a type.
@@ -227,7 +228,7 @@ class LeaveRepository {
     required List<ApprovalStep> chain,
     required List<PendingFile> files,
     required List<AppUser> users,
-  }) async {
+  }) => saving(() async {
     final doc = _requests.doc();
     await doc.set({
       'uid': me.id,
@@ -256,14 +257,14 @@ class LeaveRepository {
     }
     await _notifyStep(chain.first, fromId: me.id, ownerId: me.id, requestId: doc.id, users: users);
     return doc.id;
-  }
+  });
 
   /// The owner withdraws a request that is still waiting.
-  Future<void> cancel(String id) => _requests.doc(id).update({
+  Future<void> cancel(String id) => saving(() => _requests.doc(id).update({
         'status': LeaveStatus.cancelled.name,
         'awaitingKey': null,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }));
 
   /// The current approver approves (the request moves to the next step, or is
   /// approved after the last) or rejects (it ends). In a transaction, so two
@@ -274,7 +275,7 @@ class LeaveRepository {
     required bool approve,
     required String comment,
     required List<AppUser> users,
-  }) async {
+  }) => saving(() async {
     final next = await _db.runTransaction<(LeaveRequest, ApprovalStep?)?>((tx) async {
       final snap = await tx.get(_requests.doc(id));
       final r = LeaveRequest.fromDoc(snap);
@@ -309,7 +310,7 @@ class LeaveRepository {
         ref: id,
       );
     }
-  }
+  });
 
   Future<void> _notifyStep(
     ApprovalStep step, {
@@ -330,25 +331,25 @@ class LeaveRepository {
         ref: requestId,
       );
 
-  Future<void> saveTypes(List<LeaveType> types) => _typesDoc.set({'types': [for (final t in types) t.toMap()]});
+  Future<void> saveTypes(List<LeaveType> types) => saving(() => _typesDoc.set({'types': [for (final t in types) t.toMap()]}));
 
-  Future<void> saveHolidays(Set<String> dates) => _holidaysDoc.set({'dates': (dates.toList()..sort())});
+  Future<void> saveHolidays(Set<String> dates) => saving(() => _holidaysDoc.set({'dates': (dates.toList()..sort())}));
 
   /// HR sets [uid]'s days for [typeId] in [year]; null = back to the type's number.
-  Future<void> setEntitled(String uid, int year, String typeId, num? days) =>
+  Future<void> setEntitled(String uid, int year, String typeId, num? days) => saving(() =>
       _db.collection('leave_balances').doc(balanceDocId(uid, year)).set({
         'uid': uid,
         'year': year,
         'entitled': {typeId: days ?? FieldValue.delete()},
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)));
 
   /// HR adds (or with negative [days] removes) days, e.g. carried over from last year.
-  Future<void> addAdjustment(String uid, int year, String typeId, double days, String note, String byId) =>
+  Future<void> addAdjustment(String uid, int year, String typeId, double days, String note, String byId) => saving(() =>
       _db.collection('leave_balances').doc(balanceDocId(uid, year)).set({
         'uid': uid,
         'year': year,
         'adjustments': FieldValue.arrayUnion([
           {'typeId': typeId, 'days': days, 'note': note, 'byId': byId, 'at': Timestamp.now()},
         ]),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)));
 }

@@ -9,6 +9,7 @@ import '../plan/plan_repository.dart';
 import '../plan/plan_task.dart';
 import 'app_calls.dart';
 import 'visit.dart';
+import '../../core/saving.dart';
 
 /// Visits of one client, newest first. Sales execs only see their own.
 final clientVisitsProvider = StreamProvider.family<List<Visit>, String>((ref, clientId) {
@@ -69,7 +70,7 @@ class VisitsRepository {
     required bool setClientLocation,
     ClientLocation? location,
     Map<GivenItem, int> given = const {},
-  }) async {
+  }) => saving(() async {
     final at = location ?? client.locations.firstOrNull;
     final distance =
         at == null ? null : Geolocator.distanceBetween(position.latitude, position.longitude, at.lat, at.lng);
@@ -102,7 +103,7 @@ class VisitsRepository {
     await batch.commit();
     await _completePlan(userId, client.id, visitRef.id, now);
     return visitRef.id;
-  }
+  });
 
   /// Saves a phone call with the client. It counts like a visit (the client
   /// turns green, today's plan item for the client is done) but has no
@@ -112,7 +113,7 @@ class VisitsRepository {
     required String userId,
     required String notes,
     AppCall? appCall,
-  }) async {
+  }) => saving(() async {
     final now = DateTime.now();
     final visitRef = _db.collection('visits').doc();
     final batch = _db.batch();
@@ -133,7 +134,7 @@ class VisitsRepository {
     await batch.commit();
     await _completePlan(userId, client.id, visitRef.id, now);
     return visitRef.id;
-  }
+  });
 
   Future<void> _completePlan(String userId, String clientId, String visitId, DateTime day) async {
     try {
@@ -147,7 +148,7 @@ class VisitsRepository {
   /// are open again and the client's last visit is taken from the visits
   /// left. Comments, photos and files go with it (`cleanDeletedVisit` Cloud
   /// Function).
-  Future<void> delete(Visit visit) async {
+  Future<void> delete(Visit visit) => saving(() async {
     await _db.collection('visits').doc(visit.id).delete();
     final ticked = await _db.collection('tasks').where('visitId', isEqualTo: visit.id).get();
     for (final t in ticked.docs) {
@@ -161,19 +162,30 @@ class VisitsRepository {
     await _db.collection('clients').doc(visit.clientId).update({'lastVisitAt': latest});
     // Catalogs / stands handed over at this visit leave the client's log.
     if (visit.given.isNotEmpty) await removeGivenEntries(visit.clientId, (m) => m['visitId'] == visit.id);
+  });
+
+  /// [userId]'s visit to [clientId] today, read fresh (from the server when
+  /// online), so a second visit on the same day can be refused.
+  Future<Visit?> todaysVisit(String clientId, String userId) async {
+    final s = await _db
+        .collection('visits')
+        .where('clientId', isEqualTo: clientId)
+        .where('salesExecId', isEqualTo: userId)
+        .get();
+    return sameDayVisit(s.docs.map(Visit.fromDoc), userId, DateTime.now());
   }
 
   /// A KAM marks that they were at the visit (or removes the mark with null).
-  Future<void> setKam(String visitId, String? kamId) =>
+  Future<void> setKam(String visitId, String? kamId) => saving(() =>
       _db.collection('visits').doc(visitId).update({
         'kamId': kamId,
         'kamMarkedAt': kamId == null ? null : FieldValue.serverTimestamp(),
-      });
+      }));
 
-  Future<void> addComment(String visitId, String authorId, String body) =>
+  Future<void> addComment(String visitId, String authorId, String body) => saving(() =>
       _db.collection('visits').doc(visitId).collection('comments').add({
         'authorId': authorId,
         'body': body,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      }));
 }

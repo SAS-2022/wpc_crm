@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'visit_rules.dart';
+import '../../core/saving.dart';
 
 /// GM / sales manager: how many days each category stays green and yellow.
 class VisitRulesScreen extends ConsumerStatefulWidget {
@@ -120,7 +121,7 @@ class _VisitRulesScreenState extends ConsumerState<VisitRulesScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: _busy ? null : _save, child: Text(l10n.save)),
+            FilledButton(onPressed: _busy ? null : _save, child: BusyLabel(busy: _busy, child: Text(l10n.save))),
           ],
         ),
       ),

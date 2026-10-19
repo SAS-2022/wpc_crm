@@ -12,6 +12,7 @@ import 'features/tracking/tracking_status.dart';
 import 'features/users/users_repository.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'core/saving.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +52,7 @@ class WpcCrmApp extends ConsumerWidget {
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: UpdateGate(child: child),
+        child: SavingBar(child: UpdateGate(child: child)),
       ),
     );
   }

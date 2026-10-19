@@ -63,6 +63,7 @@ android {
             // (e.g. another machine), so `flutter run --release` still works.
             signingConfig = if (keystoreProperties.isEmpty) signingConfigs.getByName("debug")
                 else signingConfigs.getByName("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }

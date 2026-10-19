@@ -46,7 +46,8 @@ Future<List<PendingFile>> pickAttachments(BuildContext context) async {
 
   final picked = <PendingFile>[];
   final picker = ImagePicker();
-  const maxSide = 1920.0;
+  // Scaled down again (and given a thumbnail) at upload.
+  const maxSide = 1600.0;
   const quality = 75;
   switch (source) {
     case 'camera':
@@ -134,8 +135,9 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
     final locale = Localizations.localeOf(context).toString();
     final attachments = ref.watch(attachmentsProvider(widget.owner));
     final list = attachments.value ?? const <Attachment>[];
-    final photos = list.where((a) => a.isImage).toList();
-    final files = list.where((a) => !a.isImage).toList();
+    // Client documents (CR, VAT, …) are listed by name even when they are photos.
+    final photos = list.where((a) => a.isImage && a.docType.isEmpty).toList();
+    final files = list.where((a) => !photos.contains(a)).toList();
     final onLongPress = widget.canDelete ? _delete : null;
 
     return Card(
@@ -189,18 +191,7 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
                           // browsers get a labelled tile; tapping opens the file.
                           child: a.contentType == 'image/heic' && kIsWeb
                               ? _FileTile(label: 'HEIC', icon: Icons.photo, tooltip: a.fileName)
-                              : Image.network(
-                                  a.url,
-                                  width: 96,
-                                  height: 96,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 288,
-                                  // Web: when the canvas renderer can't load the photo,
-                                  // the browser's own <img> shows it instead.
-                                  webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-                                  errorBuilder: (_, _, _) =>
-                                      _FileTile(label: a.fileName, icon: Icons.broken_image, tooltip: a.fileName),
-                                ),
+                              : AttachmentThumb(attachment: a),
                         ),
                       ),
                   ],
@@ -209,9 +200,21 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
             for (final a in files)
               ListTile(
                 dense: true,
-                leading: Icon(a.contentType == 'application/pdf' ? Icons.picture_as_pdf : Icons.insert_drive_file),
-                title: Text(a.fileName),
-                subtitle: a.createdAt == null ? null : Text(DateFormat.yMMMd(locale).format(a.createdAt!)),
+                leading: Icon(a.contentType == 'application/pdf'
+                    ? Icons.picture_as_pdf
+                    : a.isImage
+                        ? Icons.image_outlined
+                        : Icons.insert_drive_file),
+                title: Text(switch (a.docType) {
+                  'cr' => l10n.docCr,
+                  'vat' => l10n.docVat,
+                  'nationalAddress' => l10n.docNationalAddress,
+                  _ => a.fileName,
+                }),
+                subtitle: Text([
+                  if (a.docType.isNotEmpty) a.fileName,
+                  if (a.createdAt != null) DateFormat.yMMMd(locale).format(a.createdAt!),
+                ].join(' · ')),
                 trailing: widget.canDelete
                     ? IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: () => _delete(a))
                     : null,
@@ -220,6 +223,54 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 96×96 photo thumbnail (the small `thumbUrl` when there is one) with a
+/// loading placeholder until the image has fully arrived.
+class AttachmentThumb extends StatelessWidget {
+  const AttachmentThumb({super.key, required this.attachment, this.size = 96});
+
+  final Attachment attachment;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = attachment;
+    final scheme = Theme.of(context).colorScheme;
+    final placeholder = Container(
+      width: size,
+      height: size,
+      color: scheme.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: SizedBox.square(
+        dimension: 22,
+        child: CircularProgressIndicator(strokeWidth: 2, color: scheme.onSurfaceVariant),
+      ),
+    );
+    return Image.network(
+      a.thumbUrl.isNotEmpty ? a.thumbUrl : a.url,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      cacheWidth: (size * 3).round(),
+      // Web: when the canvas renderer can't load the photo, the browser's
+      // own <img> shows it instead.
+      webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+      frameBuilder: (_, child, frame, wasSynchronouslyLoaded) => wasSynchronouslyLoaded
+          ? child
+          : Stack(
+              children: [
+                placeholder,
+                AnimatedOpacity(
+                  opacity: frame == null ? 0 : 1,
+                  duration: const Duration(milliseconds: 200),
+                  child: child,
+                ),
+              ],
+            ),
+      errorBuilder: (_, _, _) => _FileTile(label: a.fileName, icon: Icons.broken_image, tooltip: a.fileName),
     );
   }
 }

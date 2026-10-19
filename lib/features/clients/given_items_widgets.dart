@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import 'client.dart';
 import 'given_items.dart';
 import 'visit_rules.dart';
+import '../../core/saving.dart';
 
 String givenItemLabel(AppLocalizations l10n, GivenItem item) => switch (item) {
       GivenItem.switchCatalog => l10n.givenSwitchCatalog,
@@ -24,6 +25,37 @@ IconData givenItemIcon(GivenItem item) => switch (item) {
       GivenItem.displayStand => Icons.view_quilt,
       GivenItem.a4Samples => Icons.content_copy,
     };
+
+/// Visit rows: one icon per item handed over at the visit, with the quantity
+/// as a badge when more than one was given.
+class GivenIcons extends StatelessWidget {
+  const GivenIcons({super.key, required this.given});
+
+  final Map<GivenItem, int> given;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final color = Theme.of(context).colorScheme.primary;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final MapEntry(key: item, value: qty) in given.entries)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 8),
+            child: Tooltip(
+              message: '$qty × ${givenItemLabel(l10n, item)}',
+              child: Badge(
+                label: Text('$qty'),
+                isLabelVisible: qty > 1,
+                child: Icon(givenItemIcon(item), size: 20, color: color),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 Color? _statusColor(GivenStatus s) => switch (s) {
       GivenStatus.due => statusOverdueColor,
@@ -345,7 +377,7 @@ class _GivenItemRulesScreenState extends ConsumerState<GivenItemRulesScreen> {
                 ),
               ),
             const SizedBox(height: 8),
-            FilledButton(onPressed: _busy ? null : _save, child: Text(l10n.save)),
+            FilledButton(onPressed: _busy ? null : _save, child: BusyLabel(busy: _busy, child: Text(l10n.save))),
           ],
         ),
       ),

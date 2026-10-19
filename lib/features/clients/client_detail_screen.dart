@@ -408,6 +408,7 @@ class _VisitTile extends StatelessWidget {
       onTap: () => context.push('/visits/${visit.id}'),
       leading: visit.isCall ? const Icon(Icons.call, color: callColor) : const Icon(Icons.event_available),
       title: Text([when, author, ?place].where((s) => s.isNotEmpty).join(' · ')),
+      trailing: visit.given.isEmpty ? null : GivenIcons(given: visit.given),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

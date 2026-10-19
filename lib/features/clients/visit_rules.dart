@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
+import '../../core/saving.dart';
 
 const clientCategories = ['A', 'B', 'C'];
 const defaultCategory = 'B';
@@ -49,8 +50,8 @@ final visitRulesProvider = StreamProvider<VisitRules>((ref) => FirebaseFirestore
     .snapshots()
     .map((s) => VisitRules.fromMap(s.data())));
 
-Future<void> saveVisitRules(VisitRules rules) =>
-    FirebaseFirestore.instance.doc('settings/visitRules').set(rules.toMap());
+Future<void> saveVisitRules(VisitRules rules) => saving(() =>
+    FirebaseFirestore.instance.doc('settings/visitRules').set(rules.toMap()));
 
 /// green = visited recently, yellow = due soon, red = overdue (or never visited).
 enum VisitStatus { recent, dueSoon, overdue }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
+import '../../core/saving.dart';
 
 /// A business tag on clients (Factory, Showroom, …), used to filter the
 /// client list and map. The list lives in Firestore `settings/clientTags`
@@ -106,18 +107,18 @@ final clientTagsByIdProvider = Provider<Map<String, ClientTag>>((ref) => {
 
 /// Adds a tag ([id] null) or renames one. Checked inside a transaction so two
 /// people can't add the same name at once; throws [DuplicateTagException].
-Future<void> saveTag(TagList kind, {String? id, required String en, required String ar}) =>
+Future<void> saveTag(TagList kind, {String? id, required String en, required String ar}) => saving(() =>
     FirebaseFirestore.instance.runTransaction((tx) async {
       final tags = _tagsOf(kind, (await tx.get(kind.doc)).data());
       if (isDuplicateTag(tags, en, ar, exceptId: id)) throw const DuplicateTagException();
       final tag = ClientTag(id: id ?? kind.doc.collection('x').doc().id, en: en, ar: ar);
       final updated = id == null ? [...tags, tag] : [for (final t in tags) t.id == id ? tag : t];
       tx.set(kind.doc, {'tags': [for (final t in updated) t.toMap()]});
-    });
+    }));
 
 /// Removes the label from the list. A client tag is also removed from every
 /// client that has it; a deleted location type leaves its locations unlabelled.
-Future<void> deleteTag(TagList kind, String id) async {
+Future<void> deleteTag(TagList kind, String id) => saving(() async {
   final db = FirebaseFirestore.instance;
   await db.runTransaction((tx) async {
     final tags = _tagsOf(kind, (await tx.get(kind.doc)).data());
@@ -132,7 +133,7 @@ Future<void> deleteTag(TagList kind, String id) async {
     }
     await batch.commit();
   }
-}
+});
 
 /// The client's tags as small chips; nothing when it has none.
 class ClientTagChips extends ConsumerWidget {

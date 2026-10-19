@@ -17,6 +17,14 @@ Visit _v(String id, String by, DateTime at, {VisitType type = VisitType.visit}) 
 
 void main() {
   final now = DateTime(2026, 10, 17, 18);
+
+  test('same-day visit: own visits to the client on that date, calls left out', () {
+    final day = DateTime(2026, 10, 17, 16);
+    expect(sameDayVisit([_v('1', 's', DateTime(2026, 10, 17, 9))], 's', day)?.id, '1');
+    expect(sameDayVisit([_v('1', 's', DateTime(2026, 10, 16, 23))], 's', day), isNull);
+    expect(sameDayVisit([_v('1', 'a', DateTime(2026, 10, 17, 9))], 's', day), isNull);
+    expect(sameDayVisit([_v('1', 's', DateTime(2026, 10, 17, 9), type: VisitType.call)], 's', day), isNull);
+  });
   const names = {'s': 'Sami', 'a': 'Ahmad'};
   // Newest first, as the list provider gives them.
   final list = [
