@@ -46,12 +46,12 @@ void main() {
   });
 
   group('canTransferFrom', () {
-    test('a KAM moves their own clients and their team\'s only', () {
+    test('a KAM moves their own clients, their team\'s and unassigned ones', () {
       expect(canTransferFrom(kam, 'kam', byId), isTrue);
       expect(canTransferFrom(kam, 'sami', byId), isTrue);
       expect(canTransferFrom(kam, 'kam2', byId), isFalse);
       expect(canTransferFrom(kam, 'omar', byId), isFalse);
-      expect(canTransferFrom(kam, null, byId), isFalse);
+      expect(canTransferFrom(kam, null, byId), isTrue); // unassigned pool (2026-10-19)
     });
 
     test('the GM moves any client, unassigned ones too', () {

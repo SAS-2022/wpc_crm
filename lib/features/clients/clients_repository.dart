@@ -14,6 +14,7 @@ import 'duplicates.dart';
 import 'merge.dart';
 import 'transfer.dart';
 import '../../core/saving.dart';
+import 'client_status.dart';
 
 /// Every client the signed-in user may read (all for KAM/managers, own for
 /// sales execs), hidden ones included: for the client page, imports and
@@ -40,19 +41,25 @@ final hiddenClientIdsProvider = Provider<Set<String>>((ref) => {
         if (c.hidden) c.id,
     });
 
-/// Sales executive filter shared by the client list and map.
-/// null = everyone, [unassignedFilter] = clients without a sales executive.
-final salesFilterProvider = NotifierProvider<SalesFilter, String?>(SalesFilter.new);
+/// Salesperson filter shared by the client list and map: clients of any of
+/// these people (several allowed, user request 2026-10-19); empty = everyone,
+/// [unassignedFilter] = clients without a salesperson.
+final salesFilterProvider = NotifierProvider<SalesFilter, Set<String>>(SalesFilter.new);
 const unassignedFilter = '_unassigned';
 
-bool matchesSalesFilter(Client c, String? filter) =>
-    filter == null || (filter == unassignedFilter ? c.assignedTo == null : c.assignedTo == filter);
+bool matchesSalesFilter(Client c, Set<String> filter) =>
+    filter.isEmpty || filter.contains(c.assignedTo ?? unassignedFilter);
 
-class SalesFilter extends Notifier<String?> {
+class SalesFilter extends Notifier<Set<String>> {
   @override
-  String? build() => null;
+  Set<String> build() => const {};
 
-  void set(String? value) => state = value;
+  void toggle(String id) => state = state.contains(id) ? ({...state}..remove(id)) : {...state, id};
+
+  /// Only this person (null = everyone).
+  void only(String? id) => state = id == null ? const {} : {id};
+
+  void clear() => state = const {};
 }
 
 /// Company / individual filter shared by the client list and map; null = all.
@@ -91,18 +98,48 @@ class GivenDueFilter extends Notifier<Set<GivenItem>> {
   void clear() => state = const {};
 }
 
-/// Salesperson, company / individual, tag and "catalog due" filters together.
+/// Client status filter shared by the client list and map: the statuses
+/// shown. Active only by default; closed / not working clients appear when
+/// ticked (user request 2026-10-19).
+final clientStatusFilterProvider = NotifierProvider<ClientStatusFilter, Set<ClientStatus>>(ClientStatusFilter.new);
+
+const defaultStatusFilter = {ClientStatus.active};
+
+class ClientStatusFilter extends Notifier<Set<ClientStatus>> {
+  @override
+  Set<ClientStatus> build() => defaultStatusFilter;
+
+  /// Never empty: unticking the last one goes back to active.
+  void toggle(ClientStatus s) {
+    final next = state.contains(s) ? ({...state}..remove(s)) : {...state, s};
+    state = next.isEmpty ? defaultStatusFilter : next;
+  }
+
+  void reset() => state = defaultStatusFilter;
+}
+
+bool isDefaultStatusFilter(Set<ClientStatus> s) => s.length == 1 && s.contains(ClientStatus.active);
+
+/// Active clients only, for plans, Home statistics and reports: closed and
+/// not working clients aren't expected to be visited.
+final workingClientsProvider = Provider<AsyncValue<List<Client>>>(
+  (ref) => ref.watch(clientsProvider).whenData((list) => list.where((c) => c.isActive).toList()),
+);
+
+/// Salesperson, company / individual, tag, "catalog due" and status filters together.
 bool Function(Client) _clientFilter(Ref ref) {
   final sales = ref.watch(salesFilterProvider);
   final type = ref.watch(clientTypeFilterProvider);
   final tags = ref.watch(tagFilterProvider);
   final due = ref.watch(givenDueFilterProvider);
+  final statuses = ref.watch(clientStatusFilterProvider);
   final givenRules = ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults;
   final now = DateTime.now();
   return (c) =>
       matchesSalesFilter(c, sales) &&
       (type == null || c.clientType == type) &&
       (tags.isEmpty || c.tagIds.any(tags.contains)) &&
+      statuses.contains(c.status) &&
       (due.isEmpty || due.any((item) => givenStatus(c.given[item], item, givenRules, now) == GivenStatus.due));
 }
 

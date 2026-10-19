@@ -152,7 +152,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     final me = ref.watch(currentUserProvider).value;
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final now = DateTime.now();
-    final all = ref.watch(clientsProvider).value ?? const <Client>[];
+    final all = ref.watch(workingClientsProvider).value ?? const <Client>[];
     if (_pendingId != null) {
       final added = all.where((c) => c.id == _pendingId).firstOrNull;
       if (added != null) {

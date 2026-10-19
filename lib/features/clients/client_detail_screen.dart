@@ -20,6 +20,8 @@ import 'given_items_widgets.dart';
 import 'client_tags.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
+import 'client_status.dart';
+import 'client_status_widgets.dart';
 import 'transfer.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
@@ -123,6 +125,10 @@ class ClientDetailScreen extends ConsumerWidget {
     final phone = client.mobile.isNotEmpty ? client.mobile : client.phone;
     final usersById = {for (final u in users) u.id: u};
     final canTransfer = me != null && canTransferFrom(me, client.assignedTo, usersById);
+    // Closed / not working: the owner asks, KAM / managers change it directly.
+    final canChangeStatus = me != null &&
+        client.statusRequest == null &&
+        (canSetStatusDirectly(me, client, usersById) || canRequestStatus(me, client));
     String nameOf(String? uid) => uid == null ? l10n.unassigned : usersById[uid]?.name ?? '?';
     final calls = ref.read(appCallProvider.notifier);
     void dial(String number) => calls.dial(clientId, number);
@@ -197,6 +203,12 @@ class ClientDetailScreen extends ConsumerWidget {
               tooltip: l10n.transferClients,
               onPressed: () => showTransferDialog(context, ref, [client]),
             ),
+          if (canChangeStatus)
+            IconButton(
+              icon: const Icon(Icons.store_mall_directory_outlined),
+              tooltip: l10n.changeClientStatus,
+              onPressed: () => showClientStatusDialog(context, ref, client),
+            ),
           if (me?.role.isSupervisor ?? false)
             IconButton(
               icon: Icon(client.hidden ? Icons.visibility : Icons.visibility_off),
@@ -220,6 +232,7 @@ class ClientDetailScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          ClientStatusBanners(client: client),
           if (client.hidden)
             Card(
               margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -347,6 +360,9 @@ class ClientDetailScreen extends ConsumerWidget {
                   t.at == null ? '' : DateFormat.yMMMd(locale).add_jm().format(t.at!),
                 )),
               ),
+          ]),
+          section(l10n.clientStatusHistory, [
+            if (client.statusLog.isNotEmpty) ClientStatusHistory(client: client),
           ]),
           section(l10n.locationSection, [
             row(Icons.place, l10n.address, client.address),

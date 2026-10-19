@@ -39,6 +39,8 @@ import '../features/visits/visits_screen.dart';
 import '../features/users/users_screen.dart';
 import '../features/plan/plan_task.dart';
 import 'providers.dart';
+import '../features/clients/transfers_screen.dart';
+import '../features/plan/team_plan_map_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -72,7 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
       if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours') && !me.role.isAdmin) return '/';
-      if (const ['/live', '/reports', '/history', '/team-plans'].contains(loc) && !me.role.isSupervisor) return '/';
+      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) && !me.role.isSupervisor) return '/';
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
     },
@@ -186,9 +188,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
+            GoRoute(path: '/transfers', builder: (_, _) => const TransfersScreen()),
             GoRoute(
               path: '/team-plans',
               builder: (_, state) => TeamPlansScreen(initialDate: state.uri.queryParameters['date']),
+              routes: [
+                GoRoute(
+                  path: 'map',
+                  builder: (_, state) => TeamPlanMapScreen(
+                    date: state.uri.queryParameters['date'] ?? dayKey(DateTime.now()),
+                  ),
+                ),
+              ],
             ),
             GoRoute(
               path: '/history',

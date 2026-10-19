@@ -132,6 +132,10 @@ const TEXTS = {
     leaveRequested: (n, c, d, o) => `Leave request from ${o} – waiting for your approval`,
     leaveApproved: (n) => `${n} approved your request`,
     leaveRejected: (n) => `${n} rejected your request`,
+    clientStatusRequested: (n, c, d, o, x) => `${n} asked to mark ${x.client} as ${x.status} – waiting for your approval`,
+    clientStatusApproved: (n, c, d, o, x) => `${n} approved: ${x.client} is now ${x.status}`,
+    clientStatusRejected: (n, c, d, o, x) => `${n} rejected marking ${x.client} as ${x.status}`,
+    status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
   },
   ar: {
     title: 'WPC CRM',
@@ -151,6 +155,10 @@ const TEXTS = {
     leaveRequested: (n, c, d, o) => `طلب من ${o} – بانتظار موافقتك`,
     leaveApproved: (n) => `وافق ${n} على طلبك`,
     leaveRejected: (n) => `رفض ${n} طلبك`,
+    clientStatusRequested: (n, c, d, o, x) => `طلب ${n} تحويل ${x.client} إلى ${x.status} – بانتظار موافقتك`,
+    clientStatusApproved: (n, c, d, o, x) => `وافق ${n}: ${x.client} أصبح ${x.status}`,
+    clientStatusRejected: (n, c, d, o, x) => `رفض ${n} تحويل ${x.client} إلى ${x.status}`,
+    status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
   },
 };
 
@@ -190,11 +198,18 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
     const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type;
-    const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '');
+    const extra = { client: n.clientName || '', status: t.status[n.issue] || n.issue || '' };
+    const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
       notification: { title: t.title, body },
-      data: { route: n.ref && n.type.startsWith('leave') ? `/leave/${n.ref}` : '/notifications', notificationId: event.params.id },
+      data: {
+        route: !n.ref ? '/notifications'
+          : n.type.startsWith('leave') ? `/leave/${n.ref}`
+          : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
+          : '/notifications',
+        notificationId: event.params.id,
+      },
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },
     });

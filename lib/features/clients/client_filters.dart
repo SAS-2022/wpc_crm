@@ -11,19 +11,23 @@ import 'client_widgets.dart';
 import 'clients_repository.dart';
 import 'given_items.dart';
 import 'given_items_widgets.dart';
+import 'client_status.dart';
+import 'client_status_widgets.dart';
 
 /// Number of active filters (salesperson, type, each tag).
 int _activeCount(WidgetRef ref) =>
-    (ref.watch(salesFilterProvider) == null ? 0 : 1) +
+    ref.watch(salesFilterProvider).length +
     (ref.watch(clientTypeFilterProvider) == null ? 0 : 1) +
     ref.watch(tagFilterProvider).length +
-    ref.watch(givenDueFilterProvider).length;
+    ref.watch(givenDueFilterProvider).length +
+    (isDefaultStatusFilter(ref.watch(clientStatusFilterProvider)) ? 0 : 1);
 
 void _clearAll(WidgetRef ref) {
-  ref.read(salesFilterProvider.notifier).set(null);
+  ref.read(salesFilterProvider.notifier).clear();
   ref.read(clientTypeFilterProvider.notifier).set(null);
   ref.read(tagFilterProvider.notifier).clear();
   ref.read(givenDueFilterProvider.notifier).clear();
+  ref.read(clientStatusFilterProvider.notifier).reset();
 }
 
 String _typeLabel(AppLocalizations l10n, String type) =>
@@ -84,8 +88,26 @@ class _FiltersSheet extends ConsumerWidget {
           ),
           if (supervisor) ...[
             heading(l10n.salesperson),
-            const SalesFilterDropdown(),
+            const SalesFilterChips(),
           ],
+          heading(l10n.clientStatus),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in ClientStatus.values)
+                FilterChip(
+                  avatar: Icon(clientStatusIcon(s), size: 18),
+                  label: Text(clientStatusLabel(l10n, s)),
+                  selected: ref.watch(clientStatusFilterProvider).contains(s),
+                  onSelected: (_) => ref.read(clientStatusFilterProvider.notifier).toggle(s),
+                ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(l10n.clientStatusFilterHelp, style: theme.textTheme.bodySmall),
+          ),
           heading(l10n.clientType),
           Wrap(
             spacing: 8,
@@ -156,7 +178,11 @@ class ActiveClientFilters extends ConsumerWidget {
     final type = ref.watch(clientTypeFilterProvider);
     final tagFilter = ref.watch(tagFilterProvider);
     final due = ref.watch(givenDueFilterProvider);
-    if (sales == null && type == null && tagFilter.isEmpty && due.isEmpty) return const SizedBox.shrink();
+    final statuses = ref.watch(clientStatusFilterProvider);
+    final defaultStatuses = isDefaultStatusFilter(statuses);
+    if (sales.isEmpty && type == null && tagFilter.isEmpty && due.isEmpty && defaultStatuses) {
+      return const SizedBox.shrink();
+    }
     final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
     final tags = ref.watch(clientTagsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
@@ -175,14 +201,18 @@ class ActiveClientFilters extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          if (sales != null)
-            chip(Icons.person, sales == unassignedFilter ? l10n.unassigned : users[sales]?.name ?? '?',
-                () => ref.read(salesFilterProvider.notifier).set(null)),
+          for (final id in sales)
+            chip(Icons.person, id == unassignedFilter ? l10n.unassigned : users[id]?.name ?? '?',
+                () => ref.read(salesFilterProvider.notifier).toggle(id)),
           if (type != null)
             chip(type == clientTypeCompany ? Icons.business : Icons.person_outline, _typeLabel(l10n, type),
                 () => ref.read(clientTypeFilterProvider.notifier).set(null)),
           for (final id in tagFilter)
             chip(Icons.sell_outlined, tags[id]?.label(lang) ?? '?', () => ref.read(tagFilterProvider.notifier).toggle(id)),
+          if (!defaultStatuses)
+            chip(Icons.store_mall_directory_outlined,
+                [for (final s in ClientStatus.values) if (statuses.contains(s)) clientStatusLabel(l10n, s)].join(', '),
+                () => ref.read(clientStatusFilterProvider.notifier).reset()),
           for (final item in due)
             chip(givenItemIcon(item), '${givenItemLabel(l10n, item)} · ${l10n.givenDue}',
                 () => ref.read(givenDueFilterProvider.notifier).toggle(item)),

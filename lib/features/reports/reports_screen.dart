@@ -91,7 +91,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final tasks = (ref.watch(rangeTasksProvider(key)).value ?? const <PlanTask>[])
         .where((t) => !hidden.contains(t.clientId))
         .toList();
-    final clients = ref.watch(clientsProvider).value ?? const <Client>[];
+    final clients = ref.watch(workingClientsProvider).value ?? const <Client>[];
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
 
     final reports = buildReports(

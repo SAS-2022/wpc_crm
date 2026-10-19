@@ -14,6 +14,7 @@ import '../../l10n/app_localizations.dart';
 import '../clients/person_style.dart';
 import '../users/users_repository.dart';
 import 'live_data.dart';
+import 'motion.dart';
 
 /// Live positions of field staff. KAMs see their team (and themselves);
 /// sales manager and GM see everyone.
@@ -62,8 +63,28 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     return DateFormat.yMMMd(Localizations.localeOf(context).toString()).add_jm().format(t);
   }
 
+  /// "Driving", "Walking", "Idle for 23 min" (from 5 min on) or "Stopped".
+  String? _motion(AppLocalizations l10n, LiveLocation? loc, DateTime now) {
+    if (loc?.motion == null) return null;
+    final idle = idleFor(
+      motion: loc!.motion,
+      stillSince: loc.stillSince,
+      fixAt: loc.fixAt,
+      updatedAt: loc.updatedAt,
+      now: now,
+    );
+    return switch (loc.motion!) {
+      Motion.driving => l10n.motionDriving,
+      Motion.walking => l10n.motionWalking,
+      Motion.still => idle != null && idle >= idleShownAfter ? l10n.motionIdleFor(_duration(l10n, idle)) : l10n.motionStopped,
+    };
+  }
+
+  String _duration(AppLocalizations l10n, Duration d) =>
+      d.inMinutes < 60 ? l10n.durationMinutes(d.inMinutes) : l10n.durationHoursMinutes(d.inHours, d.inMinutes % 60);
+
   String _status(AppLocalizations l10n, LiveState s, LiveLocation? loc, Presence? p, DateTime now) => switch (s) {
-    LiveState.live => l10n.liveUpdated(_ago(l10n, loc?.updatedAt, now)),
+    LiveState.live => [l10n.liveUpdated(_ago(l10n, loc?.updatedAt, now)), ?_motion(l10n, loc, now)].join(' · '),
     LiveState.stale => p != null && !p.gpsOn ? l10n.liveGpsOff : l10n.liveNoFix(_ago(l10n, loc?.updatedAt, now)),
     LiveState.offDuty => l10n.liveOffDuty,
     LiveState.offline => l10n.liveOffline(_ago(l10n, p?.lastSeen ?? loc?.updatedAt, now)),

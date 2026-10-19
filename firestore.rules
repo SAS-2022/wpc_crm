@@ -47,12 +47,18 @@ service cloud.firestore {
             && request.resource.data.source == 'manual');
       allow delete: if isAdmin();
       // `givenLog` (`given` = older summary): catalogs / stands handed over, at
-      // visits or recorded on the client page.
+      // visits or recorded on the client page. `statusRequest`: see below.
       allow update: if isSupervisor()
         || (active() && resource.data.assignedTo == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
-              'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given', 'givenLog']));
+              'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given', 'givenLog',
+              'statusRequest'])
+            // Asks for a status change (closed / not working) as themselves,
+            // or withdraws it; KAM / managers approve and set `status`.
+            && (!('statusRequest' in request.resource.data)
+                || request.resource.data.statusRequest == null
+                || request.resource.data.statusRequest.byId == request.auth.uid));
 
       match /attachments/{attachmentId} {
         allow read, create: if isSupervisor() || ownsClient(clientId);

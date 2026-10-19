@@ -16,6 +16,9 @@ import 'clients_repository.dart';
 import 'person_style.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
+import '../../core/app_user.dart';
+import 'client_status.dart';
+import 'client_status_widgets.dart';
 
 enum _Status { all, recent, dueSoon, overdue, noLocation }
 
@@ -35,6 +38,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   /// Groups of possible duplicates instead of the list (KAM / managers).
   bool _showDuplicates = false;
+
+  /// Clients with a status change waiting for [me]'s approval.
+  bool _showStatusRequests = false;
 
   /// Ids ticked for hiding / showing; null when not selecting.
   Set<String>? _selected;
@@ -124,11 +130,22 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     final supervisor = me?.role.isSupervisor ?? false;
-    final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
+    final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
     final hidden = supervisor ? ref.watch(filteredHiddenClientsProvider) : const <Client>[];
     if (hidden.isEmpty) _showHidden = false;
     final duplicates = ref.watch(duplicateGroupsProvider);
-    final clients = _showHidden ? AsyncValue.data(hidden) : ref.watch(filteredClientsProvider);
+    final statusRequests = me == null
+        ? const <Client>[]
+        : [
+            for (final c in ref.watch(allClientsProvider).value ?? const <Client>[])
+              if (canDecideStatus(me, c, users)) c,
+          ];
+    if (statusRequests.isEmpty) _showStatusRequests = false;
+    final clients = _showHidden
+        ? AsyncValue.data(hidden)
+        : _showStatusRequests
+            ? AsyncValue.data(statusRequests)
+            : ref.watch(filteredClientsProvider);
     final now = DateTime.now();
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
 
@@ -261,6 +278,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 onSelected: (v) => setState(() {
                   _showHidden = v;
                   _showDuplicates = false;
+                  _showStatusRequests = false;
                   _selected = _selected == null ? null : {};
                 }),
               ),
@@ -277,6 +295,24 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 onSelected: (v) => setState(() {
                   _showDuplicates = v;
                   _showHidden = false;
+                  _showStatusRequests = false;
+                  _selected = null;
+                }),
+              ),
+            ),
+          // Status changes waiting for this KAM / manager's approval.
+          if (statusRequests.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilterChip(
+                avatar: const Icon(Icons.hourglass_top, size: 16),
+                label: Text('${l10n.clientStatusRequests} (${statusRequests.length})'),
+                selected: _showStatusRequests,
+                showCheckmark: false,
+                onSelected: (v) => setState(() {
+                  _showStatusRequests = v;
+                  _showHidden = false;
+                  _showDuplicates = false;
                   _selected = null;
                 }),
               ),
@@ -421,10 +457,19 @@ class _ClientTile extends ConsumerWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final color = planned ? plannedColor : visitStatusColor(status);
+    // Closed / not working: grey, labelled with the status.
+    final color = !client.isActive
+        ? theme.colorScheme.outline
+        : planned
+            ? plannedColor
+            : visitStatusColor(status);
     final last = client.lastVisitAt;
     final since = last == null ? l10n.never : l10n.daysAgo(now.difference(last).inDays);
-    final label = planned ? l10n.plannedToday : visitStatusLabel(status, l10n);
+    final label = !client.isActive
+        ? clientStatusLabel(l10n, client.status)
+        : planned
+            ? l10n.plannedToday
+            : visitStatusLabel(status, l10n);
     // Yellow needs dark text to stay readable.
     final pillText = color == statusDueSoonColor ? const Color(0xFF7A5200) : color;
 
@@ -443,6 +488,14 @@ class _ClientTile extends ConsumerWidget {
                   if (tags[id] case final t?) t.label(lang),
               ].where((s) => s.isNotEmpty).join(' · '),
             ),
+            if (client.statusRequest != null) ...[
+              const TextSpan(text: '  '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Icon(Icons.hourglass_top, size: 14, color: theme.colorScheme.tertiary),
+              ),
+              TextSpan(text: ' ${clientStatusLabel(l10n, client.statusRequest!.status)}?'),
+            ],
             if (!client.hasLocation) ...[
               const TextSpan(text: '  '),
               WidgetSpan(

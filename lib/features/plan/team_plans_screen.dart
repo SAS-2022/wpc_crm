@@ -40,7 +40,17 @@ class _TeamPlansScreenState extends ConsumerState<TeamPlansScreen> {
     final tasks = ref.watch(teamDayTasksProvider(day));
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.teamPlans)),
+      appBar: AppBar(
+        title: Text(l10n.teamPlans),
+        actions: [
+          // Everyone's visits of the day on one map.
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            tooltip: l10n.showOnMap,
+            onPressed: () => context.push('/team-plans/map?date=$day'),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),

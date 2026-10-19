@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'tracking_device.dart';
 import 'work_hours.dart';
+import 'motion.dart';
 
 /// How often a position is sent (user decision 2026-10-18: every 30 seconds,
 /// to test on the new build; was 2 minutes).
@@ -50,6 +51,8 @@ class LocationTracker {
   Timer? _heartbeat;
   Timer? _dutyCheck;
   DateTime? _lastSent;
+  /// Still / walking / driving and since when in one place, sent with each fix.
+  final _motion = MotionTracker();
   bool _connected = false;
   WorkHours _hours = WorkHours.defaults;
 
@@ -124,6 +127,7 @@ class LocationTracker {
     );
     if (!on) {
       _lastSent = null;
+      _motion.reset();
       await FirebaseDatabase.instance.ref('live_locations/$uid').remove();
     }
     await _presence.update({'onDuty': on});
@@ -193,6 +197,13 @@ class LocationTracker {
   Future<void> _send(Position p) async {
     if (_onDuty != true || !_active) return;
     final now = DateTime.now();
+    final motion = _motion.update(
+      lat: p.latitude,
+      lng: p.longitude,
+      accuracy: p.accuracy,
+      speed: p.speed,
+      at: p.timestamp,
+    );
     // The OS may deliver fixes more often than asked for; keep one per interval.
     if (_lastSent != null && now.difference(_lastSent!) < trackingInterval * 0.75) return;
     _lastSent = now;
@@ -206,6 +217,8 @@ class LocationTracker {
       ...point,
       'speed': p.speed,
       'fixAt': p.timestamp.millisecondsSinceEpoch,
+      'stillSince': motion.stillSince.millisecondsSinceEpoch,
+      'motion': motion.motion.name,
       'updatedAt': ServerValue.timestamp,
     });
     // Route history per day, for the dashboard (distance, time in the field).

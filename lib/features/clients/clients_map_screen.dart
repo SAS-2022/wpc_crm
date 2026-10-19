@@ -98,7 +98,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     final filter = ref.watch(salesFilterProvider);
     final planned = {
       for (final e in ref.watch(plannedTodayProvider).entries)
-        if (filter == null || e.value == filter) e.key,
+        if (filter.isEmpty || filter.contains(e.value)) e.key,
     };
     _Status statusOf(Client c) => planned.contains(c.id)
         ? _Status.planned
@@ -270,13 +270,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                               for (final MapEntry(key: uid, value: n) in legend)
                                 Padding(
                                   padding: const EdgeInsetsDirectional.only(end: 6),
-                                  child: ChoiceChip(
+                                  child: FilterChip(
+                                    showCheckmark: false,
                                     visualDensity: VisualDensity.compact,
                                     avatar: Icon(Icons.circle, size: 12, color: (styles[uid] ?? unassignedStyle).color),
                                     label: Text('${uid == null ? l10n.unassigned : users[uid]?.name ?? '?'} ($n)'),
-                                    selected: filter != null && filter == (uid ?? unassignedFilter),
-                                    onSelected: (on) =>
-                                        ref.read(salesFilterProvider.notifier).set(on ? uid ?? unassignedFilter : null),
+                                    selected: filter.contains(uid ?? unassignedFilter),
+                                    onSelected: (_) => ref.read(salesFilterProvider.notifier).toggle(uid ?? unassignedFilter),
                                   ),
                                 ),
                             ],

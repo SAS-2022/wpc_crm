@@ -2493,4 +2493,162 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get docFill => 'تعبئة';
+
+  @override
+  String get clientStatus => 'حالة العميل';
+
+  @override
+  String get clientStatusActive => 'نشط';
+
+  @override
+  String get clientStatusClosed => 'مغلق';
+
+  @override
+  String get clientStatusNotWorking => 'لا يتعامل معنا';
+
+  @override
+  String get changeClientStatus => 'تغيير حالة العميل';
+
+  @override
+  String get clientStatusReason => 'السبب (اختياري)';
+
+  @override
+  String get clientStatusNeedsApproval =>
+      'سيوافق مدير الحسابات أو مدير المبيعات أو المدير العام على التغيير.';
+
+  @override
+  String get sendForApproval => 'إرسال للموافقة';
+
+  @override
+  String get clientStatusChanged => 'تم تغيير حالة العميل';
+
+  @override
+  String get clientStatusRequestSent => 'تم الإرسال للموافقة';
+
+  @override
+  String get clientStatusRequestCancelled => 'تم إلغاء الطلب';
+
+  @override
+  String get clientStatusApproved => 'تمت الموافقة';
+
+  @override
+  String get clientStatusRejected => 'تم الرفض';
+
+  @override
+  String clientStatusSince(String status, String date) {
+    return '$status منذ $date';
+  }
+
+  @override
+  String clientStatusWaiting(String status) {
+    return 'بانتظار الموافقة: $status';
+  }
+
+  @override
+  String clientStatusAsked(String name, String status) {
+    return 'طلب $name تحويل هذا العميل إلى $status';
+  }
+
+  @override
+  String clientStatusRejectedEntry(String status) {
+    return '$status – مرفوض';
+  }
+
+  @override
+  String clientStatusRequestedBy(String name) {
+    return 'بطلب من $name';
+  }
+
+  @override
+  String clientStatusDecidedBy(String name) {
+    return 'بواسطة $name';
+  }
+
+  @override
+  String get clientStatusHistory => 'سجل الحالة';
+
+  @override
+  String get clientStatusRequests => 'طلبات تغيير الحالة';
+
+  @override
+  String get clientStatusFilterHelp =>
+      'العملاء المغلقون ومن لا يتعاملون معنا يظهرون فقط عند تحديدهم هنا.';
+
+  @override
+  String notifClientStatusRequested(String name, String client, String status) {
+    return 'طلب $name تحويل $client إلى $status – بانتظار موافقتك';
+  }
+
+  @override
+  String notifClientStatusApproved(String name, String client, String status) {
+    return 'وافق $name: $client أصبح $status';
+  }
+
+  @override
+  String notifClientStatusRejected(String name, String client, String status) {
+    return 'رفض $name تحويل $client إلى $status';
+  }
+
+  @override
+  String get transferredClients => 'العملاء المنقولون';
+
+  @override
+  String get transfersHelp =>
+      'العملاء الذين نُقلوا من مندوب إلى آخر، وهل زارهم المندوب الجديد أو اتصل بهم منذ ذلك.';
+
+  @override
+  String lastNDays(int n) {
+    return 'آخر $n يوم';
+  }
+
+  @override
+  String get transfersNotVisitedOnly => 'لم تتم زيارتهم بعد';
+
+  @override
+  String transfersSummary(int total, int visited, int waiting) {
+    return '$total منقول · $visited تمت زيارتهم · $waiting لم تتم بعد';
+  }
+
+  @override
+  String get transfersNone => 'لم يُنقل أي عميل في هذه الفترة.';
+
+  @override
+  String transferMovedBy(String name, String date) {
+    return 'نقله $name · $date';
+  }
+
+  @override
+  String transferVisitedAfter(String date, int days) {
+    return 'تمت الزيارة $date · بعد $days يوم من النقل';
+  }
+
+  @override
+  String transferCalledAfter(String date, int days) {
+    return 'تم الاتصال $date · بعد $days يوم من النقل';
+  }
+
+  @override
+  String transferNotVisited(int days) {
+    return 'لم تتم الزيارة · $days يوم منذ النقل';
+  }
+
+  @override
+  String get transferMovedAgain => 'نُقل مرة أخرى لاحقاً';
+
+  @override
+  String get newSalesperson => 'المندوب الجديد';
+
+  @override
+  String get motionDriving => 'يقود';
+
+  @override
+  String get motionWalking => 'يمشي';
+
+  @override
+  String get motionStopped => 'متوقف';
+
+  @override
+  String motionIdleFor(String time) {
+    return 'متوقف منذ $time';
+  }
 }

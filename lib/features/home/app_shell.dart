@@ -59,6 +59,7 @@ class AppShell extends ConsumerWidget {
       if (supervisor) ...[
         (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),
         (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),
+        (path: '/transfers', icon: Icons.swap_horiz_outlined, selected: Icons.swap_horiz, label: l10n.transferredClients),
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],

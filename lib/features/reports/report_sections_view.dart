@@ -258,7 +258,7 @@ class CatalogCard extends ConsumerWidget {
       ref.read(givenDueFilterProvider.notifier)
         ..clear()
         ..toggle(item);
-      ref.read(salesFilterProvider.notifier).set(person);
+      ref.read(salesFilterProvider.notifier).only(person);
       context.go('/clients');
     }
 

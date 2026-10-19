@@ -4321,6 +4321,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fill in'**
   String get docFill;
+
+  /// No description provided for @clientStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Client status'**
+  String get clientStatus;
+
+  /// No description provided for @clientStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get clientStatusActive;
+
+  /// No description provided for @clientStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get clientStatusClosed;
+
+  /// No description provided for @clientStatusNotWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Not working'**
+  String get clientStatusNotWorking;
+
+  /// No description provided for @changeClientStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Change client status'**
+  String get changeClientStatus;
+
+  /// No description provided for @clientStatusReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get clientStatusReason;
+
+  /// No description provided for @clientStatusNeedsApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Your KAM, the sales manager or the GM will approve the change.'**
+  String get clientStatusNeedsApproval;
+
+  /// No description provided for @sendForApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for approval'**
+  String get sendForApproval;
+
+  /// No description provided for @clientStatusChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Client status changed'**
+  String get clientStatusChanged;
+
+  /// No description provided for @clientStatusRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent for approval'**
+  String get clientStatusRequestSent;
+
+  /// No description provided for @clientStatusRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled'**
+  String get clientStatusRequestCancelled;
+
+  /// No description provided for @clientStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get clientStatusApproved;
+
+  /// No description provided for @clientStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get clientStatusRejected;
+
+  /// No description provided for @clientStatusSince.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} since {date}'**
+  String clientStatusSince(String status, String date);
+
+  /// No description provided for @clientStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval: {status}'**
+  String clientStatusWaiting(String status);
+
+  /// No description provided for @clientStatusAsked.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asked to mark this client as {status}'**
+  String clientStatusAsked(String name, String status);
+
+  /// No description provided for @clientStatusRejectedEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} – rejected'**
+  String clientStatusRejectedEntry(String status);
+
+  /// No description provided for @clientStatusRequestedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'asked by {name}'**
+  String clientStatusRequestedBy(String name);
+
+  /// No description provided for @clientStatusDecidedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'by {name}'**
+  String clientStatusDecidedBy(String name);
+
+  /// No description provided for @clientStatusHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Status history'**
+  String get clientStatusHistory;
+
+  /// No description provided for @clientStatusRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Status requests'**
+  String get clientStatusRequests;
+
+  /// No description provided for @clientStatusFilterHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed and not working clients show only when ticked here.'**
+  String get clientStatusFilterHelp;
+
+  /// No description provided for @notifClientStatusRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asked to mark {client} as {status} – waiting for your approval'**
+  String notifClientStatusRequested(String name, String client, String status);
+
+  /// No description provided for @notifClientStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved: {client} is now {status}'**
+  String notifClientStatusApproved(String name, String client, String status);
+
+  /// No description provided for @notifClientStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} rejected marking {client} as {status}'**
+  String notifClientStatusRejected(String name, String client, String status);
+
+  /// No description provided for @transferredClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Transferred clients'**
+  String get transferredClients;
+
+  /// No description provided for @transfersHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients moved from one salesperson to another, and whether the new salesperson has visited or called them since.'**
+  String get transfersHelp;
+
+  /// No description provided for @lastNDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {n} days'**
+  String lastNDays(int n);
+
+  /// No description provided for @transfersNotVisitedOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited yet'**
+  String get transfersNotVisitedOnly;
+
+  /// No description provided for @transfersSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} moved · {visited} visited · {waiting} not yet'**
+  String transfersSummary(int total, int visited, int waiting);
+
+  /// No description provided for @transfersNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients were moved in this period.'**
+  String get transfersNone;
+
+  /// No description provided for @transferMovedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved by {name} · {date}'**
+  String transferMovedBy(String name, String date);
+
+  /// No description provided for @transferVisitedAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Visited {date} · {days} days after the move'**
+  String transferVisitedAfter(String date, int days);
+
+  /// No description provided for @transferCalledAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Called {date} · {days} days after the move'**
+  String transferCalledAfter(String date, int days);
+
+  /// No description provided for @transferNotVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited · {days} days since the move'**
+  String transferNotVisited(int days);
+
+  /// No description provided for @transferMovedAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved again later'**
+  String get transferMovedAgain;
+
+  /// No description provided for @newSalesperson.
+  ///
+  /// In en, this message translates to:
+  /// **'New salesperson'**
+  String get newSalesperson;
+
+  /// No description provided for @motionDriving.
+  ///
+  /// In en, this message translates to:
+  /// **'Driving'**
+  String get motionDriving;
+
+  /// No description provided for @motionWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get motionWalking;
+
+  /// No description provided for @motionStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get motionStopped;
+
+  /// No description provided for @motionIdleFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Idle for {time}'**
+  String motionIdleFor(String time);
 }
 
 class _AppLocalizationsDelegate

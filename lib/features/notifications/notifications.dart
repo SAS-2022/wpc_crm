@@ -41,6 +41,14 @@ enum NotificationType {
   /// The recipient's leave request was approved by every step / rejected.
   leaveApproved,
   leaveRejected,
+
+  /// `ownerId` asked to mark client [AppNotification.ref] as
+  /// [AppNotification.issue] ('closed' / 'notWorking' / 'active').
+  clientStatusRequested,
+
+  /// The recipient's status request was approved / rejected.
+  clientStatusApproved,
+  clientStatusRejected,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -55,6 +63,7 @@ class AppNotification {
     required this.count,
     this.issue = '',
     this.ref = '',
+    this.clientName = '',
     required this.read,
     required this.createdAt,
   });
@@ -75,6 +84,9 @@ class AppNotification {
 
   /// The document it is about, e.g. a leave request id.
   final String ref;
+
+  /// Client notifications: the client's name when it was sent.
+  final String clientName;
   final bool read;
   final DateTime? createdAt;
 
@@ -89,6 +101,7 @@ class AppNotification {
       count: (d['count'] as num?)?.toInt() ?? 0,
       issue: d['issue'] as String? ?? '',
       ref: d['ref'] as String? ?? '',
+      clientName: d['clientName'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -130,6 +143,8 @@ Future<void> sendNotifications({
   required String date,
   required int count,
   String? ref,
+  String? issue,
+  String? clientName,
 }) async {
   final batch = FirebaseFirestore.instance.batch();
   for (final to in toIds.toSet()) {
@@ -142,6 +157,8 @@ Future<void> sendNotifications({
       'date': date,
       'count': count,
       'ref': ?ref,
+      'issue': ?issue,
+      'clientName': ?clientName,
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });

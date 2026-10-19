@@ -9,11 +9,17 @@ import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import 'client.dart';
 import 'clients_repository.dart';
+import 'person_style.dart';
 import 'visit_rules.dart';
 
 /// Status colour from the client's category and last visit; grey = no location.
-Color clientColor(Client c, VisitRules rules, DateTime now) =>
-    c.hasLocation ? visitStatusColor(visitStatus(c, rules, now)) : Colors.grey;
+/// Closed / not working clients are dark grey (shown only when the status
+/// filter asks for them).
+Color clientColor(Client c, VisitRules rules, DateTime now) => !c.isActive
+    ? Colors.blueGrey.shade700
+    : c.hasLocation
+        ? visitStatusColor(visitStatus(c, rules, now))
+        : Colors.grey;
 
 /// Clients on today's plan (approved visit tasks not yet done) → plan owner.
 final plannedTodayProvider = Provider<Map<String, String>>((ref) {
@@ -38,28 +44,40 @@ final clientOwnersProvider = Provider<List<AppUser>>((ref) {
   return users.where((u) => (u.active && u.role.isTracked) || owners.contains(u.id)).toList();
 });
 
-/// Salesperson filter for KAM / managers; hidden for sales executives.
-class SalesFilterDropdown extends ConsumerWidget {
-  const SalesFilterDropdown({super.key});
+/// Salesperson filter for KAM / managers (hidden for sales executives):
+/// tick one or several people; none ticked = everyone.
+class SalesFilterChips extends ConsumerWidget {
+  const SalesFilterChips({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final owners = ref.watch(clientOwnersProvider);
-    return DropdownButton<String?>(
-      value: ref.watch(salesFilterProvider),
-      isExpanded: true,
-      underline: const SizedBox.shrink(),
-      items: [
-        DropdownMenuItem(value: null, child: Text(l10n.allSalespeople)),
-        DropdownMenuItem(value: unassignedFilter, child: Text(l10n.unassigned)),
+    final selected = ref.watch(salesFilterProvider);
+    final filter = ref.read(salesFilterProvider.notifier);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          label: Text(l10n.allSalespeople),
+          selected: selected.isEmpty,
+          onSelected: (_) => filter.clear(),
+        ),
         for (final u in owners)
-          DropdownMenuItem(
-            value: u.id,
-            child: Text(u.role == UserRole.salesExec ? u.name : '${u.name} (${u.role.label(l10n)})'),
+          FilterChip(
+            avatar: PersonBadge(userId: u.id, name: u.name, size: 20),
+            label: Text(u.role == UserRole.salesExec ? u.name : '${u.name} (${u.role.label(l10n)})'),
+            selected: selected.contains(u.id),
+            showCheckmark: false,
+            onSelected: (_) => filter.toggle(u.id),
           ),
+        FilterChip(
+          label: Text(l10n.unassigned),
+          selected: selected.contains(unassignedFilter),
+          onSelected: (_) => filter.toggle(unassignedFilter),
+        ),
       ],
-      onChanged: ref.read(salesFilterProvider.notifier).set,
     );
   }
 }

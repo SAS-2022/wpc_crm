@@ -1,6 +1,8 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'motion.dart';
+
 class LiveLocation {
   const LiveLocation({
     required this.lat,
@@ -8,7 +10,16 @@ class LiveLocation {
     required this.accuracy,
     required this.mocked,
     required this.updatedAt,
+    this.fixAt,
+    this.stillSince,
+    this.motion,
   });
+
+  /// Phone clock: when the fix was taken and since when the person has
+  /// been in one place; [motion] null from app versions before 2026-10-19.
+  final DateTime? fixAt;
+  final DateTime? stillSince;
+  final Motion? motion;
 
   final double lat;
   final double lng;
@@ -69,6 +80,9 @@ final liveLocationsProvider = StreamProvider<Map<String, LiveLocation>>((ref) =>
                 accuracy: (d['accuracy'] as num?)?.toDouble(),
                 mocked: d['mocked'] == true,
                 updatedAt: _time(d['updatedAt']),
+                fixAt: _time(d['fixAt']),
+                stillSince: _time(d['stillSince']),
+                motion: Motion.values.asNameMap()[d['motion']],
               ),
         }));
 

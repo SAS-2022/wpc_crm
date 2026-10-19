@@ -98,6 +98,24 @@ describe('sales team keeps its access', () => {
     await assertFails(updateDoc(doc(fs('exec'), 'clients/c2'), log));
   });
 
+  test('sales exec asks to close own client, never sets the status or asks as someone else', async () => {
+    const ask = { statusRequest: { status: 'closed', byId: 'exec', at: serverTimestamp(), note: 'Shop shut' } };
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), ask));
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), { statusRequest: null }));
+    await assertFails(updateDoc(doc(fs('exec'), 'clients/c1'), { status: 'closed' }));
+    await assertFails(updateDoc(doc(fs('exec'), 'clients/c1'), { statusRequest: { status: 'closed', byId: 'kam' } }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'clients/c2'), { name: 'Other', assignedTo: 'someoneElse' }));
+    await assertFails(updateDoc(doc(fs('exec'), 'clients/c2'), ask));
+  });
+
+  test('KAM and managers approve: set the status and clear the request', async () => {
+    for (const uid of ['kam', 'sm', 'gm']) {
+      await assertSucceeds(updateDoc(doc(fs(uid), 'clients/c1'), {
+        status: 'notWorking', statusAt: serverTimestamp(), statusRequest: null,
+      }));
+    }
+  });
+
     test('KAM and managers read clients, visits and live locations', async () => {
     for (const uid of ['kam', 'sm', 'gm']) {
       await assertSucceeds(getDoc(doc(fs(uid), 'clients/c1')));

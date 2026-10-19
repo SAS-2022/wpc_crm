@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'client_status.dart';
 import 'given_items.dart';
 import 'merge.dart';
 import 'transfer.dart';
@@ -54,6 +55,10 @@ class Client {
     this.given = const {},
     this.givenLog = const [],
     this.createdAt,
+    this.status = ClientStatus.active,
+    this.statusAt,
+    this.statusRequest,
+    this.statusLog = const [],
   });
 
   final String id;
@@ -147,6 +152,15 @@ class Client {
 
   final DateTime? createdAt;
 
+  /// Active, closed or not working (`clients.status`), with when it last
+  /// changed, a change waiting for approval and every change made.
+  final ClientStatus status;
+  final DateTime? statusAt;
+  final StatusRequest? statusRequest;
+  final List<StatusChange> statusLog;
+
+  bool get isActive => status == ClientStatus.active;
+
   /// The main location. Imports, duplicates and plans use this one.
   bool get hasLocation => lat != null && lng != null;
 
@@ -217,6 +231,13 @@ class Client {
       givenLog: parseGivenLog(d['givenLog']),
       given: summarizeGiven(parseGivenLog(d['givenLog']), GivenRecord.parse(d['given'])),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      status: ClientStatus.fromKey(d['status']),
+      statusAt: (d['statusAt'] as Timestamp?)?.toDate(),
+      statusRequest: StatusRequest.fromMap(d['statusRequest']),
+      statusLog: [
+        for (final s in d['statusLog'] as List? ?? const [])
+          if (s is Map) StatusChange.fromMap(s),
+      ],
     );
   }
 }

@@ -105,7 +105,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tasks = (ref.watch(rangeTasksProvider(key)).value ?? const <PlanTask>[])
         .where((t) => ids.contains(t.ownerId) && _range.contains(DateTime.parse(t.date)) && !hidden.contains(t.clientId))
         .toList();
-    final allClients = ref.watch(clientsProvider).value ?? const <Client>[];
+    final allClients = ref.watch(workingClientsProvider).value ?? const <Client>[];
     final clients = allClients.where((c) => c.hasLocation && ids.contains(c.assignedTo)).toList();
 
     // Targets for the period, and what was expected by today.

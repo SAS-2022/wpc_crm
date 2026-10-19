@@ -2492,4 +2492,162 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get docFill => 'Fill in';
+
+  @override
+  String get clientStatus => 'Client status';
+
+  @override
+  String get clientStatusActive => 'Active';
+
+  @override
+  String get clientStatusClosed => 'Closed';
+
+  @override
+  String get clientStatusNotWorking => 'Not working';
+
+  @override
+  String get changeClientStatus => 'Change client status';
+
+  @override
+  String get clientStatusReason => 'Reason (optional)';
+
+  @override
+  String get clientStatusNeedsApproval =>
+      'Your KAM, the sales manager or the GM will approve the change.';
+
+  @override
+  String get sendForApproval => 'Send for approval';
+
+  @override
+  String get clientStatusChanged => 'Client status changed';
+
+  @override
+  String get clientStatusRequestSent => 'Sent for approval';
+
+  @override
+  String get clientStatusRequestCancelled => 'Request cancelled';
+
+  @override
+  String get clientStatusApproved => 'Approved';
+
+  @override
+  String get clientStatusRejected => 'Rejected';
+
+  @override
+  String clientStatusSince(String status, String date) {
+    return '$status since $date';
+  }
+
+  @override
+  String clientStatusWaiting(String status) {
+    return 'Waiting for approval: $status';
+  }
+
+  @override
+  String clientStatusAsked(String name, String status) {
+    return '$name asked to mark this client as $status';
+  }
+
+  @override
+  String clientStatusRejectedEntry(String status) {
+    return '$status – rejected';
+  }
+
+  @override
+  String clientStatusRequestedBy(String name) {
+    return 'asked by $name';
+  }
+
+  @override
+  String clientStatusDecidedBy(String name) {
+    return 'by $name';
+  }
+
+  @override
+  String get clientStatusHistory => 'Status history';
+
+  @override
+  String get clientStatusRequests => 'Status requests';
+
+  @override
+  String get clientStatusFilterHelp =>
+      'Closed and not working clients show only when ticked here.';
+
+  @override
+  String notifClientStatusRequested(String name, String client, String status) {
+    return '$name asked to mark $client as $status – waiting for your approval';
+  }
+
+  @override
+  String notifClientStatusApproved(String name, String client, String status) {
+    return '$name approved: $client is now $status';
+  }
+
+  @override
+  String notifClientStatusRejected(String name, String client, String status) {
+    return '$name rejected marking $client as $status';
+  }
+
+  @override
+  String get transferredClients => 'Transferred clients';
+
+  @override
+  String get transfersHelp =>
+      'Clients moved from one salesperson to another, and whether the new salesperson has visited or called them since.';
+
+  @override
+  String lastNDays(int n) {
+    return 'Last $n days';
+  }
+
+  @override
+  String get transfersNotVisitedOnly => 'Not visited yet';
+
+  @override
+  String transfersSummary(int total, int visited, int waiting) {
+    return '$total moved · $visited visited · $waiting not yet';
+  }
+
+  @override
+  String get transfersNone => 'No clients were moved in this period.';
+
+  @override
+  String transferMovedBy(String name, String date) {
+    return 'Moved by $name · $date';
+  }
+
+  @override
+  String transferVisitedAfter(String date, int days) {
+    return 'Visited $date · $days days after the move';
+  }
+
+  @override
+  String transferCalledAfter(String date, int days) {
+    return 'Called $date · $days days after the move';
+  }
+
+  @override
+  String transferNotVisited(int days) {
+    return 'Not visited · $days days since the move';
+  }
+
+  @override
+  String get transferMovedAgain => 'Moved again later';
+
+  @override
+  String get newSalesperson => 'New salesperson';
+
+  @override
+  String get motionDriving => 'Driving';
+
+  @override
+  String get motionWalking => 'Walking';
+
+  @override
+  String get motionStopped => 'Stopped';
+
+  @override
+  String motionIdleFor(String time) {
+    return 'Idle for $time';
+  }
 }

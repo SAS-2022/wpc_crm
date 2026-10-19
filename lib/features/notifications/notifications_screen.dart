@@ -7,6 +7,8 @@ import '../../core/app_user.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'notifications.dart';
+import '../clients/client_status.dart';
+import '../clients/client_status_widgets.dart';
 
 /// Bell with the unread count; opens the notifications list.
 class NotificationsBell extends ConsumerWidget {
@@ -42,6 +44,12 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.leaveRequested => l10n.notifLeaveRequested(owner),
         NotificationType.leaveApproved => l10n.notifLeaveApproved(from),
         NotificationType.leaveRejected => l10n.notifLeaveRejected(from),
+        NotificationType.clientStatusRequested =>
+          l10n.notifClientStatusRequested(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
+        NotificationType.clientStatusApproved =>
+          l10n.notifClientStatusApproved(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
+        NotificationType.clientStatusRejected =>
+          l10n.notifClientStatusRejected(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
         NotificationType.trackingIssue => switch (n.issue) {
             'gpsOff' => l10n.notifGpsOff(from),
             'locationDenied' => l10n.notifLocationDenied(from),
@@ -87,6 +95,9 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.leaveRequested => Icons.beach_access,
                     NotificationType.leaveApproved => Icons.event_available,
                     NotificationType.leaveRejected => Icons.event_busy,
+                    NotificationType.clientStatusRequested => Icons.store_mall_directory_outlined,
+                    NotificationType.clientStatusApproved => Icons.check_circle,
+                    NotificationType.clientStatusRejected => Icons.cancel,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -107,6 +118,10 @@ class NotificationsScreen extends ConsumerWidget {
                             NotificationType.leaveApproved ||
                             NotificationType.leaveRejected:
                         context.push('/leave/${n.ref}');
+                      case NotificationType.clientStatusRequested ||
+                            NotificationType.clientStatusApproved ||
+                            NotificationType.clientStatusRejected:
+                        context.push('/clients/${n.ref}');
                       default:
                         context.push('/plan/${n.ownerId}?date=${n.date}');
                     }
