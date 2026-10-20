@@ -85,7 +85,7 @@ void main() {
       ],
       clients: const {},
       range: range,
-    );
+    ).rows;
     expect(rows.first.days.length, 1);
     expect(rows.first.days.single.visits, 3);
     expect(rows.first.bestOrderDays, 0);

@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'report.dart';
+import 'routing_pace.dart';
 
 /// An entry of `import_batches`, written by each client import.
 class ImportBatch {
@@ -102,3 +103,27 @@ SnappedLeg? _leg(Object? key, Object? value) {
 /// [FirebaseFunctionsException] e.g. when the Routes API isn't enabled.
 Future<void> snapRoute(String uid, String day) =>
     FirebaseFunctions.instance.httpsCallable('snapRoute').call({'uid': uid, 'day': day});
+
+/// Day timelines of every salesperson in the given months ('yyyy-MM',
+/// comma-separated), by `uid_yyyy-MM-dd`. Built nightly by the
+/// `buildTimelines` Cloud Function.
+final dayTimelinesProvider = StreamProvider.autoDispose.family<Map<String, DayTimeline>, String>((ref, months) {
+  final list = months.split(',').where((m) => m.isNotEmpty).toList();
+  if (list.isEmpty) return Stream.value(const {});
+  return FirebaseFirestore.instance
+      .collection('day_timelines')
+      .where('month', whereIn: list.take(10).toList())
+      .snapshots()
+      .map((s) => {for (final d in s.docs) d.id: DayTimeline.fromMap(d.data())});
+});
+
+/// One person's day timeline ('uid', 'yyyy-MM-dd').
+final dayTimelineProvider = StreamProvider.autoDispose.family<DayTimeline?, (String, String)>((ref, key) =>
+    FirebaseFirestore.instance
+        .doc('day_timelines/${key.$1}_${key.$2}')
+        .snapshots()
+        .map((s) => s.exists ? DayTimeline.fromMap(s.data()!) : null));
+
+/// Asks `buildTimeline` to (re)build one day now, e.g. today's so far.
+Future<void> buildTimelineNow(String uid, String day) =>
+    FirebaseFunctions.instance.httpsCallable('buildTimeline').call({'uid': uid, 'day': day});

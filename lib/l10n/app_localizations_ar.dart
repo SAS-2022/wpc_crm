@@ -1483,7 +1483,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportRoutingHelp =>
-      'تُحسب الأيام التي فيها زيارتان أو أكثر. الكفاءة = الوقت المطلوب (أقصر مسار بين نفس العملاء + 30 دقيقة لكل زيارة) ÷ الوقت من أول زيارة إلى آخر زيارة، بحد أقصى 100%. المسافة الإضافية = الكيلومترات المستقيمة الزائدة عن أقصر ترتيب بين الزيارات.';
+      'الأيام التي فيها زيارتان أو أكثر. يُقسَّم موقع كل يوم إلى وقت عند العملاء، والقيادة، والمكتب، والغداء (حتى 60 دقيقة وقت الظهر)، والتوقف في مكان آخر (15 دقيقة فأكثر)، وبدون بيانات موقع. معيار الفريق هو الوسيط لمتوسطات المندوبين: مدة الزيارة، وسرعة القيادة، وكم تطول الطرق عن الخط المستقيم. الكفاءة = المطلوب (عدد الزيارات × مدة الزيارة + أقصر مسار بتلك السرعة) ÷ المستغرق (من الوصول لأول عميل حتى مغادرة آخر عميل، دون الغداء والمكتب)، بحد أقصى 100%. الأيام بلا موقع تُحسب من أوقات تسجيل الزيارات.';
 
   @override
   String get reportCatalogs => 'توزيع الكتالوجات';
@@ -1665,7 +1665,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String efficiencyDetail(String needed, String took) {
-    return 'المطلوب نحو $needed (أقصر مسار + 30 دقيقة لكل زيارة)، واستغرق $took من أول زيارة إلى آخر زيارة';
+    return 'المطلوب نحو $needed بوتيرة الفريق (متوسط مدة الزيارة الوسيط + أقصر مسار بسرعة القيادة الوسيطة)، واستغرق $took من الوصول إلى أول عميل حتى مغادرة آخر عميل، دون الغداء ووقت المكتب';
   }
 
   @override
@@ -2822,6 +2822,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'الوقت بعد نهاية يوم العمل يُحتسب عملاً إضافياً. عند الإيقاف: يُحتسب اليوم حتى نهاية يوم العمل فقط.';
 
   @override
+  String get attendanceRequired => 'الحضور مطلوب';
+
+  @override
+  String get attendanceRequiredHelp =>
+      'يسجّل الحضور والانصراف في مواقع العمل. عند الإيقاف: لا يُسجَّل الحضور (عادةً فريق المبيعات).';
+
+  @override
   String get position => 'المسمى الوظيفي';
 
   @override
@@ -3096,4 +3103,262 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get phoneSetupDone => 'تم الإعداد';
+
+  @override
+  String get pickWorkDays => 'اختر يوم عمل واحداً على الأقل';
+
+  @override
+  String get ownWorkSchedule => 'جدول عمل خاص';
+
+  @override
+  String get ownWorkScheduleHelp =>
+      'يُحتسب الحضور والتأخير ونهاية اليوم حسب هذه الأيام والساعات.';
+
+  @override
+  String companyWorkHoursNote(String hours) {
+    return 'عند الإيقاف: ساعات عمل الشركة ($hours)';
+  }
+
+  @override
+  String stayedAfterTime(String time) {
+    return 'بقي بعد الدوام $time (غير محتسب)';
+  }
+
+  @override
+  String lateBy(String time) {
+    return 'متأخر $time';
+  }
+
+  @override
+  String lateDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n أيام تأخير',
+      one: 'يوم تأخير واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifCheckedIn(String name, String time) {
+    return 'سجّل $name حضوره الساعة $time';
+  }
+
+  @override
+  String notifCheckedInSelf(String time) {
+    return 'تم تسجيل حضورك الساعة $time';
+  }
+
+  @override
+  String notifMinutesLate(int n) {
+    return 'متأخر $n دقيقة';
+  }
+
+  @override
+  String notifAttendanceLate(String time) {
+    return 'لم تسجّل حضورك بعد – بدأ يوم عملك الساعة $time. يرجى الحضور إلى العمل قريباً.';
+  }
+
+  @override
+  String get attendanceReport => 'التقرير الشهري';
+
+  @override
+  String get attendanceReportEmpty =>
+      'لا يوجد موظفون يتطلبون الحضور بعد. فعّل \"الحضور مطلوب\" واختر موقع عمل في نموذج المستخدم.';
+
+  @override
+  String get reportEmployee => 'الموظف';
+
+  @override
+  String get reportSchedule => 'الجدول';
+
+  @override
+  String get reportWorkDays => 'أيام العمل';
+
+  @override
+  String get reportMissed => 'غياب';
+
+  @override
+  String get reportLateDays => 'أيام التأخير';
+
+  @override
+  String get reportLateHours => 'التأخير (ساعات)';
+
+  @override
+  String get reportLateMinutes => 'التأخير (دقائق)';
+
+  @override
+  String get reportWorkedHours => 'ساعات العمل';
+
+  @override
+  String get reportOvertimeHours => 'العمل الإضافي (ساعات)';
+
+  @override
+  String get reportStayedAfterHours =>
+      'البقاء بعد الدوام بدون عمل إضافي (ساعات)';
+
+  @override
+  String get reportDate => 'التاريخ';
+
+  @override
+  String get reportStatus => 'الحالة';
+
+  @override
+  String get reportSite => 'موقع العمل';
+
+  @override
+  String get reportCheckOutType => 'طريقة انتهاء اليوم';
+
+  @override
+  String get dayAttended => 'حاضر';
+
+  @override
+  String reportSummaryLine(int attended, int workDays, int missed, int leave) {
+    return 'حضر $attended من $workDays · غياب $missed · إجازة $leave';
+  }
+
+  @override
+  String reportLateLine(int days, String time) {
+    return 'تأخر $days مرة ($time)';
+  }
+
+  @override
+  String reportStayedLine(String time) {
+    return 'بقي بعد الدوام $time';
+  }
+
+  @override
+  String get noClientsFound => 'لا يوجد عملاء مطابقون';
+
+  @override
+  String get searchContact => 'جهة الاتصال';
+
+  @override
+  String get searchOtherName => 'اسم آخر';
+
+  @override
+  String get salesTeam => 'فريق المبيعات';
+
+  @override
+  String get drivers => 'السائقون';
+
+  @override
+  String salesTeamCount(int n) {
+    return 'فريق المبيعات ($n)';
+  }
+
+  @override
+  String driversCount(int n) {
+    return 'السائقون ($n)';
+  }
+
+  @override
+  String get searchClientsHint =>
+      'ابحث بالاسم، جهة الاتصال، الهاتف، الرقم الضريبي، السجل التجاري، المندوب';
+
+  @override
+  String searchResultsOnMap(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عملاء',
+      one: 'عميل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDriversYet =>
+      'لا يوجد سائقون بعد. امنح مستخدماً دور السائق في صفحة المستخدمين، وسيظهر هنا بعد تثبيت أحدث إصدار من التطبيق على هاتفه.';
+
+  @override
+  String minutesShort(int n) {
+    return '$n د';
+  }
+
+  @override
+  String kmPerHour(int n) {
+    return '$n كم/س';
+  }
+
+  @override
+  String get reportBenchmarkDefault =>
+      'معيار الفريق (قيم ثابتة حتى تتوفر أيام كافية من بيانات الموقع)';
+
+  @override
+  String reportBenchmarkTitle(int n) {
+    return 'معيار الفريق · الوسيط لـ $n مندوبين';
+  }
+
+  @override
+  String get reportBenchVisit => 'مدة الزيارة';
+
+  @override
+  String get reportBenchSpeed => 'سرعة القيادة';
+
+  @override
+  String get reportBenchRoad => 'الطرق مقابل الخط المستقيم';
+
+  @override
+  String reportBenchExample(String time) {
+    return '10 زيارات بينها 30 كم (خط مستقيم) ≈ $time';
+  }
+
+  @override
+  String get reportBenchPartly =>
+      'بعض القيم ما زالت ثابتة (30 دقيقة للزيارة، 40 كم/س، الطرق 1.4×) حتى يتوفر لمندوبين اثنين على الأقل يومان من بيانات الموقع.';
+
+  @override
+  String get reportTimeSplit => 'أين ذهب يوم العمل';
+
+  @override
+  String get timeAtClients => 'عند العملاء';
+
+  @override
+  String get timeDriving => 'القيادة';
+
+  @override
+  String get timeOffice => 'المكتب';
+
+  @override
+  String get timeLunch => 'الغداء';
+
+  @override
+  String get timeStopped => 'توقف في مكان آخر';
+
+  @override
+  String get timeNoData => 'بدون بيانات موقع';
+
+  @override
+  String get reportNoGpsDay => 'بدون موقع – من أوقات التسجيل';
+
+  @override
+  String efficiencyDetailNoGps(String needed, String took) {
+    return 'المطلوب نحو $needed بوتيرة الفريق، واستغرق $took (بدون بيانات موقع: من أول تسجيل إلى آخر تسجيل مع زيارة واحدة)';
+  }
+
+  @override
+  String get roleLogisticsManager => 'مدير اللوجستيات';
+
+  @override
+  String get roleWarehouseSupervisor => 'مشرف المستودع';
+
+  @override
+  String get driversPage => 'السائقون';
+
+  @override
+  String get routeHistoryToday => 'سجل المسار';
+
+  @override
+  String get checkInNeedsLocation => 'لتسجيل الحضور، فعّل:';
+
+  @override
+  String get checkInGpsOff => 'خدمة الموقع (GPS) في الهاتف';
+
+  @override
+  String get checkInNoPermission => 'إذن الموقع للتطبيق';
+
+  @override
+  String get checkInNotAlways => 'الوصول إلى الموقع \"السماح طوال الوقت\"';
 }

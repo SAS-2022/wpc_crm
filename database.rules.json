@@ -4,11 +4,11 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists())",
-        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver)$/)"
+        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor)$/)"
       }
     },
     "live_locations": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()",
@@ -16,14 +16,14 @@
       }
     },
     "presence": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()"
       }
     },
     "location_history": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         "$day": {
@@ -35,13 +35,13 @@
       }
     },
     "route_snapped": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid"
       }
     },
     "tracking_device": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'",
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && ((auth.uid === $uid && root.child('roles').child(auth.uid).exists()) || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'sales_manager')",
@@ -49,7 +49,7 @@
       }
     },
     "tracking_events": {
-      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm'"
+      ".read": "root.child('roles').child(auth.uid).val() === 'kam' || root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('roles').child(auth.uid).val() === 'gm' || root.child('roles').child(auth.uid).val() === 'logistics_manager'"
     },
     "settings": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",

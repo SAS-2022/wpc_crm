@@ -57,6 +57,11 @@ class LocationTracker {
   bool _connected = false;
   WorkHours _hours = WorkHours.defaults;
 
+  /// Drivers keep the company car: tracked around the clock (user decision
+  /// 2026-10-20). Read from RTDB `roles/{uid}`, which the background
+  /// service can read too.
+  bool _allDay = false;
+
   /// null until first checked.
   bool? _onDuty;
 
@@ -101,6 +106,10 @@ class LocationTracker {
         _presence.update({'online': true, 'lastSeen': ServerValue.timestamp}).ignore();
       }
     }));
+    _subscriptions.add(FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
+      _allDay = event.snapshot.value == 'driver';
+      _applyDuty();
+    }, onError: (_) {}));
     _subscriptions.add(workHoursRef.onValue.listen((event) {
       _hours = WorkHours.fromMap(event.snapshot.value);
       _applyDuty();
@@ -116,7 +125,7 @@ class LocationTracker {
 
   /// Switches between sharing (work hours) and not sharing.
   Future<void> _applyDuty() async {
-    final on = _hours.isOn(DateTime.now());
+    final on = _allDay || _hours.isOn(DateTime.now());
     if (on == _onDuty) return;
     _onDuty = on;
     await _positions?.cancel();

@@ -62,7 +62,7 @@ final attendanceGeofencesProvider = Provider<void>((ref) {
   if (me == null || sites == null) return;
   final mine = [
     for (final s in sites)
-      if (me.active && s.active && me.workSiteIds.contains(s.id)) s,
+      if (me.active && me.needsAttendance && s.active && me.workSiteIds.contains(s.id)) s,
   ];
   unawaited(_sync(mine));
 });

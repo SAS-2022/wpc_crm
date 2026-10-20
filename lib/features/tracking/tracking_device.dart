@@ -43,7 +43,7 @@ Future<void> claimTracking(String uid, String deviceId) => trackingDeviceRef(uid
 /// or not known yet. No owner yet counts as this phone (the tracker claims).
 final thisPhoneTracksProvider = StreamProvider<bool?>((ref) async* {
   final me = ref.watch(currentUserProvider).value;
-  if (kIsWeb || me == null || !me.active || !me.role.isTracked) {
+  if (kIsWeb || me == null || !me.active || !me.role.isLocationTracked) {
     yield null;
     return;
   }

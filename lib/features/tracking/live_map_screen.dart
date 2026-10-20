@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,10 @@ import 'motion.dart';
 /// Live positions of field staff. KAMs see their team (and themselves);
 /// sales manager and GM see everyone.
 class LiveMapScreen extends ConsumerStatefulWidget {
-  const LiveMapScreen({super.key});
+  const LiveMapScreen({super.key, this.driversOnly = false});
+
+  /// The Drivers page: drivers only, no Sales team / Drivers switch.
+  final bool driversOnly;
 
   @override
   ConsumerState<LiveMapScreen> createState() => _LiveMapScreenState();
@@ -32,6 +36,9 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   });
   Timer? _tick;
   bool _fitted = false;
+
+  /// Drivers are listed apart from the sales team (user request 2026-10-20).
+  bool _drivers = false;
 
   @override
   void initState() {
@@ -99,11 +106,19 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     final presence = ref.watch(presenceProvider).value ?? const {};
     final now = DateTime.now();
 
-    final people = users.where((u) {
-      if (!u.active || !u.role.isTracked) return false;
+    // The logistics manager sees drivers only.
+    final driversOnly = widget.driversOnly || !(me?.role.isSupervisor ?? false);
+    final everyone = users.where((u) {
+      if (!u.active || !u.role.isLocationTracked) return false;
+      if (driversOnly && !u.role.isDriver) return false;
       if (me?.role == UserRole.kam) return u.id == me!.id || u.kamId == me.id;
       return true;
     }).toList();
+    final driverCount = everyone.where((u) => u.role.isDriver).length;
+    // Sales manager / GM always see the switch (drivers may not share yet).
+    final showDrivers = !driversOnly && (driverCount > 0 || (me?.role.isAdmin ?? false));
+    final drivers = driversOnly || (_drivers && showDrivers);
+    final people = everyone.where((u) => u.role.isDriver == drivers).toList();
     final order = {LiveState.live: 0, LiveState.stale: 1, LiveState.offDuty: 2, LiveState.offline: 3};
     people.sort((a, b) {
       final sa = liveState(locations[a.id], presence[a.id], now);
@@ -122,7 +137,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.liveTracking)),
+      appBar: AppBar(title: Text(driversOnly ? l10n.driversPage : l10n.liveTracking)),
       body: Stack(
         children: [
           GoogleMap(
@@ -184,7 +199,30 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                         decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
                       ),
                     ),
-                    if (people.isEmpty) ListTile(title: Text(l10n.noTrackedStaff)),
+                    if (showDrivers)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: SegmentedButton<bool>(
+                          segments: [
+                            ButtonSegment(
+                              value: false,
+                              icon: const Icon(Icons.storefront_outlined),
+                              label: Text(l10n.salesTeamCount(everyone.length - driverCount)),
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              icon: const Icon(Icons.local_shipping_outlined),
+                              label: Text(l10n.driversCount(driverCount)),
+                            ),
+                          ],
+                          selected: {drivers},
+                          onSelectionChanged: (v) => setState(() {
+                            _drivers = v.first;
+                            _fitted = false; // fit the map to the group shown
+                          }),
+                        ),
+                      ),
+                    if (people.isEmpty) ListTile(title: Text(drivers ? l10n.noDriversYet : l10n.noTrackedStaff)),
                     for (final u in people)
                       Builder(
                         builder: (context) {
@@ -284,6 +322,16 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                       ),
                     ),
                 ],
+              ),
+              // Today's route of this person (also for drivers).
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.push('/history?uid=${u.id}');
+                },
+                icon: const Icon(Icons.route),
+                label: Text(l10n.routeHistoryToday),
               ),
             ],
           ),

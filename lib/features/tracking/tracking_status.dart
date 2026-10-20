@@ -18,12 +18,12 @@ class TrackingStatus {
 
 bool get _android => defaultTargetPlatform == TargetPlatform.android;
 
-/// For sales executives and KAMs: checks permissions and starts tracking.
+/// For sales executives, KAMs and drivers: checks permissions and starts tracking.
 /// null for everyone else (and on the web). Kept alive by the app widget.
 final trackingStatusProvider = FutureProvider<TrackingStatus?>((ref) async {
   final me = ref.watch(currentUserProvider).value;
   if (kIsWeb || me == null) return null;
-  if (!me.active || !me.role.isTracked) {
+  if (!me.active || !me.role.isLocationTracked) {
     await Tracking.stop();
     return null;
   }

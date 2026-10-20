@@ -2,6 +2,11 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
 
+/// "My leave" (own balances and new requests) is greyed out for everyone
+/// until the leave module is finished (user request 2026-10-20). Approving
+/// requests (`/leave/:id`) and the HR area still work.
+const myLeaveEnabled = false;
+
 /// One kind of leave (or a non-leave request such as a salary certificate),
 /// set by HR in Firestore `settings/leaveTypes` {types: [...]}. Until HR
 /// saves the list, [LeaveType.defaults] apply.
@@ -224,6 +229,8 @@ List<ApprovalStep> approvalChain(AppUser requester, List<AppUser> users) {
     UserRole.worker ||
     UserRole.engineer ||
     UserRole.driver ||
+    UserRole.logisticsManager ||
+    UserRole.warehouseSupervisor ||
     UserRole.unknown =>
       [UserRole.gm, UserRole.hr],
   };

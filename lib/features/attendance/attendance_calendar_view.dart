@@ -36,8 +36,7 @@ class MyAttendanceCalendar extends ConsumerStatefulWidget {
 class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
 
-  DayResult _result(AttendanceRecord r, WorkHours hours) =>
-      r.server ?? r.result(hours: hours, leavesSite: widget.me.role.leavesSiteForWork, overtimeAllowed: widget.me.overtimeAllowed);
+  DayResult _result(AttendanceRecord r, WorkHours company) => r.best(widget.me, company);
 
   void _showDay(DateTime day, AttendanceRecord? r, DayMark mark, WorkHours hours) {
     final l10n = AppLocalizations.of(context);
@@ -67,7 +66,9 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 Text(l10n.checkedInSince(time.format(d.checkInAt!), sites[d.siteId] ?? '')),
                 if (d.closed) Text('${l10n.checkedOutAt(time.format(d.checkOutAt!))} · ${checkOutTypeLabel(l10n, d.checkOutType)}'),
                 if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
+                if ((d.lateMin ?? 0) > 0) Text(l10n.lateBy(formatMinutes(d.lateMin!))),
                 if ((d.overtimeMin ?? 0) > 0) Text(l10n.overtimeTime(formatMinutes(d.overtimeMin!))),
+                if ((d.afterHoursMin ?? 0) > 0) Text(l10n.stayedAfterTime(formatMinutes(d.afterHoursMin!))),
               ],
             ],
           ),
@@ -97,7 +98,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
     final marks = markMonth(
       month: _month,
       attended: attended,
-      workDays: hours.days,
+      workDays: me.scheduleOr(hours).days,
       holidays: holidays,
       leaveDays: leaveDays,
       since: since,
@@ -110,6 +111,8 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
     ];
     final counted = monthRecords.fold<int>(0, (s, d) => s + (d.countedMin ?? 0));
     final overtime = monthRecords.fold<int>(0, (s, d) => s + (d.overtimeMin ?? 0));
+    final afterHours = monthRecords.fold<int>(0, (s, d) => s + (d.afterHoursMin ?? 0));
+    final lateDays = monthRecords.where((d) => (d.lateMin ?? 0) > 0).length;
     final attendedCount = marks.values.where((m) => m == DayMark.attended).length;
     final missedCount = marks.values.where((m) => m == DayMark.missed).length;
 
@@ -181,6 +184,8 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 _Legend(color: dayMarkColor(DayMark.leave, theme.colorScheme), label: l10n.leaveLegend),
                 Text(l10n.monthHours(formatMinutes(counted)), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                 if (overtime > 0) Text(l10n.overtimeTime(formatMinutes(overtime)), style: theme.textTheme.bodySmall),
+                if (afterHours > 0) Text(l10n.stayedAfterTime(formatMinutes(afterHours)), style: theme.textTheme.bodySmall),
+                if (lateDays > 0) Text(l10n.lateDays(lateDays), style: theme.textTheme.bodySmall),
               ],
             ),
           ],

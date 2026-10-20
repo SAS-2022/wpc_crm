@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
+import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'notifications.dart';
@@ -33,7 +34,27 @@ class NotificationsBell extends ConsumerWidget {
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
-  String _text(AppLocalizations l10n, AppNotification n, String from, String owner, String day) => switch (n.type) {
+  /// '08:15' → '8:15 AM' in the reader's language.
+  static String _clock(BuildContext context, String hhmm) {
+    final parts = hhmm.split(':');
+    final h = int.tryParse(parts.first), m = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    if (h == null || m == null) return hhmm;
+    return DateFormat.jm(Localizations.localeOf(context).toString()).format(DateTime(2026, 1, 1, h, m));
+  }
+
+  String _checkIn(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String meId) {
+    final time = _clock(context, n.time);
+    return [
+      n.fromId == meId ? l10n.notifCheckedInSelf(time) : l10n.notifCheckedIn(from, time),
+      if (n.siteName.isNotEmpty) n.siteName,
+      if (n.count > 0) l10n.notifMinutesLate(n.count),
+    ].join(' · ');
+  }
+
+  String _text(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String owner, String day, String meId) =>
+      switch (n.type) {
+        NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
+        NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
         NotificationType.planSubmitted => l10n.notifPlanSubmitted(from, n.count, day),
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
@@ -68,6 +89,7 @@ class NotificationsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final list = ref.watch(notificationsProvider).value ?? const <AppNotification>[];
     final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
+    final meId = ref.watch(currentUserProvider).value?.id ?? '';
     final locale = Localizations.localeOf(context).toString();
 
     return Scaffold(
@@ -103,6 +125,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.clientStatusRejected => Icons.cancel,
                     NotificationType.updateReminder => Icons.system_update,
                     NotificationType.registrationRequested => Icons.person_add_alt,
+                    NotificationType.attendanceCheckedIn => Icons.how_to_reg,
+                    NotificationType.attendanceLate => Icons.alarm,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -110,7 +134,7 @@ class NotificationsScreen extends ConsumerWidget {
                         _ => Icons.location_off,
                       },
                   }, color: n.type == NotificationType.trackingIssue ? Theme.of(context).colorScheme.error : null),
-                  title: Text(_text(l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day)),
+                  title: Text(_text(context, l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day, meId)),
                   subtitle: n.createdAt == null ? null : Text(DateFormat.MMMd(locale).add_jm().format(n.createdAt!)),
                   onTap: () {
                     if (!n.read) markRead(n.id);
@@ -129,6 +153,10 @@ class NotificationsScreen extends ConsumerWidget {
                         context.push('/clients/${n.ref}');
                       case NotificationType.updateReminder:
                         openAppStore();
+                      case NotificationType.attendanceCheckedIn when n.fromId != meId:
+                        context.push('/attendance');
+                      case NotificationType.attendanceCheckedIn || NotificationType.attendanceLate:
+                        context.go('/');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

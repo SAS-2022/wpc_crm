@@ -2621,7 +2621,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportRoutingHelp.
   ///
   /// In en, this message translates to:
-  /// **'Counts days with two or more visits. Efficiency = time needed (shortest route through the same clients + 30 min per visit) ÷ time from the first to the last visit, at most 100%. Extra distance = straight-line km more than the shortest order between the visits.'**
+  /// **'Days with two or more visits. Each day\'s GPS is split into time at clients, driving, office, lunch (up to 60 min around midday), stopped elsewhere (15+ min) and no GPS data. The team benchmark is the median of the salespeople\'s own averages: time per visit, driving speed, and how much longer the roads are than a straight line. Efficiency = needed (visits × time per visit + shortest route at that speed) ÷ took (first client arrival to last client departure, without lunch and office), at most 100%. Days without GPS use the check-in times.'**
   String get reportRoutingHelp;
 
   /// No description provided for @reportCatalogs.
@@ -2927,7 +2927,7 @@ abstract class AppLocalizations {
   /// No description provided for @efficiencyDetail.
   ///
   /// In en, this message translates to:
-  /// **'Needed about {needed} (shortest route + 30 min per visit), took {took} from the first to the last visit'**
+  /// **'Needed about {needed} at the team\'s pace (median visit length + shortest route at the median driving speed), took {took} from arriving at the first client to leaving the last, without lunch and office time'**
   String efficiencyDetail(String needed, String took);
 
   /// No description provided for @efficiencyBestOrder.
@@ -4862,6 +4862,18 @@ abstract class AppLocalizations {
   /// **'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.'**
   String get overtimeAllowedHelp;
 
+  /// No description provided for @attendanceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance required'**
+  String get attendanceRequired;
+
+  /// No description provided for @attendanceRequiredHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Checks in and out at their work sites. Off: no attendance (usually the sales team).'**
+  String get attendanceRequiredHelp;
+
   /// No description provided for @position.
   ///
   /// In en, this message translates to:
@@ -5281,6 +5293,408 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I\'ve done this'**
   String get phoneSetupDone;
+
+  /// No description provided for @pickWorkDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least one work day'**
+  String get pickWorkDays;
+
+  /// No description provided for @ownWorkSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Own work schedule'**
+  String get ownWorkSchedule;
+
+  /// No description provided for @ownWorkScheduleHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance, lateness and the end of their day use these days and hours.'**
+  String get ownWorkScheduleHelp;
+
+  /// No description provided for @companyWorkHoursNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Off: company work hours ({hours})'**
+  String companyWorkHoursNote(String hours);
+
+  /// No description provided for @stayedAfterTime.
+  ///
+  /// In en, this message translates to:
+  /// **'stayed after hours {time} (not counted)'**
+  String stayedAfterTime(String time);
+
+  /// No description provided for @lateBy.
+  ///
+  /// In en, this message translates to:
+  /// **'late {time}'**
+  String lateBy(String time);
+
+  /// No description provided for @lateDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 late day} other{{n} late days}}'**
+  String lateDays(int n);
+
+  /// No description provided for @notifCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} checked in at {time}'**
+  String notifCheckedIn(String name, String time);
+
+  /// No description provided for @notifCheckedInSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re checked in at {time}'**
+  String notifCheckedInSelf(String time);
+
+  /// No description provided for @notifMinutesLate.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} min late'**
+  String notifMinutesLate(int n);
+
+  /// No description provided for @notifAttendanceLate.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t checked in yet – your work day started at {time}. Please be at work soon.'**
+  String notifAttendanceLate(String time);
+
+  /// No description provided for @attendanceReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly report'**
+  String get attendanceReport;
+
+  /// No description provided for @attendanceReportEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No one needs attendance yet. Turn on \"Attendance required\" and pick a work site on the user form.'**
+  String get attendanceReportEmpty;
+
+  /// No description provided for @reportEmployee.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee'**
+  String get reportEmployee;
+
+  /// No description provided for @reportSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get reportSchedule;
+
+  /// No description provided for @reportWorkDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Work days'**
+  String get reportWorkDays;
+
+  /// No description provided for @reportMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get reportMissed;
+
+  /// No description provided for @reportLateDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Late days'**
+  String get reportLateDays;
+
+  /// No description provided for @reportLateHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Late (hours)'**
+  String get reportLateHours;
+
+  /// No description provided for @reportLateMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Late (minutes)'**
+  String get reportLateMinutes;
+
+  /// No description provided for @reportWorkedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours worked'**
+  String get reportWorkedHours;
+
+  /// No description provided for @reportOvertimeHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime (hours)'**
+  String get reportOvertimeHours;
+
+  /// No description provided for @reportStayedAfterHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Stayed after hours, no overtime (hours)'**
+  String get reportStayedAfterHours;
+
+  /// No description provided for @reportDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get reportDate;
+
+  /// No description provided for @reportStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get reportStatus;
+
+  /// No description provided for @reportSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Work site'**
+  String get reportSite;
+
+  /// No description provided for @reportCheckOutType.
+  ///
+  /// In en, this message translates to:
+  /// **'How the day ended'**
+  String get reportCheckOutType;
+
+  /// No description provided for @dayAttended.
+  ///
+  /// In en, this message translates to:
+  /// **'Attended'**
+  String get dayAttended;
+
+  /// No description provided for @reportSummaryLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Attended {attended} of {workDays} · missed {missed} · leave {leave}'**
+  String reportSummaryLine(int attended, int workDays, int missed, int leave);
+
+  /// No description provided for @reportLateLine.
+  ///
+  /// In en, this message translates to:
+  /// **'late {days}× ({time})'**
+  String reportLateLine(int days, String time);
+
+  /// No description provided for @reportStayedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'stayed after {time}'**
+  String reportStayedLine(String time);
+
+  /// No description provided for @noClientsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients found'**
+  String get noClientsFound;
+
+  /// No description provided for @searchContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get searchContact;
+
+  /// No description provided for @searchOtherName.
+  ///
+  /// In en, this message translates to:
+  /// **'Other name'**
+  String get searchOtherName;
+
+  /// No description provided for @salesTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales team'**
+  String get salesTeam;
+
+  /// No description provided for @drivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers'**
+  String get drivers;
+
+  /// No description provided for @salesTeamCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales team ({n})'**
+  String salesTeamCount(int n);
+
+  /// No description provided for @driversCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers ({n})'**
+  String driversCount(int n);
+
+  /// No description provided for @searchClientsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name, contact, phone, VAT, CR, salesperson'**
+  String get searchClientsHint;
+
+  /// No description provided for @searchResultsOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 client} other{{n} clients}}'**
+  String searchResultsOnMap(int n);
+
+  /// No description provided for @noDriversYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No drivers yet. Give a user the Driver role on the Users page; they appear here once their phone has the latest app.'**
+  String get noDriversYet;
+
+  /// No description provided for @minutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} min'**
+  String minutesShort(int n);
+
+  /// No description provided for @kmPerHour.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} km/h'**
+  String kmPerHour(int n);
+
+  /// No description provided for @reportBenchmarkDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Team benchmark (fixed guesses until there are enough GPS days)'**
+  String get reportBenchmarkDefault;
+
+  /// No description provided for @reportBenchmarkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Team benchmark · median of {n} salespeople'**
+  String reportBenchmarkTitle(int n);
+
+  /// No description provided for @reportBenchVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Time per visit'**
+  String get reportBenchVisit;
+
+  /// No description provided for @reportBenchSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Driving speed'**
+  String get reportBenchSpeed;
+
+  /// No description provided for @reportBenchRoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Roads vs straight line'**
+  String get reportBenchRoad;
+
+  /// No description provided for @reportBenchExample.
+  ///
+  /// In en, this message translates to:
+  /// **'10 visits with 30 km (straight line) between them ≈ {time}'**
+  String reportBenchExample(String time);
+
+  /// No description provided for @reportBenchPartly.
+  ///
+  /// In en, this message translates to:
+  /// **'Some values are still the fixed guesses (30 min a visit, 40 km/h, roads 1.4×) until at least two salespeople have two GPS days each.'**
+  String get reportBenchPartly;
+
+  /// No description provided for @reportTimeSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Where the work day went'**
+  String get reportTimeSplit;
+
+  /// No description provided for @timeAtClients.
+  ///
+  /// In en, this message translates to:
+  /// **'At clients'**
+  String get timeAtClients;
+
+  /// No description provided for @timeDriving.
+  ///
+  /// In en, this message translates to:
+  /// **'Driving'**
+  String get timeDriving;
+
+  /// No description provided for @timeOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Office'**
+  String get timeOffice;
+
+  /// No description provided for @timeLunch.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunch'**
+  String get timeLunch;
+
+  /// No description provided for @timeStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped elsewhere'**
+  String get timeStopped;
+
+  /// No description provided for @timeNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No GPS data'**
+  String get timeNoData;
+
+  /// No description provided for @reportNoGpsDay.
+  ///
+  /// In en, this message translates to:
+  /// **'no GPS – from check-in times'**
+  String get reportNoGpsDay;
+
+  /// No description provided for @efficiencyDetailNoGps.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed about {needed} at the team\'s pace, took {took} (no GPS timeline: first to last check-in plus one visit)'**
+  String efficiencyDetailNoGps(String needed, String took);
+
+  /// No description provided for @roleLogisticsManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Logistics manager'**
+  String get roleLogisticsManager;
+
+  /// No description provided for @roleWarehouseSupervisor.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse supervisor'**
+  String get roleWarehouseSupervisor;
+
+  /// No description provided for @driversPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers'**
+  String get driversPage;
+
+  /// No description provided for @routeHistoryToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Route history'**
+  String get routeHistoryToday;
+
+  /// No description provided for @checkInNeedsLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'To check in, turn on:'**
+  String get checkInNeedsLocation;
+
+  /// No description provided for @checkInGpsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location (GPS) on the phone'**
+  String get checkInGpsOff;
+
+  /// No description provided for @checkInNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission for the app'**
+  String get checkInNoPermission;
+
+  /// No description provided for @checkInNotAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access set to \"Allow all the time\"'**
+  String get checkInNotAlways;
 }
 
 class _AppLocalizationsDelegate

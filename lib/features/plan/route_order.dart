@@ -98,7 +98,12 @@ class DayEfficiency {
     required this.needed,
     required this.takenMeters,
     required this.shortestMeters,
+    this.measured = false,
   });
+
+  /// From the GPS timeline (first client arrival to last departure, minus
+  /// lunch and office) rather than from the check-in times.
+  final bool measured;
 
   /// First to last check-in.
   final Duration took;

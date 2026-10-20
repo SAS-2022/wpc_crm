@@ -21,6 +21,8 @@ import 'client_status.dart';
 import 'client_status_widgets.dart';
 import 'client_links.dart';
 import 'client_links_widgets.dart';
+import 'client_search.dart';
+import 'client_search_widgets.dart';
 
 enum _Status { all, recent, dueSoon, overdue, noLocation }
 
@@ -32,7 +34,7 @@ class ClientsScreen extends ConsumerStatefulWidget {
 }
 
 class _ClientsScreenState extends ConsumerState<ClientsScreen> {
-  String _query = '';
+  ClientQuery _query = ClientQuery('');
   _Status _status = _Status.all;
 
   /// Hidden clients instead of the visible ones (KAM / managers).
@@ -154,16 +156,14 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final now = DateTime.now();
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
 
-    final searched = (clients.value ?? const <Client>[])
-        .where(
-          (c) =>
-              _query.isEmpty ||
-              c.nameKey.contains(_query) ||
-              c.city.toLowerCase().contains(_query) ||
-              c.vat.contains(_query) ||
-              c.companyId.contains(_query),
-        )
-        .toList();
+    // Name, other names, city, contacts, phones, VAT, CR and salesperson;
+    // where it matched is highlighted in the row.
+    final matches = <String, SearchMatch>{};
+    final searched = (clients.value ?? const <Client>[]).where((c) {
+      final m = searchClient(c, _query, salesperson: users[c.assignedTo]?.name ?? '');
+      if (m != null) matches[c.id] = m;
+      return m != null;
+    }).toList();
     final list = searched.where((c) => _matches(c, rules, now, _status)).toList();
     // Main companies with their branches; a tree shows when any of its
     // clients passes the search and filters.
@@ -372,8 +372,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.search),
-                    onChanged: (v) => setState(() => _query = Client.normalizeName(v)),
+                    decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.searchClientsHint),
+                    onChanged: (v) => setState(() => _query = ClientQuery(v)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -405,7 +405,8 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                       Expanded(
                         child: DuplicatesList(groups: [
                           for (final g in duplicates)
-                            if (_query.isEmpty || g.clients.any((c) => c.nameKey.contains(_query) || c.vat.contains(_query)))
+                            if (_query.isEmpty ||
+                                g.clients.any((c) => searchClient(c, _query, salesperson: users[c.assignedTo]?.name ?? '') != null))
                               g,
                         ]),
                       ),
@@ -441,6 +442,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                           return _ClientTile(
                             client: c,
                             exec: exec,
+                            match: matches[c.id],
                             showOwner: supervisor,
                             status: visitStatus(c, rules, now),
                             planned: planned.contains(c.id),
@@ -474,6 +476,7 @@ class _ClientTile extends ConsumerWidget {
     required this.status,
     required this.planned,
     required this.now,
+    this.match,
     this.selected,
     this.onSelect,
     this.onLongPress,
@@ -487,6 +490,9 @@ class _ClientTile extends ConsumerWidget {
   final VisitStatus status;
   final bool planned;
   final DateTime now;
+
+  /// Where the search matched (highlighted in yellow).
+  final SearchMatch? match;
 
   /// Tick state while selecting; null when not selecting.
   final bool? selected;
@@ -518,7 +524,7 @@ class _ClientTile extends ConsumerWidget {
     return ListTile(
       selected: selected ?? false,
       leading: CategoryBadge(category: client.category, color: color, size: 36),
-      title: Text(client.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: HighlightedText(client.name, match?.name?.ranges ?? const []),
       subtitle: Text.rich(
         TextSpan(
           children: [
@@ -555,9 +561,14 @@ class _ClientTile extends ConsumerWidget {
               ),
               TextSpan(text: ' ${l10n.noLocation}'),
             ],
+            // Matched on something other than the name: show what.
+            if (match?.other case final hit?) ...[
+              const TextSpan(text: '\n'),
+              searchHitSpan(l10n, hit),
+            ],
           ],
         ),
-        maxLines: 1,
+        maxLines: match?.other == null ? 1 : 2,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: selected != null

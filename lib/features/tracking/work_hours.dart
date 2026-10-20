@@ -34,18 +34,33 @@ class WorkHours {
     return days.contains(t.weekday) && minute >= startMinute && minute < endMinute;
   }
 
-  factory WorkHours.fromMap(Object? value) {
-    if (value is! Map<Object?, Object?>) return defaults;
+  factory WorkHours.fromMap(Object? value) => tryParse(value) ?? defaults;
+
+  /// Null when [value] isn't a valid schedule (e.g. a person without their
+  /// own schedule, `users.workSchedule`).
+  static WorkHours? tryParse(Object? value) {
+    if (value is! Map<Object?, Object?>) return null;
     final days = value['days'];
     final start = value['start'];
     final end = value['end'];
-    if (days is! List || start is! num || end is! num || end <= start) return defaults;
+    if (days is! List || start is! num || end is! num || end <= start) return null;
     return WorkHours(
       days: {for (final d in days) if (d is num && d >= 1 && d <= 7) d.toInt()},
       startMinute: start.toInt(),
       endMinute: end.toInt(),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is WorkHours &&
+      other.startMinute == startMinute &&
+      other.endMinute == endMinute &&
+      other.days.length == days.length &&
+      other.days.containsAll(days);
+
+  @override
+  int get hashCode => Object.hash(startMinute, endMinute, Object.hashAllUnordered(days));
 
   Map<String, Object> toMap() => {'days': (days.toList()..sort()), 'start': startMinute, 'end': endMinute};
 }

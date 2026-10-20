@@ -92,9 +92,76 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     await _checkPermission();
   }
 
+  /// What's missing for a check-in (user decision 2026-10-20): GPS on, the
+  /// location permission, and "Allow all the time".
+  Future<List<_LocationNeed>> _missingLocation() async {
+    final missing = <_LocationNeed>[];
+    if (!await Geolocator.isLocationServiceEnabled()) missing.add(_LocationNeed.gps);
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      missing.add(_LocationNeed.permission);
+    } else if (permission != LocationPermission.always) {
+      missing.add(_LocationNeed.always);
+    }
+    return missing;
+  }
+
+  Future<void> _fix(_LocationNeed need) async {
+    switch (need) {
+      case _LocationNeed.gps:
+        await Geolocator.openLocationSettings();
+      case _LocationNeed.permission:
+        final status = await Permission.locationWhenInUse.request();
+        if (status.isPermanentlyDenied) await openAppSettings();
+      case _LocationNeed.always:
+        await _allowAlways();
+    }
+  }
+
+  /// Lists what to turn on, each with a Fix button.
+  Future<void> _showLocationNeeded(List<_LocationNeed> missing) {
+    final l10n = AppLocalizations.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        icon: const Icon(Icons.location_off),
+        title: Text(l10n.checkInNeedsLocation),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final need in missing)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(switch (need) {
+                  _LocationNeed.gps => l10n.checkInGpsOff,
+                  _LocationNeed.permission => l10n.checkInNoPermission,
+                  _LocationNeed.always => l10n.checkInNotAlways,
+                }),
+                trailing: FilledButton.tonal(
+                  onPressed: () {
+                    Navigator.pop(dialog);
+                    _fix(need);
+                  },
+                  child: Text(l10n.fix),
+                ),
+              ),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel))],
+      ),
+    );
+  }
+
   Future<void> _checkIn() async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    // No check-in without GPS, the permission and "Allow all the time".
+    final missing = await _missingLocation();
+    if (missing.isNotEmpty) {
+      if (mounted) await _showLocationNeeded(missing);
+      return;
+    }
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       final fix = await currentPosition();
@@ -155,6 +222,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final me = widget.me;
+    if (!me.needsAttendance) return const SizedBox.shrink();
     if (me.workSiteIds.isEmpty) {
       if (!widget.prominent) return const SizedBox.shrink();
       return Card(
@@ -168,10 +236,11 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     }
     final locale = Localizations.localeOf(context).toString();
     final time = DateFormat.jm(locale);
-    final hours = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+    final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+    final hours = me.scheduleOr(company);
     final sites = {for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) s.id: s};
     final record = ref.watch(myAttendanceTodayProvider).value;
-    final day = record?.result(hours: hours, leavesSite: me.role.leavesSiteForWork, overtimeAllowed: me.overtimeAllowed);
+    final day = record?.best(me, company);
     final siteName = sites[day?.siteId]?.name ?? '';
 
     final String title;
@@ -202,6 +271,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         checkOutTypeLabel(l10n, day.checkOutType),
         l10n.workedTime(formatMinutes(day.countedMin ?? 0)),
         if ((day.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(day.overtimeMin!)),
+        if ((day.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(day.afterHoursMin!)),
       ].where((s) => s.isNotEmpty).join(' · ');
       icon = Icons.logout;
       color = theme.colorScheme.primary;
@@ -254,3 +324,5 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     );
   }
 }
+
+enum _LocationNeed { gps, permission, always }

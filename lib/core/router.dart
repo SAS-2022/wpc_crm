@@ -22,6 +22,7 @@ import '../features/hr/employee_leave_screen.dart';
 import '../features/hr/hr_screen.dart';
 import '../features/hr/leave_request_form.dart';
 import '../features/hr/leave_request_screen.dart';
+import '../features/hr/leave_rules.dart' show myLeaveEnabled;
 import '../features/hr/my_leave_screen.dart';
 import '../features/users/profile_screen.dart';
 import '../features/users/user_form_screen.dart';
@@ -42,6 +43,7 @@ import 'providers.dart';
 import '../features/clients/transfers_screen.dart';
 import '../features/plan/team_plan_map_screen.dart';
 import '../features/auth/register_screen.dart';
+import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
@@ -76,12 +78,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           !const ['/', '/more', '/profile', '/notifications'].contains(loc) &&
           !loc.startsWith('/leave') &&
           !loc.startsWith('/hr') &&
-          !loc.startsWith('/attendance')) {
+          !loc.startsWith('/attendance') &&
+          // Logistics manager: the drivers' live map and route history.
+          !(me.role.managesDrivers && (loc == '/drivers' || loc == '/history'))) {
         return '/';
       }
+      if (loc == '/drivers' && !me.role.managesDrivers) return '/';
       if ((loc.startsWith('/hr') || loc.startsWith('/attendance')) && !me.role.canSeeHr) return '/';
+      // "My leave" is greyed out until finished; requests to approve still open.
+      if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
       if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc == '/positions') && !me.role.isAdmin) return '/';
-      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) && !me.role.isSupervisor) return '/';
+      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) &&
+          !me.role.isSupervisor &&
+          !(me.role.managesDrivers && loc == '/history')) {
+        return '/';
+      }
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       return null;
     },
@@ -195,6 +206,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               ],
             ),
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
+            // Drivers only (sales manager, GM, logistics manager).
+            GoRoute(path: '/drivers', builder: (_, _) => const LiveMapScreen(driversOnly: true)),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(path: '/transfers', builder: (_, _) => const TransfersScreen()),
             GoRoute(
@@ -228,6 +241,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/companies', builder: (_, _) => const CompaniesScreen()),
             GoRoute(path: '/positions', builder: (_, _) => const ClientTagsScreen(kind: TagList.positions)),
             GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
+            GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(
               path: '/import',
               builder: (_, _) => const ImportScreen(),

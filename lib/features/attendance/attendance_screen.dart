@@ -38,7 +38,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final people = [
       for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
-        if (u.active && u.workSiteIds.isNotEmpty) u,
+        if (u.active && u.checksAttendance) u,
     ]..sort((a, b) => a.name.compareTo(b.name));
     final records = ref.watch(dayAttendanceProvider(day)).value ?? const <String, AttendanceRecord>{};
     final positions = ref.watch(positionsByIdProvider);
@@ -49,7 +49,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     DayResult? resultOf(AppUser u) {
       final r = records[u.id];
       if (r == null) return null;
-      return r.server ?? r.result(hours: hours, leavesSite: u.role.leavesSiteForWork, overtimeAllowed: u.overtimeAllowed);
+      return r.best(u, hours);
     }
 
     final results = {for (final u in people) u.id: resultOf(u)};
@@ -67,6 +67,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       } else if (!d.closed) {
         status = [
           l10n.inSince(time.format(d.checkInAt!)),
+          if ((d.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(d.lateMin!)),
           if (!d.inside && d.lastExitAt != null) l10n.leftSiteAt(time.format(d.lastExitAt!)),
         ].join(' · ');
         color = Colors.green.shade700;
@@ -74,6 +75,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         status = [
           '${time.format(d.checkInAt!)} – ${time.format(d.checkOutAt!)}',
           checkOutTypeLabel(l10n, d.checkOutType),
+          if ((d.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(d.lateMin!)),
         ].join(' · ');
         color = theme.colorScheme.primary;
       }
@@ -94,6 +96,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   Text(formatMinutes(d!.countedMin!), style: theme.textTheme.titleSmall),
                   if ((d.overtimeMin ?? 0) > 0)
                     Text('+${formatMinutes(d.overtimeMin!)}', style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade800)),
+                  if ((d.afterHoursMin ?? 0) > 0)
+                    Tooltip(
+                      message: l10n.stayedAfterTime(formatMinutes(d.afterHoursMin!)),
+                      child: Text('(+${formatMinutes(d.afterHoursMin!)})',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                    ),
                 ],
               ),
         onTap: canOpenUsers ? () => context.push('/users/${u.id}') : null,
@@ -101,7 +109,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.attendance)),
+      appBar: AppBar(
+        title: Text(l10n.attendance),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.table_chart_outlined),
+            label: Text(l10n.attendanceReport),
+            onPressed: () => context.push('/attendance/report'),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),

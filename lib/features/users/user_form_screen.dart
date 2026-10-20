@@ -8,6 +8,8 @@ import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
 import '../../core/saving.dart';
 import '../attendance/work_sites.dart';
+import '../tracking/work_hours.dart';
+import '../tracking/work_hours_editor.dart';
 import 'companies.dart';
 import '../clients/client_tags.dart';
 
@@ -34,6 +36,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   String _position = '';
   Set<String> _sites = {};
   bool _overtime = false;
+
+  /// Null until set here or saved: follows the role (see [AppUser.needsAttendance]).
+  bool? _attendance;
+
+  /// Their own work days / hours; null = the company work hours.
+  WorkHours? _schedule;
+  bool get _needsAttendance => _attendance ?? AppUser.defaultAttendance(_role, _sites.toList());
 
   /// A self-registered account waiting for approval.
   AppUser? _pending;
@@ -66,6 +75,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _companyId = u.companyId;
     _sites = {...u.workSiteIds};
     _overtime = u.overtimeAllowed;
+    _attendance = u.attendanceRequired;
+    _schedule = u.workSchedule;
     _pending = u.isPendingApproval ? u : null;
     // Registered accounts have no role yet: pick one before approving.
     if (_pending != null) _role = UserRole.worker;
@@ -76,6 +87,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     if (!_form.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final schedule = _needsAttendance ? _schedule : null;
+    if (schedule != null && (schedule.days.isEmpty || schedule.endMinute <= schedule.startMinute)) {
+      messenger.showSnackBar(SnackBar(content: Text(schedule.days.isEmpty ? l10n.pickWorkDays : l10n.endAfterStart)));
+      return;
+    }
     setState(() => _busy = true);
     final user = AppUser(
       id: widget.userId ?? '',
@@ -89,25 +105,22 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       monthlyTarget: int.tryParse(_target.text.trim()) ?? 0,
       companyId: _companyId,
       position: _position,
-      workSiteIds: _sites.toList(),
+      workSiteIds: _needsAttendance ? _sites.toList() : const [],
       overtimeAllowed: _overtime,
+      attendanceRequired: _needsAttendance,
+      workSchedule: schedule,
     );
     try {
       final repo = ref.read(usersRepositoryProvider);
       final assigned = _isNew
           ? await repo.create(user, _password.text)
           : approve
-              ? await repo.approveRegistration(user)
-              : await repo.update(user);
-      messenger.showSnackBar(SnackBar(
-        content: Text(assigned > 0 ? l10n.savedWithClients(assigned) : l10n.saved),
-      ));
+          ? await repo.approveRegistration(user)
+          : await repo.update(user);
+      messenger.showSnackBar(SnackBar(content: Text(assigned > 0 ? l10n.savedWithClients(assigned) : l10n.saved)));
       if (mounted) context.go('/users');
     } on EmailInUseException {
-      messenger.showSnackBar(SnackBar(
-        duration: const Duration(seconds: 8),
-        content: Text(l10n.emailInUse),
-      ));
+      messenger.showSnackBar(SnackBar(duration: const Duration(seconds: 8), content: Text(l10n.emailInUse)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
     } finally {
@@ -185,6 +198,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     }
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
     final positions = ref.watch(tagListProvider(TagList.positions)).value ?? defaultPositions;
     final lang = Localizations.localeOf(context).languageCode;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
@@ -198,11 +212,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
           if (!_isNew &&
               ref.watch(currentUserProvider).value?.role == UserRole.gm &&
               widget.userId != ref.watch(currentUserProvider).value?.id)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: l10n.delete,
-              onPressed: _busy ? null : _delete,
-            ),
+            IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: _busy ? null : _delete),
         ],
       ),
       body: Form(
@@ -269,10 +279,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             DropdownButtonFormField<UserRole>(
               initialValue: _role,
               decoration: InputDecoration(labelText: l10n.role),
-              items: [
-                for (final r in UserRole.assignable)
-                  DropdownMenuItem(value: r, child: Text(r.label(l10n))),
-              ],
+              items: [for (final r in UserRole.assignable) DropdownMenuItem(value: r, child: Text(r.label(l10n)))],
               onChanged: (r) => setState(() => _role = r!),
             ),
             if (_role == UserRole.salesExec)
@@ -289,10 +296,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             if (_role.isTracked)
               TextFormField(
                 controller: _odooName,
-                decoration: InputDecoration(
-                  labelText: l10n.odooSalespersonName,
-                  helperText: l10n.odooSalespersonHelp,
-                ),
+                decoration: InputDecoration(labelText: l10n.odooSalespersonName, helperText: l10n.odooSalespersonHelp),
               ),
             if (_role.isTracked)
               TextFormField(
@@ -301,33 +305,56 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 decoration: InputDecoration(labelText: l10n.monthlyVisitTarget, helperText: l10n.monthlyVisitTargetHelp),
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
               ),
-            // Attendance: where they check in, and whether time after the work day counts.
+            // Attendance: required or not, where they check in, and whether time after the work day counts.
             const SizedBox(height: 16),
-            Text(l10n.workSites, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            if (sites.isEmpty)
-              Text(l10n.noWorkSites, style: Theme.of(context).textTheme.bodySmall)
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final s in sites)
-                    FilterChip(
-                      avatar: const Icon(Icons.apartment, size: 16),
-                      label: Text(s.name),
-                      selected: _sites.contains(s.id),
-                      onSelected: (on) => setState(() => on ? _sites.add(s.id) : _sites.remove(s.id)),
-                    ),
-                ],
-              ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(l10n.overtimeAllowed),
-              subtitle: Text(l10n.overtimeAllowedHelp),
-              value: _overtime,
-              onChanged: (v) => setState(() => _overtime = v),
+              title: Text(l10n.attendanceRequired),
+              subtitle: Text(l10n.attendanceRequiredHelp),
+              value: _needsAttendance,
+              onChanged: (v) => setState(() => _attendance = v),
             ),
+            if (_needsAttendance) ...[
+              Text(l10n.workSites, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              if (sites.isEmpty)
+                Text(l10n.noWorkSites, style: Theme.of(context).textTheme.bodySmall)
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final s in sites)
+                      FilterChip(
+                        avatar: const Icon(Icons.apartment, size: 16),
+                        label: Text(s.name),
+                        selected: _sites.contains(s.id),
+                        onSelected: (on) => setState(() => on ? _sites.add(s.id) : _sites.remove(s.id)),
+                      ),
+                  ],
+                ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.overtimeAllowed),
+                subtitle: Text(l10n.overtimeAllowedHelp),
+                value: _overtime,
+                onChanged: (v) => setState(() => _overtime = v),
+              ),
+              // Their own days / hours; off = the company work hours.
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.ownWorkSchedule),
+                subtitle: Text(_schedule == null
+                    ? l10n.companyWorkHoursNote(WorkHoursEditor.summary(context, company))
+                    : l10n.ownWorkScheduleHelp),
+                value: _schedule != null,
+                onChanged: (v) => setState(() => _schedule = v ? company : null),
+              ),
+              if (_schedule != null) ...[
+                WorkHoursEditor(value: _schedule!, onChanged: (v) => setState(() => _schedule = v)),
+                const SizedBox(height: 8),
+              ],
+            ],
             if (_pending == null)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -340,11 +367,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _reject,
-                      icon: const Icon(Icons.close),
-                      label: Text(l10n.reject),
-                    ),
+                    child: OutlinedButton.icon(onPressed: _busy ? null : _reject, icon: const Icon(Icons.close), label: Text(l10n.reject)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

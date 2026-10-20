@@ -136,6 +136,13 @@ service cloud.firestore {
     // Attendance days `{uid}_{yyyy-MM-dd}`: the phone only adds events; the
     // check-in / check-out result is written by Cloud Functions. Read: the
     // person, the HR area and KAM / managers.
+    // Day timelines (GPS split into client / driving / office / lunch /
+    // stopped time), written only by Cloud Functions.
+    match /day_timelines/{id} {
+      allow read: if isSupervisor() || (active() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
     match /attendance/{dayId} {
       allow read: if isHrArea() || isSupervisor() || (active() && resource.data.uid == request.auth.uid);
       allow create: if active() && request.resource.data.uid == request.auth.uid

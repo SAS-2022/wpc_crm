@@ -1,9 +1,12 @@
+import 'package:intl/intl.dart';
+
 import '../../core/app_user.dart';
 import '../clients/client.dart';
 import '../clients/given_items.dart';
 import '../home/stats.dart';
 import '../plan/route_order.dart';
 import '../visits/visit.dart';
+import 'routing_pace.dart';
 
 // Reports: new clients, routing efficiency and catalog distribution for a
 // period and a group of people (user request 2026-10-18).
@@ -46,12 +49,15 @@ NewClientsReport newClientsReport({
 
 /// One day of one person with at least two visits.
 class RoutingDay {
-  const RoutingDay({required this.user, required this.day, required this.visits, required this.efficiency});
+  const RoutingDay({required this.user, required this.day, required this.visits, required this.efficiency, this.timeline});
 
   final AppUser user;
   final DateTime day;
   final int visits;
   final DayEfficiency efficiency;
+
+  /// The GPS timeline of the day, when the server built one.
+  final DayTimeline? timeline;
 
   /// Straight-line metres more than the shortest order between the visits.
   double get extraMeters => (efficiency.takenMeters - efficiency.shortestMeters).clamp(0, double.infinity);
@@ -59,10 +65,19 @@ class RoutingDay {
 
 /// A person's routing over the period.
 class RoutingRow {
-  const RoutingRow({required this.user, required this.days});
+  const RoutingRow({required this.user, required this.days, required this.pace, required this.timelines});
 
   final AppUser user;
   final List<RoutingDay> days;
+
+  /// Their measured visit length, driving speed and road factor.
+  final PersonPace pace;
+
+  /// Every day in the period with a timeline (also days with one visit).
+  final List<DayTimeline> timelines;
+
+  /// Where the work days' time went, in minutes.
+  TimeSplit get split => addSplits(timelines.map((t) => t.minutes));
 
   /// Mean daily efficiency; null without a day of two visits.
   double? get averageRate => days.isEmpty ? null : days.fold(0.0, (s, d) => s + d.efficiency.rate) / days.length;
@@ -73,13 +88,26 @@ class RoutingRow {
   Duration get took => days.fold(Duration.zero, (s, d) => s + d.efficiency.took);
 }
 
+class RoutingReport {
+  const RoutingReport({required this.rows, required this.pace});
+
+  final List<RoutingRow> rows;
+
+  /// The team benchmark the days were measured against.
+  final TeamPace pace;
+}
+
 /// Each person's days in the period (visits, not calls, with a position:
-/// the check-in, else the client's location).
-List<RoutingRow> routingReport({
+/// the check-in, else the client's location), measured against the team
+/// benchmark built from [benchmarkPeople]'s timelines (the whole team, also
+/// when [people] is one person). [timelines]: by `uid_yyyy-MM-dd`.
+RoutingReport routingReport({
   required List<AppUser> people,
   required List<Visit> visits,
   required Map<String, Client> clients,
   required StatsRange range,
+  Map<String, DayTimeline> timelines = const {},
+  List<AppUser>? benchmarkPeople,
 }) {
   Stop? place(Visit v) {
     if (v.checkInLat != null && v.checkInLng != null) return (v.checkInLat!, v.checkInLng!);
@@ -87,24 +115,55 @@ List<RoutingRow> routingReport({
     return c != null && c.hasLocation ? (c.lat!, c.lng!) : null;
   }
 
-  return [
-    for (final u in people)
-      () {
-        final byDay = <DateTime, List<({DateTime at, Stop place})>>{};
-        for (final v in visits) {
-          if (v.isCall || v.salesExecId != u.id || v.checkedInAt == null || !range.contains(v.checkedInAt!)) continue;
-          final p = place(v);
-          if (p == null) continue;
-          final t = v.checkedInAt!;
-          (byDay[DateTime(t.year, t.month, t.day)] ??= []).add((at: t, place: p));
-        }
-        final days = [
-          for (final MapEntry(key: day, value: list) in byDay.entries)
-            if (dayEfficiency(list) case final e?) RoutingDay(user: u, day: day, visits: list.length, efficiency: e),
-        ]..sort((a, b) => a.day.compareTo(b.day));
-        return RoutingRow(user: u, days: days);
-      }(),
-  ];
+  final key = DateFormat('yyyy-MM-dd');
+  // Each person's located visits by day.
+  Map<DateTime, List<({DateTime at, Stop place})>> visitsByDay(AppUser u) {
+    final byDay = <DateTime, List<({DateTime at, Stop place})>>{};
+    for (final v in visits) {
+      if (v.isCall || v.salesExecId != u.id || v.checkedInAt == null || !range.contains(v.checkedInAt!)) continue;
+      final p = place(v);
+      if (p == null) continue;
+      final t = v.checkedInAt!;
+      (byDay[DateTime(t.year, t.month, t.day)] ??= []).add((at: t, place: p));
+    }
+    return byDay;
+  }
+
+  List<DayTimeline> timelinesOf(AppUser u) => [
+        for (final t in timelines.values)
+          if (t.uid == u.id && range.contains(DateTime.tryParse(t.day)?.add(const Duration(hours: 12)) ?? DateTime(0))) t,
+      ]..sort((a, b) => a.day.compareTo(b.day));
+
+  PersonPace paceOf(AppUser u) {
+    final straight = <String, double>{
+      for (final MapEntry(key: day, value: list) in visitsByDay(u).entries)
+        if (dayEfficiency(list) case final e?) key.format(day): e.takenMeters / 1000,
+    };
+    return personPace(u.id, timelinesOf(u), straight);
+  }
+
+  final paces = {for (final u in benchmarkPeople ?? people) u.id: paceOf(u)};
+  final team = teamPace(paces.values.toList());
+  return RoutingReport(
+    pace: team,
+    rows: [
+      for (final u in people)
+        () {
+          final days = [
+            for (final MapEntry(key: day, value: list) in visitsByDay(u).entries)
+              if (paceEfficiency(list, pace: team, timeline: timelines['${u.id}_${key.format(day)}']) case final e?)
+                RoutingDay(
+                  user: u,
+                  day: day,
+                  visits: list.length,
+                  efficiency: e,
+                  timeline: timelines['${u.id}_${key.format(day)}'],
+                ),
+          ]..sort((a, b) => a.day.compareTo(b.day));
+          return RoutingRow(user: u, days: days, pace: paces[u.id] ?? paceOf(u), timelines: timelinesOf(u));
+        }(),
+    ],
+  );
 }
 
 /// Catalogs / stands one person handed over in the period.

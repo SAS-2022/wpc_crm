@@ -7,10 +7,13 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
+import '../../core/app_user.dart';
 import '../../firebase_options.dart';
 import 'location_tracker.dart';
 
-const _trackedRoles = {'sales_exec', 'kam'};
+/// Roles whose location the background service shares; same as
+/// `UserRole.isLocationTracked` (drivers added 2026-10-20).
+final _trackedRoles = {for (final r in UserRole.values) if (r.isLocationTracked) r.value};
 
 /// Starts and stops live tracking. Android: a foreground service with its own
 /// isolate that survives the app being closed and restarts after reboot.

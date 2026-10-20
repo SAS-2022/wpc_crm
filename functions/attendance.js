@@ -15,9 +15,22 @@
 // - still open late in the evening (no exit seen): closed at the end of the
 //   work day, marked 'auto';
 // - overtime allowed: time after the end counts (overtime); not allowed: the
-//   day counts only up to the end of the work day.
+//   day counts only up to the end of the work day, and the time stayed after
+//   it is recorded as afterHoursMin (2026-10-20);
+// - lateMin: minutes after the start of the work day they checked in
+//   (startMs null = not a work day for them: no lateness); up to 15 minutes
+//   is on time (grace period).
 
 const MINUTE = 60 * 1000;
+
+/** Check-ins up to this many whole minutes after the start aren't late (user decision 2026-10-20: 8:15 on time, 8:16 late). */
+const LATE_GRACE_MIN = 15;
+
+/** Whole minutes after the start (seconds dropped); 0 within the grace period. Same as lateMinutes in attendance_rules.dart. */
+function lateMinutes(ms) {
+  const m = Math.floor(ms / MINUTE);
+  return m > LATE_GRACE_MIN ? m : 0;
+}
 
 /** Epoch ms of [minutes] past midnight, Saudi time (UTC+3), on 'yyyy-MM-dd'. */
 function saudiTime(date, minutes) {
@@ -27,7 +40,7 @@ function saudiTime(date, minutes) {
 
 /**
  * @param {Array<{type: string, at: number, siteId?: string, source?: string}>} events
- * @param {{endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean}} o
+ * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean}} o
  */
 function deriveDay(events, o) {
   const s = {
@@ -71,16 +84,19 @@ function deriveDay(events, o) {
   if (s.checkInAt !== null && !s.closed && o.now >= o.closeAllMs) {
     close(Math.max(o.endMs, s.checkInAt), 'auto');
   }
-  let workedMin = null, countedMin = null, overtimeMin = null;
+  let workedMin = null, countedMin = null, overtimeMin = null, afterHoursMin = null;
   if (s.closed) {
     workedMin = Math.max(0, Math.round((s.checkOutAt - s.checkInAt) / MINUTE));
     const extra = Math.max(0, s.checkOutAt - Math.max(o.endMs, s.checkInAt));
     overtimeMin = o.overtimeAllowed ? Math.round(extra / MINUTE) : 0;
+    afterHoursMin = o.overtimeAllowed ? 0 : Math.round(extra / MINUTE);
     countedMin = o.overtimeAllowed
       ? workedMin
       : Math.max(0, Math.round((Math.min(s.checkOutAt, o.endMs) - s.checkInAt) / MINUTE));
   }
-  return { ...s, workedMin, countedMin, overtimeMin };
+  const lateMin = s.checkInAt === null || o.startMs === null || o.startMs === undefined
+    ? null : lateMinutes(s.checkInAt - o.startMs);
+  return { ...s, workedMin, countedMin, overtimeMin, afterHoursMin, lateMin };
 }
 
 module.exports = { deriveDay, saudiTime };

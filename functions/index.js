@@ -138,6 +138,8 @@ const TEXTS = {
     clientStatusRejected: (n, c, d, o, x) => `${n} rejected marking ${x.client} as ${x.status}`,
     updateReminder: (n) => `${n} asks you to update WPC CRM to the latest version – tap to update`,
     registrationRequested: (n, c, d, o) => `${o} registered an account – waiting for your approval`,
+    attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'You are checked in' : `${n} checked in`}${x.site ? ` at ${x.site}` : ''} at ${x.time}${c > 0 ? ` – ${c} min late` : ''}`,
+    attendanceLate: (n, c, d, o, x) => `You haven't checked in yet – your work day started at ${x.time}. Please be at work soon.`,
     status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
   },
   ar: {
@@ -163,6 +165,8 @@ const TEXTS = {
     clientStatusRejected: (n, c, d, o, x) => `رفض ${n} تحويل ${x.client} إلى ${x.status}`,
     updateReminder: (n) => `يطلب ${n} تحديث تطبيق WPC CRM إلى أحدث إصدار – اضغط للتحديث`,
     registrationRequested: (n, c, d, o) => `سجّل ${o} حساباً – بانتظار موافقتك`,
+    attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'تم تسجيل حضورك' : `سجّل ${n} حضوره`}${x.site ? ` في ${x.site}` : ''} الساعة ${x.time}${c > 0 ? ` – متأخر ${c} دقيقة` : ''}`,
+    attendanceLate: (n, c, d, o, x) => `لم تسجّل حضورك بعد – بدأ يوم عملك الساعة ${x.time}. يرجى الحضور إلى العمل قريباً.`,
     status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
   },
 };
@@ -171,6 +175,13 @@ function formatDay(date, lang) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date || '';
   return new Intl.DateTimeFormat(lang, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${date}T00:00:00Z`));
+}
+
+/** '08:15' → '8:15 AM' / '8:15 ص'. */
+function formatClock(hhmm, lang) {
+  if (!/^\d{2}:\d{2}$/.test(hhmm || '')) return hhmm || '';
+  return new Intl.DateTimeFormat(lang, { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })
+    .format(new Date(`2026-01-01T${hhmm}:00Z`));
 }
 
 /**
@@ -203,7 +214,10 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
     const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type;
-    const extra = { client: n.clientName || '', status: t.status[n.issue] || n.issue || '' };
+    const extra = {
+      client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
+      site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId,
+    };
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
@@ -325,9 +339,12 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   const db = admin.firestore();
   const user = await db.doc(`users/${uid}`).get();
   const role = user.get('role');
-  if ((role !== 'sales_exec' && role !== 'kam') || user.get('active') !== true) return;
+  // Drivers are tracked too (2026-10-20): reported to the sales managers and GMs.
+  if (!['sales_exec', 'kam', 'driver'].includes(role) || user.get('active') !== true) return;
 
-  const managers = await db.collection('users').where('role', 'in', ['sales_manager', 'gm']).where('active', '==', true).get();
+  // Drivers: also the logistics managers (2026-10-20).
+  const managerRoles = role === 'driver' ? ['sales_manager', 'gm', 'logistics_manager'] : ['sales_manager', 'gm'];
+  const managers = await db.collection('users').where('role', 'in', managerRoles).where('active', '==', true).get();
   const to = new Set(managers.docs.map((d) => d.id));
   const kamId = role === 'sales_exec' ? user.get('kamId') : null;
   if (kamId) {
@@ -413,14 +430,17 @@ exports.offlineAlerts = onSchedule(
     const db = admin.firestore();
     const users = new Map((await db.collection('users').get()).docs.map((d) => [d.id, d.data()]));
     const managers = [...users].filter(([, u]) => u.role === 'sales_manager' && u.active === true).map(([id]) => id);
+    const gms = [...users].filter(([, u]) => u.role === 'gm' && u.active === true).map(([id]) => id);
+    const logistics = [...users].filter(([, u]) => u.role === 'logistics_manager' && u.active === true).map(([id]) => id);
     const batch = db.batch();
     const marks = {};
     for (const { uid, since } of due) {
       const user = users.get(uid);
       marks[`${uid}/offlineSince`] = since;
-      if (user?.role !== 'sales_exec' || user.active !== true) continue;
-      const kam = users.get(user.kamId);
-      const to = kam?.active === true ? [user.kamId] : managers;
+      if (!['sales_exec', 'driver'].includes(user?.role) || user.active !== true) continue;
+      const kam = user.role === 'sales_exec' ? users.get(user.kamId) : null;
+      // Drivers: the sales managers and GMs (2026-10-20).
+      const to = kam?.active === true ? [user.kamId] : user.role === 'driver' ? [...managers, ...gms, ...logistics] : managers;
       for (const toId of to) {
         batch.set(db.collection('notifications').doc(), {
           toId,
@@ -609,7 +629,10 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   const role = me.get('role');
   if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
     const target = await db.doc(`users/${uid}`).get();
-    if (role !== 'kam' || target.get('kamId') !== req.auth.uid) throw new HttpsError('permission-denied', 'Not your team');
+    // KAM: their team; logistics manager: drivers.
+    const allowed = (role === 'kam' && target.get('kamId') === req.auth.uid)
+      || (role === 'logistics_manager' && target.get('role') === 'driver');
+    if (!allowed) throw new HttpsError('permission-denied', 'Not your team');
   }
 
   const rtdb = admin.database();
@@ -680,16 +703,56 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
 
 const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
 const DERIVED = ['checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
-  'closed', 'workedMin', 'countedMin', 'overtimeMin'];
+  'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin'];
 const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt'];
+
+/** The person's own schedule (`users.workSchedule`, user form) or the company work hours. */
+function scheduleOf(user, hours) {
+  const v = user.workSchedule;
+  if (v && Array.isArray(v.days) && typeof v.start === 'number' && typeof v.end === 'number' && v.end > v.start) {
+    return { days: v.days.filter((d) => d >= 1 && d <= 7), start: v.start, end: v.end };
+  }
+  return hours;
+}
+
+/** Monday = 1 … Sunday = 7 of 'yyyy-MM-dd'. */
+const weekdayOf = (date) => {
+  const d = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return d === 0 ? 7 : d;
+};
+
+/** 'HH:mm' Saudi time of epoch ms. */
+const saudiClock = (ms) => new Date(ms + 3 * 3600 * 1000).toISOString().slice(11, 16);
+
+/** Check-ins older than this aren't announced (e.g. days recalculated after a deploy). */
+const CHECK_IN_NOTICE_MS = 3 * 3600 * 1000;
+
+/**
+ * First check-in of the day: tells the employee and every active GM (user
+ * decision 2026-10-20). Fixed ids, so a day is announced once even when two
+ * events are processed at the same time.
+ */
+async function announceCheckIn(data, d, user, now) {
+  const db = admin.firestore();
+  const site = d.siteId ? (await db.doc(`work_sites/${d.siteId}`).get()).get('name') || '' : '';
+  const gms = await db.collection('users').where('role', '==', 'gm').get();
+  const to = new Set([data.uid, ...gms.docs.filter((g) => g.get('active') === true).map((g) => g.id)]);
+  await Promise.all([...to].map((toId) => db.doc(`notifications/checkIn_${data.uid}_${data.date}_${toId}`).create({
+    toId, fromId: data.uid, ownerId: data.uid, type: 'attendanceCheckedIn', date: data.date,
+    count: d.lateMin || 0, siteName: site, time: saudiClock(d.checkInAt), read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  }).catch((e) => { if (e.code !== 6) throw e; }))); // 6 = already exists
+}
 
 /** Works the day out from its events (see attendance.js) and saves the result when it changed. */
 async function updateAttendance(ref, data, hours, now) {
   if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
   const user = (await admin.firestore().doc(`users/${data.uid}`).get()).data() || {};
+  const mine = scheduleOf(user, hours);
   const events = (data.events || []).map((e) => ({ ...e, at: e.at?.toMillis ? e.at.toMillis() : e.at }));
   const d = deriveDay(events, {
-    endMs: saudiTime(data.date, hours.end),
+    startMs: mine.days.includes(weekdayOf(data.date)) ? saudiTime(data.date, mine.start) : null,
+    endMs: saudiTime(data.date, mine.end),
     closeAllMs: saudiTime(data.date, 23 * 60 + 55),
     now,
     leavesSite: LEAVES_SITE_ROLES.includes(user.role),
@@ -701,6 +764,10 @@ async function updateAttendance(ref, data, hours, now) {
     const old = data[k];
     const same = old?.toMillis && v?.toMillis ? old.toMillis() === v.toMillis() : old === v || (old === undefined && v === null);
     if (!same) update[k] = v;
+  }
+  if (d.checkInAt !== null && data.checkInNotified !== true) {
+    update.checkInNotified = true;
+    if (now - d.checkInAt < CHECK_IN_NOTICE_MS) await announceCheckIn(data, d, user, now);
   }
   if (Object.keys(update).length > 0) await ref.update(update);
 }
@@ -724,3 +791,169 @@ exports.closeAttendance = onSchedule(
     for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now);
   },
 );
+
+/** Reminder this long after the start of the work day (user request 2026-10-20). */
+const LATE_REMINDER_MIN = 15;
+
+/** Needs attendance (user form switch; not set = anyone with a work site) and has a site. */
+const checksAttendance = (u) => u.active === true && u.attendanceRequired !== false
+  && Array.isArray(u.workSiteIds) && u.workSiteIds.length > 0;
+
+/**
+ * Every 5 minutes: anyone who needs attendance and isn't checked in 15
+ * minutes after the start of their work day gets one reminder that day
+ * (employee only, user decision 2026-10-20). Skips their days off, public
+ * holidays (`settings/holidays`) and approved leave. Sent days in RTDB
+ * `attendance_reminders/{uid}` = 'yyyy-MM-dd' (admin only).
+ */
+exports.attendanceReminders = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const now = Date.now();
+    const today = saudiDay(now);
+    const saudi = new Date(now + 3 * 3600 * 1000);
+    const minute = saudi.getUTCHours() * 60 + saudi.getUTCMinutes();
+    const weekday = weekdayOf(today);
+    const db = admin.firestore();
+    const rtdb = admin.database();
+
+    const holidays = (await db.doc('settings/holidays').get()).get('dates') || [];
+    if (holidays.includes(today)) return;
+    const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
+    const users = (await db.collection('users').where('active', '==', true).get()).docs
+      .filter((d) => checksAttendance(d.data()))
+      .filter((d) => {
+        const h = scheduleOf(d.data(), hours);
+        return h.days.includes(weekday) && minute >= h.start + LATE_REMINDER_MIN && minute < h.end;
+      });
+    if (users.length === 0) return;
+
+    const [sentSnap, daySnap, leaveSnap] = await Promise.all([
+      rtdb.ref('attendance_reminders').get(),
+      db.collection('attendance').where('date', '==', today).get(),
+      db.collection('leave_requests').where('to', '>=', today).get(),
+    ]);
+    const sent = sentSnap.val() || {};
+    const checkedIn = new Set(daySnap.docs
+      .filter((d) => d.get('checkInAt') || (d.get('events') || []).some((e) => e.type === 'in' || e.type === 'checkIn'))
+      .map((d) => d.get('uid')));
+    const onLeave = new Set(leaveSnap.docs
+      .filter((d) => d.get('status') === 'approved' && d.get('isLeave') !== false && d.get('from') <= today)
+      .map((d) => d.get('uid')));
+
+    const batch = db.batch();
+    const marks = {};
+    for (const u of users) {
+      if (sent[u.id] === today || checkedIn.has(u.id) || onLeave.has(u.id)) continue;
+      const h = scheduleOf(u.data(), hours);
+      marks[u.id] = today;
+      batch.set(db.collection('notifications').doc(), {
+        toId: u.id, fromId: u.id, ownerId: u.id, type: 'attendanceLate', date: today, count: 0,
+        time: `${String(Math.floor(h.start / 60)).padStart(2, '0')}:${String(h.start % 60).padStart(2, '0')}`,
+        read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    if (Object.keys(marks).length === 0) return;
+    await batch.commit();
+    await rtdb.ref('attendance_reminders').update(marks);
+  },
+);
+
+// Day timelines (user request 2026-10-20): each salesperson's working day
+// split into client / driving / office / lunch / stopped / no data from their
+// GPS points, saved in Firestore `day_timelines/{uid}_{yyyy-MM-dd}` for the
+// Reports routing section and Route history (see timeline.js).
+const { buildDayTimeline } = require('./timeline');
+
+/** Builds and saves one person's day; null when there's nothing to build. */
+async function saveTimeline(uid, day, hours, sites) {
+  if (!hours.days.includes(weekdayOf(day))) return null;
+  const db = admin.firestore();
+  const [history, visitSnap] = await Promise.all([
+    admin.database().ref(`location_history/${uid}/${day}`).get(),
+    db.collection('visits').where('salesExecId', '==', uid).where('month', '==', day.slice(0, 7)).get(),
+  ]);
+  const points = mainTrack(Object.values(history.val() || {})
+    .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
+    .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
+    .sort((a, b) => a.t - b.t));
+  const visits = visitSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((v) => v.type !== 'call' && v.checkedInAt?.toMillis && typeof v.checkInLat === 'number' && typeof v.checkInLng === 'number')
+    .map((v) => ({ id: v.id, clientId: v.clientId, at: v.checkedInAt.toMillis(), lat: v.checkInLat, lng: v.checkInLng }))
+    .filter((v) => saudiDay(v.at) === day)
+    .sort((a, b) => a.at - b.at);
+  if (points.length === 0 && visits.length === 0) return null;
+  // Work hours, stretched to cover visits made a little before / after them.
+  let startMs = saudiTime(day, hours.start);
+  let endMs = saudiTime(day, hours.end);
+  if (visits.length) {
+    startMs = Math.min(startMs, visits[0].at - 30 * 60000);
+    endMs = Math.max(endMs, visits[visits.length - 1].at + 60 * 60000);
+  }
+  const now = Date.now();
+  endMs = Math.min(endMs, Math.max(startMs, now)); // today: up to now
+  const t = buildDayTimeline({ points, visits, sites, startMs, endMs });
+  const doc = { uid, day, month: day.slice(0, 7), ...t, final: now > endMs + 3600000, builtAt: now };
+  await db.doc(`day_timelines/${uid}_${day}`).set(doc);
+  return doc;
+}
+
+async function timelineContext() {
+  const [hoursSnap, siteSnap] = await Promise.all([
+    admin.database().ref('settings/workHours').get(),
+    admin.firestore().collection('work_sites').get(),
+  ]);
+  const sites = siteSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((s) => s.active !== false && typeof s.lat === 'number' && typeof s.lng === 'number');
+  return { hours: workHours(hoursSnap.val()), sites };
+}
+
+/** Days kept for the benchmarks when back-filling. */
+const TIMELINE_BACKFILL_DAYS = 30;
+
+/** Nightly: yesterday's timelines, plus any missing day of the last 30 (first run back-fills). */
+exports.buildTimelines = onSchedule(
+  { schedule: '30 0 * * *', timeZone: 'Asia/Riyadh', timeoutSeconds: 540, memory: '512MiB', maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const { hours, sites } = await timelineContext();
+    const people = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam']).get()).docs
+      .filter((d) => d.get('active') === true).map((d) => d.id);
+    const today = saudiDay(Date.now());
+    const days = [];
+    for (let k = 1; k <= TIMELINE_BACKFILL_DAYS; k++) {
+      days.push(saudiDay(Date.parse(`${today}T12:00:00Z`) - k * 86400000));
+    }
+    const refs = people.flatMap((uid) => days.map((day) => db.doc(`day_timelines/${uid}_${day}`)));
+    const existing = new Map((await db.getAll(...refs)).map((s) => [s.id, s]));
+    let built = 0;
+    for (const uid of people) {
+      for (const day of days) {
+        const old = existing.get(`${uid}_${day}`);
+        if (old?.exists && old.get('final') === true) continue;
+        await saveTimeline(uid, day, hours, sites);
+        if (++built >= 400) return; // the rest tomorrow
+      }
+    }
+  },
+);
+
+/** Route history: (re)builds one day now (today's is rebuilt as the day goes on). */
+exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
+  const { uid, day } = req.data || {};
+  if (typeof uid !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day || '')) throw new HttpsError('invalid-argument', 'uid and day');
+  const db = admin.firestore();
+  const me = await db.doc(`users/${req.auth.uid}`).get();
+  if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
+  const role = me.get('role');
+  if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
+    const target = await db.doc(`users/${uid}`).get();
+    if (role !== 'kam' || target.get('kamId') !== req.auth.uid) throw new HttpsError('permission-denied', 'Not your team');
+  }
+  const { hours, sites } = await timelineContext();
+  const doc = await saveTimeline(uid, day, hours, sites);
+  return { built: doc !== null };
+});

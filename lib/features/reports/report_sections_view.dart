@@ -13,6 +13,8 @@ import '../plan/plan_task.dart';
 import '../tracking/tracking_log.dart';
 import '../visits/visit.dart';
 import 'report_sections.dart';
+import 'routing_pace.dart';
+import 'timeline_widgets.dart';
 
 /// Card frame shared by the report sections.
 class ReportCard extends StatelessWidget {
@@ -142,31 +144,72 @@ Color _rateColor(double rate) => rate >= 0.8
         ? Colors.orange.shade800
         : statusCritical;
 
-/// 2. Routing performance and efficiency.
+/// 2. Routing performance and efficiency: the team benchmark (median of
+/// the salespeople's measured averages), where the work days' time went, and
+/// each person's days against the benchmark.
 class RoutingCard extends StatelessWidget {
-  const RoutingCard({super.key, required this.rows});
+  const RoutingCard({super.key, required this.report});
 
-  final List<RoutingRow> rows;
+  final RoutingReport report;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final withDays = rows.where((r) => r.days.isNotEmpty).toList()
+    final pace = report.pace;
+    final rows = report.rows;
+    final withDays = rows.where((r) => r.days.isNotEmpty || r.timelines.isNotEmpty).toList()
       ..sort((a, b) => (b.averageRate ?? 0).compareTo(a.averageRate ?? 0));
     final allDays = [for (final r in withDays) ...r.days];
     final lowest = [...allDays]..sort((a, b) => a.efficiency.rate.compareTo(b.efficiency.rate));
     final teamRate = allDays.isEmpty ? null : allDays.fold(0.0, (s, d) => s + d.efficiency.rate) / allDays.length;
+    final teamSplit = addSplits(withDays.map((r) => r.split));
     String pct(double r) => '${(r * 100).round()}%';
     String hours(Duration d) => formatLasted(l10n, d);
+    String perVisit(double? m) => m == null ? '–' : l10n.minutesShort(m.round());
+    String speed(double? k) => k == null ? '–' : l10n.kmPerHour(k.round());
+
+    final benchmark = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(
+          pace.people == 0 ? l10n.reportBenchmarkDefault : l10n.reportBenchmarkTitle(pace.people),
+          style: theme.textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _stat(context, l10n.reportBenchVisit, perVisit(pace.visitMinutes)),
+          _stat(context, l10n.reportBenchSpeed, speed(pace.speedKmh)),
+          _stat(context, l10n.reportBenchRoad, '×${pace.roadFactor.toStringAsFixed(2)}'),
+        ]),
+        const SizedBox(height: 8),
+        // The user's own way of thinking about it: 10 clients and the distance between them.
+        Text(l10n.reportBenchExample(hours(pace.estimate(10, 30))), style: theme.textTheme.bodyMedium),
+        if (pace.measured.length < 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(l10n.reportBenchPartly, style: theme.textTheme.bodySmall),
+          ),
+      ]),
+    );
 
     return ReportCard(
       title: l10n.reportRouting,
       icon: Icons.alt_route,
       child: withDays.isEmpty
-          ? Text(l10n.reportNoRoutingDays)
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              benchmark,
+              const SizedBox(height: 8),
+              Text(l10n.reportNoRoutingDays),
+            ])
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              benchmark,
+              const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 if (teamRate != null) _stat(context, l10n.reportAvgEfficiency, pct(teamRate), color: _rateColor(teamRate)),
                 _stat(context, l10n.reportDaysCounted, '${allDays.length}'),
@@ -177,6 +220,14 @@ class RoutingCard extends StatelessWidget {
                 ),
                 _stat(context, l10n.reportExtraDistance, formatDistance(allDays.fold(0.0, (s, d) => s + d.extraMeters))),
               ]),
+              if (teamSplit.values.any((n) => n > 0)) ...[
+                const SizedBox(height: 12),
+                Text(l10n.reportTimeSplit, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 6),
+                TimeSplitBar(split: teamSplit, height: 18),
+                const SizedBox(height: 6),
+                TimeSplitLegend(split: teamSplit),
+              ],
               const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -187,6 +238,9 @@ class RoutingCard extends StatelessWidget {
                     DataColumn(label: Text(l10n.efficiency), numeric: true),
                     DataColumn(label: Text(l10n.reportDaysCounted), numeric: true),
                     DataColumn(label: Text(l10n.reportVisitsPerDay), numeric: true),
+                    DataColumn(label: Text(l10n.reportBenchVisit), numeric: true),
+                    DataColumn(label: Text(l10n.reportBenchSpeed), numeric: true),
+                    DataColumn(label: Text(l10n.reportTimeSplit)),
                     DataColumn(label: Text(l10n.reportShortestOrderDays), numeric: true),
                     DataColumn(label: Text(l10n.reportExtraDistance), numeric: true),
                     DataColumn(label: Text(l10n.reportNeededTook), numeric: true),
@@ -195,12 +249,17 @@ class RoutingCard extends StatelessWidget {
                     for (final r in withDays)
                       DataRow(cells: [
                         DataCell(Text(r.user.name)),
-                        DataCell(Text(
-                          pct(r.averageRate!),
-                          style: TextStyle(color: _rateColor(r.averageRate!), fontWeight: FontWeight.w600),
-                        )),
+                        DataCell(r.averageRate == null
+                            ? const Text('–')
+                            : Text(
+                                pct(r.averageRate!),
+                                style: TextStyle(color: _rateColor(r.averageRate!), fontWeight: FontWeight.w600),
+                              )),
                         DataCell(Text('${r.days.length}')),
                         DataCell(Text(r.visitsPerDay.toStringAsFixed(1))),
+                        DataCell(Text(perVisit(r.pace.visitMinutes))),
+                        DataCell(Text(speed(r.pace.speedKmh))),
+                        DataCell(SizedBox(width: 160, child: TimeSplitBar(split: r.split))),
                         DataCell(Text('${r.bestOrderDays}/${r.days.length}')),
                         DataCell(Text(formatDistance(r.extraMeters))),
                         DataCell(Text('${hours(r.needed)} / ${hours(r.took)}')),
@@ -208,8 +267,10 @@ class RoutingCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(l10n.reportLowestDays, style: theme.textTheme.titleSmall),
+              if (lowest.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(l10n.reportLowestDays, style: theme.textTheme.titleSmall),
+              ],
               for (final d in lowest.take(5))
                 ListTile(
                   dense: true,
@@ -225,6 +286,9 @@ class RoutingCard extends StatelessWidget {
                     l10n.visitsCount(d.visits),
                     '${hours(d.efficiency.needed)} / ${hours(d.efficiency.took)}',
                     if (!d.efficiency.bestOrder) '+${formatDistance(d.extraMeters)}',
+                    if ((d.timeline?.between?[TimeKind.stopped] ?? 0) > 0)
+                      '${timeKindLabel(l10n, TimeKind.stopped)} ${formatSplitMinutes(l10n, d.timeline!.between![TimeKind.stopped]!)}',
+                    if (!d.efficiency.measured) l10n.reportNoGpsDay,
                   ].join(' · ')),
                   trailing: const Icon(Icons.route),
                   onTap: () => context.go('/history?uid=${d.user.id}&date=${dayKey(d.day)}'),

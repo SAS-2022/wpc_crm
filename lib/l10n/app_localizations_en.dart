@@ -1485,7 +1485,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportRoutingHelp =>
-      'Counts days with two or more visits. Efficiency = time needed (shortest route through the same clients + 30 min per visit) ÷ time from the first to the last visit, at most 100%. Extra distance = straight-line km more than the shortest order between the visits.';
+      'Days with two or more visits. Each day\'s GPS is split into time at clients, driving, office, lunch (up to 60 min around midday), stopped elsewhere (15+ min) and no GPS data. The team benchmark is the median of the salespeople\'s own averages: time per visit, driving speed, and how much longer the roads are than a straight line. Efficiency = needed (visits × time per visit + shortest route at that speed) ÷ took (first client arrival to last client departure, without lunch and office), at most 100%. Days without GPS use the check-in times.';
 
   @override
   String get reportCatalogs => 'Catalog distribution';
@@ -1668,7 +1668,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String efficiencyDetail(String needed, String took) {
-    return 'Needed about $needed (shortest route + 30 min per visit), took $took from the first to the last visit';
+    return 'Needed about $needed at the team\'s pace (median visit length + shortest route at the median driving speed), took $took from arriving at the first client to leaving the last, without lunch and office time';
   }
 
   @override
@@ -2821,6 +2821,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.';
 
   @override
+  String get attendanceRequired => 'Attendance required';
+
+  @override
+  String get attendanceRequiredHelp =>
+      'Checks in and out at their work sites. Off: no attendance (usually the sales team).';
+
+  @override
   String get position => 'Position';
 
   @override
@@ -3096,4 +3103,263 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get phoneSetupDone => 'I\'ve done this';
+
+  @override
+  String get pickWorkDays => 'Pick at least one work day';
+
+  @override
+  String get ownWorkSchedule => 'Own work schedule';
+
+  @override
+  String get ownWorkScheduleHelp =>
+      'Attendance, lateness and the end of their day use these days and hours.';
+
+  @override
+  String companyWorkHoursNote(String hours) {
+    return 'Off: company work hours ($hours)';
+  }
+
+  @override
+  String stayedAfterTime(String time) {
+    return 'stayed after hours $time (not counted)';
+  }
+
+  @override
+  String lateBy(String time) {
+    return 'late $time';
+  }
+
+  @override
+  String lateDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n late days',
+      one: '1 late day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifCheckedIn(String name, String time) {
+    return '$name checked in at $time';
+  }
+
+  @override
+  String notifCheckedInSelf(String time) {
+    return 'You\'re checked in at $time';
+  }
+
+  @override
+  String notifMinutesLate(int n) {
+    return '$n min late';
+  }
+
+  @override
+  String notifAttendanceLate(String time) {
+    return 'You haven\'t checked in yet – your work day started at $time. Please be at work soon.';
+  }
+
+  @override
+  String get attendanceReport => 'Monthly report';
+
+  @override
+  String get attendanceReportEmpty =>
+      'No one needs attendance yet. Turn on \"Attendance required\" and pick a work site on the user form.';
+
+  @override
+  String get reportEmployee => 'Employee';
+
+  @override
+  String get reportSchedule => 'Schedule';
+
+  @override
+  String get reportWorkDays => 'Work days';
+
+  @override
+  String get reportMissed => 'Missed';
+
+  @override
+  String get reportLateDays => 'Late days';
+
+  @override
+  String get reportLateHours => 'Late (hours)';
+
+  @override
+  String get reportLateMinutes => 'Late (minutes)';
+
+  @override
+  String get reportWorkedHours => 'Hours worked';
+
+  @override
+  String get reportOvertimeHours => 'Overtime (hours)';
+
+  @override
+  String get reportStayedAfterHours =>
+      'Stayed after hours, no overtime (hours)';
+
+  @override
+  String get reportDate => 'Date';
+
+  @override
+  String get reportStatus => 'Status';
+
+  @override
+  String get reportSite => 'Work site';
+
+  @override
+  String get reportCheckOutType => 'How the day ended';
+
+  @override
+  String get dayAttended => 'Attended';
+
+  @override
+  String reportSummaryLine(int attended, int workDays, int missed, int leave) {
+    return 'Attended $attended of $workDays · missed $missed · leave $leave';
+  }
+
+  @override
+  String reportLateLine(int days, String time) {
+    return 'late $days× ($time)';
+  }
+
+  @override
+  String reportStayedLine(String time) {
+    return 'stayed after $time';
+  }
+
+  @override
+  String get noClientsFound => 'No clients found';
+
+  @override
+  String get searchContact => 'Contact';
+
+  @override
+  String get searchOtherName => 'Other name';
+
+  @override
+  String get salesTeam => 'Sales team';
+
+  @override
+  String get drivers => 'Drivers';
+
+  @override
+  String salesTeamCount(int n) {
+    return 'Sales team ($n)';
+  }
+
+  @override
+  String driversCount(int n) {
+    return 'Drivers ($n)';
+  }
+
+  @override
+  String get searchClientsHint =>
+      'Search name, contact, phone, VAT, CR, salesperson';
+
+  @override
+  String searchResultsOnMap(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n clients',
+      one: '1 client',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDriversYet =>
+      'No drivers yet. Give a user the Driver role on the Users page; they appear here once their phone has the latest app.';
+
+  @override
+  String minutesShort(int n) {
+    return '$n min';
+  }
+
+  @override
+  String kmPerHour(int n) {
+    return '$n km/h';
+  }
+
+  @override
+  String get reportBenchmarkDefault =>
+      'Team benchmark (fixed guesses until there are enough GPS days)';
+
+  @override
+  String reportBenchmarkTitle(int n) {
+    return 'Team benchmark · median of $n salespeople';
+  }
+
+  @override
+  String get reportBenchVisit => 'Time per visit';
+
+  @override
+  String get reportBenchSpeed => 'Driving speed';
+
+  @override
+  String get reportBenchRoad => 'Roads vs straight line';
+
+  @override
+  String reportBenchExample(String time) {
+    return '10 visits with 30 km (straight line) between them ≈ $time';
+  }
+
+  @override
+  String get reportBenchPartly =>
+      'Some values are still the fixed guesses (30 min a visit, 40 km/h, roads 1.4×) until at least two salespeople have two GPS days each.';
+
+  @override
+  String get reportTimeSplit => 'Where the work day went';
+
+  @override
+  String get timeAtClients => 'At clients';
+
+  @override
+  String get timeDriving => 'Driving';
+
+  @override
+  String get timeOffice => 'Office';
+
+  @override
+  String get timeLunch => 'Lunch';
+
+  @override
+  String get timeStopped => 'Stopped elsewhere';
+
+  @override
+  String get timeNoData => 'No GPS data';
+
+  @override
+  String get reportNoGpsDay => 'no GPS – from check-in times';
+
+  @override
+  String efficiencyDetailNoGps(String needed, String took) {
+    return 'Needed about $needed at the team\'s pace, took $took (no GPS timeline: first to last check-in plus one visit)';
+  }
+
+  @override
+  String get roleLogisticsManager => 'Logistics manager';
+
+  @override
+  String get roleWarehouseSupervisor => 'Warehouse supervisor';
+
+  @override
+  String get driversPage => 'Drivers';
+
+  @override
+  String get routeHistoryToday => 'Route history';
+
+  @override
+  String get checkInNeedsLocation => 'To check in, turn on:';
+
+  @override
+  String get checkInGpsOff => 'Location (GPS) on the phone';
+
+  @override
+  String get checkInNoPermission => 'Location permission for the app';
+
+  @override
+  String get checkInNotAlways =>
+      'Location access set to \"Allow all the time\"';
 }

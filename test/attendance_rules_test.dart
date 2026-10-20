@@ -6,8 +6,9 @@ void main() {
   DateTime t(int h, [int m = 0]) => DateTime(2026, 10, 20, h, m);
   AttendanceEvent e(AttendanceEventType type, DateTime at) => AttendanceEvent(type, at);
   const inn = AttendanceEventType.in_, out = AttendanceEventType.out;
-  DayResult run(List<AttendanceEvent> events, {DateTime? now, bool leaves = false, bool overtime = false}) => deriveDay(
+  DayResult run(List<AttendanceEvent> events, {DateTime? now, bool leaves = false, bool overtime = false, DateTime? start}) => deriveDay(
         events,
+        start: start,
         end: t(17),
         closeAll: t(23, 55),
         now: now ?? t(12),
@@ -54,4 +55,21 @@ void main() {
   });
 
   test('formats minutes', () => expect(formatMinutes(485), '8 h 05'));
+
+  test('lateness from the start of the work day; none on a day off', () {
+    expect(run([e(inn, t(8, 22))], start: t(8)).lateMin, 22);
+    expect(run([e(inn, t(8, 15).add(const Duration(seconds: 59)))], start: t(8)).lateMin, 0); // grace
+    expect(run([e(inn, t(8, 16))], start: t(8)).lateMin, 16);
+    expect(run([e(inn, t(7, 50))], start: t(8)).lateMin, 0);
+    expect(run([e(inn, t(8, 22))]).lateMin, isNull);
+    expect(run([], start: t(8)).lateMin, isNull);
+  });
+
+  test('without overtime the time stayed after the end is recorded, not counted', () {
+    final events = [e(inn, t(8)), e(out, t(17, 45))];
+    final no = run(events, now: t(19));
+    expect([no.countedMin, no.overtimeMin, no.afterHoursMin], [540, 0, 45]);
+    final yes = run(events, now: t(19), overtime: true);
+    expect([yes.countedMin, yes.overtimeMin, yes.afterHoursMin], [585, 45, 0]);
+  });
 }

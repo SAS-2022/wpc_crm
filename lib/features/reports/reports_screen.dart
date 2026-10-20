@@ -117,11 +117,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       // Managers looking at everyone also see imports nobody owns yet.
       includeUnowned: _person == null && me.role.isAdmin,
     );
+    // Measured against the whole team's benchmark, also when one person is shown.
     final routing = routingReport(
       people: people,
+      benchmarkPeople: team,
       visits: visits,
       clients: {for (final c in clients) c.id: c},
       range: _range,
+      timelines: ref.watch(dayTimelinesProvider(_range.months.join(','))).value ?? const {},
     );
     final catalogs = catalogReport(
       people: people,
@@ -181,7 +184,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          RoutingCard(rows: routing),
+          RoutingCard(report: routing),
           const SizedBox(height: 12),
           LayoutBuilder(builder: (context, c) {
             final added = NewClientsCard(report: newClients, users: {for (final u in users) u.id: u});

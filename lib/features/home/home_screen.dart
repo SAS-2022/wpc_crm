@@ -13,6 +13,7 @@ import '../notifications/notifications_screen.dart';
 import '../plan/plan_task.dart';
 import '../tracking/tracking_card.dart';
 import '../users/users_repository.dart';
+import '../hr/leave_rules.dart' show myLeaveEnabled;
 import '../hr/leave_widgets.dart';
 import '../visits/call_chip.dart';
 import '../visits/visit.dart';
@@ -342,21 +343,37 @@ class _BackOfficeHome extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Drivers share their location like the sales team: permissions / phone health.
+          if (me.role.isLocationTracked) const TrackingCard(),
           // Today's check-in (big Check in / Check out button) and the month calendar.
           AttendanceCard(me: me, prominent: true),
-          if (me.workSiteIds.isNotEmpty) MyAttendanceCalendar(me: me),
+          if (me.checksAttendance) MyAttendanceCalendar(me: me),
           // HR: requests waiting for them first.
           const LeaveApprovalsCard(),
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
+              enabled: myLeaveEnabled,
               leading: const Icon(Icons.beach_access),
               title: Text(l10n.myLeave),
-              subtitle: Text(l10n.myLeaveHint),
-              trailing: const Icon(Icons.chevron_right),
+              subtitle: Text(myLeaveEnabled ? l10n.myLeaveHint : l10n.comingSoon),
+              trailing: myLeaveEnabled ? const Icon(Icons.chevron_right) : const Icon(Icons.lock_outline),
               onTap: () => context.push('/leave'),
             ),
           ),
+          // Logistics manager: the drivers' live map.
+          if (me.role.managesDrivers) ...[
+            const SizedBox(height: 12),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.local_shipping_outlined),
+                title: Text(l10n.driversPage),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/drivers'),
+              ),
+            ),
+          ],
           if (me.role.canSeeHr) ...[
             const SizedBox(height: 12),
             Card(

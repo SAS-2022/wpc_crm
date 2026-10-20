@@ -73,3 +73,21 @@ test('arriving after 5 pm: counted 0 without overtime', () => {
   const d = run([{ type: 'in', at: t(18) }, { type: 'out', at: t(19) }], { now: t(20) });
   assert.deepEqual([d.workedMin, d.countedMin, d.overtimeMin], [60, 0, 0]);
 });
+
+test('lateness from the start of the work day; none on a day off', () => {
+  const events = [{ type: 'in', at: t(8, 22) }];
+  assert.equal(run(events, { startMs: t(8) }).lateMin, 22);
+  assert.equal(run([{ type: 'in', at: t(8, 15) + 59000 }], { startMs: t(8) }).lateMin, 0); // 8:15:59 – grace
+  assert.equal(run([{ type: 'in', at: t(8, 16) }], { startMs: t(8) }).lateMin, 16);
+  assert.equal(run([{ type: 'in', at: t(7, 50) }], { startMs: t(8) }).lateMin, 0);
+  assert.equal(run(events, { startMs: null }).lateMin, null);
+  assert.equal(run([], { startMs: t(8) }).lateMin, null);
+});
+
+test('without overtime the time stayed after the end is recorded, not counted', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 45) }];
+  const no = run(events, { now: t(19) });
+  assert.deepEqual([no.countedMin, no.overtimeMin, no.afterHoursMin], [540, 0, 45]);
+  const yes = run(events, { now: t(19), overtimeAllowed: true });
+  assert.deepEqual([yes.countedMin, yes.overtimeMin, yes.afterHoursMin], [585, 45, 0]);
+});

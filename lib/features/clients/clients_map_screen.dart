@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,7 @@ import 'client_sheet.dart';
 import 'client_tags.dart';
 import 'client_filters.dart';
 import '../plan/plan_selection.dart';
+import 'client_search.dart';
 import 'client_widgets.dart';
 import 'transfer_dialog.dart';
 import 'clients_repository.dart';
@@ -39,6 +42,20 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   });
   _Status _status = _Status.all;
   int? _fittedTo;
+
+  /// Search on the map (same fields as the Clients list); the map zooms to
+  /// the results once typing pauses (user request 2026-10-20).
+  final _search = TextEditingController();
+  ClientQuery _query = ClientQuery('');
+  Timer? _searchDelay;
+
+  void _onSearch(String v) {
+    _searchDelay?.cancel();
+    _searchDelay = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) setState(() => _query = ClientQuery(v));
+    });
+    setState(() {}); // the clear button
+  }
 
   /// KAM / managers: pins coloured by salesperson instead of visit status.
   bool _byPerson = false;
@@ -73,6 +90,8 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
   @override
   void dispose() {
+    _searchDelay?.cancel();
+    _search.dispose();
     _map?.dispose();
     super.dispose();
   }
@@ -93,7 +112,11 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     final now = DateTime.now();
-    final located = (ref.watch(filteredClientsProvider).value ?? const <Client>[]).where((c) => c.hasLocation).toList();
+    final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
+    final located = (ref.watch(filteredClientsProvider).value ?? const <Client>[])
+        .where((c) => c.hasLocation)
+        .where((c) => _query.isEmpty || searchClient(c, _query, salesperson: users[c.assignedTo]?.name ?? '') != null)
+        .toList();
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final filter = ref.watch(salesFilterProvider);
     final planned = {
@@ -115,7 +138,6 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
         : planned.contains(c.id)
         ? plannedColor
         : clientColor(c, rules, now);
-    final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
     // Salesperson legend: everyone with clients on the map, most clients first.
     final perPerson = <String?, int>{};
     for (final c in located) {
@@ -140,6 +162,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       ref.watch(clientTypeFilterProvider),
       Object.hashAllUnordered(ref.watch(tagFilterProvider)),
       Object.hashAllUnordered(ref.watch(givenDueFilterProvider)),
+      _query.text,
     );
     if (_fittedTo == null && clients.isNotEmpty) {
       _fittedTo = signature;
@@ -161,7 +184,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 15),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
             // Keeps the Google logo and fitted markers clear of the filter card.
-            padding: EdgeInsets.only(top: (me?.role.isSupervisor ?? false) ? 120 : 64),
+            padding: EdgeInsets.only(top: ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -219,6 +242,32 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      TextField(
+                        controller: _search,
+                        onChanged: _onSearch,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.search),
+                          hintText: l10n.searchClientsHint,
+                          // How many matched, or none.
+                          helperText: _query.isEmpty
+                              ? null
+                              : clients.isEmpty
+                                  ? l10n.noClientsFound
+                                  : l10n.searchResultsOnMap(clients.length),
+                          suffixIcon: _search.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.close),
+                                  tooltip: l10n.clear,
+                                  onPressed: () {
+                                    _search.clear();
+                                    _onSearch('');
+                                  },
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: Row(

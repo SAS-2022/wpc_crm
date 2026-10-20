@@ -56,6 +56,15 @@ enum NotificationType {
   /// `ownerId` registered an account (written by the `registrationRequested`
   /// Cloud Function for the sales managers / GMs).
   registrationRequested,
+
+  /// `ownerId` checked in (first time that day, `attendanceUpdated` Cloud
+  /// Function); sent to them and every active GM. [AppNotification.count] =
+  /// minutes late, [AppNotification.time] = check-in time.
+  attendanceCheckedIn,
+
+  /// Not checked in 15 minutes after the start of their work day
+  /// (`attendanceReminders`); [AppNotification.time] = start time.
+  attendanceLate,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -71,6 +80,8 @@ class AppNotification {
     this.issue = '',
     this.ref = '',
     this.clientName = '',
+    this.siteName = '',
+    this.time = '',
     required this.read,
     required this.createdAt,
   });
@@ -94,6 +105,10 @@ class AppNotification {
 
   /// Client notifications: the client's name when it was sent.
   final String clientName;
+
+  /// Attendance: the work site and 'HH:mm' (Saudi time).
+  final String siteName;
+  final String time;
   final bool read;
   final DateTime? createdAt;
 
@@ -109,6 +124,8 @@ class AppNotification {
       issue: d['issue'] as String? ?? '',
       ref: d['ref'] as String? ?? '',
       clientName: d['clientName'] as String? ?? '',
+      siteName: d['siteName'] as String? ?? '',
+      time: d['time'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );

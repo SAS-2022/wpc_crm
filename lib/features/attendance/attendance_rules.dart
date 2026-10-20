@@ -41,6 +41,8 @@ class DayResult {
     this.workedMin,
     this.countedMin,
     this.overtimeMin,
+    this.lateMin,
+    this.afterHoursMin,
   });
 
   final DateTime? checkInAt;
@@ -56,12 +58,38 @@ class DayResult {
   final int? countedMin;
   final int? overtimeMin;
 
+  /// Minutes after the start of their work day they checked in (0 = on
+  /// time or within [lateGraceMin]; null = not checked in, or not a work day).
+  final int? lateMin;
+
+  /// Without overtime: minutes they stayed after the end of the work day
+  /// (recorded, not counted; 2026-10-20). With overtime it's [overtimeMin].
+  final int? afterHoursMin;
+
   bool get checkedIn => checkInAt != null;
   bool get closed => checkOutAt != null;
+
+  /// This result with [lateMin] / [afterHoursMin] taken from [other] where
+  /// it has none (days the server worked out before those existed).
+  DayResult fillFrom(DayResult other) => DayResult(
+        checkInAt: checkInAt,
+        checkInSource: checkInSource,
+        siteId: siteId,
+        inside: inside,
+        lastExitAt: lastExitAt,
+        checkOutAt: checkOutAt,
+        checkOutType: checkOutType,
+        workedMin: workedMin,
+        countedMin: countedMin,
+        overtimeMin: overtimeMin,
+        lateMin: lateMin ?? other.lateMin,
+        afterHoursMin: afterHoursMin ?? other.afterHoursMin,
+      );
 }
 
 DayResult deriveDay(
   List<AttendanceEvent> events, {
+  DateTime? start,
   required DateTime end,
   required DateTime closeAll,
   required DateTime now,
@@ -116,14 +144,16 @@ DayResult deriveDay(
   }
   if (checkInAt != null && !closed && !now.isBefore(closeAll)) close(later(end, checkInAt), 'auto');
 
-  int? worked, counted, overtime;
+  int? worked, counted, overtime, afterHours;
   if (closed) {
     final inAt = checkInAt!, outAt = checkOutAt!;
     worked = _minutes(outAt.difference(inAt));
     final extra = outAt.difference(later(end, inAt));
     overtime = overtimeAllowed ? _minutes(extra) : 0;
+    afterHours = overtimeAllowed ? 0 : _minutes(extra);
     counted = overtimeAllowed ? worked : _minutes((outAt.isBefore(end) ? outAt : end).difference(inAt));
   }
+  final late = checkInAt == null || start == null ? null : lateMinutes(checkInAt.difference(start));
   return DayResult(
     checkInAt: checkInAt,
     checkInSource: source,
@@ -135,7 +165,20 @@ DayResult deriveDay(
     workedMin: worked,
     countedMin: counted,
     overtimeMin: overtime,
+    lateMin: late,
+    afterHoursMin: afterHours,
   );
+}
+
+/// Check-ins up to this many whole minutes after the start aren't late
+/// (user decision 2026-10-20: 8:15 is on time, 8:16 is late).
+const lateGraceMin = 15;
+
+/// Minutes late (whole minutes after the start, seconds dropped), 0 within
+/// the grace period. Same as `lateMinutes` in functions/attendance.js.
+int lateMinutes(Duration afterStart) {
+  final m = afterStart.inMinutes;
+  return m > lateGraceMin ? m : 0;
 }
 
 int _minutes(Duration d) => d.isNegative ? 0 : (d.inSeconds / 60).round();

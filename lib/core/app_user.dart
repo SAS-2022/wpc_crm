@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../l10n/app_localizations.dart';
+import '../features/tracking/work_hours.dart';
 import 'app_version.dart';
 
 enum UserRole {
@@ -18,6 +19,13 @@ enum UserRole {
   engineer('engineer'),
   driver('driver'),
 
+  /// Manages the drivers: Drivers live map, their route history and
+  /// tracking alerts; attendance like other staff (user decision 2026-10-20).
+  logisticsManager('logistics_manager'),
+
+  /// Attendance only for now (user decision 2026-10-20).
+  warehouseSupervisor('warehouse_supervisor'),
+
   /// A role this app version doesn't know (added in a later version): no
   /// access until the app is updated. Never stored.
   unknown('');
@@ -28,7 +36,10 @@ enum UserRole {
   final String value;
 
   /// Roles that can be given to a user (the user form's list).
-  static const assignable = [salesExec, kam, salesManager, gm, hr, accounting, procurement, worker, engineer, driver];
+  static const assignable = [
+    salesExec, kam, salesManager, gm, hr, accounting, procurement, worker, engineer, driver,
+    logisticsManager, warehouseSupervisor,
+  ];
 
   /// Unknown or missing values become [unknown], never a sales role: an old
   /// app must not treat a newer role as a sales executive (tracked, sees
@@ -42,8 +53,18 @@ enum UserRole {
   /// KAM, sales manager and GM: see all clients, visits and live locations.
   bool get isSupervisor => isAdmin || this == kam;
 
-  /// Field staff whose location is tracked live.
+  /// The sales field staff (clients, plans, visits, targets).
   bool get isTracked => this == salesExec || this == kam;
+
+  /// Location shared during work hours (live map, route history): the sales
+  /// field staff and drivers (user request 2026-10-20; drivers are shown
+  /// apart, see [isDriver]).
+  bool get isLocationTracked => isTracked || this == driver;
+  bool get isDriver => this == driver;
+
+  /// Sees the drivers' live locations and route history: sales manager, GM
+  /// and the logistics manager.
+  bool get managesDrivers => isAdmin || this == logisticsManager;
 
   /// The sales team: uses clients, visits and plans.
   bool get isSales => isSupervisor || this == salesExec;
@@ -51,7 +72,14 @@ enum UserRole {
   /// HR, accounting, procurement, workers, engineers and drivers: no sales
   /// features; Home (attendance, leave), Profile.
   bool get isBackOffice =>
-      this == hr || this == accounting || this == procurement || this == worker || this == engineer || this == driver;
+      this == hr ||
+      this == accounting ||
+      this == procurement ||
+      this == worker ||
+      this == engineer ||
+      this == driver ||
+      this == logisticsManager ||
+      this == warehouseSupervisor;
 
   /// Attendance: people who leave the work site during the day (sales team,
   /// drivers) aren't checked out when they leave before the end of the day;
@@ -81,6 +109,8 @@ enum UserRole {
         worker => l10n.roleWorker,
         engineer => l10n.roleEngineer,
         driver => l10n.roleDriver,
+        logisticsManager => l10n.roleLogisticsManager,
+        warehouseSupervisor => l10n.roleWarehouseSupervisor,
         unknown => l10n.roleUnknown,
       };
 }
@@ -104,6 +134,8 @@ class AppUser {
     this.registeredAt,
     this.workSiteIds = const [],
     this.overtimeAllowed = false,
+    this.attendanceRequired,
+    this.workSchedule,
   });
 
   final String id;
@@ -143,6 +175,21 @@ class AppUser {
   final List<String> workSiteIds;
   final bool overtimeAllowed;
 
+  /// Set on the user form (2026-10-20). Not set yet: everyone outside the
+  /// sales team, plus sales people already given a work site.
+  final bool? attendanceRequired;
+  bool get needsAttendance => attendanceRequired ?? defaultAttendance(role, workSiteIds);
+
+  /// Checks in and out: attendance required and at least one work site.
+  bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;
+
+  /// Their own attendance days and hours (2026-10-20, user form); null =
+  /// the company work hours (More → Work hours).
+  final WorkHours? workSchedule;
+  WorkHours scheduleOr(WorkHours company) => workSchedule ?? company;
+
+  static bool defaultAttendance(UserRole role, List<String> workSiteIds) => !role.isSales || workSiteIds.isNotEmpty;
+
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return AppUser(
@@ -163,6 +210,8 @@ class AppUser {
       registeredAt: (d['registeredAt'] as Timestamp?)?.toDate(),
       workSiteIds: List<String>.from(d['workSiteIds'] as List? ?? const []),
       overtimeAllowed: d['overtimeAllowed'] == true,
+      attendanceRequired: d['attendanceRequired'] as bool?,
+      workSchedule: WorkHours.tryParse(d['workSchedule']),
     );
   }
 
@@ -179,5 +228,7 @@ class AppUser {
         'position': position,
         'workSiteIds': workSiteIds,
         'overtimeAllowed': overtimeAllowed,
+        'attendanceRequired': ?attendanceRequired,
+        'workSchedule': workSchedule?.toMap(),
       };
 }

@@ -43,6 +43,7 @@ class MoreScreen extends ConsumerWidget {
         ],
       ]),
       (l10n.moreSectionPeople, [
+        if (role.managesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
         if (role.canSeeHr && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
         // HR area hidden on the web for now (user request 2026-10-18).
         if (role.canSeeHr && !wide && !kIsWeb) item(Icons.badge, l10n.hrArea, '/hr'),

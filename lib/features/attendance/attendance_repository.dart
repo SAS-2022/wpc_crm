@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../tracking/work_hours.dart';
 import 'attendance_rules.dart';
@@ -63,23 +64,42 @@ class AttendanceRecord {
               workedMin: (d['workedMin'] as num?)?.toInt(),
               countedMin: (d['countedMin'] as num?)?.toInt(),
               overtimeMin: (d['overtimeMin'] as num?)?.toInt(),
+              // Days stored before the grace period: within it = on time.
+              lateMin: switch ((d['lateMin'] as num?)?.toInt()) {
+                final m? when m <= lateGraceMin => 0,
+                final m => m,
+              },
+              afterHoursMin: (d['afterHoursMin'] as num?)?.toInt(),
             )
           : null,
     );
   }
 
   /// The day as it stands now: worked out from the events on the phone (so
-  /// a new event shows at once), the same way the server does.
+  /// a new event shows at once), the same way the server does. [hours]: the
+  /// person's schedule ([AppUser.scheduleOr]).
   DayResult result({required WorkHours hours, required bool leavesSite, required bool overtimeAllowed, DateTime? now}) {
     final day = DateTime.parse(date);
     return deriveDay(
       events,
+      start: hours.days.contains(day.weekday) ? day.add(Duration(minutes: hours.startMinute)) : null,
       end: day.add(Duration(minutes: hours.endMinute)),
       closeAll: day.add(const Duration(hours: 23, minutes: 55)),
       now: now ?? DateTime.now(),
       leavesSite: leavesSite,
       overtimeAllowed: overtimeAllowed,
     );
+  }
+
+  /// The server's result once it has the day (with what older server
+  /// results lack filled in here); until then the same rules on the phone.
+  DayResult best(AppUser user, WorkHours company) {
+    final local = result(
+      hours: user.scheduleOr(company),
+      leavesSite: user.role.leavesSiteForWork,
+      overtimeAllowed: user.overtimeAllowed,
+    );
+    return server?.fillFrom(local) ?? local;
   }
 }
 
@@ -91,6 +111,14 @@ final myAttendanceTodayProvider = StreamProvider<AttendanceRecord?>((ref) {
       .snapshots()
       .map((s) => s.exists ? AttendanceRecord.fromDoc(s) : null);
 });
+
+/// Everyone's attendance in one month 'yyyy-MM' (monthly report).
+final monthAttendanceProvider = StreamProvider.family<List<AttendanceRecord>, String>((ref, month) =>
+    FirebaseFirestore.instance
+        .collection('attendance')
+        .where('month', isEqualTo: month)
+        .snapshots()
+        .map((s) => [for (final d in s.docs) AttendanceRecord.fromDoc(d)]));
 
 /// Everyone's attendance on one day (HR area, KAM / managers).
 final dayAttendanceProvider = StreamProvider.family<Map<String, AttendanceRecord>, String>((ref, day) =>

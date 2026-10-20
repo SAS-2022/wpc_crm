@@ -19,8 +19,7 @@ class WorkSitesScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
-    void open(WorkSite? site) =>
-        Navigator.push(context, MaterialPageRoute<void>(builder: (_) => WorkSiteEditor(site: site)));
+    void open(WorkSite? site) => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => WorkSiteEditor(site: site)));
     return Scaffold(
       appBar: AppBar(title: Text(l10n.workSites)),
       floatingActionButton: FloatingActionButton.extended(
@@ -29,7 +28,12 @@ class WorkSitesScreen extends ConsumerWidget {
         label: Text(l10n.addWorkSite),
       ),
       body: sites.isEmpty
-          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l10n.noWorkSites, textAlign: TextAlign.center)))
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.noWorkSites, textAlign: TextAlign.center),
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.only(bottom: 88),
               children: [
@@ -37,11 +41,13 @@ class WorkSitesScreen extends ConsumerWidget {
                   ListTile(
                     leading: Icon(Icons.apartment, color: s.active ? null : Theme.of(context).disabledColor),
                     title: Text(s.name),
-                    subtitle: Text([
-                      l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
-                      l10n.radiusMeters(s.radius.round()),
-                      if (!s.active) l10n.inactive,
-                    ].join(' · ')),
+                    subtitle: Text(
+                      [
+                        l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
+                        l10n.radiusMeters(s.radius.round()),
+                        if (!s.active) l10n.inactive,
+                      ].join(' · '),
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => open(s),
                   ),
@@ -90,13 +96,12 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
         WorkSite(id: '', name: _name.text.trim(), lat: _point!.latitude, lng: _point!.longitude, radius: _radius, active: _active),
         id: widget.site?.id,
       );
-      final before = {for (final u in users) if (u.workSiteIds.contains(id)) u.id};
+      final before = {
+        for (final u in users)
+          if (u.workSiteIds.contains(id)) u.id,
+      };
       final after = _people ?? before;
-      await assignWorkSite(
-        id,
-        assign: after.difference(before).toList(),
-        unassign: before.difference(after).toList(),
-      );
+      await assignWorkSite(id, assign: after.difference(before).toList(), unassign: before.difference(after).toList());
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
       navigator.pop();
     } catch (e) {
@@ -121,7 +126,14 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
       ),
     );
     if (ok != true) return;
-    await assignWorkSite(site.id, assign: const [], unassign: [for (final u in users) if (u.workSiteIds.contains(site.id)) u.id]);
+    await assignWorkSite(
+      site.id,
+      assign: const [],
+      unassign: [
+        for (final u in users)
+          if (u.workSiteIds.contains(site.id)) u.id,
+      ],
+    );
     await deleteWorkSite(site.id);
     navigator.pop();
   }
@@ -130,10 +142,17 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final users = [for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) if (u.active) u]
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final users = [
+      for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
+        if (u.active) u,
+    ]..sort((a, b) => a.name.compareTo(b.name));
     final id = widget.site?.id;
-    final people = _people ?? {for (final u in users) if (id != null && u.workSiteIds.contains(id)) u.id};
+    final people =
+        _people ??
+        {
+          for (final u in users)
+            if (id != null && u.workSiteIds.contains(id)) u.id,
+        };
 
     return Scaffold(
       appBar: AppBar(
@@ -155,9 +174,9 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.place, color: _point == null ? theme.colorScheme.error : theme.colorScheme.primary),
-            title: Text(_point == null
-                ? l10n.workSiteNoPlace
-                : '${_point!.latitude.toStringAsFixed(5)}, ${_point!.longitude.toStringAsFixed(5)}'),
+            title: Text(
+              _point == null ? l10n.workSiteNoPlace : '${_point!.latitude.toStringAsFixed(5)}, ${_point!.longitude.toStringAsFixed(5)}',
+            ),
             trailing: OutlinedButton.icon(
               icon: const Icon(Icons.map_outlined),
               label: Text(l10n.pickOnMap),
@@ -193,12 +212,14 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              // Only people who need attendance (user form switch).
               for (final u in users)
-                FilterChip(
-                  label: Text('${u.name} · ${u.role.label(l10n)}'),
-                  selected: people.contains(u.id),
-                  onSelected: (on) => setState(() => _people = on ? ({...people, u.id}) : ({...people}..remove(u.id))),
-                ),
+                if (u.needsAttendance || people.contains(u.id))
+                  FilterChip(
+                    label: Text('${u.name} · ${u.role.label(l10n)}'),
+                    selected: people.contains(u.id),
+                    onSelected: (on) => setState(() => _people = on ? ({...people, u.id}) : ({...people}..remove(u.id))),
+                  ),
             ],
           ),
           const SizedBox(height: 24),

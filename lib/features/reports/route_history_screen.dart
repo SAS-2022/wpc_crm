@@ -16,12 +16,14 @@ import '../home/dashboard_cards.dart';
 import '../home/stats.dart';
 import '../home/stats_widgets.dart';
 import '../plan/plan_task.dart';
-import '../plan/route_order.dart';
 import '../tracking/tracking_log.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
 import 'report.dart';
+import 'report_sections.dart';
 import 'reports_data.dart';
+import 'routing_pace.dart';
+import 'timeline_widgets.dart';
 
 /// One person's day from RTDB `location_history`: the route on a map with
 /// the visits made, distance and first / last location. Person and day are
@@ -50,6 +52,18 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
   /// Person, day and history count last sent to `snapRoute`.
   String? _snapAsked;
   bool _snapErrorShown = false;
+
+  /// Person, day and history size last sent to `buildTimeline`.
+  String? _timelineAsked;
+
+  /// Builds the day's timeline (client / driving / office / lunch / stopped)
+  /// when it's missing or the day is still going on.
+  void _buildTimeline(String uid, String day, int points) {
+    final key = '$uid|$day|${points ~/ 20}';
+    if (_timelineAsked == key) return;
+    _timelineAsked = key;
+    buildTimelineNow(uid, day).ignore();
+  }
 
   @override
   void dispose() {
@@ -95,8 +109,14 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final today = DateTime(now.year, now.month, now.day);
 
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
-    final team = [if (me.role.isTracked) me, ...teamOf(me, users)];
-    final person = team.where((u) => u.id == widget.userId).firstOrNull ?? team.firstOrNull;
+    // The logistics manager follows drivers only.
+    final team = me.role.isSupervisor || me.role.isTracked ? [if (me.role.isTracked) me, ...teamOf(me, users)] : <AppUser>[];
+    // Drivers (sales manager / GM / logistics manager), listed apart in the picker.
+    final drivers = me.role.managesDrivers
+        ? (users.where((u) => u.active && u.role.isDriver).toList()..sort((a, b) => a.name.compareTo(b.name)))
+        : const <AppUser>[];
+    final person =
+        [...team, ...drivers].where((u) => u.id == widget.userId).firstOrNull ?? team.firstOrNull ?? drivers.firstOrNull;
     final day = DateTime.tryParse(widget.date ?? '') ?? today;
     final dayStr = dayKey(day);
 
@@ -116,7 +136,8 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     }
     final clients = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final hidden = ref.watch(hiddenClientIdsProvider);
-    final visits = (ref.watch(rangeVisitsProvider((null, monthKey(day)))).value ?? const <Visit>[])
+    final monthVisits = ref.watch(rangeVisitsProvider((null, monthKey(day)))).value ?? const <Visit>[];
+    final visits = monthVisits
         .where((v) =>
             person != null &&
             !v.isCall && // no position to draw
@@ -133,12 +154,24 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       return c != null && c.hasLocation ? LatLng(c.lat!, c.lng!) : null;
     }
 
-    // Time used between the first and last visit vs the shortest route
-    // through the same clients + 30 min per visit.
-    final efficiency = dayEfficiency([
+    // The day's GPS timeline, and the team benchmark of the month (median of
+    // the salespeople's measured visit length, speed and road factor).
+    final timeline = person == null ? null : ref.watch(dayTimelineProvider((person.id, dayStr))).value;
+    if (person != null && person.role.isTracked && allPoints.isNotEmpty && (timeline == null || !timeline.isFinal)) {
+      _buildTimeline(person.id, dayStr, allPoints.length);
+    }
+    final pace = routingReport(
+      people: const [],
+      benchmarkPeople: team,
+      visits: monthVisits,
+      clients: clients,
+      range: StatsRange.month(day),
+      timelines: ref.watch(dayTimelinesProvider(monthKey(day))).value ?? const {},
+    ).pace;
+    final efficiency = paceEfficiency([
       for (final v in visits)
         if (visitPoint(v) case final p?) (at: v.checkedInAt!, place: (p.latitude, p.longitude)),
-    ]);
+    ], pace: pace, timeline: timeline);
 
     final path = [for (final p in route.path) LatLng(p.lat, p.lng)];
     LatLng latLng(RoutePoint p) => LatLng(p.lat, p.lng);
@@ -160,14 +193,27 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (team.isEmpty)
+        if (person == null)
           Text(l10n.noTrackedStaff)
         else
           DropdownButton<String>(
-            value: person!.id,
+            value: person.id,
             hint: Text(l10n.choosePerson),
             underline: const SizedBox.shrink(),
-            items: [for (final u in team) DropdownMenuItem(value: u.id, child: Text(u.name))],
+            items: [
+              if (drivers.isNotEmpty && team.isNotEmpty) _groupHeader(context, l10n.salesTeam),
+              for (final u in team) DropdownMenuItem(value: u.id, child: Text(u.name)),
+              if (drivers.isNotEmpty) _groupHeader(context, l10n.drivers),
+              for (final u in drivers)
+                DropdownMenuItem(
+                  value: u.id,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.local_shipping_outlined, size: 18),
+                    const SizedBox(width: 6),
+                    Text(u.name),
+                  ]),
+                ),
+            ],
             onChanged: (id) => id == null ? null : _open(id, day),
           ),
         if (person != null)
@@ -235,12 +281,37 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final visitList = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Where the work day's time went, and the stops that weren't at a client.
+        if (timeline != null && timeline.minutes.values.any((n) => n > 0))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(l10n.reportTimeSplit, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              TimeSplitBar(split: timeline.minutes, height: 16),
+              const SizedBox(height: 6),
+              TimeSplitLegend(split: timeline.minutes),
+              for (final st in timeline.stops)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(timeKindIcon(st.kind), color: timeKindColor(st.kind)),
+                  title: Text('${timeKindLabel(l10n, st.kind)} · ${formatSplitMinutes(l10n, st.length.inMinutes)}'),
+                  subtitle: Text('${time.format(st.from)} – ${time.format(st.to)}'),
+                  onTap: st.lat == null || _map == null
+                      ? null
+                      : () => _map!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(st.lat!, st.lng!), 16)),
+                ),
+            ]),
+          ),
         if (efficiency != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
               [
-                l10n.efficiencyDetail(formatLasted(l10n, efficiency.needed), formatLasted(l10n, efficiency.took)),
+                efficiency.measured
+                    ? l10n.efficiencyDetail(formatLasted(l10n, efficiency.needed), formatLasted(l10n, efficiency.took))
+                    : l10n.efficiencyDetailNoGps(formatLasted(l10n, efficiency.needed), formatLasted(l10n, efficiency.took)),
                 efficiency.bestOrder
                     ? l10n.efficiencyBestOrder
                     : l10n.efficiencyOtherOrder(
@@ -403,3 +474,11 @@ class _Fact extends StatelessWidget {
         label: Text(value.isEmpty ? label : '$label: $value', style: color == null ? null : TextStyle(color: color)),
       );
 }
+
+/// A section title in the person picker (not selectable).
+DropdownMenuItem<String> _groupHeader(BuildContext context, String title) => DropdownMenuItem<String>(
+      enabled: false,
+      value: '__$title',
+      child: Text(title,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.primary)),
+    );
