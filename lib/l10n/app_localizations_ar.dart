@@ -3597,4 +3597,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get monthView => 'شهر';
+
+  @override
+  String get clearAllFilters => 'مسح كل الفلاتر';
+
+  @override
+  String workedOf(String worked, String scheduled) {
+    return '$worked من $scheduled';
+  }
+
+  @override
+  String get stillIn => 'ما زال في الدوام';
+
+  @override
+  String startAt(String time) {
+    return 'البداية $time';
+  }
+
+  @override
+  String get notInYet => 'لم يحضر بعد';
+
+  @override
+  String checkedInAtTime(String time) {
+    return 'سجّل الحضور $time';
+  }
+
+  @override
+  String get onSite => 'في الموقع';
+
+  @override
+  String get notOnSite => 'خارج الموقع';
+
+  @override
+  String get leftTheSite => 'غادر الموقع';
+
+  @override
+  String get checkedOutTitle => 'سجّل الانصراف';
+
+  @override
+  String get workedSoFar => 'ساعات العمل حتى الآن';
+
+  @override
+  String delaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count متأخرًا',
+      few: '$count متأخرين',
+      two: 'متأخران',
+      one: 'متأخر واحد',
+      zero: 'التأخير',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDelays => 'لم يتأخر أحد';
+
+  @override
+  String get searchByName => 'ابحث بالاسم';
+
+  @override
+  String get viewStatus => 'الحالة';
+
+  @override
+  String get viewWorkedHours => 'الساعات';
+
+  @override
+  String get viewDelays => 'التأخير';
+
+  @override
+  String get noOneMatches => 'لا أحد مطابق';
 }

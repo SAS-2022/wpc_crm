@@ -6,18 +6,28 @@ import 'package:intl/intl.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../clients/client.dart';
 import '../plan/plan_screen.dart' show DayBar;
 import '../tracking/work_hours.dart';
+import '../users/companies.dart';
 import '../users/users_repository.dart';
 import 'attendance_card.dart' show checkOutTypeLabel;
+import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
 import 'work_sites.dart';
-import '../clients/client_tags.dart';
+
+/// Which people the summary tiles narrow the list to.
+enum _Show { all, onSite, notOnSite, checkedOut }
+
+/// The three ways to read the day (user request 2026-10-21).
+enum _View { status, hours, delays }
 
 /// HR area, GM, sales manager: one day's attendance of everyone assigned to
-/// a work site, by site: who is in, left, checked out or not checked in,
-/// with check-in / check-out times, hours and overtime.
+/// a work site (2026-10-21 redesign): summary tiles (on site / not on site /
+/// checked out / worked so far / delays), search + filters (site, role,
+/// company), and three views — status sections, worked hours so far against
+/// each schedule, and delays (late check-ins and people not in yet).
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
 
@@ -27,86 +37,303 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   DateTime _day = DateTime.now();
+  _Show _show = _Show.all;
+  _View _view = _View.status;
+  String _query = '';
+  final _sites = <String>{};
+  final _roles = <UserRole>{};
+  final _companies = <String>{};
+
+  int get _filterCount => _sites.length + _roles.length + _companies.length;
+
+  Future<void> _openFilters(List<WorkSite> sites, List<UserRole> roles, List<Company> companies) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheet) => StatefulBuilder(
+          builder: (sheet, setSheet) {
+            final l10n = AppLocalizations.of(sheet);
+            void toggle<T>(Set<T> set, T v) {
+              setSheet(() => set.contains(v) ? set.remove(v) : set.add(v));
+              setState(() {});
+            }
+
+            Widget section(String title, List<Widget> chips) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: Theme.of(sheet).textTheme.titleSmall),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: chips),
+                    ],
+                  ),
+                );
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (sites.length > 1)
+                      section(l10n.workSites, [
+                        for (final s in sites)
+                          FilterChip(label: Text(s.name), selected: _sites.contains(s.id), onSelected: (_) => toggle(_sites, s.id)),
+                      ]),
+                    if (roles.length > 1)
+                      section(l10n.role, [
+                        for (final r in roles)
+                          FilterChip(label: Text(r.label(l10n)), selected: _roles.contains(r), onSelected: (_) => toggle(_roles, r)),
+                      ]),
+                    if (companies.length > 1)
+                      section(l10n.company, [
+                        for (final c in companies)
+                          FilterChip(label: Text(c.name), selected: _companies.contains(c.id), onSelected: (_) => toggle(_companies, c.id)),
+                      ]),
+                    TextButton(
+                      onPressed: () {
+                        setSheet(() {
+                          _sites.clear();
+                          _roles.clear();
+                          _companies.clear();
+                        });
+                        setState(() {});
+                      },
+                      child: Text(l10n.clearAllFilters),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final time = DateFormat.jm(Localizations.localeOf(context).toString());
-    final day = attendanceDay(_day);
-    final hours = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+    final dayKey = attendanceDay(_day);
+    final midnight = DateTime(_day.year, _day.month, _day.day);
+    final now = DateTime.now();
+    final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
-    final people = [
+    final siteNames = {for (final s in sites) s.id: s.name};
+    final companies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final everyone = [
       for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
         if (u.active && u.checksAttendance) u,
     ]..sort((a, b) => a.name.compareTo(b.name));
-    final records = ref.watch(dayAttendanceProvider(day)).value ?? const <String, AttendanceRecord>{};
-    final positions = ref.watch(positionsByIdProvider);
-    final lang = Localizations.localeOf(context).languageCode;
+    final records = ref.watch(dayAttendanceProvider(dayKey)).value ?? const <String, AttendanceRecord>{};
     final canOpenUsers = ref.watch(currentUserProvider).value?.role.isAdmin ?? false;
 
-    // The server's result once it has the day; until then the same rules here.
-    DayResult? resultOf(AppUser u) {
-      final r = records[u.id];
-      if (r == null) return null;
-      return r.best(u, hours);
-    }
-
-    final results = {for (final u in people) u.id: resultOf(u)};
-    final inNow = results.values.where((d) => d != null && d.checkedIn && !d.closed).length;
-    final out = results.values.where((d) => d != null && d.closed).length;
-    final absent = results.values.where((d) => d == null || !d.checkedIn).length;
-
-    Widget row(AppUser u) {
-      final d = results[u.id];
-      final String status;
-      final Color color;
-      if (d == null || !d.checkedIn) {
-        status = l10n.notCheckedIn;
-        color = theme.colorScheme.outline;
-      } else if (!d.closed) {
-        status = [
-          l10n.inSince(time.format(d.checkInAt!)),
-          if ((d.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(d.lateMin!)),
-          if (!d.inside && d.lastExitAt != null) l10n.leftSiteAt(time.format(d.lastExitAt!)),
-        ].join(' · ');
-        color = Colors.green.shade700;
-      } else {
-        status = [
-          '${time.format(d.checkInAt!)} – ${time.format(d.checkOutAt!)}',
-          checkOutTypeLabel(l10n, d.checkOutType),
-          if ((d.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(d.lateMin!)),
-        ].join(' · ');
-        color = theme.colorScheme.primary;
-      }
-      return ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.14),
-          child: Icon(d == null || !d.checkedIn ? Icons.person_off_outlined : (d.closed ? Icons.logout : Icons.how_to_reg), color: color),
+    // Each person's day: the server's result (or the same rules here until
+    // it has the day), then status, hours so far and delay.
+    final results = {for (final u in everyone) u.id: records[u.id]?.best(u, company)};
+    final days = {
+      for (final u in everyone)
+        u.id: personDay(
+          results[u.id],
+          schedule: u.scheduleOr(company),
+          overtimeAllowed: u.overtimeAllowed,
+          day: midnight,
+          now: now,
         ),
+    };
+
+    // Search and filters (site, role, company); the tiles count these people.
+    final q = Client.normalizeName(_query);
+    final filtered = [
+      for (final u in everyone)
+        if ((q.isEmpty || Client.normalizeName(u.name).contains(q)) &&
+            (_sites.isEmpty || u.workSiteIds.any(_sites.contains)) &&
+            (_roles.isEmpty || _roles.contains(u.role)) &&
+            (_companies.isEmpty || _companies.contains(u.companyId)))
+          u,
+    ];
+    bool shows(AppUser u) => switch (_show) {
+          _Show.all => true,
+          _Show.onSite => days[u.id]!.status == DayStatus.onSite,
+          _Show.notOnSite => days[u.id]!.status == DayStatus.away || days[u.id]!.status == DayStatus.notIn,
+          _Show.checkedOut => days[u.id]!.status == DayStatus.checkedOut,
+        };
+    final shown = filtered.where(shows).toList();
+
+    int count(bool Function(PersonDay) test) => filtered.where((u) => test(days[u.id]!)).length;
+    final onSite = count((d) => d.status == DayStatus.onSite);
+    final notOnSite = count((d) => d.status == DayStatus.away || d.status == DayStatus.notIn);
+    final checkedOut = count((d) => d.status == DayStatus.checkedOut);
+    final workedTotal = filtered.fold(0, (n, u) => n + days[u.id]!.workedMin);
+    final late = filtered.where((u) => days[u.id]!.lateMin > 0).toList();
+    final lateTotal = late.fold(0, (n, u) => n + days[u.id]!.lateMin);
+
+    String siteOf(AppUser u) =>
+        siteNames[results[u.id]?.siteId] ?? u.workSiteIds.map((id) => siteNames[id]).nonNulls.firstOrNull ?? '';
+
+    Widget avatar(AppUser u, Color color, IconData icon) =>
+        CircleAvatar(backgroundColor: color.withValues(alpha: 0.14), child: Icon(icon, color: color));
+
+    // Status view row: what happened today.
+    Widget statusRow(AppUser u) {
+      final d = results[u.id];
+      final p = days[u.id]!;
+      final (IconData icon, Color color, String line) = switch (p.status) {
+        DayStatus.notIn => (
+            Icons.person_off_outlined,
+            theme.colorScheme.outline,
+            p.notInYet ? '${l10n.notCheckedIn} · ${l10n.lateBy(formatMinutes(p.lateMin))}' : l10n.notCheckedIn,
+          ),
+        DayStatus.onSite || DayStatus.away => (
+            p.status == DayStatus.onSite ? Icons.how_to_reg : Icons.directions_walk,
+            p.status == DayStatus.onSite ? Colors.green.shade700 : Colors.orange.shade800,
+            [
+              l10n.inSince(time.format(d!.checkInAt!)),
+              if (p.lateMin > 0) l10n.lateBy(formatMinutes(p.lateMin)),
+              if (p.status == DayStatus.away && d.lastExitAt != null) l10n.leftSiteAt(time.format(d.lastExitAt!)),
+            ].join(' · '),
+          ),
+        DayStatus.checkedOut => (
+            Icons.logout,
+            theme.colorScheme.primary,
+            [
+              '${time.format(d!.checkInAt!)} – ${time.format(d.checkOutAt!)}',
+              checkOutTypeLabel(l10n, d.checkOutType),
+              if (p.lateMin > 0) l10n.lateBy(formatMinutes(p.lateMin)),
+            ].where((s) => s.isNotEmpty).join(' · '),
+          ),
+      };
+      return ListTile(
+        leading: avatar(u, color, icon),
         title: Text(u.name),
-        subtitle: Text('${u.role.label(l10n)}${u.position.isEmpty ? '' : ' · ${positionLabel(positions, u.position, lang)}'}\n$status'),
+        subtitle: Text('${[u.role.label(l10n), siteOf(u)].where((s) => s.isNotEmpty).join(' · ')}\n$line'),
         isThreeLine: true,
-        trailing: d?.countedMin == null
-            ? null
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(formatMinutes(d!.countedMin!), style: theme.textTheme.titleSmall),
-                  if ((d.overtimeMin ?? 0) > 0)
-                    Text('+${formatMinutes(d.overtimeMin!)}', style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade800)),
-                  if ((d.afterHoursMin ?? 0) > 0)
-                    Tooltip(
-                      message: l10n.stayedAfterTime(formatMinutes(d.afterHoursMin!)),
-                      child: Text('(+${formatMinutes(d.afterHoursMin!)})',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
-                    ),
-                ],
-              ),
+        trailing: p.workedMin > 0 ? Text(formatMinutes(p.workedMin), style: theme.textTheme.titleSmall) : null,
         onTap: canOpenUsers ? () => context.push('/users/${u.id}') : null,
       );
     }
+
+    // Worked hours view row: so far against their scheduled day.
+    Widget hoursRow(AppUser u) {
+      final p = days[u.id]!;
+      final d = results[u.id];
+      final open = p.status == DayStatus.onSite || p.status == DayStatus.away;
+      final share = p.scheduledMin == 0 ? 0.0 : (p.workedMin / p.scheduledMin).clamp(0.0, 1.0);
+      return ListTile(
+        title: Text(u.name),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: share,
+                minHeight: 8,
+                color: open ? Colors.green.shade600 : theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text([
+              if (p.scheduledMin > 0) l10n.workedOf(formatMinutes(p.workedMin), formatMinutes(p.scheduledMin)) else l10n.dayOff,
+              if (open) l10n.stillIn,
+              if ((d?.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(d!.overtimeMin!)),
+            ].join(' · ')),
+          ],
+        ),
+        trailing: Text(formatMinutes(p.workedMin), style: theme.textTheme.titleMedium),
+        onTap: canOpenUsers ? () => context.push('/users/${u.id}') : null,
+      );
+    }
+
+    // Delays view row: late check-in, or not in yet after their start.
+    Widget delayRow(AppUser u) {
+      final p = days[u.id]!;
+      final d = results[u.id];
+      final start = midnight.add(Duration(minutes: u.scheduleOr(company).startMinute));
+      return ListTile(
+        leading: avatar(u, theme.colorScheme.error, p.notInYet ? Icons.hourglass_bottom : Icons.schedule),
+        title: Text(u.name),
+        subtitle: Text([
+          l10n.startAt(time.format(start)),
+          if (p.notInYet) l10n.notInYet else l10n.checkedInAtTime(time.format(d!.checkInAt!)),
+          siteOf(u),
+        ].where((s) => s.isNotEmpty).join(' · ')),
+        trailing: Text(
+          formatMinutes(p.lateMin),
+          style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.error),
+        ),
+        onTap: canOpenUsers ? () => context.push('/users/${u.id}') : null,
+      );
+    }
+
+    Widget header(String text, int n) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Text('$text ($n)', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+        );
+
+    final List<Widget> content;
+    switch (_view) {
+      case _View.status:
+        content = [
+          for (final (status, title) in [
+            (DayStatus.onSite, l10n.onSite),
+            (DayStatus.away, l10n.leftTheSite),
+            (DayStatus.notIn, l10n.notCheckedIn),
+            (DayStatus.checkedOut, l10n.checkedOutTitle),
+          ])
+            if (shown.where((u) => days[u.id]!.status == status).toList() case final list when list.isNotEmpty) ...[
+              header(title, list.length),
+              for (final u in list) statusRow(u),
+            ],
+        ];
+      case _View.hours:
+        final list = [...shown]..sort((a, b) => days[b.id]!.workedMin.compareTo(days[a.id]!.workedMin));
+        content = [for (final u in list) hoursRow(u)];
+      case _View.delays:
+        final list = [for (final u in shown) if (days[u.id]!.lateMin > 0) u]
+          ..sort((a, b) => days[b.id]!.lateMin.compareTo(days[a.id]!.lateMin));
+        content = list.isEmpty
+            ? [Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(l10n.noDelays)))]
+            : [for (final u in list) delayRow(u)];
+    }
+
+    Widget tile(String label, String value, IconData icon, Color color, {_Show? show}) {
+      final selected = show != null && _show == show;
+      return SizedBox(
+        width: 150,
+        child: Card(
+          margin: EdgeInsets.zero,
+          color: selected ? color.withValues(alpha: 0.18) : color.withValues(alpha: 0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: selected ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            // Tapping a status tile shows only those people; again = everyone.
+            onTap: show == null ? null : () => setState(() => _show = selected ? _Show.all : show),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 20, color: color),
+                  const SizedBox(height: 6),
+                  Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(label, style: theme.textTheme.bodySmall, maxLines: 2),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final roles = {for (final u in everyone) u.role}.toList()..sort((a, b) => a.index.compareTo(b.index));
+    final usedCompanies = [for (final c in companies) if (everyone.any((u) => u.companyId == c.id)) c];
 
     return Scaffold(
       appBar: AppBar(
@@ -119,42 +346,74 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+      body: everyone.isEmpty
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l10n.noOneAssignedToSites, textAlign: TextAlign.center)))
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 24),
               children: [
-                Chip(avatar: Icon(Icons.how_to_reg, size: 16, color: Colors.green.shade700), label: Text(l10n.attendanceIn(inNow))),
-                Chip(avatar: const Icon(Icons.logout, size: 16), label: Text(l10n.attendanceOut(out))),
-                Chip(avatar: const Icon(Icons.person_off_outlined, size: 16), label: Text(l10n.attendanceAbsent(absent))),
-              ],
-            ),
-          ),
-          Expanded(
-            child: people.isEmpty
-                ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l10n.noOneAssignedToSites, textAlign: TextAlign.center)))
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
+                DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),
+                // Summary: who is on site and who isn't, hours so far, delays.
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
                     children: [
-                      for (final s in sites)
-                        if (people.any((u) => u.workSiteIds.contains(s.id))) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                            child: Text(s.name, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
-                          ),
-                          // Listed under their first site only.
-                          for (final u in people)
-                            if (u.workSiteIds.firstWhere((id) => sites.any((x) => x.id == id), orElse: () => '') == s.id) row(u),
-                        ],
+                      for (final w in [
+                        tile(l10n.onSite, '$onSite', Icons.how_to_reg, Colors.green.shade700, show: _Show.onSite),
+                        tile(l10n.notOnSite, '$notOnSite', Icons.person_off_outlined, Colors.orange.shade800, show: _Show.notOnSite),
+                        tile(l10n.checkedOutTitle, '$checkedOut', Icons.logout, theme.colorScheme.primary, show: _Show.checkedOut),
+                        tile(l10n.workedSoFar, formatMinutes(workedTotal), Icons.timer_outlined, Colors.teal),
+                        tile(l10n.delaysCount(late.length), formatMinutes(lateTotal), Icons.schedule, theme.colorScheme.error),
+                      ])
+                        Padding(padding: const EdgeInsetsDirectional.only(end: 8), child: w),
                     ],
                   ),
-          ),
-        ],
-      ),
+                ),
+                // Search and filters.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SearchBar(
+                          hintText: l10n.searchByName,
+                          leading: const Icon(Icons.search),
+                          elevation: const WidgetStatePropertyAll(0),
+                          onChanged: (v) => setState(() => _query = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Badge(
+                        isLabelVisible: _filterCount > 0,
+                        label: Text('$_filterCount'),
+                        child: IconButton.filledTonal(
+                          tooltip: l10n.filters,
+                          icon: const Icon(Icons.filter_list),
+                          onPressed: () => _openFilters(sites, roles, usedCompanies),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SegmentedButton<_View>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(value: _View.status, icon: const Icon(Icons.groups_outlined), label: Text(l10n.viewStatus)),
+                      ButtonSegment(value: _View.hours, icon: const Icon(Icons.timer_outlined), label: Text(l10n.viewWorkedHours)),
+                      ButtonSegment(value: _View.delays, icon: const Icon(Icons.schedule), label: Text(l10n.viewDelays)),
+                    ],
+                    selected: {_view},
+                    onSelectionChanged: (v) => setState(() => _view = v.first),
+                  ),
+                ),
+                if (shown.isEmpty)
+                  Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(l10n.noOneMatches)))
+                else
+                  ...content,
+              ],
+            ),
     );
   }
 }

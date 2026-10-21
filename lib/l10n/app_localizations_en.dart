@@ -3596,4 +3596,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get monthView => 'Month';
+
+  @override
+  String get clearAllFilters => 'Clear all filters';
+
+  @override
+  String workedOf(String worked, String scheduled) {
+    return '$worked of $scheduled';
+  }
+
+  @override
+  String get stillIn => 'still in';
+
+  @override
+  String startAt(String time) {
+    return 'Start $time';
+  }
+
+  @override
+  String get notInYet => 'Not in yet';
+
+  @override
+  String checkedInAtTime(String time) {
+    return 'Checked in $time';
+  }
+
+  @override
+  String get onSite => 'On site';
+
+  @override
+  String get notOnSite => 'Not on site';
+
+  @override
+  String get leftTheSite => 'Left the site';
+
+  @override
+  String get checkedOutTitle => 'Checked out';
+
+  @override
+  String get workedSoFar => 'Worked so far';
+
+  @override
+  String delaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count late',
+      one: '1 late',
+      zero: 'Delays',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDelays => 'No one was late';
+
+  @override
+  String get searchByName => 'Search name';
+
+  @override
+  String get viewStatus => 'Status';
+
+  @override
+  String get viewWorkedHours => 'Hours';
+
+  @override
+  String get viewDelays => 'Delays';
+
+  @override
+  String get noOneMatches => 'No one matches';
 }

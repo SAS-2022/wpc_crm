@@ -6055,6 +6055,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Month'**
   String get monthView;
+
+  /// No description provided for @clearAllFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all filters'**
+  String get clearAllFilters;
+
+  /// No description provided for @workedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{worked} of {scheduled}'**
+  String workedOf(String worked, String scheduled);
+
+  /// No description provided for @stillIn.
+  ///
+  /// In en, this message translates to:
+  /// **'still in'**
+  String get stillIn;
+
+  /// No description provided for @startAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Start {time}'**
+  String startAt(String time);
+
+  /// No description provided for @notInYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in yet'**
+  String get notInYet;
+
+  /// No description provided for @checkedInAtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked in {time}'**
+  String checkedInAtTime(String time);
+
+  /// No description provided for @onSite.
+  ///
+  /// In en, this message translates to:
+  /// **'On site'**
+  String get onSite;
+
+  /// No description provided for @notOnSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on site'**
+  String get notOnSite;
+
+  /// No description provided for @leftTheSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the site'**
+  String get leftTheSite;
+
+  /// No description provided for @checkedOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked out'**
+  String get checkedOutTitle;
+
+  /// No description provided for @workedSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked so far'**
+  String get workedSoFar;
+
+  /// No description provided for @delaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Delays} =1{1 late} other{{count} late}}'**
+  String delaysCount(int count);
+
+  /// No description provided for @noDelays.
+  ///
+  /// In en, this message translates to:
+  /// **'No one was late'**
+  String get noDelays;
+
+  /// No description provided for @searchByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name'**
+  String get searchByName;
+
+  /// No description provided for @viewStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get viewStatus;
+
+  /// No description provided for @viewWorkedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours'**
+  String get viewWorkedHours;
+
+  /// No description provided for @viewDelays.
+  ///
+  /// In en, this message translates to:
+  /// **'Delays'**
+  String get viewDelays;
+
+  /// No description provided for @noOneMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No one matches'**
+  String get noOneMatches;
 }
 
 class _AppLocalizationsDelegate
