@@ -47,6 +47,8 @@ import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
+import '../features/settings/app_settings_screen.dart';
+import '../features/settings/tracking_schedules_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -87,7 +89,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if ((loc.startsWith('/hr') || loc.startsWith('/attendance')) && !me.role.canSeeHr) return '/';
       // "My leave" is greyed out until finished; requests to approve still open.
       if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc == '/positions') && !me.role.isAdmin) return '/';
+      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) &&
           !me.role.isSupervisor &&
           !(me.role.managesDrivers && loc == '/history')) {
@@ -237,9 +239,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const ClientTagsScreen(kind: TagList.locationTypes),
             ),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
+            GoRoute(
+              path: '/settings',
+              builder: (_, _) => const AppSettingsScreen(),
+              routes: [
+                GoRoute(path: 'tracking-schedules', builder: (_, _) => const TrackingSchedulesScreen()),
+              ],
+            ),
             GoRoute(path: '/work-sites', builder: (_, _) => const WorkSitesScreen()),
             GoRoute(path: '/companies', builder: (_, _) => const CompaniesScreen()),
-            GoRoute(path: '/positions', builder: (_, _) => const ClientTagsScreen(kind: TagList.positions)),
             GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(

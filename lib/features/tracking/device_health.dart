@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Phone settings that pause background tracking beyond the usual Android
@@ -72,6 +73,8 @@ class PhoneHealth {
     required this.sleeping,
     required this.brandSetupDone,
     required this.gap,
+    this.autostart,
+    this.batteryOptimized = false,
   });
 
   final PhoneBrand brand;
@@ -88,7 +91,20 @@ class PhoneHealth {
   /// Today's latest long stretch without sending, if any.
   final SendGap? gap;
 
-  bool get needsBrandSetup => brand != PhoneBrand.other && !brandSetupDone;
+  /// Xiaomi Autostart as read from the phone; null = can't be read (other
+  /// makers, some MIUI versions): the person's confirmation counts then.
+  final bool? autostart;
+
+  /// Android battery optimization is on for the app (the one-tap "Allow
+  /// running in the background" pop-up turns it off).
+  final bool batteryOptimized;
+
+  /// The maker checklist still to do. When Autostart can be read (Xiaomi)
+  /// the phone decides: its battery saver "No restrictions" is Android's
+  /// battery whitelist there ([batteryOptimized], checked on a Redmi with
+  /// HyperOS 2, 2026-10-21), so nothing is left to confirm. Elsewhere the
+  /// person confirms with "I've done this".
+  bool get needsBrandSetup => brand != PhoneBrand.other && (autostart != null ? !autostart! : !brandSetupDone);
 }
 
 /// Android only (null elsewhere); refreshed when the Home card asks.
@@ -117,6 +133,8 @@ final phoneHealthProvider = FutureProvider<PhoneHealth?>((ref) async {
     sleeping: (info['standbyBucket'] as int? ?? 0) >= restrictedBucket,
     brandSetupDone: prefs.getBool(_brandDoneKey) ?? false,
     gap: gap,
+    autostart: info['autostart'] as bool?,
+    batteryOptimized: !await Permission.ignoreBatteryOptimizations.isGranted.catchError((_) => true),
   );
 });
 
@@ -124,6 +142,13 @@ final phoneHealthProvider = FutureProvider<PhoneHealth?>((ref) async {
 Future<void> openBackgroundSettings() async {
   try {
     await _channel.invokeMethod<bool>('openBackgroundSettings');
+  } catch (_) {}
+}
+
+/// The app's battery page (Xiaomi: Battery saver → "No restrictions").
+Future<void> openBatterySettings() async {
+  try {
+    await _channel.invokeMethod<bool>('openBatterySettings');
   } catch (_) {}
 }
 

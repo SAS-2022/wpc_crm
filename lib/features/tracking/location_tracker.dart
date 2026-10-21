@@ -10,9 +10,12 @@ import 'tracking_device.dart';
 import 'work_hours.dart';
 import 'motion.dart';
 import 'device_health.dart';
+import 'tracking_schedule.dart';
+import '../settings/app_settings.dart';
 
-/// How often a position is sent (user decision 2026-10-18: every 30 seconds,
-/// to test on the new build; was 2 minutes).
+/// How often a position is sent by default (user decision 2026-10-18: every
+/// 30 seconds; was 2 minutes). Editable in App settings (RTDB
+/// `settings/app/trackingIntervalSec`, [AppSetting.trackingIntervalSec]).
 const trackingInterval = Duration(seconds: 30);
 
 /// How often GPS / permission / battery / notification state is re-checked.
@@ -20,8 +23,9 @@ const trackingInterval = Duration(seconds: 30);
 /// slower than the position updates.
 const heartbeatInterval = Duration(minutes: 2);
 
-/// Sends the user's position to RTDB every [trackingInterval] during work
-/// hours ([WorkHours]) and keeps their presence honest: the server marks them
+/// Sends the user's position to RTDB every [trackingInterval] (or the App
+/// settings value) during work hours ([WorkHours], or the person's own
+/// [TrackingSchedule]) and keeps their presence honest: the server marks them
 /// offline as soon as the connection drops, and a heartbeat reports when GPS
 /// is off even without new fixes. Outside work hours nothing is sent and the
 /// live position is removed. GPS, permission and (Android) battery
@@ -56,11 +60,15 @@ class LocationTracker {
   final _motion = MotionTracker();
   bool _connected = false;
   WorkHours _hours = WorkHours.defaults;
+  Duration _interval = trackingInterval;
 
-  /// Drivers keep the company car: tracked around the clock (user decision
-  /// 2026-10-20). Read from RTDB `roles/{uid}`, which the background
-  /// service can read too.
-  bool _allDay = false;
+  /// Set for this person in App settings → Tracking schedules.
+  TrackingSchedule _schedule = const TrackingSchedule.standard();
+
+  /// Drivers keep the company car: tracked around the clock unless they have
+  /// their own schedule (user decision 2026-10-20). Read from RTDB
+  /// `roles/{uid}`, which the background service can read too.
+  bool _driver = false;
 
   /// null until first checked.
   bool? _onDuty;
@@ -107,13 +115,27 @@ class LocationTracker {
       }
     }));
     _subscriptions.add(FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
-      _allDay = event.snapshot.value == 'driver';
+      _driver = event.snapshot.value == 'driver';
       _applyDuty();
     }, onError: (_) {}));
     _subscriptions.add(workHoursRef.onValue.listen((event) {
       _hours = WorkHours.fromMap(event.snapshot.value);
       _applyDuty();
     }));
+    _subscriptions.add(trackingScheduleRef(uid).onValue.listen((event) {
+      _schedule = TrackingSchedule.fromMap(event.snapshot.value);
+      _applyDuty();
+    }, onError: (_) {}));
+    _subscriptions.add(appSettingsRef.child(AppSetting.trackingIntervalSec.name).onValue.listen((event) {
+      final interval = AppSettings.fromMap({AppSetting.trackingIntervalSec.name: event.snapshot.value}).trackingInterval;
+      if (interval == _interval) return;
+      _interval = interval;
+      // Restarts the position stream with the new interval.
+      if (_onDuty == true) {
+        _onDuty = null;
+        _applyDuty();
+      }
+    }, onError: (_) {}));
     // GPS switched on / off: report at once rather than at the next heartbeat.
     if (!kIsWeb) {
       _subscriptions.add(Geolocator.getServiceStatusStream().listen((_) => _beat(), onError: (_) {}));
@@ -125,7 +147,7 @@ class LocationTracker {
 
   /// Switches between sharing (work hours) and not sharing.
   Future<void> _applyDuty() async {
-    final on = _allDay || _hours.isOn(DateTime.now());
+    final on = _schedule.isOn(DateTime.now(), _hours, driver: _driver);
     if (on == _onDuty) return;
     _onDuty = on;
     await _positions?.cancel();
@@ -215,7 +237,7 @@ class LocationTracker {
       at: p.timestamp,
     );
     // The OS may deliver fixes more often than asked for; keep one per interval.
-    if (_lastSent != null && now.difference(_lastSent!) < trackingInterval * 0.75) return;
+    if (_lastSent != null && now.difference(_lastSent!) < _interval * 0.75) return;
     _lastSent = now;
     final point = {
       'lat': p.latitude,
@@ -247,7 +269,7 @@ class LocationTracker {
         TargetPlatform.android => AndroidSettings(
             accuracy: LocationAccuracy.high,
             distanceFilter: 0,
-            intervalDuration: trackingInterval,
+            intervalDuration: _interval,
           ),
         TargetPlatform.iOS => AppleSettings(
             accuracy: LocationAccuracy.high,

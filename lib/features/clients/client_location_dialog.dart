@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../core/map_controls.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
 import 'client_locations_section.dart';
@@ -21,13 +23,16 @@ Future<void> showClientLocation(BuildContext context, Client client) {
         height: 320,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: GoogleMap(
+          child: Consumer(
+            builder: (context, ref, _) => GoogleMap(
             initialCameraPosition: CameraPosition(target: position, zoom: several ? 12 : 16),
+            mapType: ref.watch(mapTypeProvider),
             markers: {
               for (final l in client.locations) Marker(markerId: MarkerId(l.id), position: LatLng(l.lat, l.lng)),
             },
             mapToolbarEnabled: false,
             myLocationButtonEnabled: false,
+          ),
           ),
         ),
       ),

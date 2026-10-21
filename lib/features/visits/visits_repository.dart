@@ -38,6 +38,21 @@ final visitsProvider = StreamProvider<List<Visit>>((ref) {
   return query.snapshots().map(_newestFirst);
 });
 
+/// KAM / managers: everyone's visits from day [range.$1] up to (not
+/// including) day [range.$2] ('yyyy-MM-dd'), so going back in the Visits page
+/// isn't cut off by the latest-500 list (2026-10-21).
+final visitsBetweenProvider = StreamProvider.family<List<Visit>, (String, String)>((ref, range) {
+  final from = DateTime.parse(range.$1);
+  final to = DateTime.parse(range.$2);
+  return FirebaseFirestore.instance
+      .collection('visits')
+      .where('checkedInAt', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+      .where('checkedInAt', isLessThan: Timestamp.fromDate(to))
+      .orderBy('checkedInAt', descending: true)
+      .snapshots()
+      .map(_newestFirst);
+});
+
 final visitProvider = StreamProvider.family<Visit?, String>((ref, id) => FirebaseFirestore.instance
     .collection('visits')
     .doc(id)

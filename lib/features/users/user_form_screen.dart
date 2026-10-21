@@ -11,7 +11,8 @@ import '../attendance/work_sites.dart';
 import '../tracking/work_hours.dart';
 import '../tracking/work_hours_editor.dart';
 import 'companies.dart';
-import '../clients/client_tags.dart';
+import '../settings/tracking_schedules_screen.dart';
+import '../tracking/tracking_schedule.dart';
 
 /// Create (userId == null) or edit a user. Only reachable by sales manager / GM.
 class UserFormScreen extends ConsumerStatefulWidget {
@@ -53,6 +54,17 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   bool get _isNew => widget.userId == null;
 
+  /// Saved role of the user being edited (null for a new one).
+  UserRole? _savedRole;
+
+  /// GM: anyone; sales manager: anyone but GMs and sales managers. Never
+  /// oneself.
+  bool _canDelete(AppUser? me) =>
+      !_isNew &&
+      me != null &&
+      widget.userId != me.id &&
+      (me.role == UserRole.gm || (me.role == UserRole.salesManager && _savedRole?.isAdmin != true));
+
   @override
   void dispose() {
     for (final c in [_name, _email, _phone, _password, _odooName, _target]) {
@@ -78,8 +90,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _attendance = u.attendanceRequired;
     _schedule = u.workSchedule;
     _pending = u.isPendingApproval ? u : null;
-    // Registered accounts have no role yet: pick one before approving.
-    if (_pending != null) _role = UserRole.worker;
+    _savedRole = u.role;
+    // Registered accounts have no role yet: the one they asked for, changeable before approving.
+    if (_pending != null) _role = u.requestedRole ?? UserRole.worker;
     _loaded = true;
   }
 
@@ -199,8 +212,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
     final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
-    final positions = ref.watch(tagListProvider(TagList.positions)).value ?? defaultPositions;
-    final lang = Localizations.localeOf(context).languageCode;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     String? required(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
 
@@ -208,10 +219,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       appBar: AppBar(
         title: Text(_isNew ? l10n.addUser : l10n.editUser),
         actions: [
-          // Only the GM deletes users, and never themselves.
-          if (!_isNew &&
-              ref.watch(currentUserProvider).value?.role == UserRole.gm &&
-              widget.userId != ref.watch(currentUserProvider).value?.id)
+          if (_canDelete(ref.watch(currentUserProvider).value))
             IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: _busy ? null : _delete),
         ],
       ),
@@ -255,18 +263,6 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               decoration: InputDecoration(labelText: l10n.phone),
             ),
             DropdownButtonFormField<String>(
-              initialValue: _position,
-              decoration: InputDecoration(labelText: l10n.position),
-              items: [
-                DropdownMenuItem(value: '', child: Text(l10n.none)),
-                for (final p in positions) DropdownMenuItem(value: p.id, child: Text(p.label(lang))),
-                // Typed before positions became a list: kept until changed.
-                if (_position.isNotEmpty && !positions.any((p) => p.id == _position))
-                  DropdownMenuItem(value: _position, child: Text(_position)),
-              ],
-              onChanged: (v) => setState(() => _position = v ?? ''),
-            ),
-            DropdownButtonFormField<String>(
               initialValue: companies.any((c) => c.id == _companyId) ? _companyId : '',
               decoration: InputDecoration(labelText: l10n.company),
               items: [
@@ -304,6 +300,28 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: l10n.monthlyVisitTarget, helperText: l10n.monthlyVisitTargetHelp),
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
+              ),
+            // When their location is shared; saved at once (App settings → Tracking schedules).
+            if (_role.isLocationTracked && !_isNew && _pending == null)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.edit_calendar_outlined),
+                title: Text(l10n.trackingHours),
+                subtitle: Text(trackingScheduleSummary(
+                  context,
+                  ref.watch(trackingSchedulesProvider).value?[widget.userId] ?? const TrackingSchedule.standard(),
+                  company,
+                  driver: _role.isDriver,
+                )),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showTrackingScheduleDialog(
+                  context,
+                  uid: widget.userId!,
+                  name: _name.text,
+                  driver: _role.isDriver,
+                  current: ref.read(trackingSchedulesProvider).value?[widget.userId],
+                  company: company,
+                ),
               ),
             // Attendance: required or not, where they check in, and whether time after the work day counts.
             const SizedBox(height: 16),
@@ -384,6 +402,15 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 onPressed: _busy ? null : _save,
                 child: BusyLabel(busy: _busy, child: Text(l10n.save)),
               ),
+            if (_canDelete(ref.watch(currentUserProvider).value)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                onPressed: _busy ? null : _delete,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.deleteUser),
+              ),
+            ],
           ],
         ),
       ),

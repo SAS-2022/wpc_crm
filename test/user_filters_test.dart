@@ -26,10 +26,10 @@ void main() {
   final all = [sami, ali, newbie, old];
   List<String> run(UserFilter f, {Set<String> outdated = const {}}) => [
         for (final x in all)
-          if (f.matches(x, positionLabel: (p) => p == 'driver' ? 'Driver' : p, outdated: (x) => outdated.contains(x.id))) x.id,
+          if (f.matches(x, roleLabel: (r) => r == UserRole.driver ? 'Driver' : r.value, outdated: (x) => outdated.contains(x.id))) x.id,
       ];
 
-  test('search: name, email, position label, phone digits', () {
+  test('search: name, email, role label, phone digits', () {
     expect(run(const UserFilter(search: 'sami')), ['Sami Mansour']);
     expect(run(const UserFilter(search: 'wpc.com')), ['Sami Mansour']);
     expect(run(const UserFilter(search: 'driv')), ['Ali']);

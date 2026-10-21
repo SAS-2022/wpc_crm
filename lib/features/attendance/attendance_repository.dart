@@ -17,7 +17,9 @@ DocumentReference<Map<String, dynamic>> attendanceDoc(String uid, String day) =>
     FirebaseFirestore.instance.collection('attendance').doc('${uid}_$day');
 
 /// Adds one event to today's attendance; works offline (sent later).
-Future<void> recordAttendance(String uid, AttendanceEventType type, {String? siteId, DateTime? at}) {
+/// [extra]: details kept on the event for checking later (e.g. the GPS
+/// distance that confirmed a geofence event); the server ignores them.
+Future<void> recordAttendance(String uid, AttendanceEventType type, {String? siteId, DateTime? at, Map<String, Object>? extra}) {
   final when = at ?? DateTime.now();
   final day = attendanceDay(when);
   return attendanceDoc(uid, day).set({
@@ -25,7 +27,7 @@ Future<void> recordAttendance(String uid, AttendanceEventType type, {String? sit
     'date': day,
     'month': day.substring(0, 7),
     'events': FieldValue.arrayUnion([
-      {'type': eventTypeKey(type), 'at': Timestamp.fromDate(when), 'siteId': ?siteId},
+      {'type': eventTypeKey(type), 'at': Timestamp.fromDate(when), 'siteId': ?siteId, ...?extra},
     ]),
   }, SetOptions(merge: true));
 }

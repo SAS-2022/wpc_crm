@@ -5,7 +5,7 @@ const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
-const { deriveDay, saudiTime } = require('./attendance');
+const { deriveDay, saudiTime, LATE_GRACE_MIN } = require('./attendance');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
@@ -313,7 +313,11 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
 
   // Silent outside work hours (user decision): nothing is logged or sent
   // except the start / end of duty itself.
-  const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+  const [companySnap, scheduleSnap] = await Promise.all([
+    admin.database().ref('settings/workHours').get(),
+    admin.database().ref(`settings/trackingSchedules/${event.params.uid}`).get(),
+  ]);
+  const hours = trackingHours(workHours(companySnap.val()), scheduleSnap.val());
   const working = workStartToday(hours, Date.now()) !== null;
   const events = working ? changes : changes.filter((e) => e.type === 'onDuty' || e.type === 'offDuty');
   if (events.length > 0) {
@@ -378,6 +382,27 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
 /** A sales exec offline this long during work hours is reported (user decision: 30 min). */
 const OFFLINE_ALERT_MS = 30 * 60 * 1000;
 
+/**
+ * Limits edited in App settings (RTDB `settings/app`, app_settings.dart):
+ * [key] when it's a number within [min, max], else [def].
+ */
+async function appSetting(key, def, min, max) {
+  const v = (await admin.database().ref(`settings/app/${key}`).get()).val();
+  return typeof v === 'number' && v >= min && v <= max ? Math.floor(v) : def;
+}
+
+/**
+ * Hours a person's tracking log and alerts follow: their own schedule (App
+ * settings → Tracking schedules, {mode: 'own', days, start, end}), else the
+ * company work hours — also for 'allDay', as for drivers. Same as
+ * tracking_schedule.dart.
+ */
+function trackingHours(company, schedule) {
+  const own = schedule?.mode === 'own' && Array.isArray(schedule.days) && schedule.days.length > 0
+    && typeof schedule.start === 'number' && typeof schedule.end === 'number' && schedule.end > schedule.start;
+  return own ? workHours(schedule) : company;
+}
+
 // Saturday to Thursday 08:00–17:00 Saudi time; same as WorkHours.defaults.
 const DEFAULT_WORK_HOURS = { days: [6, 7, 1, 2, 3, 4], start: 8 * 60, end: 17 * 60 };
 
@@ -410,9 +435,16 @@ exports.offlineAlerts = onSchedule(
   async () => {
     const rtdb = admin.database();
     const now = Date.now();
-    const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
-    const start = workStartToday(hours, now);
-    if (start === null) return;
+    const [hoursSnap, schedulesSnap] = await Promise.all([
+      rtdb.ref('settings/workHours').get(),
+      rtdb.ref('settings/trackingSchedules').get(),
+    ]);
+    const company = workHours(hoursSnap.val());
+    const schedules = schedulesSnap.val() || {};
+    const startOf = (uid) => workStartToday(trackingHours(company, schedules[uid]), now);
+    // Nobody is at work now (company hours or anyone's own schedule).
+    if (startOf('') === null && !Object.keys(schedules).some((uid) => startOf(uid) !== null)) return;
+    const alertMs = (await appSetting('offlineAlertMin', OFFLINE_ALERT_MS / 60000, 10, 240)) * 60 * 1000;
 
     const [presence, sentSnap] = await Promise.all([rtdb.ref('presence').get(), rtdb.ref('tracking_alerts').get()]);
     const sent = sentSnap.val() || {};
@@ -420,8 +452,10 @@ exports.offlineAlerts = onSchedule(
     presence.forEach((p) => {
       const v = p.val() || {};
       if (v.online !== false || typeof v.lastSeen !== 'number') return;
+      const start = startOf(p.key);
+      if (start === null) return;
       // Only work time counts: offline overnight is reported 30 min into the day.
-      if (now - Math.max(v.lastSeen, start) < OFFLINE_ALERT_MS) return;
+      if (now - Math.max(v.lastSeen, start) < alertMs) return;
       if (sent[p.key]?.offlineSince === v.lastSeen) return;
       due.push({ uid: p.key, since: v.lastSeen });
     });
@@ -745,7 +779,7 @@ async function announceCheckIn(data, d, user, now) {
 }
 
 /** Works the day out from its events (see attendance.js) and saves the result when it changed. */
-async function updateAttendance(ref, data, hours, now) {
+async function updateAttendance(ref, data, hours, now, graceMin) {
   if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
   const user = (await admin.firestore().doc(`users/${data.uid}`).get()).data() || {};
   const mine = scheduleOf(user, hours);
@@ -757,6 +791,7 @@ async function updateAttendance(ref, data, hours, now) {
     now,
     leavesSite: LEAVES_SITE_ROLES.includes(user.role),
     overtimeAllowed: user.overtimeAllowed === true,
+    graceMin,
   });
   const update = {};
   for (const k of DERIVED) {
@@ -777,7 +812,7 @@ exports.attendanceUpdated = onDocumentWritten('attendance/{id}', async (event) =
   const after = event.data?.after;
   if (!after?.exists) return;
   const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
-  await updateAttendance(after.ref, after.data(), hours, Date.now());
+  await updateAttendance(after.ref, after.data(), hours, Date.now(), await appSetting('lateGraceMin', LATE_GRACE_MIN, 0, 60));
 });
 
 /** Every 10 minutes: closes open days whose time has come (end of the work day, late evening). */
@@ -787,8 +822,9 @@ exports.closeAttendance = onSchedule(
     const open = await admin.firestore().collection('attendance').where('closed', '==', false).get();
     if (open.empty) return;
     const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+    const graceMin = await appSetting('lateGraceMin', LATE_GRACE_MIN, 0, 60);
     const now = Date.now();
-    for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now);
+    for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now, graceMin);
   },
 );
 
@@ -956,4 +992,98 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
   const { hours, sites } = await timelineContext();
   const doc = await saveTimeline(uid, day, hours, sites);
   return { built: doc !== null };
+});
+
+/**
+ * GM / sales manager deletes a user for good (user request 2026-10-21):
+ * the login account (so the email can be used again), `users/{uid}` with its
+ * push tokens, the RTDB role, live location, presence, tracking phone,
+ * tracking schedule, route history and tracking log. Their clients become
+ * unassigned and their team loses its KAM; visits, plans, attendance and
+ * leave stay as history. A sales manager can't delete GMs or sales
+ * managers; nobody deletes themselves.
+ */
+exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req) => {
+  const callerId = req.auth?.uid;
+  if (!callerId) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const db = admin.firestore();
+  const caller = (await db.doc(`users/${callerId}`).get()).data();
+  if (caller?.active !== true || !['gm', 'sales_manager'].includes(caller.role)) {
+    throw new HttpsError('permission-denied', 'Only the GM or a sales manager can delete users.');
+  }
+  const uid = req.data?.uid;
+  if (typeof uid !== 'string' || uid === '' || uid.includes('/')) throw new HttpsError('invalid-argument', 'uid missing.');
+  if (uid === callerId) throw new HttpsError('invalid-argument', 'You cannot delete your own account.');
+  const userRef = db.doc(`users/${uid}`);
+  const target = (await userRef.get()).data();
+  if (caller.role !== 'gm' && ['gm', 'sales_manager'].includes(target?.role)) {
+    throw new HttpsError('permission-denied', 'Only the GM can delete a GM or sales manager.');
+  }
+
+  const [clients, team, devices] = await Promise.all([
+    db.collection('clients').where('assignedTo', '==', uid).get(),
+    db.collection('users').where('kamId', '==', uid).get(),
+    userRef.collection('devices').get(),
+  ]);
+  const writes = [
+    ...clients.docs.map((d) => (b) => b.update(d.ref, { assignedTo: null, updatedAt: admin.firestore.FieldValue.serverTimestamp() })),
+    ...team.docs.map((d) => (b) => b.update(d.ref, { kamId: null })),
+    ...devices.docs.map((d) => (b) => b.delete(d.ref)),
+  ];
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    writes.slice(i, i + 400).forEach((w) => w(batch));
+    await batch.commit();
+  }
+  await userRef.delete();
+  await admin.database().ref().update(Object.fromEntries([
+    'roles', 'live_locations', 'presence', 'tracking_device', 'settings/trackingSchedules', 'location_history',
+    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders',
+  ].map((path) => [`${path}/${uid}`, null])));
+  try {
+    await admin.auth().deleteUser(uid);
+  } catch (e) {
+    if (e.code !== 'auth/user-not-found') throw e;
+  }
+  return { clients: clients.size };
+});
+
+/**
+ * A visit or call ticks the visitor's open plan items for that client on
+ * that day (Saudi date), whichever screen it was saved from (user rule
+ * 2026-10-21). The app ticks them itself right after saving; this is the
+ * safety net for when that step never ran (3 items stayed open
+ * 2026-10-18…20: lost signal or the app closed right after saving) and for
+ * older app builds.
+ */
+exports.tickPlanOnVisit = onDocumentCreated({ document: 'visits/{id}', maxInstances: 5 }, async (event) => {
+  const v = event.data?.data();
+  if (!v?.clientId || !v.salesExecId) return;
+  const at = v.checkedInAt?.toMillis ? v.checkedInAt.toMillis() : Date.now();
+  const open = await admin.firestore().collection('tasks')
+    .where('ownerId', '==', v.salesExecId)
+    .where('date', '==', saudiDay(at))
+    .where('clientId', '==', v.clientId)
+    .where('done', '==', false)
+    .get();
+  await Promise.all(open.docs.map((d) => d.ref.update({
+    done: true, doneAt: admin.firestore.Timestamp.fromMillis(at), visitId: event.params.id,
+  })));
+});
+
+/**
+ * The other way round: a client put on someone's plan for a day they
+ * already visited or called that client is ticked at once.
+ */
+exports.tickPlanOnPlanned = onDocumentCreated({ document: 'tasks/{id}', maxInstances: 5 }, async (event) => {
+  const t = event.data?.data();
+  if (!t?.clientId || !t.ownerId || t.done === true || !/^\d{4}-\d{2}-\d{2}$/.test(t.date || '')) return;
+  const visits = await admin.firestore().collection('visits')
+    .where('clientId', '==', t.clientId)
+    .where('salesExecId', '==', t.ownerId)
+    .where('month', '==', t.date.slice(0, 7))
+    .get();
+  const done = visits.docs.find((d) => d.get('checkedInAt')?.toMillis && saudiDay(d.get('checkedInAt').toMillis()) === t.date);
+  if (!done) return;
+  await event.data.ref.update({ done: true, doneAt: done.get('checkedInAt'), visitId: done.id });
 });

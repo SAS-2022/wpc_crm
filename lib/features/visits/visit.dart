@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../clients/given_items.dart';
 
-/// Check-ins farther than this from the client are flagged.
-const visitRadiusMeters = 300.0;
+/// Check-ins farther than this from the client are flagged. 300 m unless
+/// changed in App settings (`AppSettings.apply`).
+var visitRadiusMeters = 300.0;
 
 /// `visits.type`: a visit at the client, or a phone call that counts like one
 /// (turns the client green, ticks the plan item) but is shown apart.

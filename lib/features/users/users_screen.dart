@@ -112,7 +112,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
             for (final u in list)
               if (_filter.matches(
                 u,
-                positionLabel: (p) => positionLabel(positions, p, lang),
+                roleLabel: (r) => r.label(l10n),
                 outdated: (u) => outdatedPlatforms(u, latest).isNotEmpty,
               ))
                 u,
@@ -121,7 +121,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                 for (final u in list)
                   if (UserFilter(status: s).matches(
                     u,
-                    positionLabel: (p) => '',
+                    roleLabel: (r) => '',
                     outdated: (u) => outdatedPlatforms(u, latest).isNotEmpty,
                   ))
                     u,
@@ -223,7 +223,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(u.isPendingApproval
-                            ? [positionLabel(positions, u.position, lang), u.email].where((s) => s.isNotEmpty).join(' · ')
+                            ? [
+                                u.requestedRole?.label(l10n) ?? positionLabel(positions, u.position, lang),
+                                u.email,
+                              ].where((s) => s.isNotEmpty).join(' · ')
                             : '${u.role.label(l10n)} · ${u.email}'),
                         Text.rich(TextSpan(children: [
                           if (u.appVersions.isEmpty) TextSpan(text: l10n.noAppVersion),

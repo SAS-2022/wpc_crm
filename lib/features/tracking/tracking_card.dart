@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/location_disclosure.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -122,6 +123,11 @@ class _TrackingCardState extends ConsumerState<TrackingCard> {
                 title: Text(_label(l10n, issue)),
                 trailing: FilledButton.tonal(
                   onPressed: () async {
+                    // Google Play: say what location is for before Android asks.
+                    if ((issue == TrackingIssue.locationDenied || issue == TrackingIssue.notAlways) &&
+                        !await showLocationDisclosure(context, LocationUse.tracking)) {
+                      return;
+                    }
                     await fixTrackingIssue(issue);
                     ref.invalidate(trackingStatusProvider);
                   },
@@ -143,53 +149,89 @@ class _TrackingCardState extends ConsumerState<TrackingCard> {
                   child: Text(l10n.done),
                 ),
               ),
-            if (health?.backgroundRestricted ?? false)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.issueBackgroundRestricted),
-                trailing: FilledButton.tonal(onPressed: openAppSettings, child: Text(l10n.fix)),
-              ),
-            if (health?.sleeping ?? false)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.issueAppSleeping),
-                trailing: FilledButton.tonal(onPressed: openBackgroundSettings, child: Text(l10n.fix)),
-              ),
-            // The maker's own battery manager: settings the app can't read.
-            if (health != null && health.needsBrandSetup) ...[
-              const Divider(),
-              Text(l10n.phoneSetupTitle, style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 4),
-              Text(switch (health.brand) {
-                PhoneBrand.xiaomi => l10n.phoneSetupXiaomi,
-                PhoneBrand.samsung => l10n.phoneSetupSamsung,
-                PhoneBrand.huawei => l10n.phoneSetupHuawei,
-                PhoneBrand.oppo => l10n.phoneSetupOppo,
-                PhoneBrand.vivo => l10n.phoneSetupVivo,
-                PhoneBrand.oneplus => l10n.phoneSetupOneplus,
-                PhoneBrand.other => '',
-              }),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                children: [
-                  OutlinedButton(onPressed: openBackgroundSettings, child: Text(l10n.openSettings)),
-                  FilledButton.tonal(
-                    onPressed: () async {
-                      await markBrandSetupDone();
-                      await refresh();
-                    },
-                    child: Text(l10n.phoneSetupDone),
-                  ),
-                ],
-              ),
-            ],
+            if (health != null) PhoneHealthTips(health: health),
           ],
         ),
       ),
     );
   }
 }
+
+/// What the phone itself may be doing to stop the app in the background:
+/// battery "Restricted", Android standby, and the maker's own settings
+/// (checklist; Xiaomi Autostart is read when the phone allows). Shown on the
+/// tracking card and, for staff who aren't tracked, on the attendance card
+/// (automatic check-in needs the app to wake up).
+class PhoneHealthTips extends ConsumerWidget {
+  const PhoneHealthTips({super.key, required this.health});
+
+  final PhoneHealth health;
+
+  /// Anything to show.
+  static bool needed(PhoneHealth? h) => h != null && (h.backgroundRestricted || h.sleeping || h.needsBrandSetup);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (health.backgroundRestricted)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.issueBackgroundRestricted),
+            trailing: FilledButton.tonal(onPressed: openAppSettings, child: Text(l10n.fix)),
+          ),
+        if (health.sleeping)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.issueAppSleeping),
+            trailing: FilledButton.tonal(onPressed: openBackgroundSettings, child: Text(l10n.fix)),
+          ),
+        // The maker's own battery manager: settings the app can't read.
+        if (health.needsBrandSetup) ...[
+          const Divider(),
+          Text(l10n.phoneSetupTitle, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 4),
+          if (health.autostart == false)
+            Text(l10n.checkInAutostartOff, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(makerSetupText(l10n, health.brand)),
+          const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: openBackgroundSettings,
+                child: Text(health.brand == PhoneBrand.xiaomi ? l10n.openAutostart : l10n.openSettings),
+              ),
+              OutlinedButton(onPressed: openBatterySettings, child: Text(l10n.openBatterySaver)),
+              // Read from the phone: confirming wouldn't change it.
+              if (health.autostart == null)
+                FilledButton.tonal(
+                  onPressed: () async {
+                    await markBrandSetupDone();
+                    ref.invalidate(phoneHealthProvider);
+                  },
+                  child: Text(l10n.phoneSetupDone),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The maker's checklist text (Autostart, battery saver …).
+String makerSetupText(AppLocalizations l10n, PhoneBrand brand) => switch (brand) {
+      PhoneBrand.xiaomi => l10n.phoneSetupXiaomi,
+      PhoneBrand.samsung => l10n.phoneSetupSamsung,
+      PhoneBrand.huawei => l10n.phoneSetupHuawei,
+      PhoneBrand.oppo => l10n.phoneSetupOppo,
+      PhoneBrand.vivo => l10n.phoneSetupVivo,
+      PhoneBrand.oneplus => l10n.phoneSetupOneplus,
+      PhoneBrand.other => '',
+    };

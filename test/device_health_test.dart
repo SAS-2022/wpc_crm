@@ -18,4 +18,21 @@ void main() {
     expect(phoneBrand('realme'), PhoneBrand.oppo);
     expect(phoneBrand('Google'), PhoneBrand.other);
   });
+
+  test('maker checklist: Autostart read from the phone decides, else "I\'ve done this"', () {
+    PhoneHealth h(PhoneBrand brand, {bool done = false, bool? autostart}) => PhoneHealth(
+          brand: brand,
+          backgroundRestricted: false,
+          sleeping: false,
+          brandSetupDone: done,
+          gap: null,
+          autostart: autostart,
+        );
+    expect(h(PhoneBrand.other).needsBrandSetup, isFalse);
+    expect(h(PhoneBrand.xiaomi).needsBrandSetup, isTrue);
+    expect(h(PhoneBrand.xiaomi, done: true).needsBrandSetup, isFalse);
+    expect(h(PhoneBrand.xiaomi, done: true, autostart: false).needsBrandSetup, isTrue);
+    // Read as on: done (Xiaomi's battery saver is checked as battery optimization).
+    expect(h(PhoneBrand.xiaomi, autostart: true).needsBrandSetup, isFalse);
+  });
 }

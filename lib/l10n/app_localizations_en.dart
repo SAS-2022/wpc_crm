@@ -364,7 +364,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteUserBody =>
-      'They will lose access to the app immediately. Their clients become unassigned, and their past visits are kept. To reuse the same email later, also delete the account in Firebase Console → Authentication.';
+      'The user is deleted for good: their login account (the email can be used again), profile and location data. Their clients become unassigned and their team loses its KAM. Their visits, plans, attendance and leave are kept.';
 
   @override
   String get userDeleted => 'User deleted';
@@ -3362,4 +3362,238 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get checkInNotAlways =>
       'Location access set to \"Allow all the time\"';
+
+  @override
+  String get mapView => 'Map view';
+
+  @override
+  String get mapViewMap => 'Map';
+
+  @override
+  String get mapViewSatellite => 'Satellite';
+
+  @override
+  String get mapViewHybrid => 'Hybrid (satellite + labels)';
+
+  @override
+  String get settingsSectionTracking => 'Tracking & work hours';
+
+  @override
+  String get settingsSectionClients => 'Clients & visits';
+
+  @override
+  String get settingsSectionPeople => 'People & attendance';
+
+  @override
+  String get trackingSchedules => 'Tracking schedules';
+
+  @override
+  String trackingSchedulesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people have their own schedule',
+      one: '1 person has their own schedule',
+      zero: 'Everyone follows the company work hours',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trackingSchedulesHelp(String hours) {
+    return 'When each person\'s location is shared. By default the sales team follows the company work hours ($hours) and drivers are tracked all day. Tap a person to give them their own days and hours, or all day.';
+  }
+
+  @override
+  String get noTrackedPeople => 'Nobody is tracked yet.';
+
+  @override
+  String get trackingAllDay => 'All day, every day';
+
+  @override
+  String get trackingAllDayDriver => 'All day (driver)';
+
+  @override
+  String get trackingCompanyHours => 'Company work hours';
+
+  @override
+  String trackingScheduleOf(String name) {
+    return 'Tracking hours · $name';
+  }
+
+  @override
+  String get trackingModeStandard => 'Default';
+
+  @override
+  String get trackingModeOwn => 'Own hours';
+
+  @override
+  String get trackingModeAllDay => 'All day';
+
+  @override
+  String get trackingStandardDriverHelp =>
+      'Drivers keep the company car, so their location is shared all day.';
+
+  @override
+  String trackingStandardHelp(String hours) {
+    return 'Location shared during the company work hours: $hours.';
+  }
+
+  @override
+  String get trackingAllDayHelp =>
+      'Location shared at all times, also on days off. Tracking alerts are still sent only during the company work hours.';
+
+  @override
+  String get trackingOwnHelp =>
+      'Location shared only on these days and hours. Tracking and offline alerts follow them too.';
+
+  @override
+  String get trackingHours => 'Tracking hours';
+
+  @override
+  String get settingTrackingInterval => 'Location sending interval';
+
+  @override
+  String get settingTrackingIntervalHelp =>
+      'How often a tracked phone sends its position. Shorter = more detailed routes, more battery use.';
+
+  @override
+  String get settingOfflineAlert => 'Offline alert after';
+
+  @override
+  String get settingOfflineAlertHelp =>
+      'A tracked phone offline this long during work time is reported to the KAM or managers.';
+
+  @override
+  String get settingVisitRadius => 'Check-in distance limit';
+
+  @override
+  String get settingVisitRadiusHelp =>
+      'Visits checked in farther than this from the client are flagged as far.';
+
+  @override
+  String get settingLateGrace => 'Late check-in grace';
+
+  @override
+  String get settingLateGraceHelp =>
+      'Attendance check-ins up to this long after the start of the day count as on time.';
+
+  @override
+  String get settingGivenDueSoon => 'Catalog \"due soon\" warning';
+
+  @override
+  String get settingGivenDueSoonHelp =>
+      'Catalogs and stands show \"due soon\" this many days before a new one is due.';
+
+  @override
+  String valueSeconds(int count) {
+    return '$count s';
+  }
+
+  @override
+  String valueMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String valueMeters(int count) {
+    return '$count m';
+  }
+
+  @override
+  String valueDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingRange(String min, String max) {
+    return 'Enter a value from $min to $max';
+  }
+
+  @override
+  String settingDefault(String value) {
+    return 'Default: $value';
+  }
+
+  @override
+  String get resetToDefault => 'Reset to default';
+
+  @override
+  String get deleteUser => 'Delete user';
+
+  @override
+  String get checkInBatteryOptimized =>
+      'Let WPC CRM run in the background (battery optimization off)';
+
+  @override
+  String get checkInAutostartOff => 'Autostart is off for WPC CRM';
+
+  @override
+  String get allowBackgroundForAttendance =>
+      'Let the app run in the background, so arriving at your site checks you in';
+
+  @override
+  String get openAutostart => 'Autostart';
+
+  @override
+  String get openBatterySaver => 'Battery saver';
+
+  @override
+  String get locationDisclosureTitle => 'Location use in the background';
+
+  @override
+  String get locationDisclosureTracking =>
+      'WPC CRM collects location data to show your position to your managers on the live team map, to save your daily route history and to confirm that client visits happen at the client, during your work hours, even when the app is closed or not in use.';
+
+  @override
+  String get locationDisclosureAttendance =>
+      'WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. Your location is only checked when you enter or leave a work site.';
+
+  @override
+  String get locationDisclosureNext =>
+      'Your location is used only for your work with the company and is not used for advertising. On the next screen, choose \"Allow all the time\".';
+
+  @override
+  String get locationDisclosureNo => 'No thanks';
+
+  @override
+  String get locationDisclosureContinue => 'Continue';
+
+  @override
+  String get addToWhosePlan => 'Add to whose plan today?';
+
+  @override
+  String personsPlan(String name) {
+    return '$name\'s plan';
+  }
+
+  @override
+  String addToPersonsPlanToday(String name) {
+    return 'Add to $name\'s plan today';
+  }
+
+  @override
+  String onPersonsPlanToday(String name) {
+    return 'On $name\'s plan today';
+  }
+
+  @override
+  String addedToPersonsPlan(String name) {
+    return 'Added to $name\'s plan for today';
+  }
+
+  @override
+  String get dayView => 'Day';
+
+  @override
+  String get weekView => 'Week';
+
+  @override
+  String get monthView => 'Month';
 }

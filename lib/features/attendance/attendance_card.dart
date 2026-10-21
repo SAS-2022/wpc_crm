@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,7 +9,10 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/app_user.dart';
 import '../../core/location.dart';
+import '../../core/location_disclosure.dart';
 import '../../l10n/app_localizations.dart';
+import '../tracking/device_health.dart';
+import '../tracking/tracking_card.dart' show PhoneHealthTips, makerSetupText;
 import '../tracking/work_hours.dart';
 import '../visits/visit.dart' show formatDistance;
 import 'attendance_repository.dart';
@@ -68,15 +72,35 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
   // Back from the phone's settings: the permission may have changed.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkPermission();
+    if (state == AppLifecycleState.resumed) {
+      _checkPermission();
+      ref.invalidate(phoneHealthProvider);
+    }
   }
 
   Future<void> _checkPermission() async {
     if (!geofencesSupported) return;
     final ok = await hasAlwaysLocation();
     if (!mounted) return;
-    if (ok && _always == false) await refreshAttendanceGeofences(_mySites());
+    if (ok && _always == false) {
+      await refreshAttendanceGeofences(_mySites());
+    } else if (ok) {
+      await ensureAttendanceGeofences(_mySites());
+    }
     setState(() => _always = ok);
+    await _askBackgroundOnce();
+  }
+
+  /// Asked once per app start (2026-10-21): Android's pop-up that lets the
+  /// app run in the background, so arrivals wake it. The tracking card asks
+  /// tracked staff itself.
+  static bool _askedBackground = false;
+
+  Future<void> _askBackgroundOnce() async {
+    if (_askedBackground || widget.me.role.isLocationTracked || widget.me.workSiteIds.isEmpty) return;
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    _askedBackground = true;
+    if (!await Permission.ignoreBatteryOptimizations.isGranted) await _allowBackground();
   }
 
   List<WorkSite> _mySites() => [
@@ -85,6 +109,8 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       ];
 
   Future<void> _allowAlways() async {
+    // Google Play: say what location is for before Android asks.
+    if (!await showLocationDisclosure(context, LocationUse.attendance)) return;
     // Android / iOS ask for "while in use" first, then "Always".
     var status = await Permission.locationWhenInUse.request();
     if (status.isGranted) status = await Permission.locationAlways.request();
@@ -92,60 +118,112 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     await _checkPermission();
   }
 
-  /// What's missing for a check-in (user decision 2026-10-20): GPS on, the
-  /// location permission, and "Allow all the time".
-  Future<List<_LocationNeed>> _missingLocation() async {
-    final missing = <_LocationNeed>[];
-    if (!await Geolocator.isLocationServiceEnabled()) missing.add(_LocationNeed.gps);
+  /// What's missing for a check-in: GPS on, the location permission and
+  /// "Allow all the time" (user decision 2026-10-20), and on Android what
+  /// stops the phone from waking the app at the site (2026-10-21): battery
+  /// optimization, battery use "Restricted" and the maker's Autostart /
+  /// battery saver checklist.
+  Future<List<_SetupNeed>> _missingSetup() async {
+    final missing = <_SetupNeed>[];
+    if (!await Geolocator.isLocationServiceEnabled()) missing.add(_SetupNeed.gps);
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-      missing.add(_LocationNeed.permission);
+      missing.add(_SetupNeed.permission);
     } else if (permission != LocationPermission.always) {
-      missing.add(_LocationNeed.always);
+      missing.add(_SetupNeed.always);
+    }
+    ref.invalidate(phoneHealthProvider);
+    final health = await ref.read(phoneHealthProvider.future).catchError((_) => null);
+    if (health != null) {
+      if (health.batteryOptimized) missing.add(_SetupNeed.battery);
+      if (health.backgroundRestricted) missing.add(_SetupNeed.restricted);
+      if (health.needsBrandSetup) missing.add(_SetupNeed.maker);
     }
     return missing;
   }
 
-  Future<void> _fix(_LocationNeed need) async {
+  Future<void> _fix(_SetupNeed need) async {
     switch (need) {
-      case _LocationNeed.gps:
+      case _SetupNeed.gps:
         await Geolocator.openLocationSettings();
-      case _LocationNeed.permission:
-        final status = await Permission.locationWhenInUse.request();
-        if (status.isPermanentlyDenied) await openAppSettings();
-      case _LocationNeed.always:
+      case _SetupNeed.permission:
         await _allowAlways();
+      case _SetupNeed.always:
+        await _allowAlways();
+      case _SetupNeed.battery:
+        await _allowBackground();
+      case _SetupNeed.restricted:
+        await openAppSettings();
+      case _SetupNeed.maker:
+        await openBackgroundSettings();
     }
   }
 
-  /// Lists what to turn on, each with a Fix button.
-  Future<void> _showLocationNeeded(List<_LocationNeed> missing) {
+  /// Android's own "Let the app always run in the background?" pop-up.
+  Future<void> _allowBackground() async {
+    await Permission.ignoreBatteryOptimizations.request();
+    ref.invalidate(phoneHealthProvider);
+  }
+
+  /// Lists what to turn on, each with a Fix button; nothing is recorded.
+  Future<void> _showSetupNeeded(List<_SetupNeed> missing) {
     final l10n = AppLocalizations.of(context);
+    final health = ref.read(phoneHealthProvider).value;
     return showDialog<void>(
       context: context,
       builder: (dialog) => AlertDialog(
         icon: const Icon(Icons.location_off),
         title: Text(l10n.checkInNeedsLocation),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final need in missing)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(switch (need) {
-                  _LocationNeed.gps => l10n.checkInGpsOff,
-                  _LocationNeed.permission => l10n.checkInNoPermission,
-                  _LocationNeed.always => l10n.checkInNotAlways,
-                }),
-                trailing: FilledButton.tonal(
-                  onPressed: () {
-                    Navigator.pop(dialog);
-                    _fix(need);
-                  },
-                  child: Text(l10n.fix),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final need in missing)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(switch (need) {
+                    _SetupNeed.gps => l10n.checkInGpsOff,
+                    _SetupNeed.permission => l10n.checkInNoPermission,
+                    _SetupNeed.always => l10n.checkInNotAlways,
+                    _SetupNeed.battery => l10n.checkInBatteryOptimized,
+                    _SetupNeed.restricted => l10n.issueBackgroundRestricted,
+                    _SetupNeed.maker => health?.autostart == false ? l10n.checkInAutostartOff : l10n.phoneSetupTitle,
+                  }),
+                  subtitle: need == _SetupNeed.maker && health != null ? Text(makerSetupText(l10n, health.brand)) : null,
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: () {
+                          Navigator.pop(dialog);
+                          _fix(need);
+                        },
+                        child: Text(l10n.fix),
+                      ),
+                      // Separate from Autostart (user request 2026-10-21).
+                      if (need == _SetupNeed.battery)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(dialog);
+                            openBatterySettings();
+                          },
+                          child: Text(l10n.openBatterySaver),
+                        ),
+                      // Settings the phone can't report: the person confirms.
+                      if (need == _SetupNeed.maker && health?.autostart == null)
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(dialog);
+                            await markBrandSetupDone();
+                            ref.invalidate(phoneHealthProvider);
+                          },
+                          child: Text(l10n.phoneSetupDone),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel))],
       ),
@@ -155,10 +233,10 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
   Future<void> _checkIn() async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    // No check-in without GPS, the permission and "Allow all the time".
-    final missing = await _missingLocation();
+    // No check-in until location and the background settings are right.
+    final missing = await _missingSetup();
     if (missing.isNotEmpty) {
-      if (mounted) await _showLocationNeeded(missing);
+      if (mounted) await _showSetupNeeded(missing);
       return;
     }
     if (!mounted) return;
@@ -242,6 +320,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     final record = ref.watch(myAttendanceTodayProvider).value;
     final day = record?.best(me, company);
     final siteName = sites[day?.siteId]?.name ?? '';
+    final health = ref.watch(phoneHealthProvider).value;
 
     final String title;
     final String detail;
@@ -296,6 +375,26 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                 title: Text(l10n.allowAlwaysForAttendance),
                 trailing: TextButton(onPressed: _allowAlways, child: Text(l10n.allow)),
               ),
+            if (!me.role.isLocationTracked && (health?.batteryOptimized ?? false))
+              ListTile(
+                dense: true,
+                leading: Icon(Icons.battery_alert, color: theme.colorScheme.error),
+                title: Text(l10n.allowBackgroundForAttendance),
+                subtitle: Wrap(
+                  spacing: 8,
+                  children: [
+                    FilledButton.tonal(onPressed: _allowBackground, child: Text(l10n.allow)),
+                    OutlinedButton(onPressed: openBatterySettings, child: Text(l10n.openBatterySaver)),
+                  ],
+                ),
+              ),
+            // Battery / autostart settings that keep the phone from waking the
+            // app at the site (the tracking card shows them to tracked staff).
+            if (!me.role.isLocationTracked && PhoneHealthTips.needed(health))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: PhoneHealthTips(health: health!),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Align(
@@ -325,4 +424,4 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
   }
 }
 
-enum _LocationNeed { gps, permission, always }
+enum _SetupNeed { gps, permission, always, battery, restricted, maker }

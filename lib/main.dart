@@ -15,6 +15,10 @@ import 'l10n/app_localizations.dart';
 import 'core/saving.dart';
 import 'core/app_version.dart';
 import 'features/attendance/geofences.dart';
+import 'features/settings/app_settings.dart';
+
+/// Largest text size taken from the phone's accessibility setting.
+const maxTextScale = 1.2;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +40,8 @@ class WpcCrmApp extends ConsumerWidget {
     ref.listen(attendanceGeofencesProvider, (_, _) {});
     // GM / manager: keeps the RTDB role copies the database rules read in sync.
     ref.listen(roleMirrorProvider, (_, _) {});
+    // Editable limits (App settings) used by visits, catalogs and attendance.
+    ref.listen(appSettingsProvider, (_, next) => next.value?.apply());
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
@@ -56,7 +62,12 @@ class WpcCrmApp extends ConsumerWidget {
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: SavingBar(child: UpdateGate(child: child)),
+        // The phone's text size is followed up to [maxTextScale]: larger
+        // system fonts (up to 200 %) broke tiles, cards and map overlays.
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: maxTextScale,
+          child: SavingBar(child: UpdateGate(child: child)),
+        ),
       ),
     );
   }

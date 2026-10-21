@@ -39,9 +39,10 @@ class UserFilter {
         siteId: siteId == null ? this.siteId : siteId(),
       );
 
-  /// [positionLabel]: the position's name in the reader's language;
+  /// [roleLabel]: the role's name in the reader's language (the role is
+  /// the job; the Positions list is gone, 2026-10-21);
   /// [outdated]: on an older app build than the newest.
-  bool matches(AppUser u, {required String Function(String) positionLabel, required bool Function(AppUser) outdated}) {
+  bool matches(AppUser u, {required String Function(UserRole) roleLabel, required bool Function(AppUser) outdated}) {
     final ok = switch (status) {
       UserStatusFilter.all => true,
       UserStatusFilter.active => u.active,
@@ -58,7 +59,7 @@ class UserFilter {
     final digits = search.replaceAll(RegExp(r'\D'), '');
     return Client.normalizeName(u.name).contains(q) ||
         u.email.toLowerCase().contains(q) ||
-        Client.normalizeName(positionLabel(u.position)).contains(q) ||
+        Client.normalizeName(roleLabel(u.role)).contains(q) ||
         (digits.length >= 3 && u.phone.replaceAll(RegExp(r'\D'), '').contains(digits));
   }
 }

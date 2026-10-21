@@ -25,6 +25,7 @@ class PlanTask {
     required this.done,
     required this.visitId,
     this.checklist = const [],
+    this.locationId,
   });
 
   final String id;
@@ -45,6 +46,10 @@ class PlanTask {
   /// Tasks to do at a client visit, ticked by the owner.
   final List<ChecklistItem> checklist;
 
+  /// Which of the client's locations was picked when planning (2026-10-21);
+  /// null or no longer there = the main one ([planStop]).
+  final String? locationId;
+
   bool get isVisit => clientId != null;
 
   int get checklistDone => checklist.where((i) => i.done).length;
@@ -62,6 +67,7 @@ class PlanTask {
       approval: TaskApproval.values.asNameMap()[d['approval']] ?? TaskApproval.pending,
       done: d['done'] as bool? ?? false,
       visitId: d['visitId'] as String?,
+      locationId: d['locationId'] as String?,
       checklist: [
         for (final i in d['checklist'] as List<dynamic>? ?? const [])
           if (i is Map<String, dynamic>) ChecklistItem.fromMap(i),

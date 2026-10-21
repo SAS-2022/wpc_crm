@@ -88,7 +88,6 @@ void main() {
         month: month,
         siteNames: const {'hq': 'Head office'},
         roleLabel: (_) => 'Worker',
-        positionLabel: (_) => '',
         companyNames: const {},
         scheduleLabel: (_) => 'Sat–Thu',
       ),

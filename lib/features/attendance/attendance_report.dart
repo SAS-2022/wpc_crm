@@ -84,7 +84,6 @@ class AttendanceReportContext {
     required this.month,
     required this.siteNames,
     required this.roleLabel,
-    required this.positionLabel,
     required this.companyNames,
     required this.scheduleLabel,
   });
@@ -94,7 +93,6 @@ class AttendanceReportContext {
   final DateTime month;
   final Map<String, String> siteNames;
   final String Function(AppUser) roleLabel;
-  final String Function(AppUser) positionLabel;
   final Map<String, String> companyNames;
   final String Function(WorkHours) scheduleLabel;
 }
@@ -133,7 +131,6 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
   header(summary, [
     l10n.reportEmployee,
     l10n.role,
-    l10n.position,
     l10n.company,
     l10n.reportSchedule,
     l10n.reportWorkDays,
@@ -150,7 +147,6 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     summary.appendRow([
       TextCellValue(r.user.name),
       TextCellValue(x.roleLabel(r.user)),
-      TextCellValue(x.positionLabel(r.user)),
       TextCellValue(x.companyNames[r.user.companyId] ?? ''),
       TextCellValue(x.scheduleLabel(r.schedule)),
       IntCellValue(r.workDays),

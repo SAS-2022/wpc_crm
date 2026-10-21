@@ -41,6 +41,12 @@ enum UserRole {
     logisticsManager, warehouseSupervisor,
   ];
 
+  /// What a person may ask for when registering (2026-10-21: the role is
+  /// the job; the old Positions list repeated it). Managers are made by an admin.
+  static const registrable = [
+    salesExec, kam, hr, accounting, procurement, worker, engineer, driver, logisticsManager, warehouseSupervisor,
+  ];
+
   /// Unknown or missing values become [unknown], never a sales role: an old
   /// app must not treat a newer role as a sales executive (tracked, sees
   /// clients).
@@ -160,9 +166,30 @@ class AppUser {
   /// Last "please update" reminder (one a minute at most).
   final DateTime? updateRemindedAt;
 
-  /// The company they work for (`companies/{id}`) and their job title.
+  /// The company they work for (`companies/{id}`).
   final String companyId;
+
+  /// Registration's job choice (2026-10-21: a role value, see
+  /// [requestedRole]); earlier a position id from the old Positions list.
+  /// No longer edited: the role is the job. Kept as stored.
   final String position;
+
+  /// The role a self-registered person asked for, preselected on approval.
+  UserRole? get requestedRole => requestedRoleOf(position);
+
+  /// Role values, plus the ids of the old Positions list that match a role.
+  static UserRole? requestedRoleOf(String position) {
+    final role = UserRole.fromValue(position);
+    if (role != UserRole.unknown) return role;
+    return switch (position) {
+      'sales_executive' => UserRole.salesExec,
+      'key_account_manager' => UserRole.kam,
+      'accountant' => UserRole.accounting,
+      'procurement_officer' => UserRole.procurement,
+      'hr_officer' => UserRole.hr,
+      _ => null,
+    };
+  }
 
   /// Self-registration (2026-10-19): 'pending' until the sales manager / GM
   /// approves, 'rejected', or '' (approved / created by an admin).

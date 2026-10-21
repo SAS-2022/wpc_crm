@@ -140,15 +140,23 @@ DayEfficiency? dayEfficiency(List<({DateTime at, Stop place})> visits) {
   );
 }
 
+/// Where a plan item's visit is: the client location picked when planning
+/// (`tasks.locationId`), else the main one (user request 2026-10-21). Null
+/// for free tasks and clients without a location.
+ClientLocation? planStop(PlanTask t, Map<String, Client> clients) {
+  final list = clients[t.clientId]?.locations ?? const <ClientLocation>[];
+  return list.where((l) => l.id == t.locationId).firstOrNull ?? list.firstOrNull;
+}
+
 /// Plan numbering (user decision 2026-10-18): the day's client visits (not
 /// rejected, client with a location) numbered in the shortest order, done
 /// ones included so the numbers stay put during the day. Task id → 1, 2, …
 Map<String, int> planStopNumbers(List<PlanTask> tasks, Map<String, Client> clients) {
   final stops = [
     for (final t in tasks)
-      if (t.isVisit && t.approval != TaskApproval.rejected && (clients[t.clientId]?.hasLocation ?? false)) t,
+      if (t.isVisit && t.approval != TaskApproval.rejected && planStop(t, clients) != null) t,
   ]..sort((a, b) => a.id.compareTo(b.id));
-  final order = shortestOrder([for (final t in stops) (clients[t.clientId]!.lat!, clients[t.clientId]!.lng!)]);
+  final order = shortestOrder([for (final t in stops) (planStop(t, clients)!.lat, planStop(t, clients)!.lng)]);
   return {for (final (n, i) in order.indexed) stops[i].id: n + 1};
 }
 

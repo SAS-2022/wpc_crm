@@ -56,15 +56,20 @@ final visitPlanTasksProvider = StreamProvider.family<List<PlanTask>, (String, St
 
 final planRepositoryProvider = Provider((ref) => PlanRepository());
 
+/// A client to put on a plan, at [locationId] (one of its locations; null =
+/// the main one).
+typedef PlannedClient = ({String id, String name, String? locationId});
+
 class PlanRepository {
   /// Adds several client visits (or one free task) in one write. Each visit
   /// gets the [checklist] tasks.
+  /// [clients]: one item per client; empty = a free task with [title].
   Future<void> addMany({
     required String ownerId,
     required String date,
     required String createdBy,
     required bool approved,
-    required List<({String id, String name})> clients,
+    required List<PlannedClient> clients,
     String title = '',
     List<String> checklist = const [],
   }) => saving(() async {
@@ -77,6 +82,7 @@ class PlanRepository {
         'month': date.substring(0, 7),
         'clientId': c?.id,
         'clientName': c?.name,
+        if (c?.locationId != null) 'locationId': c!.locationId,
         'title': title,
         'createdBy': createdBy,
         'approval': (approved ? TaskApproval.approved : TaskApproval.pending).name,

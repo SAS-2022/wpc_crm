@@ -743,7 +743,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteUserBody.
   ///
   /// In en, this message translates to:
-  /// **'They will lose access to the app immediately. Their clients become unassigned, and their past visits are kept. To reuse the same email later, also delete the account in Firebase Console → Authentication.'**
+  /// **'The user is deleted for good: their login account (the email can be used again), profile and location data. Their clients become unassigned and their team loses its KAM. Their visits, plans, attendance and leave are kept.'**
   String get deleteUserBody;
 
   /// No description provided for @userDeleted.
@@ -5695,6 +5695,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location access set to \"Allow all the time\"'**
   String get checkInNotAlways;
+
+  /// No description provided for @mapView.
+  ///
+  /// In en, this message translates to:
+  /// **'Map view'**
+  String get mapView;
+
+  /// No description provided for @mapViewMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get mapViewMap;
+
+  /// No description provided for @mapViewSatellite.
+  ///
+  /// In en, this message translates to:
+  /// **'Satellite'**
+  String get mapViewSatellite;
+
+  /// No description provided for @mapViewHybrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Hybrid (satellite + labels)'**
+  String get mapViewHybrid;
+
+  /// No description provided for @settingsSectionTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking & work hours'**
+  String get settingsSectionTracking;
+
+  /// No description provided for @settingsSectionClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients & visits'**
+  String get settingsSectionClients;
+
+  /// No description provided for @settingsSectionPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'People & attendance'**
+  String get settingsSectionPeople;
+
+  /// No description provided for @trackingSchedules.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking schedules'**
+  String get trackingSchedules;
+
+  /// No description provided for @trackingSchedulesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Everyone follows the company work hours} =1{1 person has their own schedule} other{{count} people have their own schedule}}'**
+  String trackingSchedulesCount(int count);
+
+  /// No description provided for @trackingSchedulesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'When each person\'s location is shared. By default the sales team follows the company work hours ({hours}) and drivers are tracked all day. Tap a person to give them their own days and hours, or all day.'**
+  String trackingSchedulesHelp(String hours);
+
+  /// No description provided for @noTrackedPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody is tracked yet.'**
+  String get noTrackedPeople;
+
+  /// No description provided for @trackingAllDay.
+  ///
+  /// In en, this message translates to:
+  /// **'All day, every day'**
+  String get trackingAllDay;
+
+  /// No description provided for @trackingAllDayDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'All day (driver)'**
+  String get trackingAllDayDriver;
+
+  /// No description provided for @trackingCompanyHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Company work hours'**
+  String get trackingCompanyHours;
+
+  /// No description provided for @trackingScheduleOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking hours · {name}'**
+  String trackingScheduleOf(String name);
+
+  /// No description provided for @trackingModeStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get trackingModeStandard;
+
+  /// No description provided for @trackingModeOwn.
+  ///
+  /// In en, this message translates to:
+  /// **'Own hours'**
+  String get trackingModeOwn;
+
+  /// No description provided for @trackingModeAllDay.
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get trackingModeAllDay;
+
+  /// No description provided for @trackingStandardDriverHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers keep the company car, so their location is shared all day.'**
+  String get trackingStandardDriverHelp;
+
+  /// No description provided for @trackingStandardHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Location shared during the company work hours: {hours}.'**
+  String trackingStandardHelp(String hours);
+
+  /// No description provided for @trackingAllDayHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Location shared at all times, also on days off. Tracking alerts are still sent only during the company work hours.'**
+  String get trackingAllDayHelp;
+
+  /// No description provided for @trackingOwnHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Location shared only on these days and hours. Tracking and offline alerts follow them too.'**
+  String get trackingOwnHelp;
+
+  /// No description provided for @trackingHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking hours'**
+  String get trackingHours;
+
+  /// No description provided for @settingTrackingInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Location sending interval'**
+  String get settingTrackingInterval;
+
+  /// No description provided for @settingTrackingIntervalHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How often a tracked phone sends its position. Shorter = more detailed routes, more battery use.'**
+  String get settingTrackingIntervalHelp;
+
+  /// No description provided for @settingOfflineAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline alert after'**
+  String get settingOfflineAlert;
+
+  /// No description provided for @settingOfflineAlertHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'A tracked phone offline this long during work time is reported to the KAM or managers.'**
+  String get settingOfflineAlertHelp;
+
+  /// No description provided for @settingVisitRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in distance limit'**
+  String get settingVisitRadius;
+
+  /// No description provided for @settingVisitRadiusHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits checked in farther than this from the client are flagged as far.'**
+  String get settingVisitRadiusHelp;
+
+  /// No description provided for @settingLateGrace.
+  ///
+  /// In en, this message translates to:
+  /// **'Late check-in grace'**
+  String get settingLateGrace;
+
+  /// No description provided for @settingLateGraceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance check-ins up to this long after the start of the day count as on time.'**
+  String get settingLateGraceHelp;
+
+  /// No description provided for @settingGivenDueSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalog \"due soon\" warning'**
+  String get settingGivenDueSoon;
+
+  /// No description provided for @settingGivenDueSoonHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogs and stands show \"due soon\" this many days before a new one is due.'**
+  String get settingGivenDueSoonHelp;
+
+  /// No description provided for @valueSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} s'**
+  String valueSeconds(int count);
+
+  /// No description provided for @valueMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String valueMinutes(int count);
+
+  /// No description provided for @valueMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} m'**
+  String valueMeters(int count);
+
+  /// No description provided for @valueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String valueDays(int count);
+
+  /// No description provided for @settingRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value from {min} to {max}'**
+  String settingRange(String min, String max);
+
+  /// No description provided for @settingDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default: {value}'**
+  String settingDefault(String value);
+
+  /// No description provided for @resetToDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get resetToDefault;
+
+  /// No description provided for @deleteUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete user'**
+  String get deleteUser;
+
+  /// No description provided for @checkInBatteryOptimized.
+  ///
+  /// In en, this message translates to:
+  /// **'Let WPC CRM run in the background (battery optimization off)'**
+  String get checkInBatteryOptimized;
+
+  /// No description provided for @checkInAutostartOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Autostart is off for WPC CRM'**
+  String get checkInAutostartOff;
+
+  /// No description provided for @allowBackgroundForAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the app run in the background, so arriving at your site checks you in'**
+  String get allowBackgroundForAttendance;
+
+  /// No description provided for @openAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Autostart'**
+  String get openAutostart;
+
+  /// No description provided for @openBatterySaver.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery saver'**
+  String get openBatterySaver;
+
+  /// No description provided for @locationDisclosureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location use in the background'**
+  String get locationDisclosureTitle;
+
+  /// No description provided for @locationDisclosureTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'WPC CRM collects location data to show your position to your managers on the live team map, to save your daily route history and to confirm that client visits happen at the client, during your work hours, even when the app is closed or not in use.'**
+  String get locationDisclosureTracking;
+
+  /// No description provided for @locationDisclosureAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. Your location is only checked when you enter or leave a work site.'**
+  String get locationDisclosureAttendance;
+
+  /// No description provided for @locationDisclosureNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location is used only for your work with the company and is not used for advertising. On the next screen, choose \"Allow all the time\".'**
+  String get locationDisclosureNext;
+
+  /// No description provided for @locationDisclosureNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get locationDisclosureNo;
+
+  /// No description provided for @locationDisclosureContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get locationDisclosureContinue;
+
+  /// No description provided for @addToWhosePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to whose plan today?'**
+  String get addToWhosePlan;
+
+  /// No description provided for @personsPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s plan'**
+  String personsPlan(String name);
+
+  /// No description provided for @addToPersonsPlanToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {name}\'s plan today'**
+  String addToPersonsPlanToday(String name);
+
+  /// No description provided for @onPersonsPlanToday.
+  ///
+  /// In en, this message translates to:
+  /// **'On {name}\'s plan today'**
+  String onPersonsPlanToday(String name);
+
+  /// No description provided for @addedToPersonsPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to {name}\'s plan for today'**
+  String addedToPersonsPlan(String name);
+
+  /// No description provided for @dayView.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get dayView;
+
+  /// No description provided for @weekView.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get weekView;
+
+  /// No description provided for @monthView.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get monthView;
 }
 
 class _AppLocalizationsDelegate

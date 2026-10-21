@@ -56,7 +56,13 @@ PlanSplit splitForPlans(
 /// each client on its own salesperson's plan for a chosen day, approved,
 /// and tells each of them. Clients without a salesperson are reported, with
 /// the option to move them to someone first. Returns true when plans changed.
-Future<bool> addSelectionToPlans(BuildContext context, WidgetRef ref, List<Client> selected) async {
+/// [locations]: client id → the location picked on the map (others: main).
+Future<bool> addSelectionToPlans(
+  BuildContext context,
+  WidgetRef ref,
+  List<Client> selected, {
+  Map<String, String> locations = const {},
+}) async {
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final locale = Localizations.localeOf(context).toString();
@@ -180,7 +186,7 @@ Future<bool> addSelectionToPlans(BuildContext context, WidgetRef ref, List<Clien
         date: date,
         createdBy: me.id,
         approved: true,
-        clients: [for (final c in fresh) (id: c.id, name: c.name)],
+        clients: [for (final c in fresh) (id: c.id, name: c.name, locationId: locations[c.id])],
       );
       if (o != me.id) {
         await sendNotifications(

@@ -18,43 +18,38 @@ import 'call_chip.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
 
-enum _Period { today, week, month, all }
+/// Each period but [all] is browsed with ‹ › arrows like Team plans (user
+/// request 2026-10-21): a day (default), a week (Sunday–Saturday), a month,
+/// or a picked date range ([custom], moved by its own length).
+enum _Period { day, week, month, all, custom }
 
-/// A salesperson's visits and calls on one day, shown as a sub-header.
+/// A salesperson's visits and calls in the period, shown as a sub-header;
+/// [day] = the day of their latest one (for the route map in the day view).
 typedef PersonGroup = ({String uid, DateTime day, int visits, int calls});
 
-/// The rows of the visits list: a day (DateTime) before each day's visits,
-/// and with [byPerson] a [PersonGroup] before each salesperson's visits of
-/// that day (people by name, their visits newest first). [list] is newest first.
+/// The rows of the visits list (user request 2026-10-21: grouped by
+/// salesperson, not by date, whatever the period). With [byPerson] a
+/// [PersonGroup] before each salesperson's visits (people by name, their
+/// visits newest first); without, just the visits. [list] is newest first.
 List<Object> visitListItems(
   List<Visit> list, {
   required DateTime now,
   required bool byPerson,
   required String Function(String uid) nameOf,
 }) {
-  final days = <DateTime, List<Visit>>{};
+  if (!byPerson) return [...list];
+  final people = <String, List<Visit>>{};
   for (final v in list) {
-    final t = v.checkedInAt ?? now; // pending server time = just now
-    days.putIfAbsent(DateTime(t.year, t.month, t.day), () => []).add(v);
+    people.putIfAbsent(v.salesExecId, () => []).add(v);
   }
+  final order = people.keys.toList()..sort((a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()));
   final items = <Object>[];
-  for (final MapEntry(key: day, value: visits) in days.entries) {
-    items.add(day);
-    if (!byPerson) {
-      items.addAll(visits);
-      continue;
-    }
-    final people = <String, List<Visit>>{};
-    for (final v in visits) {
-      people.putIfAbsent(v.salesExecId, () => []).add(v);
-    }
-    final order = people.keys.toList()..sort((a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()));
-    for (final uid in order) {
-      final mine = people[uid]!;
-      final calls = mine.where((v) => v.isCall).length;
-      items.add((uid: uid, day: day, visits: mine.length - calls, calls: calls));
-      items.addAll(mine);
-    }
+  for (final uid in order) {
+    final mine = people[uid]!;
+    final calls = mine.where((v) => v.isCall).length;
+    final t = mine.first.checkedInAt ?? now; // pending server time = just now
+    items.add((uid: uid, day: DateTime(t.year, t.month, t.day), visits: mine.length - calls, calls: calls));
+    items.addAll(mine);
   }
   return items;
 }
@@ -72,20 +67,107 @@ class VisitsScreen extends ConsumerStatefulWidget {
 class _VisitsScreenState extends ConsumerState<VisitsScreen> {
   /// null = everyone.
   String? _visitor;
-  _Period _period = _Period.all;
+  _Period _period = _Period.day;
   String _query = '';
+
+  /// A day inside the period shown (day / week / month).
+  DateTime _day = DateTime.now();
+
+  /// [_Period.custom]: first and last day, both included.
+  DateTimeRange? _range;
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(now.year, now.month, now.day),
+      initialDateRange: _range,
+    );
+    if (picked != null) {
+      setState(() {
+        _range = picked;
+        _period = _Period.custom;
+      });
+    }
+  }
 
   /// null = visits and calls.
   VisitType? _type;
 
+  /// First day and the day after the last of the period shown; null = all time.
+  (DateTime, DateTime)? _bounds() {
+    final d = DateTime(_day.year, _day.month, _day.day);
+    switch (_period) {
+      case _Period.day:
+        return (d, DateTime(d.year, d.month, d.day + 1));
+      case _Period.week:
+        final start = DateTime(d.year, d.month, d.day - d.weekday % 7); // weeks start on Sunday
+        return (start, DateTime(start.year, start.month, start.day + 7));
+      case _Period.month:
+        return (DateTime(d.year, d.month), DateTime(d.year, d.month + 1));
+      case _Period.custom:
+        final r = _range;
+        return r == null ? null : (r.start, DateTime(r.end.year, r.end.month, r.end.day + 1));
+      case _Period.all:
+        return null;
+    }
+  }
+
   bool _inPeriod(Visit v, DateTime now) {
+    final b = _bounds();
+    if (b == null) return true;
     final t = v.checkedInAt ?? now; // pending server time = just now
-    final today = DateTime(now.year, now.month, now.day);
+    return !t.isBefore(b.$1) && t.isBefore(b.$2);
+  }
+
+  /// The days to load for the period ('yyyy-MM-dd'), see [_bounds].
+  (String, String)? _queryRange() {
+    final b = _bounds();
+    return b == null ? null : (dayKey(b.$1), dayKey(b.$2));
+  }
+
+  /// ‹ / ›: the previous / next day, week, month or range of the same length.
+  void _step(int dir) => setState(() {
+        switch (_period) {
+          case _Period.day:
+            _day = DateTime(_day.year, _day.month, _day.day + dir);
+          case _Period.week:
+            _day = DateTime(_day.year, _day.month, _day.day + 7 * dir);
+          case _Period.month:
+            _day = DateTime(_day.year, _day.month + dir, 1);
+          case _Period.custom:
+            final r = _range!;
+            final days = r.end.difference(r.start).inDays + 1;
+            _range = DateTimeRange(
+              start: DateTime(r.start.year, r.start.month, r.start.day + days * dir),
+              end: DateTime(r.end.year, r.end.month, r.end.day + days * dir),
+            );
+          case _Period.all:
+            break;
+        }
+      });
+
+  /// Tapping the period's label: a calendar (any day of the week / month).
+  Future<void> _pickPeriod() async {
+    if (_period == _Period.custom) return _pickRange();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _day,
+      firstDate: DateTime(2025),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _day = picked);
+  }
+
+  String _periodLabel(AppLocalizations l10n, String locale) {
+    final (start, end) = _bounds()!;
+    final last = end.subtract(const Duration(days: 1));
+    final short = DateFormat.MMMd(locale);
     return switch (_period) {
-      _Period.today => !t.isBefore(today),
-      _Period.week => !t.isBefore(today.subtract(Duration(days: today.weekday % 7))), // weeks start on Sunday
-      _Period.month => t.year == now.year && t.month == now.month,
-      _Period.all => true,
+      _Period.day => dayKey(start) == dayKey(DateTime.now()) ? l10n.today : DateFormat.yMMMEd(locale).format(start),
+      _Period.month => DateFormat.yMMMM(locale).format(start),
+      _ => '${short.format(start)} – ${short.format(last)}${last.year != DateTime.now().year ? ' ${last.year}' : ''}',
     };
   }
 
@@ -109,17 +191,23 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
     final users = {for (final u in allUsers) u.id: u};
     final visitors = allUsers.where((u) => u.active && u.role.isTracked).toList();
-    final visits = ref.watch(visitsProvider);
+    final now = DateTime.now();
+    // Supervisors: the period's visits from the database (the default list is
+    // only the latest 500); "All time" and sales execs use the full list.
+    final range = _queryRange();
+    final visits = (me?.role.isSupervisor ?? false) && range != null
+        ? ref.watch(visitsBetweenProvider(range))
+        : ref.watch(visitsProvider);
     final hidden = ref.watch(hiddenClientIdsProvider);
     final locale = Localizations.localeOf(context).toString();
-    final now = DateTime.now();
     final locationTypes = ref.watch(locationTypesByIdProvider);
 
     final periodLabels = {
-      _Period.today: l10n.today,
-      _Period.week: l10n.thisWeek,
-      _Period.month: l10n.thisMonth,
+      _Period.day: l10n.dayView,
+      _Period.week: l10n.weekView,
+      _Period.month: l10n.monthView,
       _Period.all: l10n.allTime,
+      _Period.custom: l10n.customRange,
     };
 
     return Scaffold(
@@ -159,14 +247,16 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
           final calls = list.where((v) => v.isCall).length;
           final withKam = list.where((v) => v.kamId != null).length;
 
-          // By day; within a day by salesperson when the list shows everyone.
-          final byPerson = (me?.role.isSupervisor ?? false) && _visitor == null;
+          // By salesperson (KAM / managers), not by date.
+          final byPerson = me?.role.isSupervisor ?? false;
           final items = visitListItems(
             list,
             now: now,
             byPerson: byPerson,
             nameOf: (uid) => users[uid]?.name ?? '',
           );
+          // Over more than a day each visit shows its date too.
+          final severalDays = _period != _Period.day;
 
           return CustomScrollView(
             slivers: [
@@ -191,9 +281,11 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                         Padding(
                           padding: const EdgeInsetsDirectional.only(end: 8),
                           child: ChoiceChip(
+                            avatar: p == _Period.custom ? const Icon(Icons.date_range, size: 18) : null,
                             label: Text(periodLabels[p]!),
                             selected: _period == p,
-                            onSelected: (_) => setState(() => _period = p),
+                            // Custom always opens the range picker (also to change it).
+                            onSelected: (_) => p == _Period.custom ? _pickRange() : setState(() => _period = p),
                           ),
                         ),
                       const SizedBox(width: 8),
@@ -262,6 +354,25 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                   ),
                 ),
               ),
+              // ‹ period › with a calendar, like Team plans, right above the list.
+              if (_bounds() != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _step(-1)),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: _pickPeriod,
+                            child: Text(_periodLabel(l10n, locale), style: theme.textTheme.titleMedium),
+                          ),
+                        ),
+                        IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => _step(1)),
+                      ],
+                    ),
+                  ),
+                ),
               if (list.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
@@ -276,13 +387,12 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                   sliver: SliverList.builder(
                     itemCount: items.length,
                     itemBuilder: (_, i) => switch (items[i]) {
-                      final DateTime day => _DayHeader(day: day, now: now, locale: locale),
                       final PersonGroup g => _PersonHeader(
                           name: users[g.uid]?.name ?? '?',
                           visits: g.visits,
                           calls: g.calls,
-                          // That person's route and visits of that day.
-                          onMap: () => context.go('/history?uid=${g.uid}&date=${dayKey(g.day)}'),
+                          // That person's route and visits of that day (day view).
+                          onMap: severalDays ? null : () => context.go('/history?uid=${g.uid}&date=${dayKey(g.day)}'),
                         ),
                       final Visit v => _VisitCard(
                           visit: v,
@@ -290,6 +400,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                           visitor: users[v.salesExecId]?.name ?? '',
                           kam: users[v.kamId]?.name,
                           locale: locale,
+                          withDate: severalDays,
                         ),
                       _ => const SizedBox.shrink(),
                     },
@@ -339,41 +450,14 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day, required this.now, required this.locale});
-
-  final DateTime day;
-  final DateTime now;
-  final String locale;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final today = DateTime(now.year, now.month, now.day);
-    final label = day == today
-        ? l10n.today
-        : day == today.subtract(const Duration(days: 1))
-            ? l10n.yesterday
-            : DateFormat.MMMEd(locale).format(day);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-      child: Text(
-        label,
-        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-/// "Sami Mansour · 4 visits · 1 call" above one person's visits of a day.
 class _PersonHeader extends StatelessWidget {
-  const _PersonHeader({required this.name, required this.visits, required this.calls, required this.onMap});
+  const _PersonHeader({required this.name, required this.visits, required this.calls, this.onMap});
 
   final String name;
   final int visits;
   final int calls;
-  final VoidCallback onMap;
+  /// Route map of the day; null over several days.
+  final VoidCallback? onMap;
 
   @override
   Widget build(BuildContext context) {
@@ -399,12 +483,13 @@ class _PersonHeader extends StatelessWidget {
             ),
           ]),
         ),
-        IconButton(
-          tooltip: l10n.showRouteMap,
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.map_outlined, size: 20),
-          onPressed: onMap,
-        ),
+        if (onMap != null)
+          IconButton(
+            tooltip: l10n.showRouteMap,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.map_outlined, size: 20),
+            onPressed: onMap,
+          ),
       ]),
     );
   }
@@ -417,9 +502,13 @@ class _VisitCard extends StatelessWidget {
     required this.kam,
     required this.locale,
     this.place,
+    this.withDate = false,
   });
 
   final Visit visit;
+
+  /// The date before the time (lists over more than one day).
+  final bool withDate;
 
   /// Which of the client's locations (Factory, Showroom, …), when labelled.
   final String? place;
@@ -437,7 +526,9 @@ class _VisitCard extends StatelessWidget {
         : visit.isFlagged
             ? scheme.error
             : Colors.green.shade600;
-    final time = visit.checkedInAt == null ? '' : DateFormat.jm(locale).format(visit.checkedInAt!);
+    final time = visit.checkedInAt == null
+        ? ''
+        : (withDate ? DateFormat.MMMEd(locale).add_jm() : DateFormat.jm(locale)).format(visit.checkedInAt!);
 
     Widget chip(IconData icon, String text, Color color) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

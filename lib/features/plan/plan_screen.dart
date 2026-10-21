@@ -9,6 +9,8 @@ import '../../core/providers.dart';
 import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_locations_section.dart' show locationLabel;
+import '../clients/client_tags.dart' show locationTypesByIdProvider;
 import '../clients/client_location_dialog.dart';
 import '../clients/clients_repository.dart';
 import '../notifications/notifications.dart';
@@ -92,8 +94,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final clients = {for (final c in ref.read(allClientsProvider).value ?? const <Client>[]) c.id: c};
     final open = tasks.where((t) => t.approval != TaskApproval.rejected).toList();
     final visits = inRouteOrder(open.where((t) => t.isVisit).toList(), planStopNumbers(open, clients));
-    final located = [for (final t in visits) if (clients[t.clientId]?.hasLocation ?? false) clients[t.clientId]!];
-    String maps(Client c) => 'https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}';
+    // The picked location of each stop, else the client's main one.
+    final located = [for (final t in visits) ?planStop(t, clients)];
+    String maps(ClientLocation l) => 'https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lng}';
     final lines = <String>[
       l10n.shareTitle(owner.name, DateFormat.yMMMEd(locale).format(_day)),
       '',
@@ -101,7 +104,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
         '${i + 1}. ${t.clientName}${clients[t.clientId]?.city.isNotEmpty ?? false ? ' – ${clients[t.clientId]!.city}' : ''}${t.done ? ' ✓' : ''}',
         if (t.title.isNotEmpty) '   ${t.title}',
         for (final c in t.checklist) '   ${c.done ? '☑' : '☐'} ${c.text}${c.comment.isNotEmpty ? ' – ${c.comment}' : ''}',
-        if (clients[t.clientId]?.hasLocation ?? false) '   ${maps(clients[t.clientId]!)}',
+        if (planStop(t, clients) case final stop?) '   ${maps(stop)}',
       ],
       if (open.any((t) => !t.isVisit)) ...['', l10n.tasks, for (final t in open.where((t) => !t.isVisit)) '• ${t.title}${t.done ? ' ✓' : ''}'],
       // Google Maps route through the stops (it accepts up to 9 waypoints).
@@ -353,6 +356,18 @@ class PlanTaskTile extends ConsumerWidget {
     };
     final title = task.isVisit ? task.clientName ?? '' : task.title;
     final note = task.isVisit ? task.title : '';
+    // Clients with several locations: which one this visit is planned at.
+    String? place;
+    if (client != null && client.locations.length > 1) {
+      final stop = planStop(task, {client.id: client})!;
+      place = locationLabel(
+        stop,
+        client.locations.indexWhere((l) => l.id == stop.id),
+        ref.watch(locationTypesByIdProvider),
+        Localizations.localeOf(context).languageCode,
+        l10n,
+      );
+    }
 
     final Widget leading = canTick && !task.isVisit
         ? Checkbox(value: task.done, onChanged: (v) => onTick?.call(v ?? false))
@@ -389,6 +404,7 @@ class PlanTaskTile extends ConsumerWidget {
           if (note.isNotEmpty) Text(note),
           Text.rich(TextSpan(children: [
             TextSpan(text: status.$1, style: TextStyle(color: status.$2, fontWeight: FontWeight.w600)),
+            if (place != null) TextSpan(text: ' · $place', style: TextStyle(color: scheme.onSurfaceVariant)),
             if (task.checklist.isNotEmpty)
               TextSpan(
                 text: ' · ${l10n.checklistProgress(task.checklistDone, task.checklist.length)}',

@@ -335,8 +335,9 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
       ],
     );
 
-    final map = GoogleMap(
+    final googleMap = GoogleMap(
       initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
+      mapType: ref.watch(mapTypeProvider),
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,
       onMapCreated: (controller) => setState(() => _map = controller),
@@ -397,6 +398,13 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                   : InfoWindow.noText,
             ),
       },
+    );
+
+    final map = Stack(
+      children: [
+        googleMap,
+        const PositionedDirectional(top: 8, end: 8, child: MapTypeButton()),
+      ],
     );
 
     return Scaffold(

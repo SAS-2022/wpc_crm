@@ -72,4 +72,17 @@ void main() {
     final yes = run(events, now: t(19), overtime: true);
     expect([yes.countedMin, yes.overtimeMin, yes.afterHoursMin], [585, 45, 0]);
   });
+
+  test('geofence events checked against a GPS fix', () {
+    // Site radius 100 m.
+    bool enter(double d, double acc) => geofenceEventConfirmed(enter: true, distance: d, accuracy: acc, radius: 100);
+    bool exit(double d, double acc) => geofenceEventConfirmed(enter: false, distance: d, accuracy: acc, radius: 100);
+    expect(enter(80, 10), isTrue);
+    expect(enter(170, 20), isTrue); // walking in, just outside
+    expect(enter(2000, 15), isFalse); // false arrival from a rough network position
+    expect(enter(2000, 400), isTrue); // fix too rough to tell
+    expect(exit(300, 15), isTrue);
+    expect(exit(40, 10), isFalse); // still inside
+    expect(exit(90, 20), isTrue); // at the edge
+  });
 }

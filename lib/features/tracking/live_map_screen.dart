@@ -142,6 +142,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
+            mapType: ref.watch(mapTypeProvider),
             // The people sheet covers the bottom of the map.
             padding: EdgeInsets.only(bottom: MediaQuery.sizeOf(context).height * 0.28),
             zoomControlsEnabled: false,
@@ -180,6 +181,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 ),
             },
           ),
+          const PositionedDirectional(top: 8, end: 8, child: MapTypeButton()),
           DraggableScrollableSheet(
             initialChildSize: 0.28,
             minChildSize: 0.12,

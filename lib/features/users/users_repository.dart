@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -87,27 +88,13 @@ class UsersRepository {
   Future<void> rejectRegistration(String uid) =>
       saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false}));
 
-  /// Removes the user's profile and role, which ends all their access, and
-  /// unassigns their clients and sales team. Their visits stay as history.
-  /// The login account itself can only be removed in Firebase Console →
-  /// Authentication (client apps can't delete other users' accounts).
+  /// Deletes the user for good with the `deleteUser` Cloud Function: their
+  /// login account (so the email can be used again), profile, role, push
+  /// tokens and location data; their clients become unassigned and their
+  /// sales team loses its KAM. Visits, plans, attendance and leave stay as
+  /// history. GM: anyone; sales manager: not GMs or sales managers.
   Future<void> delete(String uid) => saving(() async {
-    final db = FirebaseFirestore.instance;
-    final clients = await db.collection('clients').where('assignedTo', isEqualTo: uid).get();
-    final team = await _users.where('kamId', isEqualTo: uid).get();
-    final refs = [
-      for (final d in clients.docs) (d.reference, {'assignedTo': null}),
-      for (final d in team.docs) (d.reference, {'kamId': null}),
-    ];
-    for (var i = 0; i < refs.length; i += 400) {
-      final batch = db.batch();
-      for (final (ref, data) in refs.skip(i).take(400)) {
-        batch.update(ref, data);
-      }
-      await batch.commit();
-    }
-    await FirebaseDatabase.instance.ref('roles/$uid').remove();
-    await _users.doc(uid).delete();
+    await FirebaseFunctions.instance.httpsCallable('deleteUser').call<Object?>({'uid': uid});
   });
 
   // RTDB keeps a copy of the role because its rules cannot read Firestore.

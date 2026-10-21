@@ -27,9 +27,9 @@ const MINUTE = 60 * 1000;
 const LATE_GRACE_MIN = 15;
 
 /** Whole minutes after the start (seconds dropped); 0 within the grace period. Same as lateMinutes in attendance_rules.dart. */
-function lateMinutes(ms) {
+function lateMinutes(ms, graceMin = LATE_GRACE_MIN) {
   const m = Math.floor(ms / MINUTE);
-  return m > LATE_GRACE_MIN ? m : 0;
+  return m > graceMin ? m : 0;
 }
 
 /** Epoch ms of [minutes] past midnight, Saudi time (UTC+3), on 'yyyy-MM-dd'. */
@@ -40,7 +40,8 @@ function saudiTime(date, minutes) {
 
 /**
  * @param {Array<{type: string, at: number, siteId?: string, source?: string}>} events
- * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean}} o
+ * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean, graceMin?: number}} o
+ *   graceMin: App settings `lateGraceMin` (default LATE_GRACE_MIN).
  */
 function deriveDay(events, o) {
   const s = {
@@ -95,8 +96,8 @@ function deriveDay(events, o) {
       : Math.max(0, Math.round((Math.min(s.checkOutAt, o.endMs) - s.checkInAt) / MINUTE));
   }
   const lateMin = s.checkInAt === null || o.startMs === null || o.startMs === undefined
-    ? null : lateMinutes(s.checkInAt - o.startMs);
+    ? null : lateMinutes(s.checkInAt - o.startMs, o.graceMin ?? LATE_GRACE_MIN);
   return { ...s, workedMin, countedMin, overtimeMin, afterHoursMin, lateMin };
 }
 
-module.exports = { deriveDay, saudiTime };
+module.exports = { deriveDay, saudiTime, LATE_GRACE_MIN };

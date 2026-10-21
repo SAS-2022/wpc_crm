@@ -6,7 +6,7 @@ import 'package:wpc_crm/features/plan/route_order.dart';
 // Points along a street, about 1.1 km apart (0.01° longitude near Riyadh).
 Stop _at(int km) => (24.7, 46.6 + km * 0.01);
 
-PlanTask _task(String id, String clientId, {TaskApproval approval = TaskApproval.approved}) => PlanTask(
+PlanTask _task(String id, String clientId, {TaskApproval approval = TaskApproval.approved, String? locationId}) => PlanTask(
       id: id,
       ownerId: 'u',
       date: '2026-10-18',
@@ -17,9 +17,10 @@ PlanTask _task(String id, String clientId, {TaskApproval approval = TaskApproval
       approval: approval,
       done: false,
       visitId: null,
+      locationId: locationId,
     );
 
-Client _client(String id, Stop? at) => Client(
+Client _client(String id, Stop? at, {List<ClientLocation> extra = const []}) => Client(
       id: id,
       vat: '',
       nameKey: id,
@@ -37,6 +38,7 @@ Client _client(String id, Stop? at) => Client(
       assignedTo: 'u',
       category: 'B',
       lastVisitAt: null,
+      extraLocations: extra,
     );
 
 void main() {
@@ -102,5 +104,16 @@ void main() {
     ])!;
     expect(e.rate, 1);
     expect(e.bestOrder, isTrue);
+  });
+
+  test('a plan stop is the location picked when planning, else the main one', () {
+    const factory = ClientLocation(id: 'f', typeId: 'factory', lat: 24.9, lng: 46.9);
+    final clients = {'a': _client('a', _at(0), extra: const [factory]), 'b': _client('b', null)};
+    expect(planStop(_task('1', 'a', locationId: 'f'), clients)!.id, 'f');
+    expect(planStop(_task('2', 'a'), clients)!.id, ClientLocation.mainId);
+    // The picked location was deleted since: the main one.
+    expect(planStop(_task('3', 'a', locationId: 'gone'), clients)!.id, ClientLocation.mainId);
+    expect(planStop(_task('4', 'b'), clients), isNull);
+    expect(planStopNumbers([_task('1', 'a', locationId: 'f'), _task('4', 'b')], clients).keys, ['1']);
   });
 }

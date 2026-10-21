@@ -72,7 +72,8 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
     // Numbered in the shortest order through the stops.
     final numbers = planStopNumbers(tasks, clients);
     final located = inRouteOrder(tasks, numbers).where((t) => numbers.containsKey(t.id)).toList();
-    final points = [for (final t in located) LatLng(clients[t.clientId]!.lat!, clients[t.clientId]!.lng!)];
+    // The picked location of each stop, else the client's main one.
+    final points = [for (final t in located) LatLng(planStop(t, clients)!.lat, planStop(t, clients)!.lng)];
     final missing = tasks.length - located.length;
 
     if (_map != null && !_fitted && points.isNotEmpty) {
@@ -87,6 +88,7 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
+            mapType: ref.watch(mapTypeProvider),
             // Keeps the Google logo and fitted markers clear of the legend card.
             padding: const EdgeInsets.only(top: 72),
             myLocationEnabled: true,

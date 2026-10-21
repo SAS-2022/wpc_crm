@@ -20,6 +20,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   GoogleMapController? _map;
   late LatLng _center = widget.initial ?? defaultMapCenter;
 
+  /// Satellite with labels helps find a shop or workshop from above.
+  MapType _type = MapType.hybrid;
+
   @override
   void dispose() {
     _map?.dispose();
@@ -41,8 +44,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(target: _center, zoom: widget.initial == null ? 12 : 17),
-            // Satellite with labels helps find a shop or workshop from above.
-            mapType: MapType.hybrid,
+            mapType: _type,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -74,6 +76,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
               ),
             ),
+          ),
+          PositionedDirectional(
+            end: 12,
+            bottom: 148,
+            child: MapTypeButton(value: _type, onChanged: (t) => setState(() => _type = t)),
           ),
           PositionedDirectional(
             end: 12,

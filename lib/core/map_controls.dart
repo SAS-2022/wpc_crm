@@ -2,8 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import 'location.dart';
@@ -22,6 +24,96 @@ Future<LatLng?> locateMe() async {
     return position == null ? null : LatLng(position.latitude, position.longitude);
   } catch (_) {
     return null;
+  }
+}
+
+/// Map / satellite / hybrid view of every map, remembered on this device.
+final mapTypeProvider = NotifierProvider<MapTypeController, MapType>(MapTypeController.new);
+
+class MapTypeController extends Notifier<MapType> {
+  static const _key = 'mapType';
+
+  @override
+  MapType build() {
+    _load();
+    return MapType.normal;
+  }
+
+  Future<void> _load() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getString(_key);
+      final type = MapType.values.where((t) => t.name == saved).firstOrNull;
+      if (type != null) state = type;
+    } catch (_) {
+      // Default view.
+    }
+  }
+
+  Future<void> set(MapType type) async {
+    state = type;
+    try {
+      await (await SharedPreferences.getInstance()).setString(_key, type.name);
+    } catch (_) {
+      // Kept for this session only.
+    }
+  }
+}
+
+/// The views offered by [MapTypeButton].
+const mapTypeChoices = [MapType.normal, MapType.satellite, MapType.hybrid];
+
+/// Small round button that picks the map view. Uses the shared
+/// [mapTypeProvider] unless [value] / [onChanged] are given.
+class MapTypeButton extends ConsumerWidget {
+  const MapTypeButton({super.key, this.value, this.onChanged});
+
+  final MapType? value;
+  final ValueChanged<MapType>? onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final MapType current = value ?? ref.watch(mapTypeProvider);
+    String label(MapType t) => switch (t) {
+          MapType.satellite => l10n.mapViewSatellite,
+          MapType.hybrid => l10n.mapViewHybrid,
+          _ => l10n.mapViewMap,
+        };
+    IconData icon(MapType t) => switch (t) {
+          MapType.satellite => Icons.satellite_alt_outlined,
+          MapType.hybrid => Icons.layers_outlined,
+          _ => Icons.map_outlined,
+        };
+    return PointerInterceptor(
+      child: PopupMenuButton<MapType>(
+        tooltip: l10n.mapView,
+        initialValue: current,
+        onSelected: (t) => onChanged != null ? onChanged!(t) : ref.read(mapTypeProvider.notifier).set(t),
+        itemBuilder: (_) => [
+          for (final t in mapTypeChoices)
+            PopupMenuItem(
+              value: t,
+              // Clicks on the menu must not reach the web map under it.
+              child: PointerInterceptor(
+                child: Row(
+                  children: [
+                    Icon(icon(t), size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(label(t))),
+                    if (t == current) const Icon(Icons.check, size: 18),
+                  ],
+                ),
+              ),
+            ),
+        ],
+        child: Material(
+          elevation: 3,
+          shape: const CircleBorder(),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          child: SizedBox(width: 40, height: 40, child: Icon(icon(current), size: 22)),
+        ),
+      ),
+    );
   }
 }
 
@@ -125,7 +217,7 @@ class MarkerIcons {
   }
 }
 
-/// My location, zoom in, zoom out and (optionally) show-all buttons, stacked
+/// Map view, my location, zoom in, zoom out and (optionally) show-all buttons, stacked
 /// at the bottom end of a map.
 class MapControls extends StatelessWidget {
   const MapControls({super.key, required this.map, required this.onMyLocation, this.onFitAll});
@@ -150,6 +242,7 @@ class MapControls extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const MapTypeButton(),
           button(Icons.my_location, l10n.myLocation, onMyLocation),
           button(Icons.add, l10n.zoomIn, () => map?.animateCamera(CameraUpdate.zoomIn())),
           button(Icons.remove, l10n.zoomOut, () => map?.animateCamera(CameraUpdate.zoomOut())),

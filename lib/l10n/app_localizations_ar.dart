@@ -362,7 +362,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteUserBody =>
-      'سيفقد الوصول إلى التطبيق فوراً. سيصبح عملاؤه غير مُسندين، وستبقى زياراته السابقة. لإعادة استخدام البريد نفسه لاحقاً، احذف الحساب أيضاً من Firebase Console ← Authentication.';
+      'سيُحذف المستخدم نهائيًا: حساب الدخول (يمكن استخدام البريد مرة أخرى) والملف الشخصي وبيانات الموقع. يصبح عملاؤه غير مُسندين ويفقد فريقه مدير الحسابات. تبقى زياراته وخططه وسجل حضوره وإجازاته.';
 
   @override
   String get userDeleted => 'تم حذف المستخدم';
@@ -3361,4 +3361,240 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get checkInNotAlways => 'الوصول إلى الموقع \"السماح طوال الوقت\"';
+
+  @override
+  String get mapView => 'عرض الخريطة';
+
+  @override
+  String get mapViewMap => 'خريطة';
+
+  @override
+  String get mapViewSatellite => 'قمر صناعي';
+
+  @override
+  String get mapViewHybrid => 'مختلط (قمر صناعي + أسماء)';
+
+  @override
+  String get settingsSectionTracking => 'التتبع وساعات العمل';
+
+  @override
+  String get settingsSectionClients => 'العملاء والزيارات';
+
+  @override
+  String get settingsSectionPeople => 'الموظفون والحضور';
+
+  @override
+  String get trackingSchedules => 'جداول التتبع';
+
+  @override
+  String trackingSchedulesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count أشخاص لديهم جدول خاص',
+      one: 'شخص واحد لديه جدول خاص',
+      zero: 'الجميع يتبع ساعات عمل الشركة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trackingSchedulesHelp(String hours) {
+    return 'متى يُشارك موقع كل شخص. افتراضيًا يتبع فريق المبيعات ساعات عمل الشركة ($hours) ويُتتبع السائقون طوال اليوم. اضغط على شخص لتحديد أيام وساعات خاصة به، أو طوال اليوم.';
+  }
+
+  @override
+  String get noTrackedPeople => 'لا يوجد أحد يُتتبع بعد.';
+
+  @override
+  String get trackingAllDay => 'طوال اليوم، كل يوم';
+
+  @override
+  String get trackingAllDayDriver => 'طوال اليوم (سائق)';
+
+  @override
+  String get trackingCompanyHours => 'ساعات عمل الشركة';
+
+  @override
+  String trackingScheduleOf(String name) {
+    return 'ساعات التتبع · $name';
+  }
+
+  @override
+  String get trackingModeStandard => 'افتراضي';
+
+  @override
+  String get trackingModeOwn => 'ساعات خاصة';
+
+  @override
+  String get trackingModeAllDay => 'طوال اليوم';
+
+  @override
+  String get trackingStandardDriverHelp =>
+      'تبقى سيارة الشركة مع السائقين، لذلك يُشارك موقعهم طوال اليوم.';
+
+  @override
+  String trackingStandardHelp(String hours) {
+    return 'يُشارك الموقع خلال ساعات عمل الشركة: $hours.';
+  }
+
+  @override
+  String get trackingAllDayHelp =>
+      'يُشارك الموقع في جميع الأوقات، حتى في أيام الإجازة. تُرسل تنبيهات التتبع فقط خلال ساعات عمل الشركة.';
+
+  @override
+  String get trackingOwnHelp =>
+      'يُشارك الموقع في هذه الأيام والساعات فقط، وتتبعها أيضًا تنبيهات التتبع وعدم الاتصال.';
+
+  @override
+  String get trackingHours => 'ساعات التتبع';
+
+  @override
+  String get settingTrackingInterval => 'فترة إرسال الموقع';
+
+  @override
+  String get settingTrackingIntervalHelp =>
+      'كم مرة يرسل الهاتف المُتتبع موقعه. فترة أقصر = مسارات أدق واستهلاك أكثر للبطارية.';
+
+  @override
+  String get settingOfflineAlert => 'تنبيه عدم الاتصال بعد';
+
+  @override
+  String get settingOfflineAlertHelp =>
+      'يُبلَّغ مدير الحسابات أو المدراء إذا بقي الهاتف المُتتبع غير متصل هذه المدة خلال وقت العمل.';
+
+  @override
+  String get settingVisitRadius => 'حد مسافة تسجيل الزيارة';
+
+  @override
+  String get settingVisitRadiusHelp =>
+      'تُعلَّم الزيارات المسجلة على مسافة أبعد من هذه عن العميل بأنها بعيدة.';
+
+  @override
+  String get settingLateGrace => 'مهلة التأخير في الحضور';
+
+  @override
+  String get settingLateGraceHelp =>
+      'يُعد تسجيل الحضور في حدود هذه المدة بعد بداية الدوام في الوقت.';
+
+  @override
+  String get settingGivenDueSoon => 'تنبيه \"قريب الاستحقاق\" للكتالوجات';
+
+  @override
+  String get settingGivenDueSoonHelp =>
+      'تظهر الكتالوجات والستاندات \"قريبة الاستحقاق\" قبل هذا العدد من الأيام من موعد الجديد.';
+
+  @override
+  String valueSeconds(int count) {
+    return '$count ث';
+  }
+
+  @override
+  String valueMinutes(int count) {
+    return '$count د';
+  }
+
+  @override
+  String valueMeters(int count) {
+    return '$count م';
+  }
+
+  @override
+  String valueDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومان',
+      one: 'يوم واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingRange(String min, String max) {
+    return 'أدخل قيمة من $min إلى $max';
+  }
+
+  @override
+  String settingDefault(String value) {
+    return 'الافتراضي: $value';
+  }
+
+  @override
+  String get resetToDefault => 'إعادة إلى الافتراضي';
+
+  @override
+  String get deleteUser => 'حذف المستخدم';
+
+  @override
+  String get checkInBatteryOptimized =>
+      'السماح لتطبيق WPC CRM بالعمل في الخلفية (إيقاف تحسين البطارية)';
+
+  @override
+  String get checkInAutostartOff => 'التشغيل التلقائي متوقف لتطبيق WPC CRM';
+
+  @override
+  String get allowBackgroundForAttendance =>
+      'اسمح للتطبيق بالعمل في الخلفية ليُسجَّل حضورك عند وصولك إلى موقع العمل';
+
+  @override
+  String get openAutostart => 'التشغيل التلقائي';
+
+  @override
+  String get openBatterySaver => 'توفير البطارية';
+
+  @override
+  String get locationDisclosureTitle => 'استخدام الموقع في الخلفية';
+
+  @override
+  String get locationDisclosureTracking =>
+      'يجمع تطبيق WPC CRM بيانات الموقع لعرض موقعك لمدرائك على خريطة الفريق المباشرة، وحفظ سجل مسارك اليومي، والتأكد من أن زيارات العملاء تتم عند العميل، خلال ساعات عملك، حتى عندما يكون التطبيق مغلقًا أو غير مستخدم.';
+
+  @override
+  String get locationDisclosureAttendance =>
+      'يجمع تطبيق WPC CRM بيانات الموقع لتسجيل حضورك تلقائيًا عند وصولك إلى موقع العمل وتسجيل مغادرتك له، حتى عندما يكون التطبيق مغلقًا أو غير مستخدم. لا يُفحص موقعك إلا عند دخولك موقع العمل أو مغادرته.';
+
+  @override
+  String get locationDisclosureNext =>
+      'يُستخدم موقعك فقط لعملك مع الشركة ولا يُستخدم للإعلانات. في الشاشة التالية اختر \"السماح طوال الوقت\".';
+
+  @override
+  String get locationDisclosureNo => 'لا، شكرًا';
+
+  @override
+  String get locationDisclosureContinue => 'متابعة';
+
+  @override
+  String get addToWhosePlan => 'إضافة إلى خطة من اليوم؟';
+
+  @override
+  String personsPlan(String name) {
+    return 'خطة $name';
+  }
+
+  @override
+  String addToPersonsPlanToday(String name) {
+    return 'إضافة إلى خطة $name اليوم';
+  }
+
+  @override
+  String onPersonsPlanToday(String name) {
+    return 'في خطة $name اليوم';
+  }
+
+  @override
+  String addedToPersonsPlan(String name) {
+    return 'أُضيف إلى خطة $name لليوم';
+  }
+
+  @override
+  String get dayView => 'يوم';
+
+  @override
+  String get weekView => 'أسبوع';
+
+  @override
+  String get monthView => 'شهر';
 }

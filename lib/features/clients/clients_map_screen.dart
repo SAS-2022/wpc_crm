@@ -63,13 +63,23 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   /// Web, KAM / managers: tapping pins picks clients to move or plan together.
   bool _selecting = false;
   final _selected = <String>{};
+
+  /// Client id → the location pin tapped, for clients with several
+  /// locations (planned there; otherwise the main one).
+  final _selectedAt = <String, String>{};
   bool _moving = false;
+
+  /// This pin is the picked one: for a client with several locations only
+  /// the location tapped, not all of its pins.
+  bool _isPicked(Client c, ClientLocation loc) =>
+      _selected.contains(c.id) &&
+      (c.locations.length == 1 || (_selectedAt[c.id] ?? ClientLocation.mainId) == loc.id);
 
   /// Each picked client onto its salesperson's plan for a chosen day.
   Future<void> _planSelected(List<Client> all) async {
     final picked = [for (final c in all) if (_selected.contains(c.id)) c];
     setState(() => _moving = true);
-    final done = await addSelectionToPlans(context, ref, picked);
+    final done = await addSelectionToPlans(context, ref, picked, locations: _selectedAt);
     if (!mounted) return;
     setState(() {
       _moving = false;
@@ -182,6 +192,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 15),
+            mapType: ref.watch(mapTypeProvider),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
             // Keeps the Google logo and fitted markers clear of the filter card.
             padding: EdgeInsets.only(top: ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52),
@@ -204,16 +215,26 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                       context: context,
                       fill: colorOf(c),
                       // Picked for moving: thick dark ring, slightly bigger.
-                      ring: _selected.contains(c.id) ? Colors.black : Colors.white,
-                      ringWidth: _selected.contains(c.id) ? 5 : 2,
-                      size: _selected.contains(c.id) ? 38 : 30,
+                      ring: _isPicked(c, loc) ? Colors.black : Colors.white,
+                      ringWidth: _isPicked(c, loc) ? 5 : 2,
+                      size: _isPicked(c, loc) ? 38 : 30,
                       // Salesperson mode: their initials; otherwise the category letter.
                       text: byPerson ? styleOf(c).initials : c.category,
                       // Dark letter on yellow, white on the darker colours.
                       textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
                     ),
                     onTap: () => _selecting
-                        ? setState(() => _selected.contains(c.id) ? _selected.remove(c.id) : _selected.add(c.id))
+                        ? setState(() {
+                            if (_isPicked(c, loc)) {
+                              _selected.remove(c.id);
+                              _selectedAt.remove(c.id);
+                            } else {
+                              // The pin tapped: that location goes on the plan
+                              // (another pin of a picked client switches to it).
+                              _selected.add(c.id);
+                              if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+                            }
+                          })
                         : showClientSheet(
                             context,
                             ref,
@@ -224,8 +245,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                                 ? () => setState(() {
                                       _selecting = true;
                                       _selected.add(c.id);
+                                      if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
                                     })
                                 : null,
+                            c.locations.length > 1 ? loc : null,
                           ),
                   ),
             },

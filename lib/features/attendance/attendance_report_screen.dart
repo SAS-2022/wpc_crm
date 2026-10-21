@@ -7,7 +7,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/app_user.dart';
 import '../../core/save_file.dart';
 import '../../l10n/app_localizations.dart';
-import '../clients/client_tags.dart';
 import '../hr/leave_repository.dart';
 import '../hr/leave_rules.dart';
 import '../tracking/work_hours.dart';
@@ -109,7 +108,6 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
     final requests = ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[];
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final siteNames = {for (final s in sites) s.id: s.name};
-    final positions = ref.watch(positionsByIdProvider);
     final companies = {for (final c in ref.watch(companiesProvider).value ?? const <Company>[]) c.id: c.name};
     final people = [
       for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
@@ -145,7 +143,6 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
       month: _month,
       siteNames: siteNames,
       roleLabel: (u) => u.role.label(l10n),
-      positionLabel: (u) => u.position.isEmpty ? '' : positionLabel(positions, u.position, lang),
       companyNames: companies,
       scheduleLabel: (h) => WorkHoursEditor.summary(context, h),
     );

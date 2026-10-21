@@ -86,7 +86,8 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
       missing += tasks.length - routes[uid]!.length;
     }
     final people = routes.keys.toList()..sort((a, b) => team[a]!.name.compareTo(team[b]!.name));
-    LatLng at(PlanTask t) => LatLng(clients[t.clientId]!.lat!, clients[t.clientId]!.lng!);
+    // The picked location of each stop, else the client's main one.
+    LatLng at(PlanTask t) => LatLng(planStop(t, clients)!.lat, planStop(t, clients)!.lng);
     final shown = [for (final uid in people) if (!_hidden.contains(uid)) uid];
     final points = [for (final uid in shown) for (final t in routes[uid]!) at(t)];
     Color colorOf(String uid) => (styles[uid] ?? unassignedStyle).color;
@@ -103,6 +104,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
+            mapType: ref.watch(mapTypeProvider),
             padding: const EdgeInsets.only(top: 96),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,

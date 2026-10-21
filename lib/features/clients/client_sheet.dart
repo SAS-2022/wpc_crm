@@ -30,6 +30,8 @@ void showClientSheet(
   String? place,
   Visit? visit,
   VoidCallback? onSelectSeveral,
+  // The pin tapped, for a client with several locations: planned there.
+  ClientLocation? location,
 ]) {
   final l10n = AppLocalizations.of(context);
   final me = ref.read(currentUserProvider).value;
@@ -108,9 +110,9 @@ void showClientSheet(
                   label: Text(l10n.visitDetails),
                 ),
               ],
-              if (ref.read(currentUserProvider).value?.role.isTracked ?? false) ...[
+              if (ref.read(currentUserProvider).value?.role case final r? when r.isTracked || r.isSupervisor) ...[
                 const SizedBox(height: 12),
-                AddToTodayButton(client: c),
+                AddToTodayButton(client: c, locationId: location?.id),
               ],
               // Web dashboard: KAM / managers move the client to another salesperson.
               if (kIsWeb && canMove) ...[
@@ -143,12 +145,18 @@ void showClientSheet(
   );
 }
 
-/// One tap puts the client on the user's plan for today; shows "On today's
-/// plan" once it's there (any approval state, not done).
+/// One tap puts the client on today's plan; shows "On today's plan" once
+/// it's there (any approval state, not done). Whose plan: a sales exec's own;
+/// for a KAM / manager the client's salesperson when they may plan for them
+/// (2026-10-21), and a KAM can pick their own plan instead (they may visit
+/// alone) — asked when both are possible.
 class AddToTodayButton extends ConsumerStatefulWidget {
-  const AddToTodayButton({super.key, required this.client});
+  const AddToTodayButton({super.key, required this.client, this.locationId});
 
   final Client client;
+
+  /// The client location to plan the visit at; null = the main one.
+  final String? locationId;
 
   @override
   ConsumerState<AddToTodayButton> createState() => AddToTodayButtonState();
@@ -157,13 +165,20 @@ class AddToTodayButton extends ConsumerStatefulWidget {
 class AddToTodayButtonState extends ConsumerState<AddToTodayButton> {
   bool _busy = false;
 
-  Future<void> _add(AppUser me) async {
+  Future<void> _add(AppUser me, AppUser owner) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      final approved = await addClientToTodayPlan(ref, me, widget.client);
-      messenger.showSnackBar(SnackBar(content: Text(approved ? l10n.planUpdated(1) : l10n.planSentForApproval(1))));
+      final approved =
+          await addClientToTodayPlan(ref, me, widget.client, owner: owner, locationId: widget.locationId);
+      messenger.showSnackBar(SnackBar(
+        content: Text(owner.id != me.id
+            ? l10n.addedToPersonsPlan(owner.name)
+            : approved
+            ? l10n.planUpdated(1)
+            : l10n.planSentForApproval(1)),
+      ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
     } finally {
@@ -171,20 +186,70 @@ class AddToTodayButtonState extends ConsumerState<AddToTodayButton> {
     }
   }
 
+  /// KAM: the salesperson's plan or their own.
+  Future<void> _choose(AppUser me, List<AppUser> open) async {
+    final l10n = AppLocalizations.of(context);
+    final picked = await showDialog<AppUser>(
+      context: context,
+      builder: (dialog) => PointerInterceptor(
+        child: SimpleDialog(
+          title: Text(l10n.addToWhosePlan),
+          children: [
+            for (final u in open)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialog, u),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(u.id == me.id ? Icons.person : Icons.person_outline),
+                  title: Text(u.id == me.id ? l10n.myPlan : l10n.personsPlan(u.name)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) await _add(me, picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
-    final tasks = ref.watch(dayTasksProvider((me.id, dayKey(DateTime.now())))).value;
-    final onPlan =
-        tasks?.any((t) => t.clientId == widget.client.id && !t.done && t.approval != TaskApproval.rejected) ?? false;
+    final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
+    final owner = users[widget.client.assignedTo];
+    final targets = [
+      // The client's salesperson, when a KAM / manager may plan for them.
+      if (me.role.isSupervisor &&
+          owner != null &&
+          owner.id != me.id &&
+          owner.active &&
+          owner.role.isTracked &&
+          canTransferFrom(me, owner.id, users))
+        owner,
+      if (me.role.isTracked) me,
+    ];
+    if (targets.isEmpty) return const SizedBox.shrink();
+    final today = dayKey(DateTime.now());
+    final taskLists = [for (final t in targets) ref.watch(dayTasksProvider((t.id, today))).value];
+    bool onPlan(int i) =>
+        taskLists[i]?.any((t) => t.clientId == widget.client.id && !t.done && t.approval != TaskApproval.rejected) ??
+        false;
+    final open = [for (final (i, t) in targets.indexed) if (!onPlan(i)) t];
+    final loading = taskLists.any((l) => l == null);
+    final label = open.isEmpty
+        ? (targets.first.id == me.id ? l10n.onTodaysPlan : l10n.onPersonsPlanToday(targets.first.name))
+        : open.length == 1 && open.single.id != me.id
+        ? l10n.addToPersonsPlanToday(open.single.name)
+        : l10n.addToTodaysPlan;
     return FilledButton.tonalIcon(
-      onPressed: onPlan || _busy || tasks == null ? null : () => _add(me),
+      onPressed: open.isEmpty || _busy || loading
+          ? null
+          : () => open.length == 1 ? _add(me, open.single) : _choose(me, open),
       icon: _busy
           ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(onPlan ? Icons.event_available : Icons.playlist_add),
-      label: Text(onPlan ? l10n.onTodaysPlan : l10n.addToTodaysPlan),
+          : Icon(open.isEmpty ? Icons.event_available : Icons.playlist_add),
+      label: Text(label),
     );
   }
 }

@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
 import '../clients/client_edit_screen.dart';
 import '../clients/client_location_dialog.dart';
+import '../clients/client_locations_section.dart' show locationLabel;
+import '../clients/client_tags.dart' show locationTypesByIdProvider;
 import '../clients/client_widgets.dart';
 import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
@@ -20,17 +22,32 @@ import '../../core/saving.dart';
 /// Puts [client] on [me]'s plan for today in one tap (clients map). Same
 /// approval and notifications as the add sheet; returns whether it was
 /// approved straight away (KAM) or sent for approval (sales exec).
-Future<bool> addClientToTodayPlan(WidgetRef ref, AppUser me, Client client) async {
+/// [owner]: whose plan (default [me]); a KAM / manager adding to a
+/// salesperson's plan is approved at once and tells them (2026-10-21: a KAM's
+/// tap on a team member's client used to land on the KAM's own plan).
+/// [locationId]: the client location picked (the map pin tapped); null =
+/// the main one.
+Future<bool> addClientToTodayPlan(WidgetRef ref, AppUser me, Client client, {AppUser? owner, String? locationId}) async {
   final today = dayKey(DateTime.now());
+  final to = owner ?? me;
   final approved = me.role.isSupervisor;
   await ref.read(planRepositoryProvider).addMany(
-        ownerId: me.id,
+        ownerId: to.id,
         date: today,
         createdBy: me.id,
         approved: approved,
-        clients: [(id: client.id, name: client.name)],
+        clients: [(id: client.id, name: client.name, locationId: locationId)],
       );
-  if (!approved) {
+  if (to.id != me.id) {
+    await sendNotifications(
+      toIds: [to.id],
+      type: NotificationType.planItemsAdded,
+      fromId: me.id,
+      ownerId: to.id,
+      date: today,
+      count: 1,
+    );
+  } else if (!approved) {
     await sendNotifications(
       toIds: reviewersOf(me, ref.read(usersProvider).value ?? const <AppUser>[]),
       type: NotificationType.planSubmitted,
@@ -81,6 +98,9 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
   String _typed = '';
   bool _busy = false;
 
+  /// Client id → the location picked for clients with several (none = main).
+  final _locations = <String, String>{};
+
   /// A client added from here (user decision 2026-10-18: typing a client
   /// that isn't there offers to add it); selected once it has loaded.
   String? _pendingId;
@@ -122,7 +142,9 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
             date: widget.date,
             createdBy: me.id,
             approved: approved,
-            clients: _visit ? [for (final c in _selected.values) (id: c.id, name: c.name)] : const [],
+            clients: _visit
+                ? [for (final c in _selected.values) (id: c.id, name: c.name, locationId: _locations[c.id])]
+                : const [],
             title: _title.text.trim(),
             checklist: _visit ? _checklist : const [],
           );
@@ -152,6 +174,8 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     final me = ref.watch(currentUserProvider).value;
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final now = DateTime.now();
+    final types = ref.watch(locationTypesByIdProvider);
+    final lang = Localizations.localeOf(context).languageCode;
     final all = ref.watch(workingClientsProvider).value ?? const <Client>[];
     if (_pendingId != null) {
       final added = all.where((c) => c.id == _pendingId).firstOrNull;
@@ -238,15 +262,48 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                             }
                             final c = candidates[i];
                             final selected = _selected.containsKey(c.id);
-                            void toggle() => setState(() => selected ? _selected.remove(c.id) : _selected[c.id] = c);
+                            void toggle() => setState(() {
+                                  if (selected) {
+                                    _selected.remove(c.id);
+                                    _locations.remove(c.id);
+                                  } else {
+                                    _selected[c.id] = c;
+                                  }
+                                });
                             return ListTile(
                               onTap: toggle,
                               leading: CategoryBadge(category: c.category, color: clientColor(c, rules, now)),
                               title: Text(c.name),
-                              subtitle: Text([
-                                c.city,
-                                if (c.hasLocation) visitStatusLabel(visitStatus(c, rules, now), l10n) else l10n.noLocation,
-                              ].where((s) => s.isNotEmpty).join(' · ')),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text([
+                                    c.city,
+                                    if (c.hasLocation)
+                                      visitStatusLabel(visitStatus(c, rules, now), l10n)
+                                    else
+                                      l10n.noLocation,
+                                  ].where((s) => s.isNotEmpty).join(' · ')),
+                                  // Several locations: which one to visit (default the main one).
+                                  if (selected && c.locations.length > 1)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children: [
+                                          for (final (j, l) in c.locations.indexed)
+                                            ChoiceChip(
+                                              visualDensity: VisualDensity.compact,
+                                              label: Text(locationLabel(l, j, types, lang, l10n)),
+                                              selected: (_locations[c.id] ?? ClientLocation.mainId) == l.id,
+                                              onSelected: (_) => setState(() => _locations[c.id] = l.id),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

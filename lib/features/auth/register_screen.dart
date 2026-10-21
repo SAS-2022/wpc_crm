@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/companies.dart';
-import '../clients/client_tags.dart';
+import '../../core/app_user.dart';
 
 /// Self-registration for people without a company account (user request
 /// 2026-10-19): name, phone, position and company, plus email and password.
@@ -29,7 +29,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   String? _companyId;
-  String? _position;
+  /// The job asked for, saved as a role value in `position` (see
+  /// [AppUser.requestedRole]); the admin confirms it on approval.
+  UserRole? _role;
   bool _busy = false;
 
   @override
@@ -55,7 +57,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'name': _name.text.trim(),
           'email': _email.text.trim(),
           'phone': _phone.text.trim(),
-          'position': _position,
+          'position': _role?.value,
           'companyId': _companyId,
           'role': '',
           'active': false,
@@ -84,8 +86,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final companies = [for (final c in ref.watch(companiesProvider).value ?? const <Company>[]) if (c.active) c];
-    final positions = ref.watch(tagListProvider(TagList.positions)).value ?? defaultPositions;
-    final lang = Localizations.localeOf(context).languageCode;
     String? required(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
 
     return Scaffold(
@@ -115,11 +115,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   decoration: InputDecoration(labelText: l10n.phone),
                   validator: required,
                 ),
-                DropdownButtonFormField<String>(
-                  initialValue: _position,
+                DropdownButtonFormField<UserRole>(
+                  initialValue: _role,
                   decoration: InputDecoration(labelText: l10n.position),
-                  items: [for (final p in positions) DropdownMenuItem(value: p.id, child: Text(p.label(lang)))],
-                  onChanged: (v) => setState(() => _position = v),
+                  items: [for (final r in UserRole.registrable) DropdownMenuItem(value: r, child: Text(r.label(l10n)))],
+                  onChanged: (v) => setState(() => _role = v),
                   validator: (v) => v == null ? l10n.required : null,
                 ),
                 DropdownButtonFormField<String>(

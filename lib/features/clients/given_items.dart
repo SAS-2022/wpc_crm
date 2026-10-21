@@ -65,8 +65,9 @@ class GivenItemRules {
 
 enum GivenStatus { never, ok, dueSoon, due }
 
-/// Days before the due date that count as "due soon".
-const givenDueSoonDays = 14;
+/// Days before the due date that count as "due soon". 14 unless changed in
+/// App settings (`AppSettings.apply`).
+var givenDueSoonDays = 14;
 
 /// When the client should get a new [item]; null if never given.
 DateTime? givenNextDue(GivenRecord? record, GivenItem item, GivenItemRules rules) =>

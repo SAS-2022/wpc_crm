@@ -47,21 +47,14 @@ class MoreScreen extends ConsumerWidget {
         if (role.canSeeHr && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
         // HR area hidden on the web for now (user request 2026-10-18).
         if (role.canSeeHr && !wide && !kIsWeb) item(Icons.badge, l10n.hrArea, '/hr'),
-        if (role.isAdmin) ...[
-          item(Icons.people, l10n.users, '/users'),
-          item(Icons.apartment, l10n.workSites, '/work-sites'),
-          item(Icons.business, l10n.companies, '/companies'),
-          item(Icons.work_outline, l10n.positions, '/positions'),
-        ],
+        if (role.isAdmin) item(Icons.people, l10n.users, '/users'),
       ]),
       (l10n.moreSectionSettings, [
+        // Work hours, visit frequency, tags, work sites … are all in App
+        // settings (user request 2026-10-21).
         if (role.isAdmin) ...[
+          item(Icons.settings_outlined, l10n.appSettings, '/settings'),
           item(Icons.upload_file, l10n.importClients, '/import'),
-          item(Icons.sell_outlined, l10n.clientTags, '/client-tags'),
-          item(Icons.place_outlined, l10n.locationTypes, '/location-types'),
-          item(Icons.timelapse, l10n.visitFrequency, '/visit-rules'),
-          item(Icons.menu_book_outlined, l10n.givenItemsSettings, '/given-items'),
-          item(Icons.schedule, l10n.workHours, '/work-hours'),
         ],
       ]),
     ];
@@ -98,7 +91,8 @@ class MoreScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 1,
+                    // Taller tiles when the phone's text is enlarged.
+                    childAspectRatio: 1 / MediaQuery.textScalerOf(context).scale(1),
                     children: [for (final i in items) _Tile(item: i)],
                   );
                 }),

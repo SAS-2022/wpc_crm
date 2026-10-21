@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:native_geofence/native_geofence.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,12 +40,41 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
     final user = await FirebaseAuth.instance.authStateChanges().first;
     if (user == null) return;
     final now = DateTime.now();
+    final fix = await _freshFix();
     for (final g in params.geofences) {
+      Map<String, Object>? extra;
+      if (fix != null) {
+        final distance = Geolocator.distanceBetween(fix.latitude, fix.longitude, g.location.latitude, g.location.longitude);
+        if (!geofenceEventConfirmed(
+          enter: type == AttendanceEventType.in_,
+          distance: distance,
+          accuracy: fix.accuracy,
+          radius: g.radiusMeters,
+        )) {
+          debugPrint('attendance geofence: ${params.event.name} at ${g.id} ignored, GPS ${distance.round()} m');
+          continue;
+        }
+        extra = {'dist': distance.round(), 'acc': fix.accuracy.round()};
+      }
       // Kept on the phone and sent when online if this times out.
-      await recordAttendance(user.uid, type, siteId: g.id, at: now).timeout(const Duration(seconds: 20), onTimeout: () {});
+      await recordAttendance(user.uid, type, siteId: g.id, at: now, extra: extra)
+          .timeout(const Duration(seconds: 20), onTimeout: () {});
     }
   } catch (e) {
     debugPrint('attendance geofence: $e');
+  }
+}
+
+/// A GPS fix to confirm a geofence event; null when none comes in time
+/// (the event is then trusted).
+Future<Position?> _freshFix() async {
+  try {
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 25)),
+    );
+  } catch (e) {
+    debugPrint('attendance geofence: no GPS fix: $e');
+    return null;
   }
 }
 
@@ -53,8 +83,15 @@ Future<bool> hasAlwaysLocation() async => geofencesSupported && await Permission
 
 const _signatureKey = 'attendanceGeofences';
 
+/// Registered once since the app started.
+var _registeredThisLaunch = false;
+
 /// Keeps the phone's geofences equal to the signed-in person's active work
-/// sites (re-registered only when they change).
+/// sites: registered again at every app start (Android drops them when the
+/// app is force-stopped — Xiaomi does that when it's swiped away — after a
+/// reboot or when location is switched off; found 2026-10-21), otherwise
+/// only when the sites change. Already at a site when registered counts as
+/// arriving.
 final attendanceGeofencesProvider = Provider<void>((ref) {
   if (!geofencesSupported) return;
   final me = ref.watch(currentUserProvider).value;
@@ -64,11 +101,17 @@ final attendanceGeofencesProvider = Provider<void>((ref) {
     for (final s in sites)
       if (me.active && me.needsAttendance && s.active && me.workSiteIds.contains(s.id)) s,
   ];
-  unawaited(_sync(mine));
+  final force = !_registeredThisLaunch;
+  _registeredThisLaunch = true;
+  unawaited(_sync(mine, force: force));
 });
 
 /// Re-registers after the user granted "Always" (the card asks for it).
 Future<void> refreshAttendanceGeofences(List<WorkSite> sites) => _sync(sites, force: true);
+
+/// Registers the sites if they aren't yet (e.g. "Always" was granted while
+/// the app was in the phone's settings). Cheap when nothing changed.
+Future<void> ensureAttendanceGeofences(List<WorkSite> sites) => _sync(sites);
 
 Future<void> _sync(List<WorkSite> sites, {bool force = false}) async {
   try {
@@ -82,7 +125,12 @@ Future<void> _sync(List<WorkSite> sites, {bool force = false}) async {
       await prefs.setString(_signatureKey, signature);
       return;
     }
-    if (!await hasAlwaysLocation()) return; // the Home card asks for it
+    if (!await hasAlwaysLocation()) {
+      // Nothing registered: the next sync (e.g. back from the settings with
+      // "Always" granted) must register again (found 2026-10-21).
+      await prefs.remove(_signatureKey);
+      return; // the Home card asks for it
+    }
     for (final s in sites) {
       await manager.createGeofence(
         Geofence(

@@ -171,8 +171,9 @@ DayResult deriveDay(
 }
 
 /// Check-ins up to this many whole minutes after the start aren't late
-/// (user decision 2026-10-20: 8:15 is on time, 8:16 is late).
-const lateGraceMin = 15;
+/// (user decision 2026-10-20: 8:15 is on time, 8:16 is late). Editable in
+/// App settings (`AppSettings.apply`; the server reads the same value).
+var lateGraceMin = 15;
 
 /// Minutes late (whole minutes after the start, seconds dropped), 0 within
 /// the grace period. Same as `lateMinutes` in functions/attendance.js.
@@ -185,3 +186,15 @@ int _minutes(Duration d) => d.isNegative ? 0 : (d.inSeconds / 60).round();
 
 /// "8 h 05" style.
 String formatMinutes(int minutes) => '${minutes ~/ 60} h ${(minutes % 60).toString().padLeft(2, '0')}';
+
+/// Whether a geofence event from the OS matches a fresh GPS fix
+/// ([distance] from the site centre, [accuracy] of the fix, both in metres).
+/// Android can report arrivals from a rough network position far from the
+/// site (2026-10-21), so arrivals clearly outside and departures clearly
+/// inside are ignored. A rough fix (worse than 150 m) can't tell: the OS is
+/// trusted.
+bool geofenceEventConfirmed({required bool enter, required double distance, required double accuracy, required double radius}) {
+  if (accuracy > 150) return true;
+  final margin = accuracy.clamp(0, 100);
+  return enter ? distance <= radius + margin + 50 : distance + margin >= radius;
+}

@@ -34,30 +34,24 @@ void main() {
     _v('4', 'a', DateTime(2026, 10, 16, 9)),
   ];
 
-  test('by day, then by salesperson (by name), newest first inside', () {
+  test('by salesperson (by name), not by date; newest first inside', () {
     final items = visitListItems(list, now: now, byPerson: true, nameOf: (u) => names[u]!);
     expect(items.map((i) => switch (i) {
-          final DateTime d => 'day ${d.day}',
-          final PersonGroup g => '${g.uid} ${g.visits}v ${g.calls}c',
+          final PersonGroup g => '${g.uid} ${g.visits}v ${g.calls}c day ${g.day.day}',
           final Visit v => v.id,
           _ => '?',
         }), [
-      'day 17',
-      'a 0v 1c',
+      'a 1v 1c day 17',
       '2',
-      's 2v 0c',
+      '4',
+      's 2v 0c day 17',
       '1',
       '3',
-      'day 16',
-      'a 1v 0c',
-      '4',
     ]);
   });
 
-  test('without grouping by person: day headers only', () {
+  test('without grouping by person: just the visits, newest first', () {
     final items = visitListItems(list, now: now, byPerson: false, nameOf: (u) => names[u]!);
-    expect(items.whereType<PersonGroup>(), isEmpty);
-    expect(items.whereType<DateTime>().length, 2);
-    expect(items.whereType<Visit>().map((v) => v.id), ['1', '2', '3', '4']);
+    expect(items.map((i) => (i as Visit).id), ['1', '2', '3', '4']);
   });
 }
