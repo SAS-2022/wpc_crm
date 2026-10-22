@@ -302,30 +302,27 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
     Widget tile(String label, String value, IconData icon, Color color, {_Show? show}) {
       final selected = show != null && _show == show;
-      return SizedBox(
-        width: 150,
-        child: Card(
-          margin: EdgeInsets.zero,
-          color: selected ? color.withValues(alpha: 0.18) : color.withValues(alpha: 0.08),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: selected ? BorderSide(color: color, width: 1.5) : BorderSide.none,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            // Tapping a status tile shows only those people; again = everyone.
-            onTap: show == null ? null : () => setState(() => _show = selected ? _Show.all : show),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 20, color: color),
-                  const SizedBox(height: 6),
-                  Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                  Text(label, style: theme.textTheme.bodySmall, maxLines: 2),
-                ],
-              ),
+      return Card(
+        margin: EdgeInsets.zero,
+        color: selected ? color.withValues(alpha: 0.18) : color.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: selected ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          // Tapping a status tile shows only those people; again = everyone.
+          onTap: show == null ? null : () => setState(() => _show = selected ? _Show.all : show),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(height: 6),
+                Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                Text(label, style: theme.textTheme.bodySmall, maxLines: 2),
+              ],
             ),
           ),
         ),
@@ -353,21 +350,34 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               children: [
                 DayBar(day: _day, onChanged: (d) => setState(() => _day = d)),
                 // Summary: who is on site and who isn't, hours so far, delays.
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                // A grid (3 a row on phones) so none is hidden off screen.
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      for (final w in [
-                        tile(l10n.onSite, '$onSite', Icons.how_to_reg, Colors.green.shade700, show: _Show.onSite),
-                        tile(l10n.notOnSite, '$notOnSite', Icons.person_off_outlined, Colors.orange.shade800, show: _Show.notOnSite),
-                        tile(l10n.checkedOutTitle, '$checkedOut', Icons.logout, theme.colorScheme.primary, show: _Show.checkedOut),
-                        tile(l10n.workedSoFar, formatMinutes(workedTotal), Icons.timer_outlined, Colors.teal),
-                        tile(l10n.delaysCount(late.length), formatMinutes(lateTotal), Icons.schedule, theme.colorScheme.error),
-                      ])
-                        Padding(padding: const EdgeInsetsDirectional.only(end: 8), child: w),
-                    ],
-                  ),
+                  child: LayoutBuilder(builder: (context, c) {
+                    final tiles = [
+                      tile(l10n.onSite, '$onSite', Icons.how_to_reg, Colors.green.shade700, show: _Show.onSite),
+                      tile(l10n.notOnSite, '$notOnSite', Icons.person_off_outlined, Colors.orange.shade800, show: _Show.notOnSite),
+                      tile(l10n.checkedOutTitle, '$checkedOut', Icons.logout, theme.colorScheme.primary, show: _Show.checkedOut),
+                      tile(l10n.workedSoFar, formatMinutes(workedTotal), Icons.timer_outlined, Colors.teal),
+                      tile(l10n.delaysCount(late.length), formatMinutes(lateTotal), Icons.schedule, theme.colorScheme.error),
+                    ];
+                    final perRow = c.maxWidth >= 700 ? tiles.length : 3;
+                    return Column(children: [
+                      for (var i = 0; i < tiles.length; i += perRow)
+                        Padding(
+                          padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
+                          child: IntrinsicHeight(
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              for (var j = i; j < i + perRow; j++) ...[
+                                if (j > i) const SizedBox(width: 8),
+                                // Empty places keep the last row's tiles the same width.
+                                Expanded(child: j < tiles.length ? tiles[j] : const SizedBox.shrink()),
+                              ],
+                            ]),
+                          ),
+                        ),
+                    ]);
+                  }),
                 ),
                 // Search and filters.
                 Padding(

@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../visits/visit.dart';
 import 'report.dart';
 import 'routing_pace.dart';
 
@@ -127,3 +128,24 @@ final dayTimelineProvider = StreamProvider.autoDispose.family<DayTimeline?, (Str
 /// Asks `buildTimeline` to (re)build one day now, e.g. today's so far.
 Future<void> buildTimelineNow(String uid, String day) =>
     FirebaseFunctions.instance.httpsCallable('buildTimeline').call({'uid': uid, 'day': day});
+
+/// Of the clients in [key].$2 (ids, comma-separated), those with a visit
+/// (not a call) before [key].$1 ('yyyy-MM-dd'): the monthly report's
+/// "re-visited" vs "first visit". Reads only these clients' visits.
+final visitedBeforeProvider = FutureProvider.autoDispose.family<Set<String>, (String, String)>((ref, key) async {
+  final before = DateTime.parse(key.$1);
+  final ids = key.$2.split(',').where((id) => id.isNotEmpty).toList();
+  final batches = await Future.wait([
+    for (var i = 0; i < ids.length; i += 30)
+      FirebaseFirestore.instance
+          .collection('visits')
+          .where('clientId', whereIn: ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30))
+          .get(),
+  ]);
+  return {
+    for (final s in batches)
+      for (final doc in s.docs)
+        if (Visit.fromDoc(doc) case final v when !v.isCall && v.checkedInAt != null && v.checkedInAt!.isBefore(before))
+          v.clientId,
+  };
+});

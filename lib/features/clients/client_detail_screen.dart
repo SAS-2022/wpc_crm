@@ -197,36 +197,49 @@ class ClientDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(client.name),
+        // Edit stays an icon; the rest sit in a menu so the name has room on
+        // phones (five icons left "AL R…").
         actions: [
-          if (canTransfer)
-            IconButton(
-              icon: const Icon(Icons.swap_horiz),
-              tooltip: l10n.transferClients,
-              onPressed: () => showTransferDialog(context, ref, [client]),
-            ),
-          if (canChangeStatus)
-            IconButton(
-              icon: const Icon(Icons.store_mall_directory_outlined),
-              tooltip: l10n.changeClientStatus,
-              onPressed: () => showClientStatusDialog(context, ref, client),
-            ),
-          if (me?.role.isSupervisor ?? false)
-            IconButton(
-              icon: Icon(client.hidden ? Icons.visibility : Icons.visibility_off),
-              tooltip: client.hidden ? l10n.unhideClient : l10n.hideClient,
-              onPressed: () => _setHidden(context, ref, hidden: !client.hidden),
-            ),
-          if (me?.role.isAdmin ?? false)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: l10n.deleteClient,
-              onPressed: () => _delete(context, ref, client),
-            ),
           if (canEdit)
             IconButton(
               icon: const Icon(Icons.edit),
               tooltip: l10n.editClient,
               onPressed: () => context.push('/clients/$clientId/edit'),
+            ),
+          if (canTransfer || canChangeStatus || (me?.role.isSupervisor ?? false))
+            PopupMenuButton<VoidCallback>(
+              onSelected: (action) => action(),
+              itemBuilder: (_) => [
+                if (canTransfer)
+                  PopupMenuItem(
+                    value: () => showTransferDialog(context, ref, [client]),
+                    child: ListTile(leading: const Icon(Icons.swap_horiz), title: Text(l10n.transferClients)),
+                  ),
+                if (canChangeStatus)
+                  PopupMenuItem(
+                    value: () => showClientStatusDialog(context, ref, client),
+                    child: ListTile(
+                      leading: const Icon(Icons.store_mall_directory_outlined),
+                      title: Text(l10n.changeClientStatus),
+                    ),
+                  ),
+                if (me?.role.isSupervisor ?? false)
+                  PopupMenuItem(
+                    value: () => _setHidden(context, ref, hidden: !client.hidden),
+                    child: ListTile(
+                      leading: Icon(client.hidden ? Icons.visibility : Icons.visibility_off),
+                      title: Text(client.hidden ? l10n.unhideClient : l10n.hideClient),
+                    ),
+                  ),
+                if (me?.role.isAdmin ?? false)
+                  PopupMenuItem(
+                    value: () => _delete(context, ref, client),
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                      title: Text(l10n.deleteClient, style: TextStyle(color: theme.colorScheme.error)),
+                    ),
+                  ),
+              ],
             ),
         ],
       ),

@@ -2138,12 +2138,6 @@ abstract class AppLocalizations {
   /// **'Route history'**
   String get routeHistory;
 
-  /// No description provided for @teamPerformance.
-  ///
-  /// In en, this message translates to:
-  /// **'Team performance'**
-  String get teamPerformance;
-
   /// No description provided for @person.
   ///
   /// In en, this message translates to:
@@ -6163,6 +6157,402 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No one matches'**
   String get noOneMatches;
+
+  /// No description provided for @mrScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get mrScore;
+
+  /// No description provided for @mrHowScored.
+  ///
+  /// In en, this message translates to:
+  /// **'Score out of 100: target {target} points (share reached, up to 100%; without a target compared with the busiest person), efficiency {efficiency}, clients visited {clients}, new clients {newClients} and first visits {first} (each compared with the team\'s best).'**
+  String mrHowScored(
+    int target,
+    int efficiency,
+    int clients,
+    int newClients,
+    int first,
+  );
+
+  /// No description provided for @mrTargetAchieved.
+  ///
+  /// In en, this message translates to:
+  /// **'Target achieved'**
+  String get mrTargetAchieved;
+
+  /// No description provided for @mrTargetMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Target not reached'**
+  String get mrTargetMissed;
+
+  /// No description provided for @mrNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target set'**
+  String get mrNoTarget;
+
+  /// No description provided for @mrWorkDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days in the field'**
+  String get mrWorkDays;
+
+  /// No description provided for @mrVisitsPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits a day'**
+  String get mrVisitsPerDay;
+
+  /// No description provided for @mrClientsVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients visited'**
+  String get mrClientsVisited;
+
+  /// No description provided for @mrFirstVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'First visits'**
+  String get mrFirstVisits;
+
+  /// No description provided for @mrRevisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-visited'**
+  String get mrRevisited;
+
+  /// No description provided for @mrNewClients.
+  ///
+  /// In en, this message translates to:
+  /// **'New clients'**
+  String get mrNewClients;
+
+  /// No description provided for @mrEfficiencyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Time the visits should take at the team\'s pace ÷ time they took, average of {days} days with 2+ visits'**
+  String mrEfficiencyHint(int days);
+
+  /// No description provided for @mrDrivingKmColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Km driven a day'**
+  String get mrDrivingKmColumn;
+
+  /// No description provided for @mrClientType.
+  ///
+  /// In en, this message translates to:
+  /// **'Client type'**
+  String get mrClientType;
+
+  /// No description provided for @mrClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get mrClient;
+
+  /// No description provided for @mrNoVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'No visits in this period'**
+  String get mrNoVisits;
+
+  /// No description provided for @mrClientTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Client types visited'**
+  String get mrClientTypes;
+
+  /// No description provided for @mrTypesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'clients · visits'**
+  String get mrTypesHint;
+
+  /// No description provided for @mrNoTag.
+  ///
+  /// In en, this message translates to:
+  /// **'No type'**
+  String get mrNoTag;
+
+  /// No description provided for @mrAverageDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Average day'**
+  String get mrAverageDay;
+
+  /// No description provided for @mrAverageDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'From {days} days with a GPS timeline'**
+  String mrAverageDayHint(int days);
+
+  /// No description provided for @mrNoGps.
+  ///
+  /// In en, this message translates to:
+  /// **'No GPS day timelines in this period'**
+  String get mrNoGps;
+
+  /// No description provided for @mrTimePerClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Time at each client'**
+  String get mrTimePerClient;
+
+  /// No description provided for @mrAtClientsDay.
+  ///
+  /// In en, this message translates to:
+  /// **'At clients a day'**
+  String get mrAtClientsDay;
+
+  /// No description provided for @mrDrivingDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Driving a day'**
+  String get mrDrivingDay;
+
+  /// No description provided for @mrDayStartEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} – {end}'**
+  String mrDayStartEnd(String start, String end);
+
+  /// No description provided for @mrFirstToLast.
+  ///
+  /// In en, this message translates to:
+  /// **'First to last client'**
+  String get mrFirstToLast;
+
+  /// No description provided for @mrKm.
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km'**
+  String mrKm(String km);
+
+  /// No description provided for @mrFirstVisitList.
+  ///
+  /// In en, this message translates to:
+  /// **'Visited for the first time ({count})'**
+  String mrFirstVisitList(int count);
+
+  /// No description provided for @mrRevisitedList.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-visited ({count})'**
+  String mrRevisitedList(int count);
+
+  /// No description provided for @mrFirstVisitsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'First visit = nobody had visited the client before in the app. Re-visited = visited before this period, or by a colleague earlier in it.'**
+  String get mrFirstVisitsHint;
+
+  /// No description provided for @mrPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} / 100'**
+  String mrPoints(String points);
+
+  /// No description provided for @reportPdfTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales report'**
+  String get reportPdfTitle;
+
+  /// No description provided for @rankOfTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Rank {rank} of {count}'**
+  String rankOfTeam(int rank, int count);
+
+  /// No description provided for @keyNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Key numbers'**
+  String get keyNumbers;
+
+  /// No description provided for @scoreBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Score breakdown'**
+  String get scoreBreakdown;
+
+  /// No description provided for @pdfCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String pdfCreated(String date);
+
+  /// No description provided for @pdfPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {pages}'**
+  String pdfPage(int page, int pages);
+
+  /// No description provided for @downloadPdfs.
+  ///
+  /// In en, this message translates to:
+  /// **'Download PDF reports'**
+  String get downloadPdfs;
+
+  /// No description provided for @pdfChoosePeople.
+  ///
+  /// In en, this message translates to:
+  /// **'One PDF file per salesperson'**
+  String get pdfChoosePeople;
+
+  /// No description provided for @pdfDownloadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Download ({count})'**
+  String pdfDownloadCount(int count);
+
+  /// No description provided for @pdfOne.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF report'**
+  String get pdfOne;
+
+  /// No description provided for @mrFirstAndRevisited.
+  ///
+  /// In en, this message translates to:
+  /// **'First visits and re-visits'**
+  String get mrFirstAndRevisited;
+
+  /// No description provided for @scoreInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How the score is calculated'**
+  String get scoreInfoTitle;
+
+  /// No description provided for @scoreInfoIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Each sales executive gets up to 100 points from five parts. The ranking is by score, and equal scores share a rank. KAMs are not ranked.'**
+  String get scoreInfoIntro;
+
+  /// No description provided for @scoreInfoPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Part'**
+  String get scoreInfoPart;
+
+  /// No description provided for @scoreInfoMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get scoreInfoMax;
+
+  /// No description provided for @scoreInfoHow.
+  ///
+  /// In en, this message translates to:
+  /// **'How it is measured'**
+  String get scoreInfoHow;
+
+  /// No description provided for @scoreInfoPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get scoreInfoPoints;
+
+  /// No description provided for @scorePartTargetHow.
+  ///
+  /// In en, this message translates to:
+  /// **'(Visits + calls) ÷ target, up to 100%. Without a target: compared with the busiest sales executive.'**
+  String get scorePartTargetHow;
+
+  /// No description provided for @scorePartEfficiencyHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Average efficiency of the days with 2 or more visits (see Routing).'**
+  String get scorePartEfficiencyHow;
+
+  /// No description provided for @scorePartClientsHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients visited or called, compared with the sales executive who reached the most.'**
+  String get scorePartClientsHow;
+
+  /// No description provided for @scorePartNewHow.
+  ///
+  /// In en, this message translates to:
+  /// **'New clients they added or that were imported for them, compared with the most.'**
+  String get scorePartNewHow;
+
+  /// No description provided for @scorePartFirstHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients visited for the first time, compared with the most.'**
+  String get scorePartFirstHow;
+
+  /// No description provided for @scoreInfoExample.
+  ///
+  /// In en, this message translates to:
+  /// **'Example: 54 visits + calls with a target of 60 = 90%, so 0.9 × 35 = 31.5 points. With 10 first visits when the best did 20: 0.5 × 10 = 5 points.'**
+  String get scoreInfoExample;
+
+  /// No description provided for @scoreFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Score of {name}: {points} / 100'**
+  String scoreFor(String name, String points);
+
+  /// No description provided for @salesExecutivesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales executives'**
+  String get salesExecutivesSection;
+
+  /// No description provided for @kamSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Key account managers'**
+  String get kamSection;
+
+  /// No description provided for @kamSectionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'How KAMs are measured is not decided yet. These are their own numbers, without a score or ranking.'**
+  String get kamSectionNote;
+
+  /// No description provided for @kamVisitsWithTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits with their team'**
+  String get kamVisitsWithTeam;
+
+  /// No description provided for @kamTeamSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Team members'**
+  String get kamTeamSize;
+
+  /// No description provided for @kamTeamVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Team visits + calls'**
+  String get kamTeamVisits;
+
+  /// No description provided for @firstAndRevisitedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{first} first · {revisited} re-visited'**
+  String firstAndRevisitedShort(int first, int revisited);
+
+  /// No description provided for @onScheduleShort.
+  ///
+  /// In en, this message translates to:
+  /// **'On schedule {value}'**
+  String onScheduleShort(String value);
+
+  /// No description provided for @moreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreActions;
 }
 
 class _AppLocalizationsDelegate

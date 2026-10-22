@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
+import '../clients/client_tags.dart';
 import '../clients/clients_repository.dart';
 import '../clients/given_items.dart';
 import '../clients/visit_rules.dart';
@@ -18,6 +20,9 @@ import '../users/users_repository.dart';
 import '../visits/visit.dart';
 import 'report.dart';
 import 'report_sections.dart';
+import 'report_pdf.dart';
+import 'report_ranking.dart';
+import 'report_ranking_view.dart';
 import 'report_sections_view.dart';
 import 'reports_data.dart';
 
@@ -94,8 +99,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final clients = ref.watch(workingClientsProvider).value ?? const <Client>[];
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
 
-    final reports = buildReports(
-      people: people,
+    final ids = {for (final u in people) u.id};
+    final clientsById = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
+    // Sales executives are ranked against each other (all of them, so a person
+    // keeps their rank when shown alone); KAMs are measured apart.
+    final execs = team.where((u) => u.role == UserRole.salesExec).toList();
+    final kams = [for (final u in people) if (u.role == UserRole.kam) u];
+    final teamReports = buildReports(
+      people: execs,
+      clients: clients,
+      visits: visits,
+      tasks: tasks,
+      range: _range,
+      rules: rules,
+      now: now,
+    );
+    final kamReports = buildReports(
+      people: kams,
       clients: clients,
       visits: visits,
       tasks: tasks,
@@ -109,7 +129,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       visits: visits,
       range: _range,
     );
-    final ids = {for (final u in people) u.id};
     final newClients = newClientsReport(
       clients: clients,
       people: ids,
@@ -118,28 +137,88 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       includeUnowned: _person == null && me.role.isAdmin,
     );
     // Measured against the whole team's benchmark, also when one person is shown.
-    final routing = routingReport(
-      people: people,
-      benchmarkPeople: team,
+    final teamRouting = routingReport(
+      people: team,
       visits: visits,
-      clients: {for (final c in clients) c.id: c},
+      clients: clientsById,
       range: _range,
       timelines: ref.watch(dayTimelinesProvider(_range.months.join(','))).value ?? const {},
     );
+    final routing = RoutingReport(
+      rows: [for (final r in teamRouting.rows) if (ids.contains(r.user.id)) r],
+      pace: teamRouting.pace,
+    );
+    // First visits vs re-visits need the visited clients' earlier visits.
+    final visitedIds = ({
+      for (final v in visits)
+        if (!v.isCall && v.checkedInAt != null && _range.contains(v.checkedInAt!)) v.clientId,
+    }.toList()
+      ..sort());
+    final before = ref.watch(visitedBeforeProvider((DateFormat('yyyy-MM-dd').format(_range.start), visitedIds.join(','))));
+    final ranked = before.value == null
+        ? null
+        : rankPeople(
+            reports: teamReports,
+            range: _range,
+            visits: visits,
+            visitedBefore: before.value!,
+            clients: clientsById,
+            newClientsFrom: clients,
+            routing: teamRouting,
+          );
+    final shown = ranked?.where((p) => ids.contains(p.report.user.id)).toList();
+    final lang = Localizations.localeOf(context).languageCode;
+    final tags = ref.watch(clientTagsByIdProvider);
+    String tagLabel(String id) => id.isEmpty ? l10n.mrNoTag : (tags[id]?.label(lang) ?? id);
+    final givenRules = ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults;
     final catalogs = catalogReport(
       people: people,
       clients: clients,
       visits: visits,
       range: _range,
-      rules: ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults,
+      rules: givenRules,
       now: now,
     );
     final rangeLabel = _period == _Period.custom
         ? '${DateFormat.yMMMd(locale).format(_range.start)} – ${DateFormat.yMMMd(locale).format(_range.end)}'
         : DateFormat.yMMMM(locale).format(_range.start);
 
+    ReportPdfContext pdfContext(RankedPerson p, ReportFonts fonts, Uint8List logo) => ReportPdfContext(
+          l10n: l10n,
+          languageCode: lang,
+          periodLabel: rangeLabel,
+          teamSize: ranked!.length,
+          clients: clientsById,
+          tagLabel: tagLabel,
+          createdAt: DateTime.now(),
+          catalog: catalogReport(
+            people: [p.report.user],
+            clients: clients,
+            visits: visits,
+            range: _range,
+            rules: givenRules,
+            now: now,
+          ).rows.single,
+          fonts: fonts,
+          logo: logo,
+        );
+    Future<void> download(List<RankedPerson> list, {bool ask = true}) => downloadReportPdfs(
+          context,
+          people: list,
+          contextFor: pdfContext,
+          periodLabel: rangeLabel,
+          ask: ask,
+        );
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.reports)),
+      appBar: AppBar(title: Text(l10n.reports), actions: [
+        TextButton.icon(
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: Text(l10n.downloadPdfs),
+          onPressed: shown == null || shown.isEmpty ? null : () => download(shown),
+        ),
+        const SizedBox(width: 8),
+      ]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
@@ -174,15 +253,50 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           const SizedBox(height: 4),
           Text(rangeLabel, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 12),
-          _Section(
-            title: l10n.teamPerformance,
-            icon: Icons.groups,
-            child: _TeamTable(
-              reports: reports,
-              range: _range,
-              onSelect: (id) => setState(() => _person = id),
+          if (shown == null || shown.isNotEmpty || kamReports.isEmpty)
+            _Section(
+              title: l10n.salesExecutivesSection,
+              icon: Icons.groups,
+              trailing: IconButton(
+                tooltip: l10n.scoreInfoTitle,
+                icon: const Icon(Icons.info_outline),
+                onPressed: () => showScoreInfo(context),
+              ),
+              child: shown == null
+                  ? const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+                  : _TeamTable(
+                      people: shown,
+                      range: _range,
+                      onSelect: (id) => setState(() => _person = id),
+                      onPdf: (p) => download([p], ask: false),
+                    ),
             ),
-          ),
+          if (kamReports.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _Section(
+              title: l10n.kamSection,
+              icon: Icons.supervisor_account,
+              child: _KamTable(
+                reports: kamReports,
+                visits: visits,
+                range: _range,
+                teams: {for (final k in kamReports) k.user.id: teamOf(k.user, users)},
+                onSelect: (id) => setState(() => _person = id),
+              ),
+            ),
+          ],
+          if (shown != null && shown.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            LayoutBuilder(builder: (context, c) {
+              final types = ClientTypesCard(people: shown, tagLabel: tagLabel);
+              final first = FirstVisitsCard(people: shown, clients: clientsById);
+              if (c.maxWidth < 900) return Column(children: [types, const SizedBox(height: 12), first]);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Expanded(child: types), const SizedBox(width: 12), Expanded(child: first)],
+              );
+            }),
+          ],
           const SizedBox(height: 12),
           RoutingCard(report: routing),
           const SizedBox(height: 12),
@@ -282,139 +396,298 @@ class _Section extends StatelessWidget {
 
 String _ratio(int done, int total) => total == 0 ? '–' : '$done/$total · ${(100 * done / total).round()}%';
 
-/// One row per person, sortable by any column, with a total row.
-class _TeamTable extends StatefulWidget {
-  const _TeamTable({required this.reports, required this.range, required this.onSelect});
+/// Two lines in a cell: the number, and a smaller detail under it.
+Widget _twoLines(BuildContext context, Widget main, String? detail) {
+  if (detail == null) return main;
+  final theme = Theme.of(context);
+  return Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+    main,
+    Text(detail, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+  ]);
+}
 
-  final List<PersonReport> reports;
+/// A column heading that wraps onto two lines instead of widening the table.
+DataColumn _column(String label, double width, void Function(int, bool)? onSort, {bool numeric = true}) => DataColumn(
+      label: SizedBox(width: width, child: Text(label, maxLines: 2, softWrap: true, textAlign: numeric ? TextAlign.end : null)),
+      numeric: numeric,
+      onSort: onSort,
+    );
+
+/// Sales executives, ranked, sortable by any column, with a total row.
+/// Related numbers share a cell so it fits a screen without scrolling.
+class _TeamTable extends StatefulWidget {
+  const _TeamTable({required this.people, required this.range, required this.onSelect, required this.onPdf});
+
+  final List<RankedPerson> people;
   final StatsRange range;
   final ValueChanged<String> onSelect;
+  final ValueChanged<RankedPerson> onPdf;
 
   @override
   State<_TeamTable> createState() => _TeamTableState();
 }
 
 class _TeamTableState extends State<_TeamTable> {
-  int _sortColumn = 1;
-  bool _ascending = false;
+  int _sortColumn = 0;
+  bool _ascending = true;
 
-  static final _sortKeys = <Comparable<Object> Function(PersonReport)>[
-    (r) => r.user.name.toLowerCase(),
-    (r) => r.contacts,
-    (r) => r.clientsVisited,
-    (r) => r.coverage ?? -1,
-    (r) => r.assigned == 0 ? -1 : r.onSchedule / r.assigned,
-    (r) => r.planCompletion ?? -1,
-    (r) => r.withKam,
-    (r) => r.flagged,
+  static final _sortKeys = <Comparable<Object> Function(RankedPerson)>[
+    (p) => p.rank,
+    (p) => p.score,
+    (p) => p.report.contacts,
+    (p) => p.workDays,
+    (p) => p.report.clientsVisited,
+    (p) => p.newClients,
+    (p) => p.report.coverage ?? -1,
+    (p) => p.report.planCompletion ?? -1,
+    (p) => p.report.withKam,
+    (p) => p.report.flagged,
   ];
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    if (widget.reports.isEmpty) {
+    if (widget.people.isEmpty) {
       return Text(l10n.noTrackedStaff, style: theme.textTheme.bodyMedium);
     }
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final until = today.isBefore(widget.range.end) ? today : widget.range.end;
+    // Once the period is over the target was reached or not; before, the pace.
+    final over = widget.range.end.isBefore(today);
     double expected(AppUser u) =>
         widget.range.start.isAfter(today) ? 0 : targetFor(u.monthlyTarget, widget.range, until: until);
 
-    final rows = [...widget.reports]..sort((a, b) {
+    final rows = [...widget.people]..sort((a, b) {
         final c = _sortKeys[_sortColumn](a).compareTo(_sortKeys[_sortColumn](b));
         return _ascending ? c : -c;
       });
-    int sum(int Function(PersonReport) f) => rows.fold(0, (s, r) => s + f(r));
-    final target = rows.fold<double>(0, (s, r) => s + r.target);
+    int sum(int Function(RankedPerson) f) => rows.fold(0, (s, r) => s + f(r));
+    final target = rows.fold<double>(0, (s, r) => s + r.report.target);
     final bold = theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold);
 
     void sort(int column, bool ascending) => setState(() {
           _sortColumn = column;
           _ascending = ascending;
         });
-    DataColumn column(String label, {bool numeric = true}) =>
-        DataColumn(label: Text(label), numeric: numeric, onSort: sort);
 
-    Widget visitsCell(PersonReport r) {
-      final text = Text([visitsAndCallsText(r.visits, r.calls), if (r.target > 0) '${r.target.round()}'].join('/'));
-      if (r.target <= 0) return text;
-      final (icon, color, label) = paceStyle(paceOf(r.contacts, expected(r.user)), l10n);
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        Tooltip(message: label, child: Icon(icon, size: 16, color: color)),
-        const SizedBox(width: 6),
-        text,
+    Widget visitsCell(RankedPerson p) {
+      final r = p.report;
+      final main = Text([visitsAndCallsText(r.visits, r.calls), if (r.target > 0) '${r.target.round()}'].join(' / '));
+      if (r.target <= 0) return main;
+      final Widget icon;
+      if (over) {
+        icon = targetVerdict(context, p);
+      } else {
+        final (paceIcon, color, label) = paceStyle(paceOf(r.contacts, expected(r.user)), l10n);
+        icon = Tooltip(message: label, child: Icon(paceIcon, size: 14, color: color));
+      }
+      return Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+        main,
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          icon,
+          const SizedBox(width: 4),
+          Text('${(p.targetShare! * 100).round()}%', style: theme.textTheme.bodySmall),
+        ]),
       ]);
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        sortColumnIndex: _sortColumn,
-        sortAscending: _ascending,
-        showCheckboxColumn: false,
-        columnSpacing: 28,
-        columns: [
-          column(l10n.person, numeric: false),
-          column(l10n.visitsPlusCalls),
-          column(l10n.clientsVisitedColumn),
-          column(l10n.ownClientsVisited),
-          column(l10n.onSchedule),
-          column(l10n.planCompletion),
-          column(l10n.rideAlongs),
-          column(l10n.flaggedVisits),
-          const DataColumn(label: SizedBox.shrink()),
-        ],
-        rows: [
-          for (final r in rows)
-            DataRow(
-              onSelectChanged: (_) => widget.onSelect(r.user.id),
-              cells: [
-                DataCell(Text(r.user.name)),
-                DataCell(visitsCell(r)),
-                DataCell(Text('${r.clientsVisited}')),
-                DataCell(Text(_ratio(r.assignedVisited, r.assigned))),
-                DataCell(Text(_ratio(r.onSchedule, r.assigned))),
-                DataCell(Text(_ratio(r.tasksDone, r.tasksApproved))),
-                DataCell(Text('${r.withKam}')),
-                DataCell(Text(
-                  '${r.flagged}',
-                  style: r.flagged > 0 ? TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold) : null,
-                )),
-                DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(
-                    tooltip: l10n.openPlan,
-                    icon: const Icon(Icons.today, size: 20),
-                    onPressed: () => context.push('/plan/${r.user.id}'),
-                  ),
-                  IconButton(
-                    tooltip: l10n.routeHistory,
-                    icon: const Icon(Icons.route, size: 20),
-                    onPressed: () => context.go('/history?uid=${r.user.id}'),
-                  ),
-                ])),
-              ],
-            ),
-          if (rows.length > 1)
-            DataRow(cells: [
-              DataCell(Text(l10n.everyone, style: bold)),
-              DataCell(Text(
-                [visitsAndCallsText(sum((r) => r.visits), sum((r) => r.calls)), if (target > 0) '${target.round()}']
-                    .join('/'),
-                style: bold,
-              )),
-              DataCell(Text('${sum((r) => r.clientsVisited)}', style: bold)),
-              DataCell(Text(_ratio(sum((r) => r.assignedVisited), sum((r) => r.assigned)), style: bold)),
-              DataCell(Text(_ratio(sum((r) => r.onSchedule), sum((r) => r.assigned)), style: bold)),
-              DataCell(Text(_ratio(sum((r) => r.tasksDone), sum((r) => r.tasksApproved)), style: bold)),
-              DataCell(Text('${sum((r) => r.withKam)}', style: bold)),
-              DataCell(Text('${sum((r) => r.flagged)}', style: bold)),
-              const DataCell(SizedBox.shrink()),
-            ]),
-        ],
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            sortColumnIndex: _sortColumn,
+            sortAscending: _ascending,
+            showCheckboxColumn: false,
+            columnSpacing: 16,
+            horizontalMargin: 8,
+            headingRowHeight: 52,
+            dataRowMinHeight: 52,
+            dataRowMaxHeight: 60,
+            columns: [
+              _column(l10n.person, 150, sort, numeric: false),
+              _column(l10n.mrScore, 48, sort),
+              _column(l10n.visitsPlusCalls, 92, sort),
+              _column(l10n.mrWorkDays, 56, sort),
+              _column(l10n.clientsVisitedColumn, 120, sort),
+              _column(l10n.mrNewClients, 52, sort),
+              _column(l10n.ownClientsVisited, 104, sort),
+              _column(l10n.planCompletion, 84, sort),
+              _column(l10n.rideAlongs, 60, sort),
+              _column(l10n.flaggedVisits, 56, sort),
+              const DataColumn(label: SizedBox.shrink()),
+            ],
+            rows: [
+              for (final p in rows)
+                DataRow(
+                  onSelectChanged: (_) => widget.onSelect(p.report.user.id),
+                  cells: [
+                    DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                      RankBadge(p.rank, size: 24),
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 118),
+                        child: Text(p.report.user.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ),
+                    ])),
+                    DataCell(
+                      Text(
+                        p.score.toStringAsFixed(1),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                          decorationStyle: TextDecorationStyle.dotted,
+                        ),
+                      ),
+                      onTap: () => showScoreInfo(context, person: p),
+                    ),
+                    DataCell(visitsCell(p)),
+                    DataCell(Text('${p.workDays}')),
+                    DataCell(_twoLines(
+                      context,
+                      Text('${p.report.clientsVisited}'),
+                      l10n.firstAndRevisitedShort(p.firstClients.length, p.revisitedClients.length),
+                    )),
+                    DataCell(Text('${p.newClients}')),
+                    DataCell(_twoLines(
+                      context,
+                      Text(_ratio(p.report.assignedVisited, p.report.assigned)),
+                      p.report.assigned == 0 ? null : l10n.onScheduleShort('${p.report.onSchedule}/${p.report.assigned}'),
+                    )),
+                    DataCell(Text(_ratio(p.report.tasksDone, p.report.tasksApproved))),
+                    DataCell(Text('${p.report.withKam}')),
+                    DataCell(Text(
+                      '${p.report.flagged}',
+                      style: p.report.flagged > 0 ? TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold) : null,
+                    )),
+                    DataCell(PopupMenuButton<String>(
+                      tooltip: l10n.moreActions,
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      onSelected: (action) => switch (action) {
+                        'pdf' => widget.onPdf(p),
+                        'plan' => context.push('/plan/${p.report.user.id}'),
+                        _ => context.go('/history?uid=${p.report.user.id}'),
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(value: 'pdf', child: ListTile(leading: const Icon(Icons.picture_as_pdf_outlined), title: Text(l10n.pdfOne))),
+                        PopupMenuItem(value: 'plan', child: ListTile(leading: const Icon(Icons.today), title: Text(l10n.openPlan))),
+                        PopupMenuItem(value: 'route', child: ListTile(leading: const Icon(Icons.route), title: Text(l10n.routeHistory))),
+                      ],
+                    )),
+                  ],
+                ),
+              if (rows.length > 1)
+                DataRow(cells: [
+                  DataCell(Text(l10n.everyone, style: bold)),
+                  const DataCell(SizedBox.shrink()),
+                  DataCell(Text(
+                    [
+                      visitsAndCallsText(sum((p) => p.report.visits), sum((p) => p.report.calls)),
+                      if (target > 0) '${target.round()}',
+                    ].join(' / '),
+                    style: bold,
+                  )),
+                  DataCell(Text('${sum((p) => p.workDays)}', style: bold)),
+                  DataCell(_twoLines(
+                    context,
+                    Text('${sum((p) => p.report.clientsVisited)}', style: bold),
+                    l10n.firstAndRevisitedShort(sum((p) => p.firstClients.length), sum((p) => p.revisitedClients.length)),
+                  )),
+                  DataCell(Text('${sum((p) => p.newClients)}', style: bold)),
+                  DataCell(Text(_ratio(sum((p) => p.report.assignedVisited), sum((p) => p.report.assigned)), style: bold)),
+                  DataCell(Text(_ratio(sum((p) => p.report.tasksDone), sum((p) => p.report.tasksApproved)), style: bold)),
+                  DataCell(Text('${sum((p) => p.report.withKam)}', style: bold)),
+                  DataCell(Text('${sum((p) => p.report.flagged)}', style: bold)),
+                  const DataCell(SizedBox.shrink()),
+                ]),
+            ],
+          ),
+        ),
       ),
     );
+  }
+}
+
+/// KAMs' own numbers for now: no score or ranking until the user decides
+/// how KAMs are measured (2026-10-22).
+class _KamTable extends StatelessWidget {
+  const _KamTable({
+    required this.reports,
+    required this.visits,
+    required this.range,
+    required this.teams,
+    required this.onSelect,
+  });
+
+  final List<PersonReport> reports;
+  final List<Visit> visits;
+  final StatsRange range;
+
+  /// KAM id → their sales executives.
+  final Map<String, List<AppUser>> teams;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final inRange = visits.where((v) => v.checkedInAt != null && range.contains(v.checkedInAt!)).toList();
+    DataColumn column(String label, double width, {bool numeric = true}) => _column(label, width, null, numeric: numeric);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(l10n.kamSectionNote, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 4),
+      LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              showCheckboxColumn: false,
+              columnSpacing: 16,
+              horizontalMargin: 8,
+              headingRowHeight: 52,
+              columns: [
+                column(l10n.person, 150, numeric: false),
+                column(l10n.visitsPlusCalls, 92),
+                column(l10n.clientsVisitedColumn, 72),
+                column(l10n.ownClientsVisited, 104),
+                column(l10n.planCompletion, 84),
+                column(l10n.kamVisitsWithTeam, 84),
+                column(l10n.kamTeamSize, 64),
+                column(l10n.kamTeamVisits, 92),
+              ],
+              rows: [
+                for (final r in reports)
+                  () {
+                    final team = {for (final u in teams[r.user.id] ?? const <AppUser>[]) u.id};
+                    final teamContacts = inRange.where((v) => team.contains(v.salesExecId)).toList();
+                    return DataRow(
+                      onSelectChanged: (_) => onSelect(r.user.id),
+                      cells: [
+                        DataCell(Text(r.user.name)),
+                        DataCell(Text([visitsAndCallsText(r.visits, r.calls), if (r.target > 0) '${r.target.round()}'].join(' / '))),
+                        DataCell(Text('${r.clientsVisited}')),
+                        DataCell(Text(_ratio(r.assignedVisited, r.assigned))),
+                        DataCell(Text(_ratio(r.tasksDone, r.tasksApproved))),
+                        DataCell(Text('${inRange.where((v) => v.kamId == r.user.id).length}')),
+                        DataCell(Text('${team.length}')),
+                        DataCell(Text(visitsAndCallsText(
+                          teamContacts.where((v) => !v.isCall).length,
+                          teamContacts.where((v) => v.isCall).length,
+                        ))),
+                      ],
+                    );
+                  }(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 

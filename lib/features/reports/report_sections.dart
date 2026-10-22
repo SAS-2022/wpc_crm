@@ -13,13 +13,10 @@ import 'routing_pace.dart';
 
 /// Clients added in the period by or for [people].
 class NewClientsReport {
-  const NewClientsReport({required this.clients, required this.addedBy, required this.manual, required this.imported});
+  const NewClientsReport({required this.clients, required this.manual, required this.imported});
 
   /// Newest first.
   final List<Client> clients;
-
-  /// Person id → clients they added in the app.
-  final Map<String, int> addedBy;
   final int manual;
   final int imported;
 }
@@ -39,12 +36,8 @@ NewClientsReport newClientsReport({
     return people.contains(c.assignedTo) || (includeUnowned && c.assignedTo == null);
   }).toList()
     ..sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
-  final by = <String, int>{};
-  for (final c in added) {
-    if (c.source == 'manual' && people.contains(c.createdBy)) by[c.createdBy] = (by[c.createdBy] ?? 0) + 1;
-  }
   final manual = added.where((c) => c.source == 'manual').length;
-  return NewClientsReport(clients: added, addedBy: by, manual: manual, imported: added.length - manual);
+  return NewClientsReport(clients: added, manual: manual, imported: added.length - manual);
 }
 
 /// One day of one person with at least two visits.

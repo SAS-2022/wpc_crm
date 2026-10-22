@@ -1191,9 +1191,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routeHistory => 'Route history';
 
   @override
-  String get teamPerformance => 'Team performance';
-
-  @override
   String get person => 'Person';
 
   @override
@@ -3665,4 +3662,244 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noOneMatches => 'No one matches';
+
+  @override
+  String get mrScore => 'Score';
+
+  @override
+  String mrHowScored(
+    int target,
+    int efficiency,
+    int clients,
+    int newClients,
+    int first,
+  ) {
+    return 'Score out of 100: target $target points (share reached, up to 100%; without a target compared with the busiest person), efficiency $efficiency, clients visited $clients, new clients $newClients and first visits $first (each compared with the team\'s best).';
+  }
+
+  @override
+  String get mrTargetAchieved => 'Target achieved';
+
+  @override
+  String get mrTargetMissed => 'Target not reached';
+
+  @override
+  String get mrNoTarget => 'No target set';
+
+  @override
+  String get mrWorkDays => 'Days in the field';
+
+  @override
+  String get mrVisitsPerDay => 'Visits a day';
+
+  @override
+  String get mrClientsVisited => 'Clients visited';
+
+  @override
+  String get mrFirstVisits => 'First visits';
+
+  @override
+  String get mrRevisited => 'Re-visited';
+
+  @override
+  String get mrNewClients => 'New clients';
+
+  @override
+  String mrEfficiencyHint(int days) {
+    return 'Time the visits should take at the team\'s pace ÷ time they took, average of $days days with 2+ visits';
+  }
+
+  @override
+  String get mrDrivingKmColumn => 'Km driven a day';
+
+  @override
+  String get mrClientType => 'Client type';
+
+  @override
+  String get mrClient => 'Client';
+
+  @override
+  String get mrNoVisits => 'No visits in this period';
+
+  @override
+  String get mrClientTypes => 'Client types visited';
+
+  @override
+  String get mrTypesHint => 'clients · visits';
+
+  @override
+  String get mrNoTag => 'No type';
+
+  @override
+  String get mrAverageDay => 'Average day';
+
+  @override
+  String mrAverageDayHint(int days) {
+    return 'From $days days with a GPS timeline';
+  }
+
+  @override
+  String get mrNoGps => 'No GPS day timelines in this period';
+
+  @override
+  String get mrTimePerClient => 'Time at each client';
+
+  @override
+  String get mrAtClientsDay => 'At clients a day';
+
+  @override
+  String get mrDrivingDay => 'Driving a day';
+
+  @override
+  String mrDayStartEnd(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get mrFirstToLast => 'First to last client';
+
+  @override
+  String mrKm(String km) {
+    return '$km km';
+  }
+
+  @override
+  String mrFirstVisitList(int count) {
+    return 'Visited for the first time ($count)';
+  }
+
+  @override
+  String mrRevisitedList(int count) {
+    return 'Re-visited ($count)';
+  }
+
+  @override
+  String get mrFirstVisitsHint =>
+      'First visit = nobody had visited the client before in the app. Re-visited = visited before this period, or by a colleague earlier in it.';
+
+  @override
+  String mrPoints(String points) {
+    return '$points / 100';
+  }
+
+  @override
+  String get reportPdfTitle => 'Sales report';
+
+  @override
+  String rankOfTeam(int rank, int count) {
+    return 'Rank $rank of $count';
+  }
+
+  @override
+  String get keyNumbers => 'Key numbers';
+
+  @override
+  String get scoreBreakdown => 'Score breakdown';
+
+  @override
+  String pdfCreated(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String pdfPage(int page, int pages) {
+    return 'Page $page of $pages';
+  }
+
+  @override
+  String get downloadPdfs => 'Download PDF reports';
+
+  @override
+  String get pdfChoosePeople => 'One PDF file per salesperson';
+
+  @override
+  String pdfDownloadCount(int count) {
+    return 'Download ($count)';
+  }
+
+  @override
+  String get pdfOne => 'PDF report';
+
+  @override
+  String get mrFirstAndRevisited => 'First visits and re-visits';
+
+  @override
+  String get scoreInfoTitle => 'How the score is calculated';
+
+  @override
+  String get scoreInfoIntro =>
+      'Each sales executive gets up to 100 points from five parts. The ranking is by score, and equal scores share a rank. KAMs are not ranked.';
+
+  @override
+  String get scoreInfoPart => 'Part';
+
+  @override
+  String get scoreInfoMax => 'Max';
+
+  @override
+  String get scoreInfoHow => 'How it is measured';
+
+  @override
+  String get scoreInfoPoints => 'Points';
+
+  @override
+  String get scorePartTargetHow =>
+      '(Visits + calls) ÷ target, up to 100%. Without a target: compared with the busiest sales executive.';
+
+  @override
+  String get scorePartEfficiencyHow =>
+      'Average efficiency of the days with 2 or more visits (see Routing).';
+
+  @override
+  String get scorePartClientsHow =>
+      'Clients visited or called, compared with the sales executive who reached the most.';
+
+  @override
+  String get scorePartNewHow =>
+      'New clients they added or that were imported for them, compared with the most.';
+
+  @override
+  String get scorePartFirstHow =>
+      'Clients visited for the first time, compared with the most.';
+
+  @override
+  String get scoreInfoExample =>
+      'Example: 54 visits + calls with a target of 60 = 90%, so 0.9 × 35 = 31.5 points. With 10 first visits when the best did 20: 0.5 × 10 = 5 points.';
+
+  @override
+  String scoreFor(String name, String points) {
+    return 'Score of $name: $points / 100';
+  }
+
+  @override
+  String get salesExecutivesSection => 'Sales executives';
+
+  @override
+  String get kamSection => 'Key account managers';
+
+  @override
+  String get kamSectionNote =>
+      'How KAMs are measured is not decided yet. These are their own numbers, without a score or ranking.';
+
+  @override
+  String get kamVisitsWithTeam => 'Visits with their team';
+
+  @override
+  String get kamTeamSize => 'Team members';
+
+  @override
+  String get kamTeamVisits => 'Team visits + calls';
+
+  @override
+  String firstAndRevisitedShort(int first, int revisited) {
+    return '$first first · $revisited re-visited';
+  }
+
+  @override
+  String onScheduleShort(String value) {
+    return 'On schedule $value';
+  }
+
+  @override
+  String get moreActions => 'More';
 }

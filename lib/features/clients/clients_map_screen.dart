@@ -312,21 +312,57 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                               const SizedBox(width: 12),
                               Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
                               const SizedBox(width: 8),
+                              // Two segments when there's room (web); on phones a
+                              // menu button, since the segments' labels wrapped.
                               Expanded(
-                                child: SegmentedButton<bool>(
-                                  showSelectedIcon: false,
-                                  style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                                  segments: [
-                                    ButtonSegment(value: false, label: Text(l10n.visitStatus)),
-                                    ButtonSegment(value: true, label: Text(l10n.salesperson)),
-                                  ],
-                                  selected: {byPerson},
-                                  onSelectionChanged: (s) => setState(() {
-                                    _byPerson = s.first;
-                                    // The status filter's chips are hidden in this mode.
-                                    _status = _Status.all;
-                                  }),
-                                ),
+                                child: LayoutBuilder(builder: (context, c) {
+                                  void choose(bool person) => setState(() {
+                                        _byPerson = person;
+                                        // The status filter's chips are hidden in this mode.
+                                        _status = _Status.all;
+                                      });
+                                  if (c.maxWidth >= 260) {
+                                    return SegmentedButton<bool>(
+                                      showSelectedIcon: false,
+                                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                                      segments: [
+                                        ButtonSegment(value: false, label: Text(l10n.visitStatus)),
+                                        ButtonSegment(value: true, label: Text(l10n.salesperson)),
+                                      ],
+                                      selected: {byPerson},
+                                      onSelectionChanged: (s) => choose(s.first),
+                                    );
+                                  }
+                                  return Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: PopupMenuButton<bool>(
+                                      tooltip: l10n.colourBy,
+                                      initialValue: byPerson,
+                                      onSelected: choose,
+                                      itemBuilder: (_) => [
+                                        PopupMenuItem(value: false, child: Text(l10n.visitStatus)),
+                                        PopupMenuItem(value: true, child: Text(l10n.salesperson)),
+                                      ],
+                                      child: InputDecorator(
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          border: OutlineInputBorder(),
+                                          contentPadding: EdgeInsetsDirectional.fromSTEB(12, 8, 4, 8),
+                                        ),
+                                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                          Flexible(
+                                            child: Text(
+                                              byPerson ? l10n.salesperson : l10n.visitStatus,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const Icon(Icons.arrow_drop_down),
+                                        ]),
+                                      ),
+                                    ),
+                                  );
+                                }),
                               ),
                             ],
                           ],

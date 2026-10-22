@@ -1190,9 +1190,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get routeHistory => 'سجل المسار';
 
   @override
-  String get teamPerformance => 'أداء الفريق';
-
-  @override
   String get person => 'الشخص';
 
   @override
@@ -3668,4 +3665,244 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noOneMatches => 'لا أحد مطابق';
+
+  @override
+  String get mrScore => 'النقاط';
+
+  @override
+  String mrHowScored(
+    int target,
+    int efficiency,
+    int clients,
+    int newClients,
+    int first,
+  ) {
+    return 'النقاط من 100: الهدف $target نقطة (النسبة المحققة حتى 100%؛ بدون هدف يُقارن بالأكثر نشاطًا)، الكفاءة $efficiency، العملاء الذين زارهم $clients، العملاء الجدد $newClients والزيارات الأولى $first (كل منها مقارنة بالأفضل في الفريق).';
+  }
+
+  @override
+  String get mrTargetAchieved => 'تحقق الهدف';
+
+  @override
+  String get mrTargetMissed => 'لم يتحقق الهدف';
+
+  @override
+  String get mrNoTarget => 'لا يوجد هدف';
+
+  @override
+  String get mrWorkDays => 'أيام العمل الميداني';
+
+  @override
+  String get mrVisitsPerDay => 'زيارات في اليوم';
+
+  @override
+  String get mrClientsVisited => 'العملاء الذين تمت زيارتهم';
+
+  @override
+  String get mrFirstVisits => 'زيارات أولى';
+
+  @override
+  String get mrRevisited => 'زيارات متكررة';
+
+  @override
+  String get mrNewClients => 'عملاء جدد';
+
+  @override
+  String mrEfficiencyHint(int days) {
+    return 'الوقت اللازم للزيارات بوتيرة الفريق ÷ الوقت الفعلي، متوسط $days أيام فيها زيارتان أو أكثر';
+  }
+
+  @override
+  String get mrDrivingKmColumn => 'كم القيادة يوميًا';
+
+  @override
+  String get mrClientType => 'نوع العميل';
+
+  @override
+  String get mrClient => 'العميل';
+
+  @override
+  String get mrNoVisits => 'لا توجد زيارات في هذه الفترة';
+
+  @override
+  String get mrClientTypes => 'أنواع العملاء الذين تمت زيارتهم';
+
+  @override
+  String get mrTypesHint => 'عملاء · زيارات';
+
+  @override
+  String get mrNoTag => 'بدون نوع';
+
+  @override
+  String get mrAverageDay => 'اليوم المتوسط';
+
+  @override
+  String mrAverageDayHint(int days) {
+    return 'من $days أيام بمسار تحديد الموقع';
+  }
+
+  @override
+  String get mrNoGps => 'لا توجد مسارات لتحديد الموقع في هذه الفترة';
+
+  @override
+  String get mrTimePerClient => 'الوقت عند كل عميل';
+
+  @override
+  String get mrAtClientsDay => 'عند العملاء يوميًا';
+
+  @override
+  String get mrDrivingDay => 'القيادة يوميًا';
+
+  @override
+  String mrDayStartEnd(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get mrFirstToLast => 'من أول عميل إلى آخر عميل';
+
+  @override
+  String mrKm(String km) {
+    return '$km كم';
+  }
+
+  @override
+  String mrFirstVisitList(int count) {
+    return 'زيارة لأول مرة ($count)';
+  }
+
+  @override
+  String mrRevisitedList(int count) {
+    return 'زيارة متكررة ($count)';
+  }
+
+  @override
+  String get mrFirstVisitsHint =>
+      'زيارة أولى = لم يزر أحد العميل من قبل في التطبيق. زيارة متكررة = تمت زيارته قبل هذه الفترة، أو زاره زميل في وقت سابق منها.';
+
+  @override
+  String mrPoints(String points) {
+    return '$points / 100';
+  }
+
+  @override
+  String get reportPdfTitle => 'تقرير المبيعات';
+
+  @override
+  String rankOfTeam(int rank, int count) {
+    return 'المرتبة $rank من $count';
+  }
+
+  @override
+  String get keyNumbers => 'الأرقام الرئيسية';
+
+  @override
+  String get scoreBreakdown => 'تفاصيل النقاط';
+
+  @override
+  String pdfCreated(String date) {
+    return 'أُنشئ في $date';
+  }
+
+  @override
+  String pdfPage(int page, int pages) {
+    return 'صفحة $page من $pages';
+  }
+
+  @override
+  String get downloadPdfs => 'تنزيل تقارير PDF';
+
+  @override
+  String get pdfChoosePeople => 'ملف PDF لكل مندوب';
+
+  @override
+  String pdfDownloadCount(int count) {
+    return 'تنزيل ($count)';
+  }
+
+  @override
+  String get pdfOne => 'تقرير PDF';
+
+  @override
+  String get mrFirstAndRevisited => 'الزيارات الأولى والمتكررة';
+
+  @override
+  String get scoreInfoTitle => 'كيف تُحسب النقاط';
+
+  @override
+  String get scoreInfoIntro =>
+      'يحصل كل مندوب مبيعات على 100 نقطة كحد أقصى من خمسة أجزاء. الترتيب حسب النقاط، والنقاط المتساوية تتشارك المرتبة. مدراء الحسابات لا يدخلون الترتيب.';
+
+  @override
+  String get scoreInfoPart => 'الجزء';
+
+  @override
+  String get scoreInfoMax => 'الحد الأقصى';
+
+  @override
+  String get scoreInfoHow => 'طريقة القياس';
+
+  @override
+  String get scoreInfoPoints => 'النقاط';
+
+  @override
+  String get scorePartTargetHow =>
+      '(الزيارات + المكالمات) ÷ الهدف، حتى 100%. بدون هدف: مقارنة بأكثر مندوب نشاطًا.';
+
+  @override
+  String get scorePartEfficiencyHow =>
+      'متوسط كفاءة الأيام التي فيها زيارتان أو أكثر (انظر المسارات).';
+
+  @override
+  String get scorePartClientsHow =>
+      'العملاء الذين تمت زيارتهم أو الاتصال بهم، مقارنة بالمندوب الأعلى.';
+
+  @override
+  String get scorePartNewHow =>
+      'العملاء الجدد الذين أضافهم أو استُوردوا له، مقارنة بالأعلى.';
+
+  @override
+  String get scorePartFirstHow =>
+      'العملاء الذين زيروا لأول مرة، مقارنة بالأعلى.';
+
+  @override
+  String get scoreInfoExample =>
+      'مثال: 54 زيارة ومكالمة مع هدف 60 = 90%، أي 0.9 × 35 = 31.5 نقطة. و10 زيارات أولى بينما الأفضل 20: 0.5 × 10 = 5 نقاط.';
+
+  @override
+  String scoreFor(String name, String points) {
+    return 'نقاط $name: $points / 100';
+  }
+
+  @override
+  String get salesExecutivesSection => 'مندوبو المبيعات';
+
+  @override
+  String get kamSection => 'مدراء الحسابات الرئيسية';
+
+  @override
+  String get kamSectionNote =>
+      'لم تُحدد بعد طريقة قياس أداء مدراء الحسابات. هذه أرقامهم الخاصة، بدون نقاط أو ترتيب.';
+
+  @override
+  String get kamVisitsWithTeam => 'زيارات مع فريقه';
+
+  @override
+  String get kamTeamSize => 'أعضاء الفريق';
+
+  @override
+  String get kamTeamVisits => 'زيارات ومكالمات الفريق';
+
+  @override
+  String firstAndRevisitedShort(int first, int revisited) {
+    return '$first أولى · $revisited متكررة';
+  }
+
+  @override
+  String onScheduleShort(String value) {
+    return 'ضمن الموعد $value';
+  }
+
+  @override
+  String get moreActions => 'المزيد';
 }

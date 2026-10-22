@@ -13,12 +13,10 @@ import 'features/users/users_repository.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'core/saving.dart';
+import 'core/text_scale.dart';
 import 'core/app_version.dart';
 import 'features/attendance/geofences.dart';
 import 'features/settings/app_settings.dart';
-
-/// Largest text size taken from the phone's accessibility setting.
-const maxTextScale = 1.2;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,10 +60,11 @@ class WpcCrmApp extends ConsumerWidget {
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        // The phone's text size is followed up to [maxTextScale]: larger
-        // system fonts (up to 200 %) broke tiles, cards and map overlays.
-        child: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: maxTextScale,
+        // Text size by screen width and the phone's setting (text_scale.dart).
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: appTextScaler(MediaQuery.textScalerOf(context), MediaQuery.sizeOf(context).width),
+          ),
           child: SavingBar(child: UpdateGate(child: child)),
         ),
       ),

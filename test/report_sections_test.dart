@@ -67,7 +67,6 @@ void main() {
     expect(r.clients.map((c) => c.id), ['b', 'a']);
     expect(r.manual, 1);
     expect(r.imported, 1);
-    expect(r.addedBy, {'sami': 1});
     final all = newClientsReport(clients: [client('c', createdAt: DateTime(2026, 10, 9))], people: {'sami'}, range: range, includeUnowned: true);
     expect(all.clients.single.id, 'c');
   });

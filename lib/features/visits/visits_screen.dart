@@ -341,16 +341,20 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Row(
-                    children: [
-                      _StatTile(icon: Icons.event_available, label: l10n.visitsTotal, value: list.length - calls, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      _StatTile(icon: Icons.call, label: l10n.calls, value: calls, color: callColor),
-                      const SizedBox(width: 8),
-                      _StatTile(icon: Icons.flag, label: l10n.flaggedVisits, value: flagged, color: theme.colorScheme.error),
-                      const SizedBox(width: 8),
-                      _StatTile(icon: Icons.groups, label: l10n.withKamCount, value: withKam, color: Colors.teal),
-                    ],
+                  // Same height for all four, also when a label takes two lines.
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _StatTile(icon: Icons.event_available, label: l10n.visitsTotal, value: list.length - calls, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        _StatTile(icon: Icons.call, label: l10n.calls, value: calls, color: callColor),
+                        const SizedBox(width: 8),
+                        _StatTile(icon: Icons.flag, label: l10n.flaggedVisits, value: flagged, color: theme.colorScheme.error),
+                        const SizedBox(width: 8),
+                        _StatTile(icon: Icons.groups, label: l10n.withKamCount, value: withKam, color: Colors.teal),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -442,7 +446,7 @@ class _StatTile extends StatelessWidget {
             Icon(icon, size: 20, color: color),
             const SizedBox(height: 4),
             Text('$value', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: color)),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall),
+            Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall),
           ],
         ),
       ),

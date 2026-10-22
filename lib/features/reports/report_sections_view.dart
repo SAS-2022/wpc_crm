@@ -12,6 +12,7 @@ import '../home/stats_widgets.dart';
 import '../plan/plan_task.dart';
 import '../tracking/tracking_log.dart';
 import '../visits/visit.dart';
+import 'report_ranking.dart' show averageDayOf, clockOf;
 import 'report_sections.dart';
 import 'routing_pace.dart';
 import 'timeline_widgets.dart';
@@ -93,7 +94,6 @@ class _NewClientsCardState extends State<NewClientsCard> {
     final locale = Localizations.localeOf(context).toString();
     final r = widget.report;
     final shown = _all ? r.clients : r.clients.take(10).toList();
-    final people = r.addedBy.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return ReportCard(
       title: l10n.reportNewClients(r.clients.length),
       icon: Icons.person_add_alt,
@@ -103,8 +103,6 @@ class _NewClientsCardState extends State<NewClientsCard> {
               Wrap(spacing: 8, runSpacing: 8, children: [
                 _stat(context, l10n.reportAddedInApp, '${r.manual}'),
                 _stat(context, l10n.reportImported, '${r.imported}'),
-                for (final MapEntry(key: uid, value: n) in people)
-                  _stat(context, widget.users[uid]?.name ?? '?', '$n'),
               ]),
               const SizedBox(height: 8),
               for (final c in shown)
@@ -241,12 +239,15 @@ class RoutingCard extends StatelessWidget {
                     DataColumn(label: Text(l10n.reportBenchVisit), numeric: true),
                     DataColumn(label: Text(l10n.reportBenchSpeed), numeric: true),
                     DataColumn(label: Text(l10n.reportTimeSplit)),
+                    DataColumn(label: Text(l10n.mrFirstToLast)),
+                    DataColumn(label: Text(l10n.mrAtClientsDay), numeric: true),
+                    DataColumn(label: Text(l10n.mrDrivingDay), numeric: true),
                     DataColumn(label: Text(l10n.reportShortestOrderDays), numeric: true),
                     DataColumn(label: Text(l10n.reportExtraDistance), numeric: true),
                     DataColumn(label: Text(l10n.reportNeededTook), numeric: true),
                   ],
                   rows: [
-                    for (final r in withDays)
+                    for (final (r, day) in [for (final r in withDays) (r, averageDayOf(r.timelines))])
                       DataRow(cells: [
                         DataCell(Text(r.user.name)),
                         DataCell(r.averageRate == null
@@ -260,6 +261,14 @@ class RoutingCard extends StatelessWidget {
                         DataCell(Text(perVisit(r.pace.visitMinutes))),
                         DataCell(Text(speed(r.pace.speedKmh))),
                         DataCell(SizedBox(width: 160, child: TimeSplitBar(split: r.split))),
+                        // The average day, from the GPS timelines.
+                        DataCell(Text(day?.firstClientMin == null || day?.lastClientMin == null
+                            ? '–'
+                            : l10n.mrDayStartEnd(clockOf(day!.firstClientMin!), clockOf(day.lastClientMin!)))),
+                        DataCell(Text(day == null ? '–' : formatSplitMinutes(l10n, day.split[TimeKind.client] ?? 0))),
+                        DataCell(Text(day == null
+                            ? '–'
+                            : '${formatSplitMinutes(l10n, day.split[TimeKind.driving] ?? 0)} · ${l10n.mrKm(day.drivingKm.toStringAsFixed(0))}')),
                         DataCell(Text('${r.bestOrderDays}/${r.days.length}')),
                         DataCell(Text(formatDistance(r.extraMeters))),
                         DataCell(Text('${hours(r.needed)} / ${hours(r.took)}')),
