@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/login_name.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/companies.dart';
@@ -135,7 +136,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
                   decoration: InputDecoration(labelText: l10n.email),
-                  validator: (v) => (v == null || !v.contains('@')) ? l10n.invalidEmail : null,
+                  // The username accounts' hidden domain is not for registering.
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? l10n.invalidEmail
+                      : usernameOf(v) != null
+                      ? l10n.reservedEmail
+                      : null,
                 ),
                 TextFormField(
                   controller: _password,

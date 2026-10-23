@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/login_name.dart';
+import '../../core/password_field.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -124,6 +126,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final kam = users.where((u) => u.id == me.kamId).firstOrNull;
     String? required(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
     final email = FirebaseAuth.instance.currentUser?.email ?? me.email;
+    // Username accounts: no mailbox, so no reset email.
+    final username = usernameOf(email);
 
     Widget busy(bool on, String label) => on
         ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -162,9 +166,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         const SizedBox(height: 12),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.email_outlined),
-                          title: Text(email),
-                          subtitle: Text(l10n.email),
+                          leading: Icon(username != null ? Icons.account_circle_outlined : Icons.email_outlined),
+                          title: Text(username ?? email),
+                          subtitle: Text(username != null ? l10n.username : l10n.email),
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -222,29 +226,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           Text(l10n.changePassword, style: theme.textTheme.titleMedium),
                           const SizedBox(height: 12),
-                          TextFormField(
+                          PasswordField(
                             controller: _current,
-                            obscureText: true,
-                            autofillHints: const [AutofillHints.password],
-                            decoration: InputDecoration(labelText: l10n.currentPassword, errorText: _currentError),
+                            label: l10n.currentPassword,
+                            errorText: _currentError,
                             validator: (v) => (v == null || v.isEmpty) ? l10n.required : null,
                           ),
                           const SizedBox(height: 12),
-                          TextFormField(
+                          PasswordField(
                             controller: _new,
-                            obscureText: true,
+                            label: l10n.newPassword,
                             autofillHints: const [AutofillHints.newPassword],
-                            decoration: InputDecoration(labelText: l10n.newPassword),
                             validator: (v) => (v == null || v.length < 6) ? l10n.passwordTooShort : null,
                           ),
                           const SizedBox(height: 12),
-                          TextFormField(
+                          PasswordField(
                             controller: _confirm,
-                            obscureText: true,
+                            label: l10n.confirmNewPassword,
                             autofillHints: const [AutofillHints.newPassword],
-                            decoration: InputDecoration(labelText: l10n.confirmNewPassword),
                             validator: (v) => v != _new.text ? l10n.passwordsDontMatch : null,
-                            onFieldSubmitted: (_) => _changePassword(email),
+                            onSubmitted: (_) => _changePassword(email),
                           ),
                           const SizedBox(height: 12),
                           Align(
@@ -255,18 +256,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ),
                           const Divider(height: 32),
-                          Text(l10n.resetPasswordByEmail, style: theme.textTheme.titleSmall),
-                          const SizedBox(height: 4),
-                          Text(l10n.resetPasswordInfo, style: theme.textTheme.bodySmall),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.mail_outline),
-                              onPressed: _sendingReset ? null : () => _sendReset(email),
-                              label: busy(_sendingReset, l10n.sendResetLink),
+                          if (username != null)
+                            Text(l10n.usernameAccountInfo, style: theme.textTheme.bodySmall)
+                          else ...[
+                            Text(l10n.resetPasswordByEmail, style: theme.textTheme.titleSmall),
+                            const SizedBox(height: 4),
+                            Text(l10n.resetPasswordInfo, style: theme.textTheme.bodySmall),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.mail_outline),
+                                onPressed: _sendingReset ? null : () => _sendReset(email),
+                                label: busy(_sendingReset, l10n.sendResetLink),
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

@@ -12,6 +12,13 @@ enum DayStatus {
   /// No check-in.
   notIn,
 
+  /// No check-in, reported "not coming to work" beforehand (2026-10-22),
+  /// not (or not yet) accepted as leave.
+  absent,
+
+  /// No check-in, on approved leave.
+  onLeave,
+
   /// The day is closed (checked out).
   checkedOut,
 }
@@ -30,12 +37,23 @@ PersonDay personDay(
   required bool overtimeAllowed,
   required DateTime day,
   required DateTime now,
+  bool reportedAbsent = false,
+  bool onLeave = false,
 }) {
   final workDay = schedule.days.contains(day.weekday);
   final start = day.add(Duration(minutes: schedule.startMinute));
   final end = day.add(Duration(minutes: schedule.endMinute));
   final scheduled = workDay ? schedule.endMinute - schedule.startMinute : 0;
   if (d == null || !d.checkedIn) {
+    if (onLeave || reportedAbsent) {
+      return (
+        status: onLeave ? DayStatus.onLeave : DayStatus.absent,
+        workedMin: 0,
+        lateMin: 0,
+        notInYet: false,
+        scheduledMin: scheduled,
+      );
+    }
     final today = day.year == now.year && day.month == now.month && day.day == now.day;
     final since = now.difference(start).inMinutes;
     final late = today && workDay && now.isBefore(end) && since > lateGraceMin ? since : 0;
@@ -53,7 +71,7 @@ PersonDay personDay(
   }
   // Still open: up to now, or up to the end of the work day without overtime.
   final upTo = overtimeAllowed || now.isBefore(end) ? now : end;
-  final worked = upTo.difference(d.checkInAt!).inMinutes;
+  final worked = upTo.difference(d.checkInAt!).inMinutes - (d.awayMin ?? 0);
   return (
     status: d.inside ? DayStatus.onSite : DayStatus.away,
     workedMin: worked < 0 ? 0 : worked,

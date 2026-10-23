@@ -21,6 +21,10 @@ enum AppSetting {
   /// Attendance check-ins up to this many minutes after the start aren't late.
   lateGraceMin(15, 0, 60),
 
+  /// People not allowed to leave their work site: away longer than this →
+  /// checked out at the time they left (2026-10-22).
+  awayGraceMin(30, 5, 240),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90);
 
@@ -60,6 +64,7 @@ class AppSettings {
     visit.visitRadiusMeters = this[AppSetting.visitRadiusM].toDouble();
     given.givenDueSoonDays = this[AppSetting.givenDueSoonDays];
     attendance.lateGraceMin = this[AppSetting.lateGraceMin];
+    attendance.awayGraceMin = this[AppSetting.awayGraceMin];
   }
 }
 

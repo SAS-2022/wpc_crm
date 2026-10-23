@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wpc_crm/features/attendance/absence.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wpc_crm/core/app_user.dart';
 import 'package:wpc_crm/features/attendance/attendance_calendar.dart';
@@ -40,13 +41,19 @@ void main() {
   final month = DateTime(2026, 10);
   final today = DateTime(2026, 10, 8); // Thursday
 
-  AttendanceReportRow row({Map<String, DayResult> results = const {}, Set<String> leave = const {}, AppUser? user}) => reportRow(
+  AttendanceReportRow row({
+    Map<String, DayResult> results = const {},
+    Set<String> leave = const {},
+    Map<String, Absence> absences = const {},
+    AppUser? user,
+  }) => reportRow(
         user: user ?? _user(),
         schedule: (user ?? _user()).scheduleOr(WorkHours.defaults),
         month: month,
         results: results,
         holidays: const {'2026-10-05'},
         leaveDays: leave,
+        absences: absences,
         today: today,
       );
 
@@ -98,5 +105,20 @@ void main() {
     final daily = excel['Daily'];
     expect(daily.row(1)[3]?.value.toString(), 'Head office');
     expect(daily.row(1)[7]?.value.toString(), '12');
+  });
+
+  test('reported absences are counted apart from missed days', () {
+    const sick = Absence(uid: 'u', date: '2026-10-07', reason: AbsenceReason.sick, note: 'fever');
+    final base = row();
+    final r = row(absences: {'2026-10-07': sick});
+    expect(r.absent, 1);
+    expect(r.missed, base.missed - 1);
+    expect(r.days.firstWhere((d) => d.date == DateTime(2026, 10, 7)).absence, sick);
+  });
+
+  test('a rejected absence is a missed day; only waiting ones are "reported absent"', () {
+    const no = Absence(uid: 'u', date: '2026-10-07', reason: AbsenceReason.tired, note: '', status: AbsenceStatus.rejected);
+    final r = row(absences: {'2026-10-07': no});
+    expect([r.absent, r.missed], [0, row().missed]);
   });
 }

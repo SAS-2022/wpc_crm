@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../tracking/work_hours.dart';
+import '../../core/saving.dart';
 import 'attendance_rules.dart';
 
 // Attendance days in Firestore `attendance/{uid}_{yyyy-MM-dd}`: {uid, date,
@@ -34,7 +35,7 @@ Future<void> recordAttendance(String uid, AttendanceEventType type, {String? sit
 
 /// One person's day as stored (events + the server's result).
 class AttendanceRecord {
-  const AttendanceRecord({required this.uid, required this.date, required this.events, required this.server});
+  const AttendanceRecord({required this.uid, required this.date, required this.events, required this.server, this.correction});
 
   final String uid;
   final String date;
@@ -42,6 +43,9 @@ class AttendanceRecord {
 
   /// The server's result; null until Cloud Functions processed the day.
   final DayResult? server;
+
+  /// HR's correction of the day, if any (replaces what the phone recorded).
+  final AttendanceCorrection? correction;
 
   factory AttendanceRecord.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -54,6 +58,16 @@ class AttendanceRecord {
           if (e is Map && eventTypeFromKey(e['type']) != null && e['at'] is Timestamp)
             AttendanceEvent(eventTypeFromKey(e['type'])!, (e['at'] as Timestamp).toDate(), siteId: e['siteId'] as String?),
       ],
+      correction: switch (d['correction']) {
+        {'checkInAt': final Timestamp inAt} && final Map c => AttendanceCorrection(
+            checkInAt: inAt.toDate(),
+            checkOutAt: (c['checkOutAt'] as Timestamp?)?.toDate(),
+            siteId: c['siteId'] as String?,
+            note: c['note'] as String? ?? '',
+            byId: c['byId'] as String? ?? '',
+          ),
+        _ => null,
+      },
       server: d.containsKey('closed')
           ? DayResult(
               checkInAt: time('checkInAt'),
@@ -72,6 +86,7 @@ class AttendanceRecord {
                 final m => m,
               },
               afterHoursMin: (d['afterHoursMin'] as num?)?.toInt(),
+              awayMin: (d['awayMin'] as num?)?.toInt(),
             )
           : null,
     );
@@ -83,7 +98,7 @@ class AttendanceRecord {
   DayResult result({required WorkHours hours, required bool leavesSite, required bool overtimeAllowed, DateTime? now}) {
     final day = DateTime.parse(date);
     return deriveDay(
-      events,
+      correctedEvents(events, correction),
       start: hours.days.contains(day.weekday) ? day.add(Duration(minutes: hours.startMinute)) : null,
       end: day.add(Duration(minutes: hours.endMinute)),
       closeAll: day.add(const Duration(hours: 23, minutes: 55)),
@@ -98,12 +113,34 @@ class AttendanceRecord {
   DayResult best(AppUser user, WorkHours company) {
     final local = result(
       hours: user.scheduleOr(company),
-      leavesSite: user.role.leavesSiteForWork,
+      leavesSite: user.leavesSite,
       overtimeAllowed: user.overtimeAllowed,
     );
     return server?.fillFrom(local) ?? local;
   }
 }
+
+/// HR corrects [uid]'s day [day] (2026-10-22): check-in, optional check-out
+/// and site, with a note; the server works the day out again. Creates the
+/// day when the person has none (e.g. forgot their phone).
+Future<void> correctAttendance(String uid, String day, AttendanceCorrection c, String byId) => saving(() =>
+    attendanceDoc(uid, day).set({
+      'uid': uid,
+      'date': day,
+      'month': day.substring(0, 7),
+      'correction': {
+        'checkInAt': Timestamp.fromDate(c.checkInAt),
+        'checkOutAt': c.checkOutAt == null ? null : Timestamp.fromDate(c.checkOutAt!),
+        'siteId': c.siteId,
+        'note': c.note,
+        'byId': byId,
+        'at': FieldValue.serverTimestamp(),
+      },
+    }, SetOptions(merge: true)));
+
+/// Back to what the phone recorded.
+Future<void> removeAttendanceCorrection(String uid, String day) =>
+    saving(() => attendanceDoc(uid, day).update({'correction': FieldValue.delete()}));
 
 /// The signed-in person's attendance today.
 final myAttendanceTodayProvider = StreamProvider<AttendanceRecord?>((ref) {

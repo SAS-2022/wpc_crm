@@ -1,15 +1,16 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../settings/page_access.dart';
+import '../../core/login_name.dart';
 import '../../core/providers.dart';
 import '../../core/sign_out.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_shell.dart';
 
 /// One tile of the More grid.
-typedef _Item = ({IconData icon, String label, VoidCallback onTap});
+typedef _Item = ({IconData icon, String label, String path, VoidCallback onTap});
 
 /// More tab: the role's tools as a grid in sections (user request
 /// 2026-10-19: stays tidy as items are added), then language and sign out.
@@ -27,8 +28,9 @@ class MoreScreen extends ConsumerWidget {
     // On wide screens these pages are in the side menu already.
     final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
     final role = me.role;
+    final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     _Item item(IconData icon, String label, String path, {bool go = false}) =>
-        (icon: icon, label: label, onTap: () => go ? context.go(path) : context.push(path));
+        (icon: icon, label: label, path: path, onTap: () => go ? context.go(path) : context.push(path));
 
     final sections = <(String, List<_Item>)>[
       (l10n.moreSectionSales, [
@@ -43,11 +45,11 @@ class MoreScreen extends ConsumerWidget {
         ],
       ]),
       (l10n.moreSectionPeople, [
-        if (role.managesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
-        if (role.canSeeHr && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
-        // HR area hidden on the web for now (user request 2026-10-18).
-        if (role.canSeeHr && !wide && !kIsWeb) item(Icons.badge, l10n.hrArea, '/hr'),
-        if (role.isAdmin) item(Icons.people, l10n.users, '/users'),
+        if (role.seesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
+        if (me.seesTeamAttendance && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
+        // On the web again since 2026-10-22 (absences to decide).
+        if (role.canSeeHr && !wide) item(Icons.badge, l10n.hrArea, '/hr'),
+        if (role.managesUsers) item(Icons.people, l10n.users, '/users'),
       ]),
       (l10n.moreSectionSettings, [
         // Work hours, visit frequency, tags, work sites … are all in App
@@ -69,13 +71,14 @@ class MoreScreen extends ConsumerWidget {
             child: ListTile(
               leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
               title: Text(me.name),
-              subtitle: Text('${role.label(l10n)} · ${me.email}'),
+              subtitle: Text('${role.label(l10n)} · ${loginNameOf(me.email)}'),
               trailing: Tooltip(message: l10n.profile, child: const Icon(Icons.chevron_right)),
               onTap: () => context.push('/profile'),
             ),
           ),
-          for (final (title, items) in sections)
-            if (items.isNotEmpty) ...[
+          for (final (title, all) in sections)
+            // Pages turned off for the role (App settings → Page access) are left out.
+            if ([for (final i in all) if (access.allowsLocation(me, i.path)) i] case final items when items.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),

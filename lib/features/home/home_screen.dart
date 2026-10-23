@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
+import '../../core/skeleton.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
@@ -21,6 +22,9 @@ import 'dashboard_cards.dart';
 import 'progress_charts.dart';
 import 'stats.dart';
 import 'stats_widgets.dart';
+import '../attendance/absence_screen.dart' show PendingAbsencesCard;
+import '../attendance/early_checkout_card.dart';
+import '../settings/page_access.dart';
 import '../attendance/attendance_card.dart';
 import '../attendance/attendance_calendar_view.dart';
 
@@ -84,7 +88,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final today = DateTime(now.year, now.month, now.day);
 
     // Who the numbers are about.
-    final users = ref.watch(usersProvider).value ?? const <AppUser>[];
+    final usersAsync = ref.watch(usersProvider);
+    final users = usersAsync.value ?? const <AppUser>[];
     final team = me.role.isSupervisor
         ? [if (me.role.isTracked) me, ...teamOf(me, users)]
         : [me];
@@ -96,7 +101,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final key = (me.role.isSupervisor ? null : me.id, _range.months.join(','));
     // Hidden clients are left out of every number.
     final hidden = ref.watch(hiddenClientIdsProvider);
-    final rangeVisits = (ref.watch(rangeVisitsProvider(key)).value ?? const <Visit>[])
+    final visitsAsync = ref.watch(rangeVisitsProvider(key));
+    final rangeVisits = (visitsAsync.value ?? const <Visit>[])
         .where((v) => v.checkedInAt != null && _range.contains(v.checkedInAt!) && !hidden.contains(v.clientId))
         .toList();
     // Visits and calls of the people shown; calls count toward the target
@@ -105,10 +111,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final visits = mineAll.where((v) => !v.isCall).toList();
     final calls = mineAll.where((v) => v.isCall).toList();
     final contacts = mineAll.length;
-    final tasks = (ref.watch(rangeTasksProvider(key)).value ?? const <PlanTask>[])
+    final tasksAsync = ref.watch(rangeTasksProvider(key));
+    final tasks = (tasksAsync.value ?? const <PlanTask>[])
         .where((t) => ids.contains(t.ownerId) && _range.contains(DateTime.parse(t.date)) && !hidden.contains(t.clientId))
         .toList();
-    final allClients = ref.watch(workingClientsProvider).value ?? const <Client>[];
+    final clientsAsync = ref.watch(workingClientsProvider);
+    final allClients = clientsAsync.value ?? const <Client>[];
+    // First load (e.g. the web page refreshed): placeholders instead of
+    // zeros until the numbers' data has come (an error doesn't keep them).
+    final loading = [usersAsync, visitsAsync, tasksAsync, clientsAsync].any((a) => a.isLoading && !a.hasValue);
     final clients = allClients.where((c) => c.hasLocation && ids.contains(c.assignedTo)).toList();
 
     // Targets for the period, and what was expected by today.
@@ -140,6 +151,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           AttendanceCard(me: me),
           // Leave requests waiting for this person's approval (hidden when none).
           const LeaveApprovalsCard(),
+          // HR / GM: reported absences to decide (hidden when none).
+          const PendingAbsencesCard(),
+          // Direct managers: today's requests to leave early (hidden when none).
+          const EarlyCheckoutRequestsCard(),
           // Filters: period and person, in one row above the numbers.
           Wrap(
             spacing: 8,
@@ -175,6 +190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
+          if (loading) const _DashboardSkeleton() else ...[
           LayoutBuilder(builder: (context, c) {
             final columns = c.maxWidth > 720 ? 4 : 2;
             final width = (c.maxWidth - 8 * (columns - 1)) / columns;
@@ -305,6 +321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [Expanded(child: cards[0]), const SizedBox(width: 12), Expanded(child: cards[1])],
             );
           }),
+          ],
           const SizedBox(height: 12),
           if (me.role.isSupervisor) ...[
             ApprovalsCard(me: me),
@@ -317,15 +334,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// The numbers' shape while their data loads: four tiles, the target
+/// chart and the two cards under it (side by side on wide screens).
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tile(double width) => SizedBox(
+          width: width,
+          child: const Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [SkeletonBox(width: 20, height: 20, radius: 10), SizedBox(width: 8), SkeletonBox(width: 70, height: 12)]),
+                  SizedBox(height: 14),
+                  SkeletonBox(width: 64, height: 26),
+                  SizedBox(height: 12),
+                  SkeletonBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+    return Skeleton(
+      child: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= 720;
+        final columns = c.maxWidth > 720 ? 4 : 2;
+        final width = (c.maxWidth - 8 * (columns - 1)) / columns;
+        const lower = [SkeletonCard(lines: 4), SkeletonCard(lines: 4)];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(spacing: 8, runSpacing: 8, children: [for (var i = 0; i < 4; i++) tile(width)]),
+            const SizedBox(height: 12),
+            const SkeletonCard(height: 160),
+            const SizedBox(height: 12),
+            if (wide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Expanded(child: lower[0]), const SizedBox(width: 12), Expanded(child: lower[1])],
+              )
+            else ...[lower[0], const SizedBox(height: 12), lower[1]],
+          ],
+        );
+      }),
+    );
+  }
+}
+
 /// Home for HR, accounting and procurement: no sales numbers. Attendance and
 /// leave cards will go here.
-class _BackOfficeHome extends StatelessWidget {
+class _BackOfficeHome extends ConsumerWidget {
   const _BackOfficeHome({required this.me});
 
   final AppUser me;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.welcome(me.name)), actions: const [NotificationsBell()]),
@@ -350,6 +419,8 @@ class _BackOfficeHome extends StatelessWidget {
           if (me.checksAttendance) MyAttendanceCalendar(me: me),
           // HR: requests waiting for them first.
           const LeaveApprovalsCard(),
+          const PendingAbsencesCard(),
+          const EarlyCheckoutRequestsCard(),
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
@@ -361,8 +432,9 @@ class _BackOfficeHome extends StatelessWidget {
               onTap: () => context.push('/leave'),
             ),
           ),
-          // Logistics manager: the drivers' live map.
-          if (me.role.managesDrivers) ...[
+          // Logistics manager / warehouse supervisor: the drivers' live map.
+          if (me.role.seesDrivers &&
+              (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.drivers)) ...[
             const SizedBox(height: 12),
             Card(
               margin: EdgeInsets.zero,

@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../attendance/absence.dart';
+import '../attendance/absence_screen.dart' show HrAbsencesTab;
 import '../users/users_repository.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
@@ -23,7 +25,7 @@ class HrScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.hrArea),
@@ -32,13 +34,30 @@ class HrScreen extends ConsumerWidget {
             tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: l10n.leaveRequests),
+              // Reported "not coming to work" days (2026-10-22), with the waiting count.
+              Tab(child: _AbsencesTabLabel()),
               Tab(text: l10n.leaveBalances),
               Tab(text: l10n.leaveTypesAndHolidays),
             ],
           ),
         ),
-        body: const TabBarView(children: [_RequestsTab(), _BalancesTab(), _TypesTab()]),
+        body: const TabBarView(children: [_RequestsTab(), HrAbsencesTab(), _BalancesTab(), _TypesTab()]),
       ),
+    );
+  }
+}
+
+class _AbsencesTabLabel extends ConsumerWidget {
+  const _AbsencesTabLabel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final waiting = (ref.watch(allAbsencesProvider).value ?? const <Absence>[]).where((a) => a.pending).length;
+    return Badge(
+      isLabelVisible: waiting > 0,
+      label: Text('$waiting'),
+      offset: const Offset(14, -6),
+      child: Text(AppLocalizations.of(context).absencesTab),
     );
   }
 }
@@ -95,7 +114,15 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
               ]),
             ),
             if (list.isEmpty) ListTile(title: Text(l10n.noLeaveRequests)),
-            for (final r in list) LeaveRequestTile(request: r, showPerson: true),
+            for (final r in list) ...[
+              LeaveRequestTile(request: r, showPerson: true),
+              // Waiting requests: the person's balance right under it.
+              if (r.isLeave && r.status == LeaveStatus.pending)
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 16, 12),
+                  child: LeaveBalanceTable(uid: r.uid, year: r.year, highlightTypeId: r.typeId),
+                ),
+            ],
           ],
         );
       },

@@ -4,10 +4,26 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../settings/page_access.dart';
 
 /// Below this width: bottom tabs (phones). From it: a side menu (web,
 /// tablets) with the dashboard pages as their own entries.
 const wideLayoutWidth = 900.0;
+
+/// The bottom tabs' branch indexes (0 Home, 1 Clients, 2 Visits, 3 More)
+/// the signed-in person has: back-office roles Home and More only; Clients
+/// and Visits left out when turned off for the role (Page access).
+List<int> visibleBranches(WidgetRef ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || me.role.isBackOffice) return const [0, 3];
+  final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
+  return [
+    0,
+    if (access.allowsUser(me, AppPage.clients)) 1,
+    if (access.allowsUser(me, AppPage.visits)) 2,
+    3,
+  ];
+}
 
 /// Bottom tabs: Home · Clients · Visits · More. Each tab keeps its own
 /// navigation stack. On wide screens a side menu replaces the tabs.
@@ -23,9 +39,9 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     if (MediaQuery.sizeOf(context).width >= wideLayoutWidth) return _wide(context, ref, l10n);
-    // HR, accounting, procurement: Home and More only (branches 0 and 3).
-    final backOffice = ref.watch(currentUserProvider).value?.role.isBackOffice ?? false;
-    final branches = backOffice ? const [0, 3] : const [0, 1, 2, 3];
+    // HR, accounting, procurement: Home and More only (branches 0 and 3);
+    // Clients / Visits also go when turned off (App settings → Page access).
+    final branches = visibleBranches(ref);
     return Scaffold(
       body: shell,
       bottomNavigationBar: NavigationBar(
@@ -35,10 +51,10 @@ class AppShell extends ConsumerWidget {
             shell.goBranch(branches[i], initialLocation: branches[i] == shell.currentIndex),
         destinations: [
           NavigationDestination(icon: const Icon(Icons.dashboard_outlined), selectedIcon: const Icon(Icons.dashboard), label: l10n.home),
-          if (!backOffice) ...[
+          if (branches.contains(1))
             NavigationDestination(icon: const Icon(Icons.store_outlined), selectedIcon: const Icon(Icons.store), label: l10n.clients),
+          if (branches.contains(2))
             NavigationDestination(icon: const Icon(Icons.event_note_outlined), selectedIcon: const Icon(Icons.event_note), label: l10n.visits),
-          ],
           NavigationDestination(icon: const Icon(Icons.menu), label: l10n.more),
         ],
       ),
@@ -46,7 +62,9 @@ class AppShell extends ConsumerWidget {
   }
 
   Widget _wide(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final role = ref.watch(currentUserProvider).value?.role;
+    final me = ref.watch(currentUserProvider).value;
+    final role = me?.role;
+    final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     final supervisor = role?.isSupervisor ?? false;
     final backOffice = role?.isBackOffice ?? false;
     final items = [
@@ -63,12 +81,12 @@ class AppShell extends ConsumerWidget {
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],
-      if (role?.canSeeHr ?? false)
+      if (ref.watch(currentUserProvider).value?.seesTeamAttendance ?? false)
         (path: '/attendance', icon: Icons.how_to_reg_outlined, selected: Icons.how_to_reg, label: l10n.attendance),
-      // HR entry hidden on the web for now (user request 2026-10-18).
-      // if (role?.canSeeHr ?? false) (path: '/hr', icon: Icons.badge_outlined, selected: Icons.badge, label: l10n.hrArea),
+      // Shown again on the web 2026-10-22 (hidden since 2026-10-18): absences to decide live there.
+      if (role?.canSeeHr ?? false) (path: '/hr', icon: Icons.badge_outlined, selected: Icons.badge, label: l10n.hrArea),
       (path: '/more', icon: Icons.menu, selected: Icons.menu_open, label: l10n.more),
-    ];
+    ].where((item) => me == null || access.allowsLocation(me, item.path)).toList();
     // The entry whose path is the longest prefix of the location; Home also
     // holds the plan and notification pages.
     var index = 0;
@@ -130,6 +148,11 @@ class _BranchPagerState extends ConsumerState<BranchPager> {
   /// True while the pager follows a tab tap, so that move isn't taken for a swipe.
   bool _following = false;
 
+  /// True while the pager's current scroll was started by a finger. Other
+  /// scrolls (e.g. a menu's `Scrollable.ensureVisible`, which walks up into
+  /// the pager) must not change the tab.
+  bool _dragged = false;
+
   @override
   void didUpdateWidget(BranchPager old) {
     super.didUpdateWidget(old);
@@ -155,16 +178,30 @@ class _BranchPagerState extends ConsumerState<BranchPager> {
     if (MediaQuery.sizeOf(context).width >= wideLayoutWidth) {
       return IndexedStack(index: shell.currentIndex, children: widget.children);
     }
-    // Back-office roles have no Clients / Visits tabs to swipe to.
-    final backOffice = ref.watch(currentUserProvider).value?.role.isBackOffice ?? false;
-    final atRoot = !backOffice && _tabRoots.contains(shell.shellRouteContext.routerState.uri.path);
+    // Swiping only when all four tabs are there (back-office roles have no
+    // Clients / Visits tabs; a role may have them turned off).
+    final allTabs = visibleBranches(ref).length == 4;
+    final atRoot = allTabs && _tabRoots.contains(shell.shellRouteContext.routerState.uri.path);
     // Switches tab once the swipe has settled, so the gesture isn't cut off
     // halfway by the other tab's screen.
-    return NotificationListener<ScrollEndNotification>(
+    return NotificationListener<ScrollNotification>(
       onNotification: (n) {
+        if (n.depth != 0) return false;
+        if (n is ScrollStartNotification) _dragged = n.dragDetails != null;
+        if (n is! ScrollEndNotification) return false;
         // widget.shell, not the one captured at build: it has the current tab.
-        final i = _pages.page?.round();
-        if (!_following && n.depth == 0 && i != null && i != widget.shell.currentIndex) widget.shell.goBranch(i);
+        final current = widget.shell.currentIndex;
+        final page = _pages.page;
+        final i = page?.round();
+        if (_dragged && !_following && i != null && i != current) {
+          widget.shell.goBranch(i);
+        } else if (!_dragged && !_following && page != null && page != current) {
+          // Moved without a swipe: put the current tab back in place.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _pages.hasClients) _pages.jumpToPage(widget.shell.currentIndex);
+          });
+        }
+        _dragged = false;
         return false;
       },
       child: PageView(

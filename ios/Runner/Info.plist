@@ -41,6 +41,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Take photos at client visits.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID confirms it is you when you check in or out at work.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Sales staff: your location is shared with your managers during work hours so visits and routes can be followed live. Everyone assigned to a work site: the phone notices when you arrive at or leave the site so you're checked in and out automatically; nothing is tracked anywhere else.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

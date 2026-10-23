@@ -88,6 +88,9 @@ class MapTypeButton extends ConsumerWidget {
       child: PopupMenuButton<MapType>(
         tooltip: l10n.mapView,
         initialValue: current,
+        // Root navigator: the menu scrolls to the ticked item, which would
+        // also scroll the tab pager around a tab's navigator.
+        useRootNavigator: true,
         onSelected: (t) => onChanged != null ? onChanged!(t) : ref.read(mapTypeProvider.notifier).set(t),
         itemBuilder: (_) => [
           for (final t in mapTypeChoices)

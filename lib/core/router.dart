@@ -20,6 +20,7 @@ import '../features/import/import_screen.dart';
 import '../features/import/location_import_screen.dart';
 import '../features/hr/employee_leave_screen.dart';
 import '../features/hr/hr_screen.dart';
+import '../features/attendance/absence_screen.dart';
 import '../features/hr/leave_request_form.dart';
 import '../features/hr/leave_request_screen.dart';
 import '../features/hr/leave_rules.dart' show myLeaveEnabled;
@@ -48,12 +49,15 @@ import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
 import '../features/settings/app_settings_screen.dart';
+import '../features/settings/page_access.dart';
+import '../features/settings/page_access_screen.dart';
 import '../features/settings/tracking_schedules_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
   ref.listen(authStateProvider, (_, _) => refresh.value++);
   ref.listen(currentUserProvider, (_, _) => refresh.value++);
+  ref.listen(pageAccessProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -79,23 +83,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (me.role.isBackOffice &&
           !const ['/', '/more', '/profile', '/notifications'].contains(loc) &&
           !loc.startsWith('/leave') &&
+          !loc.startsWith('/absence/') &&
           !loc.startsWith('/hr') &&
           !loc.startsWith('/attendance') &&
-          // Logistics manager: the drivers' live map and route history.
-          !(me.role.managesDrivers && (loc == '/drivers' || loc == '/history'))) {
+          // Logistics manager: the drivers' live map and route history, and
+          // the Users page for drivers.
+          !(me.role.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
+          !(me.role.managesUsers && loc.startsWith('/users'))) {
         return '/';
       }
-      if (loc == '/drivers' && !me.role.managesDrivers) return '/';
-      if ((loc.startsWith('/hr') || loc.startsWith('/attendance')) && !me.role.canSeeHr) return '/';
+      if (loc == '/drivers' && !me.role.seesDrivers) return '/';
+      if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
+      // Managers and warehouse supervisors: the attendance of the people under them.
+      if (loc.startsWith('/attendance') && !me.seesTeamAttendance) return '/';
       // "My leave" is greyed out until finished; requests to approve still open.
       if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
-      if ((loc.startsWith('/users') || loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.role.isAdmin) return '/';
+      if (loc.startsWith('/users') && !me.role.managesUsers) return '/';
+      if ((loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.role.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) &&
           !me.role.isSupervisor &&
-          !(me.role.managesDrivers && loc == '/history')) {
+          !(me.role.seesDrivers && loc == '/history')) {
         return '/';
       }
       if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
+      // Pages turned off for the role (App settings → Page access).
+      if (!(ref.read(pageAccessProvider).value ?? PageAccess.defaults).allowsLocation(me, loc)) return '/';
       return null;
     },
     routes: [
@@ -194,6 +206,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: ':id', builder: (_, state) => LeaveRequestScreen(id: state.pathParameters['id']!)),
               ],
             ),
+            GoRoute(path: '/absence/:id', builder: (_, state) => AbsenceScreen(id: state.pathParameters['id']!)),
             GoRoute(
               path: '/hr',
               builder: (_, _) => const HrScreen(),
@@ -244,11 +257,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const AppSettingsScreen(),
               routes: [
                 GoRoute(path: 'tracking-schedules', builder: (_, _) => const TrackingSchedulesScreen()),
+                GoRoute(path: 'page-access', builder: (_, _) => const PageAccessScreen()),
               ],
             ),
             GoRoute(path: '/work-sites', builder: (_, _) => const WorkSitesScreen()),
             GoRoute(path: '/companies', builder: (_, _) => const CompaniesScreen()),
-            GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
+            GoRoute(
+              path: '/attendance',
+              builder: (_, state) => AttendanceScreen(initialDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? '')),
+            ),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(
               path: '/import',

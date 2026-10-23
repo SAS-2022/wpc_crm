@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers.dart';
 import '../../core/saving.dart';
 
 /// Where people check in (user request 2026-10-19): `work_sites/{id}`
@@ -45,9 +46,16 @@ const defaultSiteRadius = 100.0;
 
 CollectionReference<Map<String, dynamic>> get _sites => FirebaseFirestore.instance.collection('work_sites');
 
-final workSitesProvider = StreamProvider<List<WorkSite>>((ref) => _sites.snapshots().map(
-      (s) => s.docs.map(WorkSite.fromDoc).toList()..sort((a, b) => a.name.compareTo(b.name)),
-    ));
+/// Only active users may read work sites: signed out or waiting for
+/// approval gives none (the listener used to start at app launch, before
+/// sign-in, fail with permission-denied and stay failed after signing in).
+final workSitesProvider = StreamProvider<List<WorkSite>>((ref) {
+  final uid = ref.watch(currentUserProvider.select((u) => u.value?.active == true ? u.value!.id : null));
+  if (uid == null) return Stream.value(const []);
+  return _sites.snapshots().map(
+        (s) => s.docs.map(WorkSite.fromDoc).toList()..sort((a, b) => a.name.compareTo(b.name)),
+      );
+});
 
 /// Adds ([id] null) or updates a site; returns its id.
 Future<String> saveWorkSite(WorkSite site, {String? id}) => saving(() async {

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { deriveDay, saudiTime } = require('./attendance');
+const { deriveDay, correctedEvents, saudiTime } = require('./attendance');
 
 const day = '2026-10-20';
 const t = (h, m = 0) => saudiTime(day, h * 60 + m);
@@ -24,18 +24,38 @@ test('leaving after 5 pm checks out at that time; overtime counts only when allo
   assert.deepEqual([yes.countedMin, yes.overtimeMin], [630, 90]);
 });
 
-test('office: left at 2:40 pm and never came back → checked out at 2:40 once the day ends', () => {
+test('office: left at 2:40 pm and away over 30 min → checked out at 2:40', () => {
   const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(14, 40) }];
-  assert.equal(run(events, { now: t(16) }).closed, false); // could still come back
-  const d = run(events, { now: t(17, 5) });
-  assert.deepEqual([d.checkOutAt, d.checkOutType, d.workedMin], [t(14, 40), 'leftEarly', 400]);
+  assert.equal(run(events, { now: t(15, 5) }).closed, false); // could still come back
+  const d = run(events, { now: t(15, 10) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.workedMin], [t(14, 40), 'leftSite', 400]);
+  assert.equal(run(events, { now: t(15, 20), awayGraceMin: 45 }).closed, false); // App settings
 });
 
-test('office: out for lunch and back → stays checked in', () => {
-  const d = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(12) }, { type: 'in', at: t(13) }], { now: t(16) });
-  assert.equal(d.inside, true);
-  assert.equal(d.lastExitAt, null);
-  assert.equal(d.closed, false);
+test('office: left at 4:45 pm → checked out at 4:45 once the day ends', () => {
+  const d = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(16, 45) }], { now: t(17, 5) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType], [t(16, 45), 'leftEarly']);
+});
+
+test('office: out 20 min and back → stays checked in, the time counts', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(12) }, { type: 'in', at: t(12, 20) }];
+  const d = run(events, { now: t(16) });
+  assert.deepEqual([d.inside, d.lastExitAt, d.closed, d.awayMin], [true, null, false, 0]);
+  const out = run([...events, { type: 'out', at: t(17, 10) }], { now: t(18) });
+  assert.equal(out.countedMin, 540);
+});
+
+test('office: out for an hour and back → checked in again, the hour away does not count', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(12) }, { type: 'in', at: t(13) }];
+  const d = run(events, { now: t(16) });
+  assert.deepEqual([d.inside, d.closed, d.checkInAt, d.awayMin], [true, false, t(8), 60]);
+  const out = run([...events, { type: 'out', at: t(17, 10) }], { now: t(18) });
+  assert.deepEqual([out.checkOutType, out.countedMin, out.workedMin, out.afterHoursMin], ['left', 480, 490, 10]);
+});
+
+test('office: checked out for leaving, back only after 5 pm → stays checked out', () => {
+  const d = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(15) }, { type: 'in', at: t(17, 20) }], { now: t(18) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType], [t(15), 'leftSite']);
 });
 
 test('sales / drivers: leaving during the day keeps them in; closed at 5 pm', () => {
@@ -61,6 +81,9 @@ test('manual check-out at once; arriving again later doesn\'t reopen, a manual c
   const again = run([...events, { type: 'checkIn', at: t(15, 31) }], { now: t(16) });
   assert.equal(again.closed, false);
   assert.equal(again.checkInAt, t(8));
+  // The 31 minutes between the check-out and the check-in don't count.
+  const out = run([...events, { type: 'checkIn', at: t(15, 31) }, { type: 'checkOut', at: t(16) }], { now: t(16) });
+  assert.deepEqual([out.awayMin, out.countedMin], [31, 449]);
 });
 
 test('leaving before any check-in is ignored; events are taken in time order', () => {
@@ -90,4 +113,16 @@ test('without overtime the time stayed after the end is recorded, not counted', 
   assert.deepEqual([no.countedMin, no.overtimeMin, no.afterHoursMin], [540, 0, 45]);
   const yes = run(events, { now: t(19), overtimeAllowed: true });
   assert.deepEqual([yes.countedMin, yes.overtimeMin, yes.afterHoursMin], [585, 45, 0]);
+});
+
+test('HR correction replaces the phone\'s events', () => {
+  const phone = [{ type: 'in', at: t(9, 30) }, { type: 'out', at: t(12) }, { type: 'in', at: t(14) }];
+  const full = run(correctedEvents(phone, { checkInAt: t(8), checkOutAt: t(17), siteId: 'hq' }), { now: t(18) });
+  assert.deepEqual([full.checkInAt, full.checkInSource, full.siteId, full.checkOutAt, full.checkOutType, full.countedMin],
+    [t(8), 'hr', 'hq', t(17), 'hr', 540]);
+  // Only the check-in corrected: the phone's later events go on.
+  const inOnly = run(correctedEvents(phone.slice(0, 2), { checkInAt: t(8) }), { now: t(13) });
+  assert.deepEqual([inOnly.checkInAt, inOnly.closed, inOnly.checkOutType], [t(8), true, 'leftSite']);
+  // No correction: HR event types written by a phone are dropped.
+  assert.deepEqual(correctedEvents([...phone, { type: 'hrOut', at: t(10) }], null), phone);
 });

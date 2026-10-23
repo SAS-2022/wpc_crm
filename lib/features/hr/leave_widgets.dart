@@ -132,3 +132,85 @@ class LeaveApprovalsCard extends ConsumerWidget {
     );
   }
 }
+
+/// A person's leave for one year as a table (2026-10-23, HR asked to see it
+/// under each request): per leave type the days entitled, used (approved),
+/// waiting for approval (this request included) and remaining. The row of
+/// [highlightTypeId] (the request's type) is marked. Balances are readable
+/// by the HR area only, so it is shown to them.
+class LeaveBalanceTable extends ConsumerWidget {
+  const LeaveBalanceTable({super.key, required this.uid, required this.year, this.highlightTypeId});
+
+  final String uid;
+  final int year;
+  final String? highlightTypeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
+    final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
+    final requests = [
+      for (final r in ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[])
+        if (r.uid == uid) r.use,
+    ];
+    final balances = leaveBalances(
+      types: types,
+      year: year,
+      entitledOverride: record.entitled,
+      adjustments: record.forBalance,
+      requests: requests,
+    );
+    if (balances.isEmpty) return const SizedBox.shrink();
+    final head = theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    Widget cell(String text, {TextStyle? style, bool first = false}) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Text(text, style: style, textAlign: first ? TextAlign.start : TextAlign.end),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l10n.leaveBalanceYear(year), style: theme.textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Table(
+          columnWidths: const {0: FlexColumnWidth(2.2)},
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            TableRow(
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.dividerColor))),
+              children: [
+                cell(l10n.balanceColType, style: head, first: true),
+                cell(l10n.balanceColEntitled, style: head),
+                cell(l10n.balanceColUsed, style: head),
+                cell(l10n.balanceColWaiting, style: head),
+                cell(l10n.balanceColLeft, style: head),
+              ],
+            ),
+            for (final t in types)
+              if (balances[t.id] case final b?)
+                TableRow(
+                  decoration: t.id == highlightTypeId
+                      ? BoxDecoration(color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5))
+                      : null,
+                  children: [
+                    cell(t.name(lang), first: true, style: t.id == highlightTypeId ? const TextStyle(fontWeight: FontWeight.w600) : null),
+                    cell(formatLeaveDays(b.entitled)),
+                    cell(formatLeaveDays(b.used)),
+                    cell(b.pending > 0 ? formatLeaveDays(b.pending) : '–'),
+                    cell(
+                      formatLeaveDays(b.remaining),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: b.remaining < 0 ? theme.colorScheme.error : null,
+                      ),
+                    ),
+                  ],
+                ),
+          ],
+        ),
+      ],
+    );
+  }
+}

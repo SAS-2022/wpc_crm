@@ -37,4 +37,29 @@ void main() {
     );
     expect([at(d, DateTime(2026, 10, 21, 20)).status, at(d, DateTime(2026, 10, 21, 20)).workedMin], [DayStatus.checkedOut, 480]);
   });
+
+  test('reported absent: own status, no delay; a check-in still wins', () {
+    final p = personDay(null, schedule: hours, overtimeAllowed: false, day: day, now: DateTime(2026, 10, 21, 10), reportedAbsent: true);
+    expect([p.status, p.lateMin, p.notInYet], [DayStatus.absent, 0, false]);
+    final came = personDay(
+      DayResult(checkInAt: DateTime(2026, 10, 21, 9), inside: true, lateMin: 60),
+      schedule: hours,
+      overtimeAllowed: false,
+      day: day,
+      now: DateTime(2026, 10, 21, 10),
+      reportedAbsent: true,
+    );
+    expect(came.status, DayStatus.onSite);
+  });
+
+  test('time away after being checked out for leaving is not counted while open', () {
+    final p = at(DayResult(checkInAt: DateTime(2026, 10, 21, 8), inside: true, awayMin: 60), DateTime(2026, 10, 21, 12));
+    expect(p.workedMin, 180);
+  });
+
+  test('on approved leave: own status, before a reported absence', () {
+    final p = personDay(null,
+        schedule: hours, overtimeAllowed: false, day: day, now: DateTime(2026, 10, 21, 10), reportedAbsent: true, onLeave: true);
+    expect([p.status, p.lateMin], [DayStatus.onLeave, 0]);
+  });
 }

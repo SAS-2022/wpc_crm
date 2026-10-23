@@ -72,6 +72,26 @@ enum UserRole {
   /// and the logistics manager.
   bool get managesDrivers => isAdmin || this == logisticsManager;
 
+  /// Drivers page and their route history: [managesDrivers] for every
+  /// driver, the warehouse supervisor for their own drivers
+  /// ([AppUser.supervisorId], user decision 2026-10-23).
+  bool get seesDrivers => managesDrivers || this == warehouseSupervisor;
+
+  /// Manager roles: always a manager, can be someone's direct manager
+  /// (2026-10-23). Anyone else becomes one with [AppUser.markedManager].
+  bool get isManagerRole => this == gm || this == salesManager || this == kam || this == logisticsManager;
+
+  /// Opens the Users page: sales manager and GM for everyone, the logistics
+  /// manager for drivers only (user decision 2026-10-23).
+  bool get managesUsers => isAdmin || this == logisticsManager;
+
+  /// The roles this person may give to and edit on the user form.
+  List<UserRole> get editableRoles => isAdmin
+      ? assignable
+      : this == logisticsManager
+      ? const [driver]
+      : const [];
+
   /// The sales team: uses clients, visits and plans.
   bool get isSales => isSupervisor || this == salesExec;
 
@@ -121,6 +141,11 @@ enum UserRole {
       };
 }
 
+/// The only accounts that may delete users (user decision 2026-10-23: a
+/// deletion by mistake does great harm). Same list as USER_DELETERS in
+/// functions/index.js, which enforces it.
+const userDeleterEmails = {'wissam.b@woodpanelsco.com'};
+
 class AppUser {
   const AppUser({
     required this.id,
@@ -141,7 +166,11 @@ class AppUser {
     this.workSiteIds = const [],
     this.overtimeAllowed = false,
     this.attendanceRequired,
+    this.leaveSiteAllowed,
     this.workSchedule,
+    this.managerId,
+    this.markedManager = false,
+    this.supervisorId,
   });
 
   final String id;
@@ -207,6 +236,11 @@ class AppUser {
   final bool? attendanceRequired;
   bool get needsAttendance => attendanceRequired ?? defaultAttendance(role, workSiteIds);
 
+  /// User form "Allowed to leave the site" (2026-10-22): leaving during the
+  /// work day doesn't check them out. Not set = the sales team and drivers.
+  final bool? leaveSiteAllowed;
+  bool get leavesSite => leaveSiteAllowed ?? role.leavesSiteForWork;
+
   /// Checks in and out: attendance required and at least one work site.
   bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;
 
@@ -214,6 +248,26 @@ class AppUser {
   /// the company work hours (More → Work hours).
   final WorkHours? workSchedule;
   WorkHours scheduleOr(WorkHours company) => workSchedule ?? company;
+
+  /// Their direct manager, chosen on the user form (2026-10-23); null =
+  /// automatic ([directManagersOf] in notifications.dart).
+  final String? managerId;
+
+  /// User form "Is a manager" (`users.isManager`): e.g. the accounting
+  /// manager, who has the Accounting role.
+  final bool markedManager;
+
+  /// Can be chosen as someone's direct manager.
+  bool get isManager => role.isManagerRole || markedManager;
+
+  /// A driver's warehouse supervisor (`users.supervisorId`, 2026-10-23):
+  /// sees their tracking and attendance. Their direct manager stays the
+  /// logistics manager.
+  final String? supervisorId;
+
+  /// Attendance page for the people under them (2026-10-23): managers and
+  /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
+  bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
 
   static bool defaultAttendance(UserRole role, List<String> workSiteIds) => !role.isSales || workSiteIds.isNotEmpty;
 
@@ -238,7 +292,11 @@ class AppUser {
       workSiteIds: List<String>.from(d['workSiteIds'] as List? ?? const []),
       overtimeAllowed: d['overtimeAllowed'] == true,
       attendanceRequired: d['attendanceRequired'] as bool?,
+      leaveSiteAllowed: d['leaveSiteAllowed'] as bool?,
       workSchedule: WorkHours.tryParse(d['workSchedule']),
+      managerId: d['managerId'] as String?,
+      markedManager: d['isManager'] == true,
+      supervisorId: d['supervisorId'] as String?,
     );
   }
 
@@ -249,13 +307,17 @@ class AppUser {
         'role': role.value,
         'kamId': role == UserRole.salesExec ? kamId : null,
         'active': active,
-        'odooName': odooName,
+        'odooName': role.isTracked ? odooName : '',
         'monthlyTarget': role.isTracked ? monthlyTarget : 0,
         'companyId': companyId,
         'position': position,
         'workSiteIds': workSiteIds,
         'overtimeAllowed': overtimeAllowed,
         'attendanceRequired': ?attendanceRequired,
+        'leaveSiteAllowed': ?leaveSiteAllowed,
         'workSchedule': workSchedule?.toMap(),
+        'managerId': managerId,
+        'isManager': role.isManagerRole ? false : markedManager,
+        'supervisorId': role == UserRole.driver ? supervisorId : null,
       };
 }

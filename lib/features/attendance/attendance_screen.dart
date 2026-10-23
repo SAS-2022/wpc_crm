@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../notifications/notifications.dart' show peopleUnder;
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -11,6 +12,11 @@ import '../plan/plan_screen.dart' show DayBar;
 import '../tracking/work_hours.dart';
 import '../users/companies.dart';
 import '../users/users_repository.dart';
+import 'absence.dart';
+import 'absence_sheet.dart' show absenceReasonIcon, absenceReasonLabel, absenceStatusText;
+import 'attendance_correction.dart';
+import '../hr/leave_repository.dart';
+import '../hr/leave_rules.dart';
 import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_day.dart';
 import 'attendance_repository.dart';
@@ -29,14 +35,17 @@ enum _View { status, hours, delays }
 /// company), and three views — status sections, worked hours so far against
 /// each schedule, and delays (late check-ins and people not in yet).
 class AttendanceScreen extends ConsumerStatefulWidget {
-  const AttendanceScreen({super.key});
+  const AttendanceScreen({super.key, this.initialDate});
+
+  /// The day shown first (`/attendance?date=`); today when null.
+  final DateTime? initialDate;
 
   @override
   ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
-  DateTime _day = DateTime.now();
+  late DateTime _day = widget.initialDate ?? DateTime.now();
   _Show _show = _Show.all;
   _View _view = _View.status;
   String _query = '';
@@ -122,12 +131,26 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final siteNames = {for (final s in sites) s.id: s.name};
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final me = ref.watch(currentUserProvider).value;
+    final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
+    // HR area: everyone; other managers: the people under them (2026-10-23).
+    final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
     final everyone = [
-      for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
+      for (final u in visible)
         if (u.active && u.checksAttendance) u,
     ]..sort((a, b) => a.name.compareTo(b.name));
     final records = ref.watch(dayAttendanceProvider(dayKey)).value ?? const <String, AttendanceRecord>{};
-    final canOpenUsers = ref.watch(currentUserProvider).value?.role.isAdmin ?? false;
+    final absences = ref.watch(dayAbsencesProvider(dayKey)).value ?? const <String, Absence>{};
+    // Approved leave covering the day, by person.
+    final leave = {
+      for (final r in ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[])
+        if (r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null &&
+            r.from!.compareTo(dayKey) <= 0 && r.to!.compareTo(dayKey) >= 0)
+          r.uid: r,
+    };
+    final role = me?.role;
+    final canOpenUsers = role?.isAdmin ?? false;
+    final canCorrect = role?.canManageHr ?? false;
 
     // Each person's day: the server's result (or the same rules here until
     // it has the day), then status, hours so far and delay.
@@ -140,6 +163,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           overtimeAllowed: u.overtimeAllowed,
           day: midnight,
           now: now,
+          reportedAbsent: absences.containsKey(u.id),
+          onLeave: leave.containsKey(u.id),
         ),
     };
 
@@ -156,14 +181,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     bool shows(AppUser u) => switch (_show) {
           _Show.all => true,
           _Show.onSite => days[u.id]!.status == DayStatus.onSite,
-          _Show.notOnSite => days[u.id]!.status == DayStatus.away || days[u.id]!.status == DayStatus.notIn,
+          _Show.notOnSite =>
+            const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave].contains(days[u.id]!.status),
           _Show.checkedOut => days[u.id]!.status == DayStatus.checkedOut,
         };
     final shown = filtered.where(shows).toList();
 
     int count(bool Function(PersonDay) test) => filtered.where((u) => test(days[u.id]!)).length;
     final onSite = count((d) => d.status == DayStatus.onSite);
-    final notOnSite = count((d) => d.status == DayStatus.away || d.status == DayStatus.notIn);
+    final notOnSite =
+        count((d) => const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave].contains(d.status));
     final checkedOut = count((d) => d.status == DayStatus.checkedOut);
     final workedTotal = filtered.fold(0, (n, u) => n + days[u.id]!.workedMin);
     final late = filtered.where((u) => days[u.id]!.lateMin > 0).toList();
@@ -184,6 +211,20 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             Icons.person_off_outlined,
             theme.colorScheme.outline,
             p.notInYet ? '${l10n.notCheckedIn} · ${l10n.lateBy(formatMinutes(p.lateMin))}' : l10n.notCheckedIn,
+          ),
+        DayStatus.absent => (
+            absenceReasonIcon(absences[u.id]!.reason),
+            Colors.orange.shade800,
+            [
+              absenceReasonLabel(l10n, absences[u.id]!.reason),
+              absences[u.id]!.note,
+              absenceStatusText(l10n, absences[u.id]!),
+            ].where((s) => s.isNotEmpty).join(' · '),
+          ),
+        DayStatus.onLeave => (
+            Icons.beach_access,
+            Colors.blue.shade600,
+            leave[u.id]?.typeName(Localizations.localeOf(context).languageCode) ?? l10n.dayOnLeave,
           ),
         DayStatus.onSite || DayStatus.away => (
             p.status == DayStatus.onSite ? Icons.how_to_reg : Icons.directions_walk,
@@ -207,10 +248,23 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return ListTile(
         leading: avatar(u, color, icon),
         title: Text(u.name),
-        subtitle: Text('${[u.role.label(l10n), siteOf(u)].where((s) => s.isNotEmpty).join(' · ')}\n$line'),
+        subtitle: Text([
+          [u.role.label(l10n), siteOf(u)].where((s) => s.isNotEmpty).join(' · '),
+          line,
+          if (records[u.id]?.correction != null) l10n.correctedByHr,
+        ].join('\n')),
         isThreeLine: true,
         trailing: p.workedMin > 0 ? Text(formatMinutes(p.workedMin), style: theme.textTheme.titleSmall) : null,
-        onTap: canOpenUsers ? () => context.push('/users/${u.id}') : null,
+        onTap: () => showAttendanceDaySheet(
+          context,
+          person: u,
+          day: midnight,
+          record: records[u.id],
+          result: d,
+          absence: absences[u.id],
+          canCorrect: canCorrect,
+          canOpenUser: canOpenUsers,
+        ),
       );
     }
 
@@ -282,6 +336,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             (DayStatus.onSite, l10n.onSite),
             (DayStatus.away, l10n.leftTheSite),
             (DayStatus.notIn, l10n.notCheckedIn),
+            (DayStatus.absent, l10n.reportedAbsent),
+            (DayStatus.onLeave, l10n.dayOnLeave),
             (DayStatus.checkedOut, l10n.checkedOutTitle),
           ])
             if (shown.where((u) => days[u.id]!.status == status).toList() case final list when list.isNotEmpty) ...[

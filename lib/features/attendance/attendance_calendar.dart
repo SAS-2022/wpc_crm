@@ -13,6 +13,9 @@ enum DayMark {
   /// Approved leave.
   leave,
 
+  /// Reported "not coming to work" beforehand (2026-10-22), not approved leave.
+  absent,
+
   /// Not a work day (weekend) or a public holiday.
   off,
 
@@ -37,6 +40,7 @@ Map<DateTime, DayMark> markMonth({
   required Set<int> workDays,
   required Set<String> holidays,
   required Set<String> leaveDays,
+  Set<String> absentDays = const {},
   required DateTime? since,
   required DateTime today,
 }) {
@@ -47,10 +51,12 @@ Map<DateTime, DayMark> markMonth({
     final key = _key.format(d);
     out[d] = attended.contains(key)
         ? DayMark.attended
-        : d.isAfter(todayDay)
-            ? DayMark.future
-            : leaveDays.contains(key)
-                ? DayMark.leave
+        : leaveDays.contains(key) && !d.isAfter(todayDay)
+            ? DayMark.leave
+            : absentDays.contains(key)
+                ? DayMark.absent
+                : d.isAfter(todayDay)
+                ? DayMark.future
                 : !workDays.contains(d.weekday) || holidays.contains(key)
                     ? DayMark.off
                     : d == todayDay

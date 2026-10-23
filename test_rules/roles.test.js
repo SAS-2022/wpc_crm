@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ref, get, set } from 'firebase/database';
 
 let env;
@@ -16,6 +16,11 @@ const users = {
   hr: { role: 'hr' },
   acc: { role: 'accounting' },
   proc: { role: 'procurement' },
+  lm: { role: 'logistics_manager' },
+  driver: { role: 'driver', supervisorId: 'ws' },
+  ws: { role: 'warehouse_supervisor' },
+  ws2: { role: 'warehouse_supervisor' },
+  boss: { role: 'accounting', isManager: true },
 };
 
 before(async () => {
@@ -40,6 +45,11 @@ beforeEach(async () => {
     await setDoc(doc(db, 'clients', 'c1'), { name: 'Client', assignedTo: 'exec' });
     await setDoc(doc(db, 'visits', 'v1'), { clientId: 'c1', salesExecId: 'exec' });
     await set(ref(ctx.database(), 'live_locations/exec'), { lat: 1, lng: 2, updatedAt: 1 });
+    await set(ref(ctx.database(), 'live_locations/driver'), { lat: 1, lng: 2, updatedAt: 1 });
+    await set(ref(ctx.database(), 'driver_supervisors/driver'), 'ws');
+    await setDoc(doc(db, 'attendance', 'acc_2026-10-23'), { uid: 'acc', date: '2026-10-23', events: [] });
+    await setDoc(doc(db, 'day_timelines', 'driver_2026-10-23'), { uid: 'driver' });
+    await setDoc(doc(db, 'leave_requests', 'l1'), { uid: 'acc', status: 'approved' });
   });
 });
 
@@ -174,5 +184,67 @@ describe('RTDB role mirror', () => {
 
   test('HR can\'t set roles', async () => {
     await assertFails(set(ref(rtdb('hr'), 'roles/hr'), 'gm'));
+  });
+});
+
+describe('logistics manager manages drivers only (2026-10-23)', () => {
+  const driver = { name: 'D', email: 'd1@staff.wpc-crm-a9247.web.app', role: 'driver', active: true };
+
+  test('adds a driver, with its RTDB role', async () => {
+    await assertSucceeds(setDoc(doc(fs('lm'), 'users/new'), driver));
+    await assertSucceeds(set(ref(rtdb('lm'), 'roles/new'), 'driver'));
+  });
+
+  test('edits a driver, but not into another role', async () => {
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/driver'), { name: 'Driver 2', active: false }));
+    await assertFails(updateDoc(doc(fs('lm'), 'users/driver'), { role: 'gm' }));
+    await assertFails(set(ref(rtdb('lm'), 'roles/driver'), 'gm'));
+  });
+
+  test("can't add or edit anyone else", async () => {
+    await assertFails(setDoc(doc(fs('lm'), 'users/new'), { ...driver, role: 'sales_exec' }));
+    await assertFails(updateDoc(doc(fs('lm'), 'users/exec'), { name: 'x' }));
+    await assertFails(set(ref(rtdb('lm'), 'roles/exec'), 'driver'));
+    await assertFails(set(ref(rtdb('lm'), 'roles/new'), 'sales_manager'));
+  });
+});
+
+describe('managers and warehouse supervisors (2026-10-23)', () => {
+  test('warehouse supervisor: their drivers\' tracking only', async () => {
+    await assertSucceeds(get(ref(rtdb('ws'), 'live_locations/driver')));
+    await assertSucceeds(get(ref(rtdb('ws'), 'location_history/driver')));
+    await assertSucceeds(get(ref(rtdb('ws'), 'tracking_events/driver')));
+    await assertSucceeds(getDoc(doc(fs('ws'), 'day_timelines/driver_2026-10-23')));
+    await assertFails(get(ref(rtdb('ws'), 'live_locations')));
+    await assertFails(get(ref(rtdb('ws'), 'live_locations/exec')));
+    await assertFails(get(ref(rtdb('ws2'), 'live_locations/driver')));
+    await assertFails(getDoc(doc(fs('ws2'), 'day_timelines/driver_2026-10-23')));
+  });
+
+  test('only admins / the logistics manager set a driver\'s supervisor', async () => {
+    await assertSucceeds(set(ref(rtdb('lm'), 'driver_supervisors/driver'), 'ws2'));
+    await assertSucceeds(set(ref(rtdb('sm'), 'driver_supervisors/driver'), 'ws'));
+    await assertFails(set(ref(rtdb('ws2'), 'driver_supervisors/driver'), 'ws2'));
+    await assertFails(set(ref(rtdb('lm'), 'driver_supervisors/exec'), 'ws'));
+  });
+
+  test('managers read attendance, other staff only their own', async () => {
+    for (const uid of ['boss', 'lm', 'ws', 'kam']) {
+      await assertSucceeds(getDoc(doc(fs(uid), 'attendance/acc_2026-10-23')));
+    }
+    await assertFails(getDoc(doc(fs('proc'), 'attendance/acc_2026-10-23')));
+    await assertFails(getDoc(doc(fs('driver'), 'attendance/acc_2026-10-23')));
+  });
+});
+
+describe('leave and deleting users (2026-10-23)', () => {
+  test('managers read leave requests, other staff not', async () => {
+    for (const uid of ['boss', 'lm', 'ws', 'gm']) await assertSucceeds(getDoc(doc(fs(uid), 'leave_requests/l1')));
+    await assertFails(getDoc(doc(fs('proc'), 'leave_requests/l1')));
+  });
+
+  test('nobody deletes a user profile directly, not even the GM', async () => {
+    await assertFails(deleteDoc(doc(fs('gm'), 'users/exec')));
+    await assertFails(deleteDoc(doc(fs('sm'), 'users/exec')));
   });
 });

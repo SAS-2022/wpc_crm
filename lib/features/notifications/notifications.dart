@@ -65,6 +65,32 @@ enum NotificationType {
   /// Not checked in 15 minutes after the start of their work day
   /// (`attendanceReminders`); [AppNotification.time] = start time.
   attendanceLate,
+
+  /// `ownerId` reported "not coming to work" on [AppNotification.date]
+  /// (`absenceReported` Cloud Function, to their KAM, HR and the GMs);
+  /// [AppNotification.issue] = reason (sick / tired / cantCome),
+  /// [AppNotification.note] = what they wrote; [AppNotification.ref] = absence id.
+  absenceReported,
+
+  /// HR / the GM accepted the recipient's absence as leave
+  /// ([AppNotification.issue] = 'sick' / 'annual') or rejected it.
+  absenceAccepted,
+  absenceRejected,
+
+  /// `ownerId`, someone the recipient manages directly, is on leave from
+  /// [AppNotification.date] to [AppNotification.note] ('yyyy-MM-dd');
+  /// [AppNotification.ref] = leave request id.
+  teamOnLeave,
+
+  /// `ownerId` asks the recipient (a direct manager) to check out before
+  /// the end of today's work day; [AppNotification.note] = reason,
+  /// [AppNotification.ref] = `checkout_requests` id (early_checkout.dart).
+  earlyCheckoutRequested,
+
+  /// The recipient's early check-out was approved / rejected
+  /// ([AppNotification.note] = the manager's comment).
+  earlyCheckoutApproved,
+  earlyCheckoutRejected,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -82,6 +108,7 @@ class AppNotification {
     this.clientName = '',
     this.siteName = '',
     this.time = '',
+    this.note = '',
     required this.read,
     required this.createdAt,
   });
@@ -109,6 +136,9 @@ class AppNotification {
   /// Attendance: the work site and 'HH:mm' (Saudi time).
   final String siteName;
   final String time;
+
+  /// Free text sent with it (absence reason).
+  final String note;
   final bool read;
   final DateTime? createdAt;
 
@@ -126,6 +156,7 @@ class AppNotification {
       clientName: d['clientName'] as String? ?? '',
       siteName: d['siteName'] as String? ?? '',
       time: d['time'] as String? ?? '',
+      note: d['note'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -151,6 +182,47 @@ final unreadCountProvider = Provider<int>(
   (ref) => (ref.watch(notificationsProvider).value ?? const []).where((n) => !n.read).length,
 );
 
+/// [person]'s direct manager(s) (user decision 2026-10-22, who should know
+/// who is on leave; also who approves leaving early, 2026-10-23): the one
+/// chosen on the user form (`managerId`, when active); else a sales exec's
+/// KAM, else the sales managers; a KAM's sales managers; everyone else's
+/// GMs (also when no one fits). Same as `directManagers` in functions/index.js.
+List<String> directManagersOf(AppUser person, List<AppUser> users) {
+  final chosen = [for (final u in users) if (u.id == person.managerId && u.active && u.id != person.id) u.id];
+  if (chosen.isNotEmpty) return chosen;
+  List<String> withRole(UserRole r) => [for (final u in users) if (u.active && u.role == r && u.id != person.id) u.id];
+  final found = switch (person.role) {
+    UserRole.salesExec => [
+        for (final u in users) if (u.id == person.kamId && u.active && u.role == UserRole.kam) u.id,
+      ].ifEmpty(() => withRole(UserRole.salesManager)),
+    UserRole.kam => withRole(UserRole.salesManager),
+    // Drivers and warehouse supervisors: the logistics manager (2026-10-23).
+    UserRole.driver || UserRole.warehouseSupervisor => withRole(UserRole.logisticsManager),
+    UserRole.gm => const <String>[],
+    _ => withRole(UserRole.gm),
+  };
+  return person.role == UserRole.gm ? found : found.ifEmpty(() => withRole(UserRole.gm));
+}
+
+/// The people under [me] (2026-10-23): those whose direct manager is
+/// [me] ([directManagersOf]), plus a warehouse supervisor's drivers. HR /
+/// SM / GM see everyone in the HR area, this is for the other managers.
+List<AppUser> peopleUnder(AppUser me, List<AppUser> users) => [
+      for (final u in users)
+        if (u.id != me.id && (u.supervisorId == me.id || directManagersOf(u, users).contains(me.id))) u,
+    ];
+
+/// The drivers [me] follows: every one for the logistics manager / SM /
+/// GM, their own for a warehouse supervisor.
+List<AppUser> driversOf(AppUser me, List<AppUser> users) => [
+      for (final u in users)
+        if (u.active && u.role.isDriver && (me.role.managesDrivers || (me.role.seesDrivers && u.supervisorId == me.id))) u,
+    ];
+
+extension on List<String> {
+  List<String> ifEmpty(List<String> Function() other) => isEmpty ? other() : this;
+}
+
 /// Who reviews [owner]'s plan: their KAM, or the sales manager / GM when they
 /// have no active KAM.
 List<String> reviewersOf(AppUser owner, List<AppUser> users) {
@@ -169,6 +241,7 @@ Future<void> sendNotifications({
   String? ref,
   String? issue,
   String? clientName,
+  String? note,
 }) async {
   final batch = FirebaseFirestore.instance.batch();
   for (final to in toIds.toSet()) {
@@ -183,6 +256,7 @@ Future<void> sendNotifications({
       'ref': ?ref,
       'issue': ?issue,
       'clientName': ?clientName,
+      'note': ?note,
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });

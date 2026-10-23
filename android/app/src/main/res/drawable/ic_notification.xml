@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the logo's W mark as a white silhouette (Android
+     tints it; a full-colour icon shows as a blob, e.g. on Xiaomi). Shapes
+     from assets/icon/app_icon_foreground.png (1024 px), cropped square. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="573"
+    android:viewportHeight="573">
+    <group android:translateX="-222" android:translateY="-225">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M242,335 L322,335 L468,688 L388,688 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M409,335 L489,335 L635,688 L555,688 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M528,335 L609,335 L558,458 L518,360 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M695,335 L775,335 L641,658 L601,562 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M459,506 L498,600 L474,657 L435,562 Z" />
+    </group>
+</vector>

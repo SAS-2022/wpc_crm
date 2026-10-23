@@ -1,5 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/app_user.dart';
+import '../../core/providers.dart';
+import '../notifications/notifications.dart' show driversOf;
+import '../users/users_repository.dart';
 
 import 'motion.dart';
 
@@ -70,9 +77,45 @@ Map<String, Map<Object?, Object?>> _children(DataSnapshot s) => {
           if (e.value is Map<Object?, Object?>) '${e.key}': e.value as Map<Object?, Object?>,
     };
 
+/// A warehouse supervisor may read only their own drivers' entries (RTDB
+/// rules, `driver_supervisors`), not the whole list: their ids; null =
+/// read the whole list (the rules decide).
+List<String>? _ownDriverIds(Ref ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || me.role != UserRole.warehouseSupervisor) return null;
+  return [for (final u in driversOf(me, ref.watch(usersProvider).value ?? const <AppUser>[])) u.id];
+}
+
+/// The children of RTDB [path] by key: one listener on the whole list, or
+/// one per id in [ids].
+Stream<Map<String, Map<Object?, Object?>>> _nodes(String path, List<String>? ids) {
+  final db = FirebaseDatabase.instance;
+  if (ids == null) return db.ref(path).onValue.map((e) => _children(e.snapshot));
+  if (ids.isEmpty) return Stream.value(const {});
+  final latest = <String, Map<Object?, Object?>>{};
+  final out = StreamController<Map<String, Map<Object?, Object?>>>();
+  final subs = [
+    for (final id in ids)
+      db.ref('$path/$id').onValue.listen((e) {
+        if (e.snapshot.value case final Map<Object?, Object?> v) {
+          latest[id] = v;
+        } else {
+          latest.remove(id);
+        }
+        out.add(Map.of(latest));
+      }, onError: out.addError),
+  ];
+  out.onCancel = () {
+    for (final s in subs) {
+      s.cancel();
+    }
+  };
+  return out.stream;
+}
+
 final liveLocationsProvider = StreamProvider<Map<String, LiveLocation>>((ref) =>
-    FirebaseDatabase.instance.ref('live_locations').onValue.map((event) => {
-          for (final MapEntry(:key, value: d) in _children(event.snapshot).entries)
+    _nodes('live_locations', _ownDriverIds(ref)).map((nodes) => {
+          for (final MapEntry(:key, value: d) in nodes.entries)
             if (d['lat'] is num && d['lng'] is num)
               key: LiveLocation(
                 lat: (d['lat'] as num).toDouble(),
@@ -87,8 +130,8 @@ final liveLocationsProvider = StreamProvider<Map<String, LiveLocation>>((ref) =>
         }));
 
 final presenceProvider = StreamProvider<Map<String, Presence>>((ref) =>
-    FirebaseDatabase.instance.ref('presence').onValue.map((event) => {
-          for (final MapEntry(:key, value: d) in _children(event.snapshot).entries)
+    _nodes('presence', _ownDriverIds(ref)).map((nodes) => {
+          for (final MapEntry(:key, value: d) in nodes.entries)
             key: Presence(
               online: d['online'] == true,
               lastSeen: _time(d['lastSeen']),

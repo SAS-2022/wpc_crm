@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../core/app_user.dart';
 import '../../l10n/app_localizations.dart';
 import '../tracking/work_hours.dart';
+import 'absence.dart';
+import 'absence_sheet.dart' show absenceReasonLabel, absenceStatusText;
 import 'attendance_calendar.dart';
 import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_rules.dart';
@@ -14,13 +16,16 @@ import 'attendance_rules.dart';
 // Shown in the HR area and exported to Excel.
 
 class AttendanceReportDay {
-  const AttendanceReportDay(this.date, this.mark, this.result);
+  const AttendanceReportDay(this.date, this.mark, this.result, [this.absence]);
 
   final DateTime date;
   final DayMark mark;
 
   /// Null when there was no attendance that day.
   final DayResult? result;
+
+  /// "Not coming to work" reported for the day.
+  final Absence? absence;
 }
 
 class AttendanceReportRow {
@@ -37,6 +42,9 @@ class AttendanceReportRow {
   int get attended => days.where((d) => d.mark == DayMark.attended).length;
   int get missed => days.where((d) => d.mark == DayMark.missed).length;
   int get leave => days.where((d) => d.mark == DayMark.leave).length;
+
+  /// Work days reported beforehand as "not coming" (not counted as missed).
+  int get absent => days.where((d) => d.mark == DayMark.absent && schedule.days.contains(d.date.weekday)).length;
   int get lateDays => _results.where((r) => (r.lateMin ?? 0) > 0).length;
   int get lateMin => _results.fold(0, (s, r) => s + (r.lateMin ?? 0));
   int get workedMin => _results.fold(0, (s, r) => s + (r.countedMin ?? 0));
@@ -56,6 +64,7 @@ AttendanceReportRow reportRow({
   required Map<String, DayResult> results,
   required Set<String> holidays,
   required Set<String> leaveDays,
+  Map<String, Absence> absences = const {},
   required DateTime today,
 }) {
   final attended = {for (final MapEntry(:key, :value) in results.entries) if (value.checkedIn) key};
@@ -66,13 +75,17 @@ AttendanceReportRow reportRow({
     workDays: schedule.days,
     holidays: holidays,
     leaveDays: leaveDays,
+    absentDays: {for (final e in absences.entries) if (e.value.pending) e.key},
     since: user.registeredAt ?? first ?? DateTime(month.year, month.month),
     today: today,
   );
   return AttendanceReportRow(
     user: user,
     schedule: schedule,
-    days: [for (final MapEntry(key: d, value: m) in marks.entries) AttendanceReportDay(d, m, results[_key.format(d)])],
+    days: [
+      for (final MapEntry(key: d, value: m) in marks.entries)
+        AttendanceReportDay(d, m, results[_key.format(d)], absences[_key.format(d)]),
+    ],
   );
 }
 
@@ -101,8 +114,22 @@ String dayMarkLabel(AppLocalizations l10n, DayMark m) => switch (m) {
       DayMark.attended => l10n.dayAttended,
       DayMark.missed => l10n.dayMissed,
       DayMark.leave => l10n.dayOnLeave,
+      DayMark.absent => l10n.reportedAbsent,
       DayMark.off => l10n.dayOff,
       DayMark.today || DayMark.future || DayMark.none => '',
+    };
+
+/// A day without a check-in: its mark, with the reason and note of a
+/// reported absence ("Reported absent: Sick – fever").
+/// A rejected absence is a missed day ("Missed · Not accepted …").
+String reportDayStatus(AppLocalizations l10n, AttendanceReportDay d) => switch (d.absence) {
+      final a? when d.mark == DayMark.absent || d.mark == DayMark.missed => [
+          d.mark == DayMark.absent
+              ? l10n.dayReportedAbsent(absenceReasonLabel(l10n, a.reason))
+              : '${l10n.dayMissed} · ${absenceStatusText(l10n, a)} (${absenceReasonLabel(l10n, a.reason)})',
+          if (a.note.isNotEmpty) a.note,
+        ].join(' – '),
+      _ => dayMarkLabel(l10n, d.mark),
     };
 
 /// Decimal hours for Excel (8 h 30 → 8.5), so HR can add them up.
@@ -137,6 +164,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.dayAttended,
     l10n.reportMissed,
     l10n.dayOnLeave,
+    l10n.reportedAbsent,
     l10n.reportLateDays,
     l10n.reportLateHours,
     l10n.reportWorkedHours,
@@ -153,6 +181,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
       IntCellValue(r.attended),
       IntCellValue(r.missed),
       IntCellValue(r.leave),
+      IntCellValue(r.absent),
       IntCellValue(r.lateDays),
       DoubleCellValue(hoursOf(r.lateMin)),
       DoubleCellValue(hoursOf(r.workedMin)),
@@ -179,7 +208,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
   for (final r in rows) {
     for (final d in r.days) {
       final res = d.result;
-      final status = res != null && res.checkedIn ? l10n.dayAttended : dayMarkLabel(l10n, d.mark);
+      final status = res != null && res.checkedIn ? l10n.dayAttended : reportDayStatus(l10n, d);
       if (status.isEmpty) continue; // future days, days before they started
       daily.appendRow([
         TextCellValue(r.user.name),

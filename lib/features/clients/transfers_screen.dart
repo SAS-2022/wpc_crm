@@ -29,7 +29,8 @@ class TransfersScreen extends ConsumerStatefulWidget {
 
 class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   int _days = 30;
-  bool _notVisitedOnly = false;
+  /// Archived view: visited / called or moved again (user request 2026-10-22).
+  bool _archived = false;
 
   /// New salesperson filter; null = everyone.
   String? _person;
@@ -43,7 +44,8 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     if (me == null) return const SizedBox.shrink();
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
     final byId = {for (final u in users) u.id: u};
-    String nameOf(String? id) => id == null ? l10n.unassigned : byId[id]?.name ?? '?';
+    // A user deleted since the move has no name any more (was shown as "?").
+    String nameOf(String? id) => id == null ? l10n.unassigned : byId[id]?.name ?? l10n.deletedUser;
 
     final now = DateTime.now();
     final since = DateTime(now.year, now.month, now.day).subtract(Duration(days: _days));
@@ -56,12 +58,11 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final clients = ref.watch(clientsProvider).value ?? const [];
     final team = me.role.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
     final all = transferWatchRows(clients: clients, visits: visits, since: since, now: now, people: team);
-    final targets = {for (final r in all) r.transfer.toId!};
+    final archivedCount = all.where((r) => r.archived).length;
+    final shown = [for (final r in all) if (r.archived == _archived) r];
+    final targets = {for (final r in shown) r.transfer.toId!};
     if (_person != null && !targets.contains(_person)) _person = null;
-    final rows = [
-      for (final r in all)
-        if ((_person == null || r.transfer.toId == _person) && (!_notVisitedOnly || !r.contacted)) r,
-    ];
+    final rows = [for (final r in shown) if (_person == null || r.transfer.toId == _person) r];
     final visited = all.where((r) => r.contacted).length;
 
     return Scaffold(
@@ -82,12 +83,22 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                   selected: _days == d,
                   onSelected: (_) => setState(() => _days = d),
                 ),
-              FilterChip(
-                avatar: const Icon(Icons.hourglass_empty, size: 16),
-                label: Text(l10n.transfersNotVisitedOnly),
-                selected: _notVisitedOnly,
-                showCheckmark: false,
-                onSelected: (v) => setState(() => _notVisitedOnly = v),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: false,
+                    icon: const Icon(Icons.hourglass_empty, size: 16),
+                    label: Text(l10n.transfersWaiting(all.length - archivedCount)),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    icon: const Icon(Icons.archive_outlined, size: 16),
+                    label: Text(l10n.transfersArchived(archivedCount)),
+                  ),
+                ],
+                selected: {_archived},
+                onSelectionChanged: (v) => setState(() => _archived = v.first),
               ),
               if (targets.length > 1)
                 DropdownButton<String?>(
@@ -109,7 +120,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           if (rows.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: Text(l10n.transfersNone)),
+              child: Center(child: Text(all.isEmpty ? l10n.transfersNone : (_archived ? l10n.transfersNoneArchived : l10n.transfersAllVisited))),
             ),
           for (final r in rows) _TransferTile(row: r, nameOf: nameOf, locale: locale),
         ],

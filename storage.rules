@@ -31,6 +31,17 @@ service firebase.storage {
       allow delete: if request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager'];
     }
 
+    // Reported absence documents (medical report): the person and the HR area
+    // add; the HR area, supervisors and the person read.
+    match /absences/{absenceId}/{fileName} {
+      function absence() { return firestore.get(/databases/(default)/documents/absences/$(absenceId)).data; }
+      function hrArea() { return request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']; }
+      allow read: if hrArea() || supervisor() || (request.auth != null && absence().uid == request.auth.uid);
+      allow create: if request.resource.size < 20 * 1024 * 1024
+        && (hrArea() || (request.auth != null && absence().uid == request.auth.uid));
+      allow delete: if hrArea();
+    }
+
     // Client and visit attachments, max 20 MB each.
     match /{folder}/{parentId}/{fileName} {
       allow read: if folder in ['clients', 'visits'] && canAccess(folder, parentId);

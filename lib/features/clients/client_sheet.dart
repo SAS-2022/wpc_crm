@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
@@ -11,15 +12,18 @@ import '../plan/add_task_sheet.dart';
 import '../plan/plan_repository.dart';
 import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
+import '../visits/app_calls.dart';
 import '../visits/visit.dart';
 import 'client.dart';
+import 'client_detail_screen.dart' show whatsAppNumber;
+import 'client_locations_section.dart' show directionsToClient;
 import 'person_style.dart';
 import 'transfer.dart';
 import 'transfer_dialog.dart';
 
 /// The client sheet shown when a client pin is tapped (clients map, route
-/// history): owner, details, add visit / log call, today's plan and, on the
-/// web, moving the client.
+/// history): owner; directions, call, WhatsApp, details; add visit / log
+/// call; today's plan; on the web, moving the client / picking several.
 ///
 /// [place]: which of the client's locations was tapped, when it has several; [visit]: adds a button to open it;
 /// [onSelectSeveral]: clients map, starts picking several clients to move.
@@ -37,6 +41,16 @@ void showClientSheet(
   final me = ref.read(currentUserProvider).value;
   final usersById = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
   final canMove = me != null && canTransferFrom(me, c.assignedTo, usersById);
+  final phone = c.mobile.isNotEmpty ? c.mobile : c.phone;
+  // Dialled here: remembered like on the client page (offered as a call to log there).
+  final calls = ref.read(appCallProvider.notifier);
+  final theme = Theme.of(context);
+  Widget action(IconData icon, String label, VoidCallback? onPressed) => Expanded(
+        child: Column(children: [
+          IconButton.filledTonal(onPressed: onPressed, icon: Icon(icon)),
+          Text(label, style: theme.textTheme.labelSmall, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ]),
+      );
   showModalBottomSheet<void>(
     context: context,
     builder: (sheet) => PointerInterceptor(
@@ -64,19 +78,37 @@ void showClientSheet(
                   );
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              // Directions, call, WhatsApp, details (2026-10-23, user layout).
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(sheet);
-                        context.push('/clients/${c.id}');
-                      },
-                      child: Text(l10n.details),
-                    ),
+                  action(
+                    Icons.directions,
+                    l10n.directions,
+                    !c.hasLocation
+                        ? null
+                        : () {
+                            Navigator.pop(sheet);
+                            directionsToClient(context, c);
+                          },
                   ),
-                  const SizedBox(width: 12),
+                  action(Icons.call, l10n.callPhone, phone.isEmpty ? null : () => calls.dial(c.id, phone)),
+                  action(
+                    Icons.chat,
+                    'WhatsApp',
+                    phone.isEmpty
+                        ? null
+                        : () => launchUrl(Uri.parse('https://wa.me/${whatsAppNumber(phone)}'), mode: LaunchMode.externalApplication),
+                  ),
+                  action(Icons.info_outline, l10n.details, () {
+                    Navigator.pop(sheet);
+                    context.push('/clients/${c.id}');
+                  }),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: () {
@@ -87,16 +119,18 @@ void showClientSheet(
                       label: Text(l10n.addVisit),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheet);
+                        context.push('/clients/${c.id}/call');
+                      },
+                      icon: const Icon(Icons.add_call),
+                      label: Text(l10n.logCall),
+                    ),
+                  ),
                 ],
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(sheet);
-                  context.push('/clients/${c.id}/call');
-                },
-                icon: const Icon(Icons.add_call),
-                label: Text(l10n.logCall),
               ),
               // Route history: the visit behind the tapped pin.
               if (visit != null) ...[
@@ -114,27 +148,36 @@ void showClientSheet(
                 const SizedBox(height: 12),
                 AddToTodayButton(client: c, locationId: location?.id),
               ],
-              // Web dashboard: KAM / managers move the client to another salesperson.
-              if (kIsWeb && canMove) ...[
+              // Web dashboard: KAM / managers move the client to another
+              // salesperson, or start picking several — on one row.
+              if ((kIsWeb && canMove) || onSelectSeveral != null) ...[
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(sheet);
-                    showTransferDialog(context, ref, [c]);
-                  },
-                  icon: const Icon(Icons.swap_horiz),
-                  label: Text(l10n.moveToSalesperson),
-                ),
-              ],
-              if (onSelectSeveral != null) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.pop(sheet);
-                    onSelectSeveral();
-                  },
-                  icon: const Icon(Icons.checklist),
-                  label: Text(l10n.selectSeveralToMove),
+                Row(
+                  children: [
+                    if (kIsWeb && canMove)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheet);
+                            showTransferDialog(context, ref, [c]);
+                          },
+                          icon: const Icon(Icons.swap_horiz),
+                          label: Text(l10n.moveToSalesperson),
+                        ),
+                      ),
+                    if (kIsWeb && canMove && onSelectSeveral != null) const SizedBox(width: 12),
+                    if (onSelectSeveral != null)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(sheet);
+                            onSelectSeveral();
+                          },
+                          icon: const Icon(Icons.checklist),
+                          label: Text(l10n.selectSeveralToMove),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ],

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../notifications/notifications.dart' show driversOf;
 import '../../core/app_user.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
@@ -111,10 +112,9 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
     // The logistics manager follows drivers only.
     final team = me.role.isSupervisor || me.role.isTracked ? [if (me.role.isTracked) me, ...teamOf(me, users)] : <AppUser>[];
-    // Drivers (sales manager / GM / logistics manager), listed apart in the picker.
-    final drivers = me.role.managesDrivers
-        ? (users.where((u) => u.active && u.role.isDriver).toList()..sort((a, b) => a.name.compareTo(b.name)))
-        : const <AppUser>[];
+    // Drivers (sales manager / GM / logistics manager; a warehouse
+    // supervisor's own), listed apart in the picker.
+    final drivers = driversOf(me, users)..sort((a, b) => a.name.compareTo(b.name));
     final person =
         [...team, ...drivers].where((u) => u.id == widget.userId).firstOrNull ?? team.firstOrNull ?? drivers.firstOrNull;
     final day = DateTime.tryParse(widget.date ?? '') ?? today;

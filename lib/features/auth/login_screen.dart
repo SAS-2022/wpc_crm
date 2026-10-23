@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/language_button.dart';
+import '../../core/login_name.dart';
+import '../../core/password_field.dart';
 import '../../core/text_input_dialog.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -33,7 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _email.text.trim(),
+        // A username signs in with its hidden email.
+        email: loginEmailFor(_email.text),
         password: _password.text,
       );
     } on FirebaseAuthException {
@@ -44,9 +47,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Emails a reset link. The answer is the same whether or not the address
-  /// has an account, so the screen doesn't reveal who has one.
+  /// has an account, so the screen doesn't reveal who has one. Username
+  /// accounts have no mailbox: their manager sets a new password.
   Future<void> _forgotPassword() async {
     final l10n = AppLocalizations.of(context);
+    final typed = _email.text.trim();
+    if (typed.isNotEmpty && (!typed.contains('@') || usernameOf(typed) != null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(duration: const Duration(seconds: 8), content: Text(l10n.usernameResetByManager)),
+      );
+      return;
+    }
     final email = await showTextInputDialog(
       context,
       title: l10n.forgotPassword,
@@ -55,7 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
       confirmLabel: l10n.sendResetLink,
       maxLines: 1,
     );
-    if (email == null || !email.trim().contains('@') || !mounted) return;
+    if (email == null || !mounted) return;
+    if (!email.contains('@') || usernameOf(email) != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(duration: const Duration(seconds: 8), content: Text(l10n.usernameResetByManager)),
+      );
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     try {
       await FirebaseAuth.instance.setLanguageCode(Localizations.localeOf(context).languageCode);
@@ -98,15 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: InputDecoration(labelText: l10n.email),
+                    autocorrect: false,
+                    autofillHints: const [AutofillHints.username, AutofillHints.email],
+                    decoration: InputDecoration(labelText: l10n.emailOrUsername),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+                  PasswordField(
                     controller: _password,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.password],
-                    decoration: InputDecoration(labelText: l10n.password),
+                    label: l10n.password,
                     onSubmitted: (_) => _signIn(),
                   ),
                   if (_failed) ...[

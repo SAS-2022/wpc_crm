@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../hr/leave_repository.dart';
 import '../hr/leave_rules.dart';
 import '../tracking/work_hours.dart';
+import 'absence.dart';
+import 'absence_sheet.dart' show absenceReasonLabel, absenceStatusText;
 import 'attendance_calendar.dart';
 import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_repository.dart';
@@ -17,6 +19,7 @@ Color dayMarkColor(DayMark m, ColorScheme scheme) => switch (m) {
       DayMark.attended => Colors.green.shade600,
       DayMark.missed => scheme.error,
       DayMark.leave => Colors.blue.shade600,
+      DayMark.absent => Colors.orange.shade700,
       DayMark.today => scheme.primary,
       DayMark.off || DayMark.future || DayMark.none => scheme.outlineVariant,
     };
@@ -38,7 +41,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
 
   DayResult _result(AttendanceRecord r, WorkHours company) => r.best(widget.me, company);
 
-  void _showDay(DateTime day, AttendanceRecord? r, DayMark mark, WorkHours hours) {
+  void _showDay(DateTime day, AttendanceRecord? r, DayMark mark, WorkHours hours, Absence? absence) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     final time = DateFormat.jm(locale);
@@ -60,6 +63,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                   DayMark.missed => l10n.dayMissed,
                   DayMark.leave => l10n.dayOnLeave,
                   DayMark.off => l10n.dayOff,
+                  DayMark.absent when absence != null => l10n.dayReportedAbsent(absenceReasonLabel(l10n, absence.reason)),
                   _ => l10n.notCheckedIn,
                 })
               else ...[
@@ -69,6 +73,10 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 if ((d.lateMin ?? 0) > 0) Text(l10n.lateBy(formatMinutes(d.lateMin!))),
                 if ((d.overtimeMin ?? 0) > 0) Text(l10n.overtimeTime(formatMinutes(d.overtimeMin!))),
                 if ((d.afterHoursMin ?? 0) > 0) Text(l10n.stayedAfterTime(formatMinutes(d.afterHoursMin!))),
+              ],
+              if ((d == null || !d.checkedIn) && absence != null) ...[
+                if (absence.note.isNotEmpty) Text(absence.note),
+                Text(absenceStatusText(l10n, absence)),
               ],
             ],
           ),
@@ -90,6 +98,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
       for (final r in ref.watch(myLeaveRequestsProvider).value ?? const [])
         if (r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null) ...daysBetween(r.from!, r.to!),
     };
+    final absences = ref.watch(myAbsencesProvider).value ?? const <String, Absence>{};
     final attended = {for (final MapEntry(:key, :value) in records.entries) if (_result(value, hours).checkedIn) key};
     // Attendance counts from their first check-in (or registration).
     final firstDay = attended.isEmpty ? null : DateTime.parse((attended.toList()..sort()).first);
@@ -101,6 +110,8 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
       workDays: me.scheduleOr(hours).days,
       holidays: holidays,
       leaveDays: leaveDays,
+      // Waiting for HR; rejected days count as missed, accepted ones are leave.
+      absentDays: {for (final e in absences.entries) if (e.value.pending) e.key},
       since: since,
       today: now,
     );
@@ -115,6 +126,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
     final lateDays = monthRecords.where((d) => (d.lateMin ?? 0) > 0).length;
     final attendedCount = marks.values.where((m) => m == DayMark.attended).length;
     final missedCount = marks.values.where((m) => m == DayMark.missed).length;
+    final absentCount = marks.values.where((m) => m == DayMark.absent).length;
 
     // Weeks start on the locale's first day (Sunday in Arabic / Saudi use).
     final firstWeekday = MaterialLocalizations.of(context).firstDayOfWeekIndex; // 0 = Sunday
@@ -170,7 +182,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                     mark: mark,
                     onTap: mark == DayMark.future || mark == DayMark.none
                         ? null
-                        : () => _showDay(day, records[key.format(day)], mark, hours),
+                        : () => _showDay(day, records[key.format(day)], mark, hours, absences[key.format(day)]),
                   ),
               ],
             ),
@@ -182,6 +194,8 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 _Legend(color: dayMarkColor(DayMark.attended, theme.colorScheme), label: l10n.daysAttended(attendedCount)),
                 _Legend(color: dayMarkColor(DayMark.missed, theme.colorScheme), label: l10n.daysMissed(missedCount)),
                 _Legend(color: dayMarkColor(DayMark.leave, theme.colorScheme), label: l10n.leaveLegend),
+                if (absentCount > 0)
+                  _Legend(color: dayMarkColor(DayMark.absent, theme.colorScheme), label: l10n.daysReportedAbsent(absentCount)),
                 Text(l10n.monthHours(formatMinutes(counted)), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                 if (overtime > 0) Text(l10n.overtimeTime(formatMinutes(overtime)), style: theme.textTheme.bodySmall),
                 if (afterHours > 0) Text(l10n.stayedAfterTime(formatMinutes(afterHours)), style: theme.textTheme.bodySmall),
@@ -206,7 +220,7 @@ class _DayCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = dayMarkColor(mark, scheme);
-    final filled = mark == DayMark.attended || mark == DayMark.missed || mark == DayMark.leave;
+    final filled = mark == DayMark.attended || mark == DayMark.missed || mark == DayMark.leave || mark == DayMark.absent;
     return InkWell(
       onTap: onTap,
       customBorder: const CircleBorder(),

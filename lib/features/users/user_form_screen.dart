@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_user.dart';
+import '../../core/login_name.dart';
+import '../../core/text_input_dialog.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
+import '../notifications/notifications.dart' show directManagersOf;
 import '../../core/saving.dart';
 import '../attendance/work_sites.dart';
 import '../tracking/work_hours.dart';
@@ -13,8 +16,10 @@ import '../tracking/work_hours_editor.dart';
 import 'companies.dart';
 import '../settings/tracking_schedules_screen.dart';
 import '../tracking/tracking_schedule.dart';
+import '../settings/app_settings.dart';
 
-/// Create (userId == null) or edit a user. Only reachable by sales manager / GM.
+/// Create (userId == null) or edit a user. Sales manager / GM: anyone;
+/// logistics manager: drivers only ([UserRole.editableRoles]).
 class UserFormScreen extends ConsumerStatefulWidget {
   const UserFormScreen({super.key, required this.userId});
 
@@ -28,26 +33,51 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
+  final _username = TextEditingController();
+
+  /// New user signs in with a username instead of an email (hidden email,
+  /// see login_name.dart).
+  bool _useUsername = false;
+
+  /// Typed by the admin: the name no longer replaces it with a suggestion.
+  bool _usernameEdited = false;
   final _phone = TextEditingController();
   final _password = TextEditingController();
   final _odooName = TextEditingController();
   final _target = TextEditingController();
-  UserRole _role = UserRole.salesExec;
+  /// None for a new user until picked (2026-10-23: the sales-only fields
+  /// stay hidden until a sales role is chosen).
+  UserRole? _role;
+
+  /// Role-based defaults (attendance, leaving the site) before a role is picked.
+  UserRole get _roleOrDefault => _role ?? UserRole.worker;
   String _companyId = '';
   String _position = '';
   Set<String> _sites = {};
   bool _overtime = false;
+
+  /// Null until set here or saved: follows the role ([AppUser.leavesSite]).
+  bool? _leaveSite;
 
   /// Null until set here or saved: follows the role (see [AppUser.needsAttendance]).
   bool? _attendance;
 
   /// Their own work days / hours; null = the company work hours.
   WorkHours? _schedule;
-  bool get _needsAttendance => _attendance ?? AppUser.defaultAttendance(_role, _sites.toList());
+  bool get _needsAttendance => _attendance ?? AppUser.defaultAttendance(_roleOrDefault, _sites.toList());
 
   /// A self-registered account waiting for approval.
   AppUser? _pending;
   String? _kamId;
+
+  /// Direct manager chosen here; null = automatic ([directManagersOf]).
+  String? _managerId;
+
+  /// "Is a manager" for roles that aren't manager roles (e.g. the accounting manager).
+  bool _markedManager = false;
+
+  /// A driver's warehouse supervisor.
+  String? _supervisorId;
   bool _active = true;
   bool _loaded = false;
   bool _busy = false;
@@ -57,17 +87,50 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   /// Saved role of the user being edited (null for a new one).
   UserRole? _savedRole;
 
-  /// GM: anyone; sales manager: anyone but GMs and sales managers. Never
-  /// oneself.
+  /// Only the accounts in [userDeleterEmails]. Never oneself.
   bool _canDelete(AppUser? me) =>
+      !_isNew && me != null && widget.userId != me.id && userDeleterEmails.contains(me.email.trim().toLowerCase());
+
+  /// GM: anyone; sales manager: anyone but GMs and sales managers;
+  /// logistics manager: drivers. Never oneself (same rule as the
+  /// `setUserPassword` Cloud Function).
+  bool _canSetPassword(AppUser? me) =>
       !_isNew &&
       me != null &&
       widget.userId != me.id &&
-      (me.role == UserRole.gm || (me.role == UserRole.salesManager && _savedRole?.isAdmin != true));
+      (me.role == UserRole.gm ||
+          (me.role == UserRole.salesManager && _savedRole?.isAdmin != true) ||
+          (me.role == UserRole.logisticsManager && _savedRole == UserRole.driver));
+
+  Future<void> _setPassword() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final password = await showTextInputDialog(
+      context,
+      title: l10n.setPasswordFor(_name.text),
+      label: l10n.newPassword,
+      confirmLabel: l10n.setPassword,
+      maxLines: 1,
+    );
+    if (password == null || !mounted) return;
+    if (password.length < 6) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.passwordTooShort)));
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref.read(usersRepositoryProvider).setPassword(widget.userId!, password);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.passwordSetFor(_name.text))));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   void dispose() {
-    for (final c in [_name, _email, _phone, _password, _odooName, _target]) {
+    for (final c in [_name, _email, _username, _phone, _password, _odooName, _target]) {
       c.dispose();
     }
     super.dispose();
@@ -76,10 +139,15 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   void _fill(AppUser u) {
     _name.text = u.name;
     _email.text = u.email;
+    _username.text = usernameOf(u.email) ?? '';
+    _useUsername = _username.text.isNotEmpty;
     _phone.text = u.phone;
     // An unknown role (from a newer app) is shown as sales exec; saving sets it.
     _role = u.role == UserRole.unknown ? UserRole.salesExec : u.role;
     _kamId = u.kamId;
+    _managerId = u.managerId;
+    _markedManager = u.markedManager;
+    _supervisorId = u.supervisorId;
     _active = u.active;
     _odooName.text = u.odooName;
     _target.text = u.monthlyTarget > 0 ? '${u.monthlyTarget}' : '';
@@ -87,6 +155,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _companyId = u.companyId;
     _sites = {...u.workSiteIds};
     _overtime = u.overtimeAllowed;
+    _leaveSite = u.leaveSiteAllowed;
     _attendance = u.attendanceRequired;
     _schedule = u.workSchedule;
     _pending = u.isPendingApproval ? u : null;
@@ -109,9 +178,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     final user = AppUser(
       id: widget.userId ?? '',
       name: _name.text.trim(),
-      email: _email.text.trim(),
+      email: _useUsername ? loginEmailFor(_username.text) : _email.text.trim(),
       phone: _phone.text.trim(),
-      role: _role,
+      role: _role!,
       kamId: _kamId,
       active: _active,
       odooName: _odooName.text.trim(),
@@ -121,7 +190,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       workSiteIds: _needsAttendance ? _sites.toList() : const [],
       overtimeAllowed: _overtime,
       attendanceRequired: _needsAttendance,
+      leaveSiteAllowed: _needsAttendance ? _leaveSite ?? _roleOrDefault.leavesSiteForWork : null,
       workSchedule: schedule,
+      managerId: _managerId,
+      markedManager: _markedManager,
+      supervisorId: _supervisorId,
     );
     try {
       final repo = ref.read(usersRepositoryProvider);
@@ -133,7 +206,10 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       messenger.showSnackBar(SnackBar(content: Text(assigned > 0 ? l10n.savedWithClients(assigned) : l10n.saved)));
       if (mounted) context.go('/users');
     } on EmailInUseException {
-      messenger.showSnackBar(SnackBar(duration: const Duration(seconds: 8), content: Text(l10n.emailInUse)));
+      messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 8),
+        content: Text(_useUsername ? l10n.usernameInUse : l10n.emailInUse),
+      ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
     } finally {
@@ -202,6 +278,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final users = ref.watch(usersProvider).value ?? const [];
+    final me = ref.watch(currentUserProvider).value;
+    final roles = me?.role.editableRoles ?? const <UserRole>[];
+    if (_isNew && _role != null && !roles.contains(_role)) _role = null;
+    // Logistics manager: drivers only, so already picked.
+    if (_isNew && roles.length == 1) _role ??= roles.first;
     if (!_isNew && !_loaded) {
       final existing = users.where((u) => u.id == widget.userId).firstOrNull;
       if (existing == null) {
@@ -209,17 +290,26 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       }
       _fill(existing);
     }
+    // Logistics manager: drivers only (also enforced by the rules).
+    if (!_isNew && me != null && !me.role.isAdmin && !roles.contains(_savedRole)) {
+      return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
+    }
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
     final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     String? required(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
+    // Usernames of the other accounts (checked again by Auth when saving).
+    final taken = usernamesOf([for (final u in users) if (u.id != widget.userId) u.email]);
+    final typedUsername = normalizeUsername(_username.text);
+    final usernameTaken = _isNew && taken.contains(typedUsername);
+    final usernameFree = _isNew && !usernameTaken && isValidUsername(typedUsername);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_isNew ? l10n.addUser : l10n.editUser),
         actions: [
-          if (_canDelete(ref.watch(currentUserProvider).value))
+          if (_canDelete(me))
             IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: _busy ? null : _delete),
         ],
       ),
@@ -242,14 +332,66 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               controller: _name,
               decoration: InputDecoration(labelText: l10n.name),
               validator: required,
+              // A new user's username follows the name until it's typed by hand.
+              onChanged: (v) {
+                if (_isNew && !_usernameEdited) setState(() => _username.text = suggestUsername(v, taken) ?? '');
+              },
             ),
-            TextFormField(
-              controller: _email,
-              enabled: _isNew,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(labelText: l10n.email),
-              validator: (v) => (v == null || !v.contains('@')) ? l10n.invalidEmail : null,
-            ),
+            if (_isNew) ...[
+              const SizedBox(height: 12),
+              Text(l10n.signInWith, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: false, icon: const Icon(Icons.email_outlined), label: Text(l10n.email)),
+                  ButtonSegment(value: true, icon: const Icon(Icons.account_circle_outlined), label: Text(l10n.username)),
+                ],
+                selected: {_useUsername},
+                onSelectionChanged: (v) => setState(() => _useUsername = v.first),
+              ),
+            ],
+            if (_useUsername)
+              TextFormField(
+                controller: _username,
+                enabled: _isNew,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: l10n.username,
+                  helperText: !_isNew
+                      ? null
+                      : usernameFree
+                      ? l10n.usernameAvailable
+                      : l10n.usernameHelp,
+                  helperStyle: usernameFree ? const TextStyle(color: Colors.green) : null,
+                  helperMaxLines: 2,
+                  errorText: usernameTaken ? l10n.usernameTaken : null,
+                  suffixIcon: usernameTaken
+                      ? Icon(Icons.cancel, color: Theme.of(context).colorScheme.error, semanticLabel: l10n.usernameTaken)
+                      : usernameFree
+                      ? Icon(Icons.check_circle, color: Colors.green, semanticLabel: l10n.usernameAvailable)
+                      : null,
+                ),
+                onChanged: (v) => setState(() => _usernameEdited = v.trim().isNotEmpty),
+                validator: (v) => !_isNew
+                    ? null
+                    : !isValidUsername(v ?? '')
+                    ? l10n.invalidUsername
+                    : taken.contains(normalizeUsername(v!))
+                    ? l10n.usernameTaken
+                    : null,
+              )
+            else
+              TextFormField(
+                controller: _email,
+                enabled: _isNew,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(labelText: l10n.email),
+                validator: (v) => (v == null || !v.contains('@'))
+                    ? l10n.invalidEmail
+                    : _isNew && usernameOf(v) != null
+                    ? l10n.reservedEmail
+                    : null,
+              ),
             if (_isNew)
               TextFormField(
                 controller: _password,
@@ -275,8 +417,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             DropdownButtonFormField<UserRole>(
               initialValue: _role,
               decoration: InputDecoration(labelText: l10n.role),
-              items: [for (final r in UserRole.assignable) DropdownMenuItem(value: r, child: Text(r.label(l10n)))],
-              onChanged: (r) => setState(() => _role = r!),
+              items: [
+                for (final r in _role == null || roles.contains(_role) ? roles : [_role!, ...roles])
+                  DropdownMenuItem(value: r, child: Text(r.label(l10n))),
+              ],
+              hint: Text(l10n.selectRole),
+              validator: (r) => r == null ? l10n.required : null,
+              onChanged: (r) => setState(() => _role = r),
             ),
             if (_role == UserRole.salesExec)
               DropdownButtonFormField<String?>(
@@ -288,13 +435,62 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 ],
                 onChanged: (id) => setState(() => _kamId = id),
               ),
+            // Managers: by role, or marked here (e.g. the accounting manager).
+            if (_role != null && !_role!.isManagerRole && me?.role.isAdmin == true)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.isManager),
+                subtitle: Text(l10n.isManagerHelp),
+                value: _markedManager,
+                onChanged: (v) => setState(() => _markedManager = v),
+              ),
+            if (_role != null)
+              Builder(builder: (context) {
+                // Who it is when left on automatic, for the label.
+                final auto = directManagersOf(
+                  AppUser(id: widget.userId ?? '', name: '', email: '', phone: '', role: _role!, kamId: _kamId, active: true),
+                  users,
+                );
+                final names = {for (final u in users) u.id: u.name};
+                final managers = [for (final u in users) if (u.active && u.isManager && u.id != widget.userId) u];
+                return DropdownButtonFormField<String?>(
+                  initialValue: managers.any((m) => m.id == _managerId) ? _managerId : null,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l10n.directManager, helperText: l10n.directManagerHelp, helperMaxLines: 2),
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text(l10n.directManagerAuto(auto.map((id) => names[id] ?? '').join(', ')), overflow: TextOverflow.ellipsis),
+                    ),
+                    for (final m in managers)
+                      DropdownMenuItem(value: m.id, child: Text('${m.name} · ${m.role.label(l10n)}', overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (id) => setState(() => _managerId = id),
+                );
+              }),
+            // Drivers: the warehouse supervisor who follows them (their
+            // direct manager stays the logistics manager).
+            if (_role == UserRole.driver)
+              Builder(builder: (context) {
+                final supervisors = [for (final u in users) if (u.active && u.role == UserRole.warehouseSupervisor) u];
+                return DropdownButtonFormField<String?>(
+                  initialValue: supervisors.any((u) => u.id == _supervisorId) ? _supervisorId : null,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l10n.roleWarehouseSupervisor),
+                  items: [
+                    DropdownMenuItem(value: null, child: Text(l10n.none)),
+                    for (final u in supervisors) DropdownMenuItem(value: u.id, child: Text(u.name)),
+                  ],
+                  onChanged: (id) => setState(() => _supervisorId = id),
+                );
+              }),
             // KAMs too: some Odoo clients are under a KAM until they're moved to the team.
-            if (_role.isTracked)
+            if (_role?.isTracked == true)
               TextFormField(
                 controller: _odooName,
                 decoration: InputDecoration(labelText: l10n.odooSalespersonName, helperText: l10n.odooSalespersonHelp),
               ),
-            if (_role.isTracked)
+            if (_role?.isTracked == true)
               TextFormField(
                 controller: _target,
                 keyboardType: TextInputType.number,
@@ -302,7 +498,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
               ),
             // When their location is shared; saved at once (App settings → Tracking schedules).
-            if (_role.isLocationTracked && !_isNew && _pending == null)
+            // RTDB settings: sales manager / GM only.
+            if (_role?.isLocationTracked == true && !_isNew && _pending == null && me?.role.isAdmin == true)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.edit_calendar_outlined),
@@ -311,14 +508,14 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   context,
                   ref.watch(trackingSchedulesProvider).value?[widget.userId] ?? const TrackingSchedule.standard(),
                   company,
-                  driver: _role.isDriver,
+                  driver: _role!.isDriver,
                 )),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showTrackingScheduleDialog(
                   context,
                   uid: widget.userId!,
                   name: _name.text,
-                  driver: _role.isDriver,
+                  driver: _role!.isDriver,
                   current: ref.read(trackingSchedulesProvider).value?[widget.userId],
                   company: company,
                 ),
@@ -351,6 +548,16 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                       ),
                   ],
                 ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.leaveSiteAllowed),
+                subtitle: Text((_leaveSite ?? _roleOrDefault.leavesSiteForWork)
+                    ? l10n.leaveSiteAllowedHelp
+                    : l10n.leaveSiteNotAllowedHelp(ref.watch(appSettingsProvider).value?[AppSetting.awayGraceMin] ??
+                        AppSetting.awayGraceMin.defaultValue)),
+                value: _leaveSite ?? _roleOrDefault.leavesSiteForWork,
+                onChanged: (v) => setState(() => _leaveSite = v),
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.overtimeAllowed),
@@ -402,7 +609,15 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 onPressed: _busy ? null : _save,
                 child: BusyLabel(busy: _busy, child: Text(l10n.save)),
               ),
-            if (_canDelete(ref.watch(currentUserProvider).value)) ...[
+            if (_canSetPassword(me)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _setPassword,
+                icon: const Icon(Icons.password),
+                label: Text(l10n.setPassword),
+              ),
+            ],
+            if (_canDelete(me)) ...[
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),

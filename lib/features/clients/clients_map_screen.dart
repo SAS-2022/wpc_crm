@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
@@ -23,6 +25,10 @@ import 'transfer_dialog.dart';
 import 'clients_repository.dart';
 import 'person_style.dart';
 import 'visit_rules.dart';
+import '../../core/app_user.dart';
+import '../../core/place_search.dart';
+import '../tracking/live_data.dart';
+import '../tracking/live_map_screen.dart' show timeAgo;
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
 /// precedence over the visit status colour.
@@ -55,6 +61,62 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       if (mounted) setState(() => _query = ClientQuery(v));
     });
     setState(() {}); // the clear button
+  }
+
+  /// Search box mode: clients (default) or an area / place to zoom to
+  /// (user request 2026-10-23; searched on Enter, see place_search.dart).
+  bool _areaMode = false;
+  List<PlaceResult> _places = const [];
+  bool _placeBusy = false;
+  String? _placeError;
+
+  /// Switches the search box between clients and area. [keepText]: the
+  /// client search found nothing, search the same text as an area.
+  void _setAreaMode(bool area, {bool keepText = false}) {
+    if (area == _areaMode) return;
+    _searchDelay?.cancel();
+    if (!keepText) _search.clear();
+    setState(() {
+      _areaMode = area;
+      _query = ClientQuery('');
+      _places = const [];
+      _placeError = null;
+    });
+    if (area && keepText) _searchArea();
+  }
+
+  Future<void> _searchArea() async {
+    final l10n = AppLocalizations.of(context);
+    final q = _search.text.trim();
+    if (q.isEmpty || _placeBusy) return;
+    setState(() {
+      _placeBusy = true;
+      _placeError = null;
+    });
+    try {
+      final places = await searchPlaces(q, lang: Localizations.localeOf(context).languageCode);
+      if (!mounted) return;
+      setState(() {
+        _places = places;
+        _placeError = places.isEmpty ? l10n.areaNotFound(q) : null;
+      });
+      if (places.isNotEmpty) _zoomToPlace(places.first);
+    } catch (_) {
+      if (mounted) setState(() => _placeError = l10n.areaSearchFailed);
+    } finally {
+      if (mounted) setState(() => _placeBusy = false);
+    }
+  }
+
+  /// Centre of the place at the zoom that shows its area (not the map's
+  /// fit-to-bounds call, which zoomed out). The search card and buttons
+  /// cover part of the map, so less than the whole screen counts.
+  void _zoomToPlace(PlaceResult p) {
+    final b = p.bounds;
+    final size = MediaQuery.sizeOf(context);
+    final zoom = b == null ? 15.0 : zoomForBounds(b, math.max(size.width - 96, 160), math.max(size.height - 360, 160));
+    final centre = b == null ? LatLng(p.lat, p.lng) : LatLng((b.$1 + b.$3) / 2, (b.$2 + b.$4) / 2);
+    _map?.animateCamera(CameraUpdate.newLatLngZoom(centre, zoom));
   }
 
   /// KAM / managers: pins coloured by salesperson instead of visit status.
@@ -162,6 +224,22 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     // Moving clients from the map: web dashboard, KAM / managers.
     final canSelect = kIsWeb && (me?.role.isSupervisor ?? false);
     final lang = Localizations.localeOf(context).languageCode;
+    // The sales team's live positions (KAM / managers; RTDB rules): the KAM's
+    // own team, the people ticked in the salesperson filter.
+    final supervisor = me?.role.isSupervisor ?? false;
+    final showPeople = supervisor && ref.watch(showSalespeopleProvider);
+    final live = showPeople ? ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{} : const <String, LiveLocation>{};
+    final presence = showPeople ? ref.watch(presenceProvider).value ?? const <String, Presence>{} : const <String, Presence>{};
+    final salespeople = [
+      for (final u in users.values)
+        if (showPeople &&
+            u.active &&
+            u.role.isTracked &&
+            live.containsKey(u.id) &&
+            (me!.role != UserRole.kam || u.id == me.id || u.kamId == me.id) &&
+            (filter.isEmpty || filter.contains(u.id)))
+          u,
+    ];
 
     // Re-centre on the visible clients when a filter changes (not on first
     // load, which starts at the user's location, and not when the data
@@ -195,7 +273,8 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             mapType: ref.watch(mapTypeProvider),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
             // Keeps the Google logo and fitted markers clear of the filter card.
-            padding: EdgeInsets.only(top: ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52),
+            // + 44: the Clients | Area switch.
+            padding: EdgeInsets.only(top: ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52 + 44),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -251,6 +330,27 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                             c.locations.length > 1 ? loc : null,
                           ),
                   ),
+              // Salespeople: all purple with their initials (user request
+              // 2026-10-23, apart from the client colours); paler when the
+              // position is old or they're offline / off duty.
+              for (final u in salespeople)
+                if (live[u.id] case final loc?)
+                  Marker(
+                    markerId: MarkerId('person/${u.id}'),
+                    position: LatLng(loc.lat, loc.lng),
+                    anchor: const Offset(0.5, 0.5),
+                    zIndexInt: 10,
+                    icon: _icons.circle(
+                      context: context,
+                      fill: liveState(loc, presence[u.id], now) == LiveState.live
+                          ? salespersonPinColor
+                          : salespersonPinColor.withValues(alpha: 0.45),
+                      text: styles[u.id]?.initials ?? initialsOf(u.name),
+                      ringWidth: 3,
+                      size: 40,
+                    ),
+                    infoWindow: InfoWindow(title: u.name, snippet: timeAgo(context, loc.updatedAt, now)),
+                  ),
             },
           ),
           PositionedDirectional(
@@ -265,31 +365,93 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Clients or an area: an explicit choice, so a place
+                      // name isn't taken for a client search (2026-10-23).
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: SegmentedButton<bool>(
+                          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(value: false, icon: const Icon(Icons.store_outlined, size: 18), label: Text(l10n.clients)),
+                            ButtonSegment(value: true, icon: const Icon(Icons.travel_explore, size: 18), label: Text(l10n.searchArea)),
+                          ],
+                          selected: {_areaMode},
+                          onSelectionChanged: (v) => _setAreaMode(v.first),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _search,
-                        onChanged: _onSearch,
+                        onChanged: _areaMode ? (_) => setState(() {}) : _onSearch,
+                        onSubmitted: _areaMode ? (_) => _searchArea() : null,
+                        textInputAction: TextInputAction.search,
                         decoration: InputDecoration(
                           isDense: true,
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: l10n.searchClientsHint,
-                          // How many matched, or none.
-                          helperText: _query.isEmpty
-                              ? null
-                              : clients.isEmpty
-                                  ? l10n.noClientsFound
-                                  : l10n.searchResultsOnMap(clients.length),
+                          prefixIcon: Icon(_areaMode ? Icons.travel_explore : Icons.search),
+                          hintText: _areaMode ? l10n.searchAreaHint : l10n.searchClientsHint,
+                          // Clients: how many matched, or none. Area: not found / failed.
+                          helperText: _areaMode
+                              ? _placeError ?? l10n.searchAreaHelp
+                              : _query.isEmpty
+                                  ? null
+                                  : clients.isEmpty
+                                      ? l10n.noClientsFound
+                                      : l10n.searchResultsOnMap(clients.length),
+                          helperMaxLines: 2,
                           suffixIcon: _search.text.isEmpty
                               ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.close),
-                                  tooltip: l10n.clear,
-                                  onPressed: () {
-                                    _search.clear();
-                                    _onSearch('');
-                                  },
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_areaMode)
+                                      IconButton(
+                                        icon: _placeBusy
+                                            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                            : const Icon(Icons.arrow_forward),
+                                        tooltip: l10n.searchAreaGo,
+                                        onPressed: _placeBusy ? null : _searchArea,
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close),
+                                      tooltip: l10n.clear,
+                                      onPressed: () {
+                                        _search.clear();
+                                        _areaMode ? setState(() => _places = const []) : _onSearch('');
+                                      },
+                                    ),
+                                  ],
                                 ),
                         ),
                       ),
+                      // No client matches: maybe it's a place.
+                      if (!_areaMode && !_query.isEmpty && clients.isEmpty)
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: TextButton.icon(
+                            onPressed: () => _setAreaMode(true, keepText: true),
+                            icon: const Icon(Icons.travel_explore, size: 18),
+                            label: Text(l10n.searchAsArea(_search.text.trim())),
+                          ),
+                        ),
+                      // Several places with that name: zoomed to the first, pick another.
+                      if (_areaMode && _places.length > 1)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 160),
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              for (final p in _places)
+                                ListTile(
+                                  dense: true,
+                                  visualDensity: VisualDensity.compact,
+                                  leading: const Icon(Icons.place_outlined, size: 20),
+                                  title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  onTap: () => _zoomToPlace(p),
+                                ),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: 6),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
@@ -338,6 +500,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                                     child: PopupMenuButton<bool>(
                                       tooltip: l10n.colourBy,
                                       initialValue: byPerson,
+                                      // Root navigator: the menu scrolls to the ticked
+                                      // item, which also scrolled the tab pager to Visits.
+                                      useRootNavigator: true,
                                       onSelected: choose,
                                       itemBuilder: (_) => [
                                         PopupMenuItem(value: false, child: Text(l10n.visitStatus)),
@@ -468,10 +633,65 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
           PositionedDirectional(
             end: 12,
             bottom: 32,
-            child: MapControls(map: _map, onMyLocation: _goToMe, onFitAll: () => _fit(points)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // KAM / managers: show or hide the salespeople.
+                if (supervisor)
+                  PointerInterceptor(
+                    child: FloatingActionButton.small(
+                      heroTag: null,
+                      tooltip: showPeople ? l10n.hideSalespeople : l10n.showSalespeople,
+                      backgroundColor: showPeople ? Theme.of(context).colorScheme.primaryContainer : null,
+                      onPressed: () => ref.read(showSalespeopleProvider.notifier).toggle(),
+                      child: Icon(showPeople ? Icons.person_pin_circle : Icons.person_off_outlined),
+                    ),
+                  ),
+                // The same gap as between the other map buttons.
+                if (supervisor) const SizedBox(height: 8),
+                MapControls(map: _map, onMyLocation: _goToMe, onFitAll: () => _fit(points)),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+/// Clients map: the sales team's live locations on top of the clients
+/// (2026-10-23, user request; KAM / managers). On by default, the choice
+/// remembered on this device.
+final showSalespeopleProvider = NotifierProvider<ShowSalespeopleController, bool>(ShowSalespeopleController.new);
+
+class ShowSalespeopleController extends Notifier<bool> {
+  static const _key = 'mapShowSalespeople';
+
+  @override
+  bool build() {
+    _load();
+    return true;
+  }
+
+  Future<void> _load() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getBool(_key);
+      if (saved != null) state = saved;
+    } catch (_) {
+      // Default: shown.
+    }
+  }
+
+  Future<void> toggle() async {
+    state = !state;
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_key, state);
+    } catch (_) {
+      // Kept for this session only.
+    }
+  }
+}
+
+/// The sales team's pins on the clients map: one purple for everyone, unlike
+/// any client colour (status or salesperson palette).
+const salespersonPinColor = Color(0xFF6A1B9A);

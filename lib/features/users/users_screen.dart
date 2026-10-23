@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_user.dart';
 import '../../core/app_version.dart';
+import '../../core/login_name.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
@@ -85,6 +86,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final now = DateTime.now();
     final positions = ref.watch(positionsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
+    final me = ref.watch(currentUserProvider).value;
+    // Sales manager / GM: everyone; logistics manager: approved drivers only.
+    final admin = me?.role.isAdmin == true;
+    final editable = me?.role.editableRoles ?? const <UserRole>[];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.users)),
@@ -97,7 +102,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
         data: (all) {
-          var list = all;
+          var list = admin ? all : [for (final u in all) if (!u.isPendingApproval && editable.contains(u.role)) u];
           if (list.isEmpty) return Center(child: Text(l10n.noUsers));
           // Registrations waiting for approval first.
           list = [...list.where((u) => u.isPendingApproval), ...list.where((u) => !u.isPendingApproval)];
@@ -130,23 +135,25 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           return ListView(
             padding: const EdgeInsets.only(bottom: 88),
             children: [
-              Card(
-                margin: const EdgeInsets.all(12),
-                child: ListTile(
-                  leading: const Icon(Icons.system_update),
-                  title: Text(l10n.latestAppVersion('$latestName ($latest)')),
-                  subtitle: Text(outdated.isEmpty ? l10n.everyoneUpToDate : l10n.peopleOnOlderVersion(outdated.length)),
-                  trailing: outdated.isEmpty
-                      ? null
-                      : FilledButton.tonalIcon(
-                          onPressed: _sending || canRemind.isEmpty ? null : () => _remind(canRemind),
-                          icon: _sending
-                              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.notifications_active_outlined),
-                          label: Text(l10n.remindAll(canRemind.length)),
-                        ),
+              // Reminders write admin-only fields.
+              if (admin)
+                Card(
+                  margin: const EdgeInsets.all(12),
+                  child: ListTile(
+                    leading: const Icon(Icons.system_update),
+                    title: Text(l10n.latestAppVersion('$latestName ($latest)')),
+                    subtitle: Text(outdated.isEmpty ? l10n.everyoneUpToDate : l10n.peopleOnOlderVersion(outdated.length)),
+                    trailing: outdated.isEmpty
+                        ? null
+                        : FilledButton.tonalIcon(
+                            onPressed: _sending || canRemind.isEmpty ? null : () => _remind(canRemind),
+                            icon: _sending
+                                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.notifications_active_outlined),
+                            label: Text(l10n.remindAll(canRemind.length)),
+                          ),
+                  ),
                 ),
-              ),
               // Search and filters.
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
@@ -225,9 +232,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                         Text(u.isPendingApproval
                             ? [
                                 u.requestedRole?.label(l10n) ?? positionLabel(positions, u.position, lang),
-                                u.email,
+                                loginNameOf(u.email),
                               ].where((s) => s.isNotEmpty).join(' · ')
-                            : '${u.role.label(l10n)} · ${u.email}'),
+                            : '${u.role.label(l10n)} · ${loginNameOf(u.email)}'),
                         Text.rich(TextSpan(children: [
                           if (u.appVersions.isEmpty) TextSpan(text: l10n.noAppVersion),
                           for (final (j, MapEntry(key: platform, value: v)) in u.appVersions.entries.indexed) ...[
@@ -255,7 +262,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                           Chip(label: Text(l10n.registrationRejectedShort))
                         else if (!u.active)
                           Chip(label: Text(l10n.inactive)),
-                        if (u.active && old.isNotEmpty)
+                        if (admin && u.active && old.isNotEmpty)
                           IconButton(
                             icon: const Icon(Icons.notifications_active_outlined),
                             color: theme.colorScheme.error,

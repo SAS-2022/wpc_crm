@@ -8,6 +8,8 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'notifications.dart';
+import '../attendance/absence.dart';
+import '../attendance/absence_sheet.dart' show absenceLeaveLabel, absenceReasonIcon, absenceReasonLabel;
 import '../clients/client_status.dart';
 import '../clients/client_status_widgets.dart';
 import '../../core/app_version.dart';
@@ -42,6 +44,14 @@ class NotificationsScreen extends ConsumerWidget {
     return DateFormat.jm(Localizations.localeOf(context).toString()).format(DateTime(2026, 1, 1, h, m));
   }
 
+  /// 'yyyy-MM-dd' – 'yyyy-MM-dd' as "Wed, Oct 22" or "Wed, Oct 22 – Thu, Oct 23".
+  static String _range(BuildContext context, String from, String to) {
+    final f = DateFormat.MMMEd(Localizations.localeOf(context).toString());
+    final a = DateTime.tryParse(from), b = DateTime.tryParse(to);
+    if (a == null) return from;
+    return b == null || b == a ? f.format(a) : '${f.format(a)} – ${f.format(b)}';
+  }
+
   String _checkIn(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String meId) {
     final time = _clock(context, n.time);
     return [
@@ -55,6 +65,22 @@ class NotificationsScreen extends ConsumerWidget {
       switch (n.type) {
         NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
         NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
+        NotificationType.absenceReported => [
+            l10n.notifAbsenceReported(owner, day, absenceReasonLabel(l10n, AbsenceReason.fromKey(n.issue))),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
+        NotificationType.absenceAccepted => l10n.notifAbsenceAccepted(from, day, absenceLeaveLabel(l10n, AbsenceLeave.fromKey(n.issue))),
+        NotificationType.absenceRejected => l10n.notifAbsenceRejected(from, day),
+        NotificationType.teamOnLeave => l10n.notifTeamOnLeave(owner, _range(context, n.date, n.note)),
+        NotificationType.earlyCheckoutRequested => [
+            l10n.notifEarlyCheckoutRequested(owner),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
+        NotificationType.earlyCheckoutApproved => l10n.notifEarlyCheckoutApproved(from),
+        NotificationType.earlyCheckoutRejected => [
+            l10n.notifEarlyCheckoutRejected(from),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
         NotificationType.planSubmitted => l10n.notifPlanSubmitted(from, n.count, day),
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
@@ -127,6 +153,13 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.attendanceCheckedIn => Icons.how_to_reg,
                     NotificationType.attendanceLate => Icons.alarm,
+                    NotificationType.absenceReported => absenceReasonIcon(AbsenceReason.fromKey(n.issue)),
+                    NotificationType.absenceAccepted => Icons.event_available,
+                    NotificationType.absenceRejected => Icons.event_busy,
+                    NotificationType.teamOnLeave => Icons.beach_access,
+                    NotificationType.earlyCheckoutRequested => Icons.directions_walk,
+                    NotificationType.earlyCheckoutApproved => Icons.check_circle,
+                    NotificationType.earlyCheckoutRejected => Icons.cancel,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -155,8 +188,19 @@ class NotificationsScreen extends ConsumerWidget {
                         openAppStore();
                       case NotificationType.attendanceCheckedIn when n.fromId != meId:
                         context.push('/attendance');
-                      case NotificationType.attendanceCheckedIn || NotificationType.attendanceLate:
+                      // Home: the manager's requests card / the person's attendance card.
+                      case NotificationType.attendanceCheckedIn ||
+                            NotificationType.attendanceLate ||
+                            NotificationType.earlyCheckoutRequested ||
+                            NotificationType.earlyCheckoutApproved ||
+                            NotificationType.earlyCheckoutRejected:
                         context.go('/');
+                      case NotificationType.absenceReported ||
+                            NotificationType.absenceAccepted ||
+                            NotificationType.absenceRejected:
+                        if (n.ref.isNotEmpty) context.push('/absence/${n.ref}');
+                      case NotificationType.teamOnLeave:
+                        if (n.ref.isNotEmpty) context.push('/leave/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

@@ -42,6 +42,8 @@ class AppSettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          header(l10n.settingsSectionAccess),
+          page(Icons.lock_person_outlined, l10n.pageAccess, '/settings/page-access', subtitle: l10n.pageAccessSubtitle),
           header(l10n.settingsSectionTracking),
           page(Icons.schedule, l10n.workHours, '/work-hours',
               subtitle: company == null ? null : WorkHoursEditor.summary(context, company)),
@@ -60,6 +62,7 @@ class AppSettingsScreen extends ConsumerWidget {
           page(Icons.apartment, l10n.workSites, '/work-sites'),
           page(Icons.business, l10n.companies, '/companies'),
           number(Icons.more_time, AppSetting.lateGraceMin),
+          number(Icons.directions_walk, AppSetting.awayGraceMin),
         ],
       ),
     );
@@ -71,6 +74,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.offlineAlertMin => l10n.settingOfflineAlert,
       AppSetting.visitRadiusM => l10n.settingVisitRadius,
       AppSetting.lateGraceMin => l10n.settingLateGrace,
+      AppSetting.awayGraceMin => l10n.settingAwayGrace,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
     };
 
@@ -79,13 +83,14 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.offlineAlertMin => l10n.settingOfflineAlertHelp,
       AppSetting.visitRadiusM => l10n.settingVisitRadiusHelp,
       AppSetting.lateGraceMin => l10n.settingLateGraceHelp,
+      AppSetting.awayGraceMin => l10n.settingAwayGraceHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
     };
 
 /// "30 seconds", "300 m" …
 String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.trackingIntervalSec => l10n.valueSeconds(v),
-      AppSetting.offlineAlertMin || AppSetting.lateGraceMin => l10n.valueMinutes(v),
+      AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin => l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
       AppSetting.givenDueSoonDays => l10n.valueDays(v),
     };

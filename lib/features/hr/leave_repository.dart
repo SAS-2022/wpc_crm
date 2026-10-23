@@ -143,7 +143,12 @@ final userLeaveRequestsProvider = StreamProvider.family<List<LeaveRequest>, Stri
 /// Every request, newest first (HR area only, by the rules).
 final allLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.canSeeHr) return Stream.value(const []);
+  // Managers too: their people's leave on the Attendance page / report (2026-10-23).
+  if (me == null || !me.seesTeamAttendance) return Stream.value(const []);
+  // A KAM may read only their team's requests (rules).
+  if (me.role == UserRole.kam) {
+    return _requests.where('kamId', isEqualTo: me.id).snapshots().map(_newestFirst);
+  }
   return _requests.orderBy('createdAt', descending: true).limit(500).snapshots().map(_newestFirst);
 });
 
@@ -259,6 +264,49 @@ class LeaveRepository {
     return doc.id;
   });
 
+  /// HR / GM accept a reported absence ([absenceId]) as leave of [type] for
+  /// [person] on [date] (2026-10-22): an already approved one-day request,
+  /// so it counts against their balance and shows as leave everywhere.
+  /// Returns its id.
+  Future<String> recordAbsenceLeave({
+    required AppUser me,
+    required AppUser person,
+    required LeaveType type,
+    required String date,
+    required double days,
+    required String reason,
+    required String comment,
+    required String absenceId,
+  }) => saving(() async {
+    final doc = _requests.doc();
+    final step = ApprovalStep(role: me.role, uid: me.id)
+        .decide(approve: true, byId: me.id, at: DateTime.now(), comment: comment);
+    await doc.set({
+      'uid': person.id,
+      'kamId': person.role == UserRole.salesExec ? person.kamId : null,
+      'typeId': type.id,
+      'typeEn': type.en,
+      'typeAr': type.ar,
+      'isLeave': true,
+      'paid': type.paid,
+      'from': date,
+      'to': date,
+      'halfDay': false,
+      'days': days,
+      'year': int.parse(date.substring(0, 4)),
+      'reason': reason,
+      'status': LeaveStatus.approved.name,
+      'steps': [_stepMap(step)],
+      'stepIndex': 0,
+      'awaitingKey': null,
+      'absenceId': absenceId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'decidedAt': FieldValue.serverTimestamp(),
+    });
+    return doc.id;
+  });
+
   /// The owner withdraws a request that is still waiting.
   Future<void> cancel(String id) => saving(() => _requests.doc(id).update({
         'status': LeaveStatus.cancelled.name,
@@ -309,6 +357,22 @@ class LeaveRepository {
         count: 0,
         ref: id,
       );
+      // Their direct manager should know who is on leave (2026-10-22);
+      // not those who approved a step.
+      final person = users.where((u) => u.id == r.uid).firstOrNull;
+      if (approve && r.isLeave && r.from != null && person != null) {
+        final approvers = {for (final s in r.steps) ?s.byId, me.id};
+        await sendNotifications(
+          toIds: [for (final m in directManagersOf(person, users)) if (!approvers.contains(m)) m],
+          type: NotificationType.teamOnLeave,
+          fromId: me.id,
+          ownerId: r.uid,
+          date: r.from!,
+          count: 0,
+          ref: id,
+          note: r.to ?? r.from!,
+        );
+      }
     }
   });
 

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Notification accent: the green of the WPC logo. -->
+    <color name="notification_color">#00A651</color>
 </resources>

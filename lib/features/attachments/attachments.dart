@@ -14,7 +14,10 @@ const maxAttachmentBytes = 20 * 1024 * 1024;
 enum AttachmentParent {
   clients('clients'),
   visits('visits'),
-  leaveRequests('leave_requests');
+  leaveRequests('leave_requests'),
+
+  /// A reported absence (e.g. the medical report for a sick day).
+  absences('absences');
 
   const AttachmentParent(this.collection);
 

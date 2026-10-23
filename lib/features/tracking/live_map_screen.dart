@@ -17,6 +17,17 @@ import '../users/users_repository.dart';
 import 'live_data.dart';
 import 'motion.dart';
 
+/// "Just now", "5 min ago", "2 h ago", else the date and time.
+String timeAgo(BuildContext context, DateTime? t, DateTime now) {
+  final l10n = AppLocalizations.of(context);
+  if (t == null) return l10n.never;
+  final m = now.difference(t).inMinutes;
+  if (m < 1) return l10n.justNow;
+  if (m < 60) return l10n.minutesAgo(m);
+  if (m < 24 * 60) return l10n.hoursAgo(m ~/ 60);
+  return DateFormat.yMMMd(Localizations.localeOf(context).toString()).add_jm().format(t);
+}
+
 /// Live positions of field staff. KAMs see their team (and themselves);
 /// sales manager and GM see everyone.
 class LiveMapScreen extends ConsumerStatefulWidget {
@@ -61,14 +72,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     LiveState.offline => Colors.grey,
   };
 
-  String _ago(AppLocalizations l10n, DateTime? t, DateTime now) {
-    if (t == null) return l10n.never;
-    final m = now.difference(t).inMinutes;
-    if (m < 1) return l10n.justNow;
-    if (m < 60) return l10n.minutesAgo(m);
-    if (m < 24 * 60) return l10n.hoursAgo(m ~/ 60);
-    return DateFormat.yMMMd(Localizations.localeOf(context).toString()).add_jm().format(t);
-  }
+  String _ago(AppLocalizations l10n, DateTime? t, DateTime now) => timeAgo(context, t, now);
 
   /// "Driving", "Walking", "Idle for 23 min" (from 5 min on) or "Stopped".
   String? _motion(AppLocalizations l10n, LiveLocation? loc, DateTime now) {
@@ -112,6 +116,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       if (!u.active || !u.role.isLocationTracked) return false;
       if (driversOnly && !u.role.isDriver) return false;
       if (me?.role == UserRole.kam) return u.id == me!.id || u.kamId == me.id;
+      // Warehouse supervisor: their own drivers.
+      if (me?.role == UserRole.warehouseSupervisor) return u.supervisorId == me!.id;
       return true;
     }).toList();
     final driverCount = everyone.where((u) => u.role.isDriver).length;

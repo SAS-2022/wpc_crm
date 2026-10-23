@@ -3902,4 +3902,486 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreActions => 'More';
+
+  @override
+  String get settingAwayGrace => 'Away from the site before check-out';
+
+  @override
+  String get settingAwayGraceHelp =>
+      'People not allowed to leave their work site who stay away longer than this are checked out at the time they left. Coming back checks them in again.';
+
+  @override
+  String get leaveSiteAllowed => 'Allowed to leave the site';
+
+  @override
+  String get leaveSiteAllowedHelp =>
+      'Leaving the site during the work day doesn\'t check them out (usually the sales team and drivers).';
+
+  @override
+  String leaveSiteNotAllowedHelp(int minutes) {
+    return 'Away from the site for more than $minutes min → checked out at the time they left. Coming back checks them in again; the time away doesn\'t count.';
+  }
+
+  @override
+  String get checkOutLeftSite => 'left the site';
+
+  @override
+  String get absenceSick => 'Sick';
+
+  @override
+  String get absenceTired => 'Tired';
+
+  @override
+  String get absenceCantCome => 'Can\'t come';
+
+  @override
+  String get absencePickReason => 'Pick a reason';
+
+  @override
+  String get absenceWriteReason => 'Write the reason';
+
+  @override
+  String get absenceSent => 'Sent. HR and your manager have been told.';
+
+  @override
+  String get absenceTitle => 'Not coming to work';
+
+  @override
+  String get tomorrow => 'Tomorrow';
+
+  @override
+  String get absenceReasonField => 'Reason';
+
+  @override
+  String get absenceSickHelp =>
+      'Attach your medical report (now or later). HR accepts the day as sick leave only with the report.';
+
+  @override
+  String get absenceSend => 'Send';
+
+  @override
+  String absentToday(String reason) {
+    return 'Not coming today · $reason';
+  }
+
+  @override
+  String absentOn(String date, String reason) {
+    return 'Not coming on $date · $reason';
+  }
+
+  @override
+  String get absenceUndoConfirm => 'Take back this absence?';
+
+  @override
+  String get absenceUndo => 'Undo';
+
+  @override
+  String get sickReportMissing =>
+      'Medical report not attached yet – needed to approve the sick leave';
+
+  @override
+  String get attachSickReport => 'Attach medical report';
+
+  @override
+  String get openRequest => 'Open request';
+
+  @override
+  String get absenceButton => 'Not coming to work?';
+
+  @override
+  String dayReportedAbsent(String reason) {
+    return 'Reported absent: $reason';
+  }
+
+  @override
+  String daysReportedAbsent(int count) {
+    return '$count reported absent';
+  }
+
+  @override
+  String get reportedAbsent => 'Reported absent';
+
+  @override
+  String leaveDocumentMissingMine(String document) {
+    return 'Attach the $document – the request can be approved only with it.';
+  }
+
+  @override
+  String leaveDocumentMissing(String document) {
+    return 'Waiting for the $document – it can be approved once it is attached.';
+  }
+
+  @override
+  String notifAbsenceReported(String name, String day, String reason) {
+    return '$name won\'t be at work on $day – $reason';
+  }
+
+  @override
+  String get checkOutHr => 'corrected by HR';
+
+  @override
+  String get asSickLeave => 'sick leave';
+
+  @override
+  String get asAnnualLeave => 'annual leave';
+
+  @override
+  String get absenceWaiting => 'Waiting for HR';
+
+  @override
+  String absenceAcceptedAs(String leave) {
+    return 'Accepted as $leave';
+  }
+
+  @override
+  String get absenceRejectedText => 'Not accepted – counts as an absence day';
+
+  @override
+  String get attachDocument => 'Attach document';
+
+  @override
+  String documentsCount(int count) {
+    return '$count document(s)';
+  }
+
+  @override
+  String get rejectAbsence => 'Reject';
+
+  @override
+  String acceptAbsenceAs(String leave) {
+    return 'Accept as $leave';
+  }
+
+  @override
+  String get rejectAbsenceHelp => 'The day counts as an absence day.';
+
+  @override
+  String get acceptAbsenceHelp =>
+      'An approved leave request is saved for this day and taken from their balance. Their direct manager is told.';
+
+  @override
+  String get absenceNotFound => 'This absence was taken back.';
+
+  @override
+  String get sickReportMissingMine =>
+      'Attach your medical report – the day can be accepted as sick leave only with it.';
+
+  @override
+  String get decideAbsence => 'Decision';
+
+  @override
+  String get sickNeedsDocument =>
+      'Sick leave needs a document (medical report) attached.';
+
+  @override
+  String annualLeaveLeft(String days) {
+    return 'Annual leave left: $days days';
+  }
+
+  @override
+  String absencesWaiting(int count) {
+    return 'Absences to decide ($count)';
+  }
+
+  @override
+  String notifAbsenceAccepted(String name, String day, String leave) {
+    return '$name accepted your absence on $day as $leave';
+  }
+
+  @override
+  String notifAbsenceRejected(String name, String day) {
+    return '$name didn\'t accept your absence on $day – it counts as an absence day';
+  }
+
+  @override
+  String notifTeamOnLeave(String name, String dates) {
+    return '$name is on leave: $dates';
+  }
+
+  @override
+  String get correctedByHr => 'Corrected by HR';
+
+  @override
+  String awayTime(String time) {
+    return 'Away $time (not counted)';
+  }
+
+  @override
+  String correctedBy(String name) {
+    return 'Corrected by $name';
+  }
+
+  @override
+  String get correctDay => 'Correct this day';
+
+  @override
+  String get removeCorrection => 'Remove correction';
+
+  @override
+  String get openAbsence => 'Open absence';
+
+  @override
+  String get openUser => 'Open user';
+
+  @override
+  String get correctionNoteNeeded => 'Write why the day is corrected';
+
+  @override
+  String correctDayOf(String name) {
+    return 'Correct $name\'s day';
+  }
+
+  @override
+  String get correctDayHelp =>
+      'Replaces what the phone recorded. Without a check-out, the phone\'s later events still count.';
+
+  @override
+  String get checkOutFromPhone => 'From the phone';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get correctionNote => 'Reason for the correction';
+
+  @override
+  String get identityReason => 'Confirm it\'s you to check in or out';
+
+  @override
+  String get identityLocked =>
+      'Too many tries – unlock the phone with your PIN and try again.';
+
+  @override
+  String get absencesTab => 'Absences';
+
+  @override
+  String get absenceAcceptedFilter => 'Accepted';
+
+  @override
+  String get absenceRejectedFilter => 'Not accepted';
+
+  @override
+  String get noAbsences => 'No absences here.';
+
+  @override
+  String transfersWaiting(int count) {
+    return 'Not visited yet ($count)';
+  }
+
+  @override
+  String transfersArchived(int count) {
+    return 'Archived ($count)';
+  }
+
+  @override
+  String get transfersAllVisited =>
+      'Every moved client has been visited – see Archived.';
+
+  @override
+  String get transfersNoneArchived =>
+      'Nothing archived yet. Clients go here once the new salesperson visits or calls them, or when they\'re moved again.';
+
+  @override
+  String get deletedUser => 'Deleted user';
+
+  @override
+  String get emailOrUsername => 'Email or username';
+
+  @override
+  String get username => 'Username';
+
+  @override
+  String get signInWith => 'Signs in with';
+
+  @override
+  String get usernameHelp =>
+      'Letters, numbers, . _ - (3–30). They sign in with this; no email is needed.';
+
+  @override
+  String get invalidUsername => '3–30 letters (a–z), numbers, . _ or -';
+
+  @override
+  String get usernameInUse => 'This username is taken. Choose another one.';
+
+  @override
+  String get setPassword => 'Set password';
+
+  @override
+  String setPasswordFor(String name) {
+    return 'New password for $name';
+  }
+
+  @override
+  String passwordSetFor(String name) {
+    return 'Password changed for $name. Tell them the new one.';
+  }
+
+  @override
+  String get usernameResetByManager =>
+      'Accounts with a username can\'t get a reset email. Ask your manager to set a new password.';
+
+  @override
+  String get usernameAccountInfo =>
+      'Forgot your password? Ask your manager to set a new one.';
+
+  @override
+  String get reservedEmail =>
+      'This address can\'t be used. Enter your own email.';
+
+  @override
+  String get selectRole => 'Select a role';
+
+  @override
+  String get usernameAvailable => 'Available';
+
+  @override
+  String get usernameTaken => 'Already used by another account';
+
+  @override
+  String get isManager => 'Is a manager';
+
+  @override
+  String get isManagerHelp =>
+      'Can be chosen as someone\'s direct manager, e.g. the accounting manager.';
+
+  @override
+  String get directManager => 'Direct manager';
+
+  @override
+  String directManagerAuto(String names) {
+    return 'Automatic ($names)';
+  }
+
+  @override
+  String get directManagerHelp =>
+      'Approves leaving early and is told when they\'re on leave or absent.';
+
+  @override
+  String get askLeaveEarly => 'Ask to leave early';
+
+  @override
+  String askLeaveEarlyHelp(String time, String names) {
+    return 'Your work day ends at $time. $names must approve before you can check out.';
+  }
+
+  @override
+  String earlyRequestSent(String names) {
+    return 'Request sent to $names';
+  }
+
+  @override
+  String earlyWaiting(String names) {
+    return 'Asked to leave early – waiting for $names';
+  }
+
+  @override
+  String earlyApproved(String name) {
+    return '$name approved – you can check out';
+  }
+
+  @override
+  String earlyRejected(String name) {
+    return '$name didn\'t approve leaving early';
+  }
+
+  @override
+  String get earlyAskAgain => 'Ask again';
+
+  @override
+  String earlyRequestsWaiting(int count) {
+    return 'Asking to leave early ($count)';
+  }
+
+  @override
+  String notifEarlyCheckoutRequested(String name) {
+    return '$name asks to leave early today';
+  }
+
+  @override
+  String notifEarlyCheckoutApproved(String name) {
+    return '$name approved your early check-out – you can check out now';
+  }
+
+  @override
+  String notifEarlyCheckoutRejected(String name) {
+    return '$name didn\'t approve your early check-out';
+  }
+
+  @override
+  String get balanceColType => 'Leave';
+
+  @override
+  String get balanceColEntitled => 'Entitled';
+
+  @override
+  String get balanceColUsed => 'Used';
+
+  @override
+  String get balanceColWaiting => 'Waiting';
+
+  @override
+  String get balanceColLeft => 'Remaining';
+
+  @override
+  String get pageAccess => 'Page access';
+
+  @override
+  String get pageAccessSubtitle => 'Which roles may open each page';
+
+  @override
+  String get pageAccessHelp =>
+      'Highlighted pages are open to the role; tap a page to allow or remove it (saved right away). Greyed pages with a lock can\'t be given to that role, because the data they show is protected for it (e.g. drivers can\'t see clients).';
+
+  @override
+  String get pageAccessLocked =>
+      'Always on for sales managers and GMs, so nobody is locked out of the settings.';
+
+  @override
+  String get pageAccessMarkedManagers =>
+      'People marked \"Is a manager\" always see their team\'s attendance.';
+
+  @override
+  String get settingsSectionAccess => 'Access';
+
+  @override
+  String get pageNotForRole =>
+      'Not available for this role: the data this page shows is protected for it.';
+
+  @override
+  String get showSalespeople => 'Show salespeople';
+
+  @override
+  String get hideSalespeople => 'Hide salespeople';
+
+  @override
+  String get searchAreaHint => 'Area, e.g. Riyadh, Al Salam';
+
+  @override
+  String get searchAreaHelp => 'Press Enter to go there';
+
+  @override
+  String get searchAreaGo => 'Go';
+
+  @override
+  String areaNotFound(String query) {
+    return 'No place found for \"$query\"';
+  }
+
+  @override
+  String get areaSearchFailed =>
+      'Couldn\'t search the place. Check the internet and try again.';
+
+  @override
+  String get searchArea => 'Area';
+
+  @override
+  String searchAsArea(String text) {
+    return 'Search \"$text\" as an area';
+  }
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
 }

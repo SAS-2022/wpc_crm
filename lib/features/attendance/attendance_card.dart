@@ -11,23 +11,31 @@ import '../../core/app_user.dart';
 import '../../core/location.dart';
 import '../../core/location_disclosure.dart';
 import '../../l10n/app_localizations.dart';
+import '../notifications/notifications.dart' show directManagersOf;
+import '../users/users_repository.dart';
 import '../tracking/device_health.dart';
 import '../tracking/tracking_card.dart' show PhoneHealthTips, makerSetupText;
 import '../tracking/work_hours.dart';
 import '../visits/visit.dart' show formatDistance;
+import 'absence.dart';
+import 'absence_sheet.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'early_checkout.dart';
 import 'geofences.dart';
+import 'identity_check.dart';
 import 'work_sites.dart';
 
 String checkOutTypeLabel(AppLocalizations l10n, String? type) => switch (type) {
-      'left' => l10n.checkOutLeft,
-      'manual' => l10n.checkOutManual,
-      'leftEarly' => l10n.checkOutLeftEarly,
-      'endOfDay' => l10n.checkOutEndOfDay,
-      'auto' => l10n.checkOutAuto,
-      _ => '',
-    };
+  'left' => l10n.checkOutLeft,
+  'manual' => l10n.checkOutManual,
+  'leftSite' => l10n.checkOutLeftSite,
+  'leftEarly' => l10n.checkOutLeftEarly,
+  'endOfDay' => l10n.checkOutEndOfDay,
+  'auto' => l10n.checkOutAuto,
+  'hr' => l10n.checkOutHr,
+  _ => '',
+};
 
 /// Home: today's attendance for people assigned to a work site — status,
 /// "Check in" (must be at the site) / "Check out", and the "Always"
@@ -104,9 +112,9 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
   }
 
   List<WorkSite> _mySites() => [
-        for (final s in ref.read(workSitesProvider).value ?? const <WorkSite>[])
-          if (s.active && widget.me.workSiteIds.contains(s.id)) s,
-      ];
+    for (final s in ref.read(workSitesProvider).value ?? const <WorkSite>[])
+      if (s.active && widget.me.workSiteIds.contains(s.id)) s,
+  ];
 
   Future<void> _allowAlways() async {
     // Google Play: say what location is for before Android asks.
@@ -239,7 +247,10 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       if (mounted) await _showSetupNeeded(missing);
       return;
     }
+    // Fingerprint / face / PIN when the phone has a screen lock (2026-10-22).
     if (!mounted) return;
+    final verified = await confirmIdentity(context);
+    if (verified == null || !mounted) return;
     setState(() => _busy = true);
     try {
       final fix = await currentPosition();
@@ -257,12 +268,12 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         if (d <= s.radius + p.accuracy.clamp(0, 50)) at = s;
       }
       if (at == null) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(nearest.isFinite ? l10n.notAtWorkSite(formatDistance(nearest)) : l10n.noWorkSiteAssigned),
-        ));
+        messenger.showSnackBar(
+          SnackBar(content: Text(nearest.isFinite ? l10n.notAtWorkSite(formatDistance(nearest)) : l10n.noWorkSiteAssigned)),
+        );
         return;
       }
-      await recordAttendance(widget.me.id, AttendanceEventType.checkIn, siteId: at.id);
+      await recordAttendance(widget.me.id, AttendanceEventType.checkIn, siteId: at.id, extra: {'verified': verified});
       messenger.showSnackBar(SnackBar(content: Text(l10n.checkedInAt(at.name))));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
@@ -284,10 +295,67 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
+    final verified = await confirmIdentity(context);
+    if (verified == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      await recordAttendance(widget.me.id, AttendanceEventType.checkOut);
+      await recordAttendance(widget.me.id, AttendanceEventType.checkOut, extra: {'verified': verified});
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Before the end of the work day: asks the direct manager(s) first.
+  Future<void> _askEarly(List<String> approverIds, String names, String endTime) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final reason = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.askLeaveEarly),
+        content: Form(
+          key: form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.askLeaveEarlyHelp(endTime, names)),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: reason,
+                autofocus: true,
+                minLines: 1,
+                maxLines: 4,
+                maxLength: 500,
+                decoration: InputDecoration(labelText: l10n.absenceReasonField),
+                validator: (v) => (v == null || v.trim().isEmpty) ? l10n.required : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState!.validate()) Navigator.pop(dialog, true);
+            },
+            child: Text(l10n.sendRequest),
+          ),
+        ],
+      ),
+    );
+    final text = reason.text.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) => reason.dispose());
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await askEarlyCheckout(me: widget.me, approverIds: approverIds, reason: text);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.earlyRequestSent(names))));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
     } finally {
@@ -321,6 +389,22 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     final day = record?.best(me, company);
     final siteName = sites[day?.siteId]?.name ?? '';
     final health = ref.watch(phoneHealthProvider).value;
+    // "Not coming to work" reported for today / tomorrow (2026-10-22).
+    final now = DateTime.now();
+    final absences = ref.watch(myAbsencesProvider).value ?? const <String, Absence>{};
+    final checkedIn = day != null && day.checkedIn;
+    final absentToday = checkedIn ? null : absences[attendanceDay(now)];
+    final absentTomorrow = absences[attendanceDay(DateTime(now.year, now.month, now.day + 1))];
+    // Leaving early (2026-10-23): before the end of the work day the direct
+    // manager approves first. Users not loaded yet: the button waits.
+    final open = day != null && day.checkedIn && !day.closed;
+    final users = ref.watch(usersProvider).value;
+    final byId = {for (final u in users ?? const <AppUser>[]) u.id: u};
+    final approvers = users == null ? const <String>[] : directManagersOf(me, users);
+    final approverNames = approvers.map((id) => byId[id]?.name ?? '').where((n) => n.isNotEmpty).join(', ');
+    final early = open ? ref.watch(myEarlyCheckoutTodayProvider).value : null;
+    final mustAsk = open && approvers.isNotEmpty && needsEarlyCheckoutApproval(now, hours) && !(early?.approved ?? false);
+    final endTime = time.format(DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute)));
 
     final String title;
     final String detail;
@@ -334,10 +418,9 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     } else if (!day.closed) {
       title = l10n.checkedInSince(time.format(day.checkInAt!), siteName);
       // Hours so far today (without overtime when it isn't allowed).
-      final now = DateTime.now();
       final end = DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute));
       final upTo = me.overtimeAllowed || now.isBefore(end) ? now : end;
-      final so = upTo.difference(day.checkInAt!);
+      final so = upTo.difference(day.checkInAt!) - Duration(minutes: day.awayMin ?? 0);
       detail = [
         l10n.checkedInFor(formatMinutes(so.isNegative ? 0 : so.inMinutes)),
         day.inside || day.lastExitAt == null ? l10n.atTheSite : l10n.leftSiteAt(time.format(day.lastExitAt!)),
@@ -363,11 +446,42 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.14), child: Icon(icon, color: color)),
-              title: Text(title, style: theme.textTheme.titleMedium),
-              subtitle: detail.isEmpty ? null : Text(detail),
-            ),
+            if (absentToday != null)
+              AbsenceNotice(absence: absentToday, today: true)
+            else
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.14),
+                  child: Icon(icon, color: color),
+                ),
+                title: Text(title, style: theme.textTheme.titleMedium),
+                subtitle: detail.isEmpty ? null : Text(detail),
+              ),
+            if (absentTomorrow != null) AbsenceNotice(absence: absentTomorrow, today: false),
+            if (early != null)
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  early.pending ? Icons.hourglass_top : early.approved ? Icons.check_circle : Icons.cancel,
+                  color: early.pending
+                      ? Colors.orange.shade800
+                      : early.approved
+                      ? Colors.green.shade700
+                      : theme.colorScheme.error,
+                ),
+                title: Text(early.pending
+                    ? l10n.earlyWaiting(approverNames)
+                    : early.approved
+                    ? l10n.earlyApproved(byId[early.decidedBy]?.name ?? '')
+                    : l10n.earlyRejected(byId[early.decidedBy]?.name ?? '')),
+                subtitle: Text([early.reason, if (early.comment.isNotEmpty) '“${early.comment}”'].join('\n')),
+                trailing: early.pending
+                    ? TextButton(
+                        onPressed: _busy ? null : () => cancelEarlyCheckout(early),
+                        child: Text(l10n.cancelRequest),
+                      )
+                    : null,
+              ),
             if (_always == false)
               ListTile(
                 dense: true,
@@ -395,28 +509,57 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: PhoneHealthTips(health: health!),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: widget.prominent ? Alignment.center : AlignmentDirectional.centerEnd,
-                widthFactor: widget.prominent ? null : 1,
-                child: day != null && day.checkedIn && !day.closed
-                    ? OutlinedButton.icon(
-                        style: widget.prominent ? OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
-                        onPressed: _busy ? null : _checkOut,
-                        icon: const Icon(Icons.logout),
-                        label: Text(l10n.checkOut),
-                      )
-                    : FilledButton.icon(
-                        style: widget.prominent ? FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
-                        onPressed: _busy || !geofencesSupported ? null : _checkIn,
-                        icon: _busy
-                            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.login),
-                        label: Text(day != null && day.closed ? l10n.checkInAgain : l10n.checkIn),
-                      ),
+            if (absentToday == null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: widget.prominent ? Alignment.center : AlignmentDirectional.centerEnd,
+                  widthFactor: widget.prominent ? null : 1,
+                  child: open && mustAsk
+                      ? OutlinedButton.icon(
+                          style: widget.prominent ? OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
+                          // Waiting for an answer: nothing to press yet.
+                          onPressed: _busy || (early?.pending ?? false)
+                              ? null
+                              : () => _askEarly(approvers, approverNames, endTime),
+                          icon: const Icon(Icons.directions_walk),
+                          label: Text(early != null && !early.pending ? l10n.earlyAskAgain : l10n.askLeaveEarly),
+                        )
+                      : open
+                      ? OutlinedButton.icon(
+                          style: widget.prominent ? OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
+                          onPressed: _busy || users == null ? null : _checkOut,
+                          icon: const Icon(Icons.logout),
+                          label: Text(l10n.checkOut),
+                        )
+                      : FilledButton.icon(
+                          style: widget.prominent ? FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
+                          onPressed: _busy || !geofencesSupported ? null : _checkIn,
+                          icon: _busy
+                              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.login),
+                          label: Text(day != null && day.closed ? l10n.checkInAgain : l10n.checkIn),
+                        ),
+                ),
               ),
-            ),
+            // Report an absence: today (until they check in) or tomorrow.
+            if ((absentToday == null && !checkedIn) || absentTomorrow == null)
+              Align(
+                alignment: widget.prominent ? Alignment.center : AlignmentDirectional.centerEnd,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TextButton.icon(
+                    onPressed: () => showAbsenceSheet(
+                      context,
+                      me,
+                      todayOpen: absentToday == null && !checkedIn,
+                      tomorrowOpen: absentTomorrow == null,
+                    ),
+                    icon: const Icon(Icons.event_busy_outlined),
+                    label: Text(l10n.absenceButton),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

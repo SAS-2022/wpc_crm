@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../notifications/notifications.dart' show peopleUnder;
 import '../../core/app_user.dart';
+import '../../core/providers.dart';
 import '../../core/save_file.dart';
 import '../../l10n/app_localizations.dart';
 import '../hr/leave_repository.dart';
@@ -13,6 +15,7 @@ import '../tracking/work_hours.dart';
 import '../tracking/work_hours_editor.dart';
 import '../users/companies.dart';
 import '../users/users_repository.dart';
+import 'absence.dart';
 import 'attendance_calendar.dart';
 import 'attendance_calendar_view.dart' show dayMarkColor;
 import 'attendance_card.dart' show checkOutTypeLabel;
@@ -85,7 +88,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                       if ((res.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(res.overtimeMin!)),
                       if ((res.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(res.afterHoursMin!)),
                     ].where((s) => s.isNotEmpty).join(' · '),
-                  _ => dayMarkLabel(l10n, d.mark),
+                  _ => reportDayStatus(l10n, d),
                 }),
                 trailing: d.result?.countedMin == null ? null : Text(formatMinutes(d.result!.countedMin!)),
               ),
@@ -109,8 +112,12 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final siteNames = {for (final s in sites) s.id: s.name};
     final companies = {for (final c in ref.watch(companiesProvider).value ?? const <Company>[]) c.id: c.name};
+    final me = ref.watch(currentUserProvider).value;
+    final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
+    // HR area: everyone; other managers: the people under them (2026-10-23).
+    final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
     final people = [
-      for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
+      for (final u in visible)
         if (u.active && u.checksAttendance) u,
     ]..sort((a, b) => a.name.compareTo(b.name));
 
@@ -119,6 +126,10 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
     for (final r in records.value ?? const <AttendanceRecord>[]) {
       final u = users[r.uid];
       if (u != null) (byUser[r.uid] ??= {})[r.date] = r.best(u, company);
+    }
+    final absences = <String, Map<String, Absence>>{};
+    for (final a in ref.watch(monthAbsencesProvider(monthKey)).value ?? const <Absence>[]) {
+      (absences[a.uid] ??= {})[a.date] = a;
     }
     final now = DateTime.now();
     final rows = [
@@ -134,6 +145,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
               if (r.uid == u.id && r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null)
                 ...daysBetween(r.from!, r.to!),
           },
+          absences: absences[u.id] ?? const {},
           today: now,
         ),
     ];
@@ -192,6 +204,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                             subtitle: Text([
                               l10n.reportSummaryLine(r.attended, r.workDays, r.missed, r.leave),
                               [
+                                if (r.absent > 0) l10n.daysReportedAbsent(r.absent),
                                 if (r.lateDays > 0) l10n.reportLateLine(r.lateDays, formatMinutes(r.lateMin)),
                                 if (r.overtimeMin > 0) l10n.overtimeTime(formatMinutes(r.overtimeMin)),
                                 if (r.afterHoursMin > 0) l10n.reportStayedLine(formatMinutes(r.afterHoursMin)),

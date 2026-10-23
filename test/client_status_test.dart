@@ -117,7 +117,8 @@ void main() {
       expect(rows[0].contacted, isFalse);
       expect(rows[0].days, 9);
       expect(rows[2].firstContact?.id, '3');
-      expect(rows[2].days, 3);
+      expect(rows[2].days, 3);      // Visited / called = archived (user request 2026-10-22).
+      expect([for (final r in rows) r.archived], [false, false, true]);
     });
 
     test('moves to Unassigned and before the period are left out; later moves marked', () {
@@ -135,6 +136,8 @@ void main() {
         ('c', 'sami', true),
         ('c', 'omar', false),
       ]);
+      // The earlier move of a client moved again is archived, the latest isn't.
+      expect([for (final r in rows) r.archived], [true, false]);
     });
 
     test('limited to the people (new or previous owner)', () {

@@ -27,6 +27,12 @@ import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 import 'client_links_widgets.dart';
 
+/// Digits only, with Saudi local numbers (05…) turned into 9665… (WhatsApp links).
+String whatsAppNumber(String phone) {
+  final digits = phone.replaceAll(RegExp(r'\D'), '');
+  return digits.startsWith('05') ? '966${digits.substring(1)}' : digits;
+}
+
 /// Client page: quick actions (call, WhatsApp, directions, visit), contact,
 /// location, sales details, notes, photos & files and visit history.
 class ClientDetailScreen extends ConsumerWidget {
@@ -37,11 +43,6 @@ class ClientDetailScreen extends ConsumerWidget {
   static String _money(double amount, String currency, String locale) =>
       NumberFormat.currency(locale: locale, name: currency.isEmpty ? 'SAR' : currency, decimalDigits: 2).format(amount);
 
-  /// Digits only, with Saudi local numbers (05…) turned into 9665….
-  static String _waNumber(String phone) {
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    return digits.startsWith('05') ? '966${digits.substring(1)}' : digits;
-  }
 
   /// Sales manager / GM: deletes the client after confirming. When it has
   /// visits, they must type their login password first (re-authentication).
@@ -301,7 +302,7 @@ class ClientDetailScreen extends ConsumerWidget {
                   'WhatsApp',
                   phone.isEmpty
                       ? null
-                      : () => launchUrl(Uri.parse('https://wa.me/${_waNumber(phone)}'), mode: LaunchMode.externalApplication),
+                      : () => launchUrl(Uri.parse('https://wa.me/${whatsAppNumber(phone)}'), mode: LaunchMode.externalApplication),
                 ),
                 action(
                   Icons.directions,

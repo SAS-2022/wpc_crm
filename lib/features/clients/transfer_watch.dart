@@ -27,6 +27,11 @@ class TransferWatch {
   final int days;
 
   bool get contacted => firstContact != null;
+
+  /// Done with (user request 2026-10-22: visited clients leave the list and
+  /// show only as archived): visited or called by the new salesperson, or
+  /// moved again since (a newer row follows the client).
+  bool get archived => contacted || movedAgain;
 }
 
 /// Moves to a salesperson (not to Unassigned) from [since] on, for the

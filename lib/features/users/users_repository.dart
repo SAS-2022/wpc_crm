@@ -92,9 +92,18 @@ class UsersRepository {
   /// login account (so the email can be used again), profile, role, push
   /// tokens and location data; their clients become unassigned and their
   /// sales team loses its KAM. Visits, plans, attendance and leave stay as
-  /// history. GM: anyone; sales manager: not GMs or sales managers.
+  /// history. Only the accounts in [userDeleterEmails].
   Future<void> delete(String uid) => saving(() async {
     await FirebaseFunctions.instance.httpsCallable('deleteUser').call<Object?>({'uid': uid});
+  });
+
+  /// Sets someone's password with the `setUserPassword` Cloud Function,
+  /// e.g. for username accounts, which can't get a reset email. GM: anyone;
+  /// sales manager: not GMs or sales managers; logistics manager: drivers.
+  Future<void> setPassword(String uid, String password) => saving(() async {
+    await FirebaseFunctions.instance
+        .httpsCallable('setUserPassword')
+        .call<Object?>({'uid': uid, 'password': password});
   });
 
   // RTDB keeps a copy of the role because its rules cannot read Firestore.
@@ -102,6 +111,10 @@ class UsersRepository {
     // Merged: keeps what the app writes itself (app versions, reminders).
     await _users.doc(uid).set(user.toMap(), SetOptions(merge: true));
     await FirebaseDatabase.instance.ref('roles/$uid').set(user.role.value);
+    // A driver's warehouse supervisor reads their tracking: RTDB rules use this copy.
+    await FirebaseDatabase.instance
+        .ref('driver_supervisors/$uid')
+        .set(user.role == UserRole.driver ? user.supervisorId : null);
     return user.role.isTracked && user.active && user.odooName.isNotEmpty
         ? _assignOdooClients(uid, user.odooName)
         : 0;

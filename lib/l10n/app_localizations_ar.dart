@@ -3905,4 +3905,486 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get moreActions => 'المزيد';
+
+  @override
+  String get settingAwayGrace => 'مدة الابتعاد عن الموقع قبل تسجيل الانصراف';
+
+  @override
+  String get settingAwayGraceHelp =>
+      'من لا يُسمح لهم بمغادرة موقع العمل ويبقون بعيدين أكثر من هذه المدة يُسجَّل انصرافهم وقت مغادرتهم. العودة تسجّل حضورهم من جديد.';
+
+  @override
+  String get leaveSiteAllowed => 'مسموح بمغادرة الموقع';
+
+  @override
+  String get leaveSiteAllowedHelp =>
+      'مغادرة الموقع خلال يوم العمل لا تسجّل الانصراف (عادة فريق المبيعات والسائقون).';
+
+  @override
+  String leaveSiteNotAllowedHelp(int minutes) {
+    return 'الابتعاد عن الموقع أكثر من $minutes دقيقة ← يُسجَّل الانصراف وقت المغادرة. العودة تسجّل الحضور من جديد، ولا يُحتسب وقت الغياب.';
+  }
+
+  @override
+  String get checkOutLeftSite => 'غادر الموقع';
+
+  @override
+  String get absenceSick => 'مريض';
+
+  @override
+  String get absenceTired => 'متعب';
+
+  @override
+  String get absenceCantCome => 'لا أستطيع الحضور';
+
+  @override
+  String get absencePickReason => 'اختر السبب';
+
+  @override
+  String get absenceWriteReason => 'اكتب السبب';
+
+  @override
+  String get absenceSent => 'تم الإرسال. تم إبلاغ الموارد البشرية ومديرك.';
+
+  @override
+  String get absenceTitle => 'لن أحضر إلى العمل';
+
+  @override
+  String get tomorrow => 'غداً';
+
+  @override
+  String get absenceReasonField => 'السبب';
+
+  @override
+  String get absenceSickHelp =>
+      'أرفق تقريرك الطبي (الآن أو لاحقاً). لا تقبل الموارد البشرية اليوم كإجازة مرضية إلا بالتقرير.';
+
+  @override
+  String get absenceSend => 'إرسال';
+
+  @override
+  String absentToday(String reason) {
+    return 'لن أحضر اليوم · $reason';
+  }
+
+  @override
+  String absentOn(String date, String reason) {
+    return 'لن أحضر يوم $date · $reason';
+  }
+
+  @override
+  String get absenceUndoConfirm => 'هل تريد التراجع عن هذا الغياب؟';
+
+  @override
+  String get absenceUndo => 'تراجع';
+
+  @override
+  String get sickReportMissing =>
+      'لم يُرفق التقرير الطبي بعد – مطلوب لاعتماد الإجازة المرضية';
+
+  @override
+  String get attachSickReport => 'إرفاق التقرير الطبي';
+
+  @override
+  String get openRequest => 'فتح الطلب';
+
+  @override
+  String get absenceButton => 'لن تحضر إلى العمل؟';
+
+  @override
+  String dayReportedAbsent(String reason) {
+    return 'أبلغ بالغياب: $reason';
+  }
+
+  @override
+  String daysReportedAbsent(int count) {
+    return '$count غياب مُبلّغ عنه';
+  }
+
+  @override
+  String get reportedAbsent => 'أبلغ بالغياب';
+
+  @override
+  String leaveDocumentMissingMine(String document) {
+    return 'أرفق $document – لا يمكن اعتماد الطلب بدونه.';
+  }
+
+  @override
+  String leaveDocumentMissing(String document) {
+    return 'بانتظار $document – يمكن اعتماده بعد إرفاقه.';
+  }
+
+  @override
+  String notifAbsenceReported(String name, String day, String reason) {
+    return '$name لن يحضر إلى العمل يوم $day – $reason';
+  }
+
+  @override
+  String get checkOutHr => 'صحّحته الموارد البشرية';
+
+  @override
+  String get asSickLeave => 'إجازة مرضية';
+
+  @override
+  String get asAnnualLeave => 'إجازة سنوية';
+
+  @override
+  String get absenceWaiting => 'بانتظار الموارد البشرية';
+
+  @override
+  String absenceAcceptedAs(String leave) {
+    return 'مقبول ك$leave';
+  }
+
+  @override
+  String get absenceRejectedText => 'غير مقبول – يُحتسب يوم غياب';
+
+  @override
+  String get attachDocument => 'إرفاق مستند';
+
+  @override
+  String documentsCount(int count) {
+    return '$count مستند';
+  }
+
+  @override
+  String get rejectAbsence => 'رفض';
+
+  @override
+  String acceptAbsenceAs(String leave) {
+    return 'قبول ك$leave';
+  }
+
+  @override
+  String get rejectAbsenceHelp => 'يُحتسب اليوم يوم غياب.';
+
+  @override
+  String get acceptAbsenceHelp =>
+      'يُحفظ طلب إجازة معتمد لهذا اليوم ويُخصم من رصيده، ويُبلَّغ مديره المباشر.';
+
+  @override
+  String get absenceNotFound => 'تم التراجع عن هذا الغياب.';
+
+  @override
+  String get sickReportMissingMine =>
+      'أرفق تقريرك الطبي – لا يمكن قبول اليوم كإجازة مرضية بدونه.';
+
+  @override
+  String get decideAbsence => 'القرار';
+
+  @override
+  String get sickNeedsDocument =>
+      'الإجازة المرضية تحتاج إلى مستند مرفق (تقرير طبي).';
+
+  @override
+  String annualLeaveLeft(String days) {
+    return 'المتبقي من الإجازة السنوية: $days يوم';
+  }
+
+  @override
+  String absencesWaiting(int count) {
+    return 'غيابات بانتظار القرار ($count)';
+  }
+
+  @override
+  String notifAbsenceAccepted(String name, String day, String leave) {
+    return 'قبل $name غيابك يوم $day ك$leave';
+  }
+
+  @override
+  String notifAbsenceRejected(String name, String day) {
+    return 'لم يقبل $name غيابك يوم $day – يُحتسب يوم غياب';
+  }
+
+  @override
+  String notifTeamOnLeave(String name, String dates) {
+    return '$name في إجازة: $dates';
+  }
+
+  @override
+  String get correctedByHr => 'صحّحته الموارد البشرية';
+
+  @override
+  String awayTime(String time) {
+    return 'غائب $time (غير محتسب)';
+  }
+
+  @override
+  String correctedBy(String name) {
+    return 'صحّحه $name';
+  }
+
+  @override
+  String get correctDay => 'تصحيح هذا اليوم';
+
+  @override
+  String get removeCorrection => 'إزالة التصحيح';
+
+  @override
+  String get openAbsence => 'فتح الغياب';
+
+  @override
+  String get openUser => 'فتح المستخدم';
+
+  @override
+  String get correctionNoteNeeded => 'اكتب سبب تصحيح اليوم';
+
+  @override
+  String correctDayOf(String name) {
+    return 'تصحيح يوم $name';
+  }
+
+  @override
+  String get correctDayHelp =>
+      'يحل محل ما سجّله الهاتف. بدون وقت انصراف تبقى أحداث الهاتف اللاحقة محتسبة.';
+
+  @override
+  String get checkOutFromPhone => 'من الهاتف';
+
+  @override
+  String get add => 'إضافة';
+
+  @override
+  String get correctionNote => 'سبب التصحيح';
+
+  @override
+  String get identityReason => 'أكّد هويتك لتسجيل الحضور أو الانصراف';
+
+  @override
+  String get identityLocked =>
+      'محاولات كثيرة – افتح الهاتف برمز PIN ثم حاول مجدداً.';
+
+  @override
+  String get absencesTab => 'الغيابات';
+
+  @override
+  String get absenceAcceptedFilter => 'مقبولة';
+
+  @override
+  String get absenceRejectedFilter => 'غير مقبولة';
+
+  @override
+  String get noAbsences => 'لا توجد غيابات هنا.';
+
+  @override
+  String transfersWaiting(int count) {
+    return 'لم تتم زيارتها بعد ($count)';
+  }
+
+  @override
+  String transfersArchived(int count) {
+    return 'المؤرشفة ($count)';
+  }
+
+  @override
+  String get transfersAllVisited =>
+      'تمت زيارة كل العملاء المنقولين – راجع المؤرشفة.';
+
+  @override
+  String get transfersNoneArchived =>
+      'لا شيء في الأرشيف بعد. ينتقل العميل إلى هنا بعد أن يزوره البائع الجديد أو يتصل به، أو عند نقله مرة أخرى.';
+
+  @override
+  String get deletedUser => 'مستخدم محذوف';
+
+  @override
+  String get emailOrUsername => 'البريد الإلكتروني أو اسم المستخدم';
+
+  @override
+  String get username => 'اسم المستخدم';
+
+  @override
+  String get signInWith => 'يسجّل الدخول باستخدام';
+
+  @override
+  String get usernameHelp =>
+      'أحرف إنجليزية وأرقام و . _ - (من 3 إلى 30). يسجّل الدخول به دون حاجة إلى بريد إلكتروني.';
+
+  @override
+  String get invalidUsername => 'من 3 إلى 30 حرفًا (a–z) أو أرقامًا أو . _ -';
+
+  @override
+  String get usernameInUse => 'اسم المستخدم هذا مستخدم بالفعل. اختر اسمًا آخر.';
+
+  @override
+  String get setPassword => 'تعيين كلمة المرور';
+
+  @override
+  String setPasswordFor(String name) {
+    return 'كلمة مرور جديدة لـ $name';
+  }
+
+  @override
+  String passwordSetFor(String name) {
+    return 'تم تغيير كلمة مرور $name. أخبره بكلمة المرور الجديدة.';
+  }
+
+  @override
+  String get usernameResetByManager =>
+      'لا يمكن إرسال رابط إعادة التعيين لحسابات اسم المستخدم. اطلب من مديرك تعيين كلمة مرور جديدة.';
+
+  @override
+  String get usernameAccountInfo =>
+      'نسيت كلمة المرور؟ اطلب من مديرك تعيين كلمة مرور جديدة.';
+
+  @override
+  String get reservedEmail =>
+      'لا يمكن استخدام هذا العنوان. أدخل بريدك الإلكتروني.';
+
+  @override
+  String get selectRole => 'اختر الدور';
+
+  @override
+  String get usernameAvailable => 'متاح';
+
+  @override
+  String get usernameTaken => 'مستخدم لحساب آخر';
+
+  @override
+  String get isManager => 'مدير';
+
+  @override
+  String get isManagerHelp =>
+      'يمكن اختياره مديراً مباشراً لموظفين آخرين، مثل مدير الحسابات.';
+
+  @override
+  String get directManager => 'المدير المباشر';
+
+  @override
+  String directManagerAuto(String names) {
+    return 'تلقائي ($names)';
+  }
+
+  @override
+  String get directManagerHelp =>
+      'يوافق على الانصراف المبكر ويُبلَّغ عند إجازة الموظف أو غيابه.';
+
+  @override
+  String get askLeaveEarly => 'طلب انصراف مبكر';
+
+  @override
+  String askLeaveEarlyHelp(String time, String names) {
+    return 'ينتهي يوم عملك الساعة $time. يجب أن يوافق $names قبل أن تسجّل الانصراف.';
+  }
+
+  @override
+  String earlyRequestSent(String names) {
+    return 'أُرسل الطلب إلى $names';
+  }
+
+  @override
+  String earlyWaiting(String names) {
+    return 'طلبت الانصراف مبكراً – بانتظار $names';
+  }
+
+  @override
+  String earlyApproved(String name) {
+    return 'وافق $name – يمكنك تسجيل الانصراف';
+  }
+
+  @override
+  String earlyRejected(String name) {
+    return 'لم يوافق $name على الانصراف المبكر';
+  }
+
+  @override
+  String get earlyAskAgain => 'اطلب مرة أخرى';
+
+  @override
+  String earlyRequestsWaiting(int count) {
+    return 'طلبات انصراف مبكر ($count)';
+  }
+
+  @override
+  String notifEarlyCheckoutRequested(String name) {
+    return 'يطلب $name الانصراف مبكراً اليوم';
+  }
+
+  @override
+  String notifEarlyCheckoutApproved(String name) {
+    return 'وافق $name على انصرافك المبكر – يمكنك تسجيل الانصراف الآن';
+  }
+
+  @override
+  String notifEarlyCheckoutRejected(String name) {
+    return 'لم يوافق $name على انصرافك المبكر';
+  }
+
+  @override
+  String get balanceColType => 'الإجازة';
+
+  @override
+  String get balanceColEntitled => 'المستحق';
+
+  @override
+  String get balanceColUsed => 'المستخدم';
+
+  @override
+  String get balanceColWaiting => 'بانتظار الموافقة';
+
+  @override
+  String get balanceColLeft => 'المتبقي';
+
+  @override
+  String get pageAccess => 'صلاحيات الصفحات';
+
+  @override
+  String get pageAccessSubtitle => 'الأدوار التي يمكنها فتح كل صفحة';
+
+  @override
+  String get pageAccessHelp =>
+      'الصفحات المظللة متاحة للدور؛ اضغط على الصفحة للسماح بها أو إزالتها (يُحفظ فوراً). الصفحات الرمادية بقفل لا يمكن منحها لهذا الدور لأن بياناتها محمية عنه (مثلاً السائقون لا يرون العملاء).';
+
+  @override
+  String get pageAccessLocked =>
+      'مفعّلة دائماً لمدير المبيعات والمدير العام، حتى لا يُمنع أحد من الإعدادات.';
+
+  @override
+  String get pageAccessMarkedManagers =>
+      'من حُدّد كـ\"مدير\" يرى دائماً حضور فريقه.';
+
+  @override
+  String get settingsSectionAccess => 'الصلاحيات';
+
+  @override
+  String get pageNotForRole =>
+      'غير متاحة لهذا الدور: بيانات هذه الصفحة محمية عنه.';
+
+  @override
+  String get showSalespeople => 'إظهار المندوبين';
+
+  @override
+  String get hideSalespeople => 'إخفاء المندوبين';
+
+  @override
+  String get searchAreaHint => 'منطقة، مثل الرياض، السلام';
+
+  @override
+  String get searchAreaHelp => 'اضغط إدخال للانتقال إليها';
+
+  @override
+  String get searchAreaGo => 'انتقال';
+
+  @override
+  String areaNotFound(String query) {
+    return 'لم يُعثر على مكان باسم \"$query\"';
+  }
+
+  @override
+  String get areaSearchFailed =>
+      'تعذّر البحث عن المكان. تحقق من الإنترنت وحاول مرة أخرى.';
+
+  @override
+  String get searchArea => 'منطقة';
+
+  @override
+  String searchAsArea(String text) {
+    return 'ابحث عن \"$text\" كمنطقة';
+  }
+
+  @override
+  String get showPassword => 'إظهار كلمة المرور';
+
+  @override
+  String get hidePassword => 'إخفاء كلمة المرور';
 }

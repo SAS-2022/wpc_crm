@@ -96,6 +96,12 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
     final canAct = canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey);
     final fmt = DateFormat.yMMMd(locale).add_jm();
     final dates = leaveDatesText(r, locale, l10n);
+    // A type that needs a document (sick leave: medical report) can't be
+    // approved until one is attached; sick days reported from the attendance
+    // card are sent without it (2026-10-22).
+    final type = (ref.watch(leaveTypesProvider).value ?? LeaveType.defaults).where((t) => t.id == r.typeId).firstOrNull;
+    final files = ref.watch(attachmentsProvider((parent: AttachmentParent.leaveRequests, id: r.id))).value;
+    final documentMissing = r.status == LeaveStatus.pending && (type?.needsDocument ?? false) && files != null && files.isEmpty;
 
     return Scaffold(
       appBar: AppBar(title: Text(r.typeName(lang))),
@@ -117,6 +123,20 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             ListTile(leading: const Icon(Icons.event), title: Text(dates), subtitle: r.halfDay ? Text(l10n.halfDay) : null),
           if (r.reason.isNotEmpty)
             ListTile(leading: const Icon(Icons.notes), title: SelectableText(r.reason)),
+          // HR area: the person's balance for the request's year.
+          if (r.isLeave && me.role.canSeeHr)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: LeaveBalanceTable(uid: r.uid, year: r.year, highlightTypeId: r.typeId),
+            ),
+          if (documentMissing)
+            ListTile(
+              leading: Icon(Icons.attach_file, color: theme.colorScheme.error),
+              title: Text(
+                mine ? l10n.leaveDocumentMissingMine(type!.document(lang)) : l10n.leaveDocumentMissing(type!.document(lang)),
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ),
           AttachmentsSection(
             owner: (parent: AttachmentParent.leaveRequests, id: r.id),
             canAdd: (mine && r.status == LeaveStatus.pending) || me.role.canManageHr,
@@ -164,7 +184,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: _busy ? null : () => _decide(me, approve: true),
+                    onPressed: _busy || documentMissing ? null : () => _decide(me, approve: true),
                     icon: busyIcon(_busy, const Icon(Icons.check)),
                     label: Text(l10n.approve),
                   ),

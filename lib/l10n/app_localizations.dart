@@ -6553,6 +6553,786 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'More'**
   String get moreActions;
+
+  /// No description provided for @settingAwayGrace.
+  ///
+  /// In en, this message translates to:
+  /// **'Away from the site before check-out'**
+  String get settingAwayGrace;
+
+  /// No description provided for @settingAwayGraceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'People not allowed to leave their work site who stay away longer than this are checked out at the time they left. Coming back checks them in again.'**
+  String get settingAwayGraceHelp;
+
+  /// No description provided for @leaveSiteAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed to leave the site'**
+  String get leaveSiteAllowed;
+
+  /// No description provided for @leaveSiteAllowedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving the site during the work day doesn\'t check them out (usually the sales team and drivers).'**
+  String get leaveSiteAllowedHelp;
+
+  /// No description provided for @leaveSiteNotAllowedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Away from the site for more than {minutes} min → checked out at the time they left. Coming back checks them in again; the time away doesn\'t count.'**
+  String leaveSiteNotAllowedHelp(int minutes);
+
+  /// No description provided for @checkOutLeftSite.
+  ///
+  /// In en, this message translates to:
+  /// **'left the site'**
+  String get checkOutLeftSite;
+
+  /// No description provided for @absenceSick.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick'**
+  String get absenceSick;
+
+  /// No description provided for @absenceTired.
+  ///
+  /// In en, this message translates to:
+  /// **'Tired'**
+  String get absenceTired;
+
+  /// No description provided for @absenceCantCome.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t come'**
+  String get absenceCantCome;
+
+  /// No description provided for @absencePickReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a reason'**
+  String get absencePickReason;
+
+  /// No description provided for @absenceWriteReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Write the reason'**
+  String get absenceWriteReason;
+
+  /// No description provided for @absenceSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent. HR and your manager have been told.'**
+  String get absenceSent;
+
+  /// No description provided for @absenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not coming to work'**
+  String get absenceTitle;
+
+  /// No description provided for @tomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get tomorrow;
+
+  /// No description provided for @absenceReasonField.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get absenceReasonField;
+
+  /// No description provided for @absenceSickHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach your medical report (now or later). HR accepts the day as sick leave only with the report.'**
+  String get absenceSickHelp;
+
+  /// No description provided for @absenceSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get absenceSend;
+
+  /// No description provided for @absentToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Not coming today · {reason}'**
+  String absentToday(String reason);
+
+  /// No description provided for @absentOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Not coming on {date} · {reason}'**
+  String absentOn(String date, String reason);
+
+  /// No description provided for @absenceUndoConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Take back this absence?'**
+  String get absenceUndoConfirm;
+
+  /// No description provided for @absenceUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get absenceUndo;
+
+  /// No description provided for @sickReportMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical report not attached yet – needed to approve the sick leave'**
+  String get sickReportMissing;
+
+  /// No description provided for @attachSickReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach medical report'**
+  String get attachSickReport;
+
+  /// No description provided for @openRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Open request'**
+  String get openRequest;
+
+  /// No description provided for @absenceButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Not coming to work?'**
+  String get absenceButton;
+
+  /// No description provided for @dayReportedAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported absent: {reason}'**
+  String dayReportedAbsent(String reason);
+
+  /// No description provided for @daysReportedAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reported absent'**
+  String daysReportedAbsent(int count);
+
+  /// No description provided for @reportedAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported absent'**
+  String get reportedAbsent;
+
+  /// No description provided for @leaveDocumentMissingMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach the {document} – the request can be approved only with it.'**
+  String leaveDocumentMissingMine(String document);
+
+  /// No description provided for @leaveDocumentMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the {document} – it can be approved once it is attached.'**
+  String leaveDocumentMissing(String document);
+
+  /// No description provided for @notifAbsenceReported.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} won\'t be at work on {day} – {reason}'**
+  String notifAbsenceReported(String name, String day, String reason);
+
+  /// No description provided for @checkOutHr.
+  ///
+  /// In en, this message translates to:
+  /// **'corrected by HR'**
+  String get checkOutHr;
+
+  /// No description provided for @asSickLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'sick leave'**
+  String get asSickLeave;
+
+  /// No description provided for @asAnnualLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'annual leave'**
+  String get asAnnualLeave;
+
+  /// No description provided for @absenceWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for HR'**
+  String get absenceWaiting;
+
+  /// No description provided for @absenceAcceptedAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted as {leave}'**
+  String absenceAcceptedAs(String leave);
+
+  /// No description provided for @absenceRejectedText.
+  ///
+  /// In en, this message translates to:
+  /// **'Not accepted – counts as an absence day'**
+  String get absenceRejectedText;
+
+  /// No description provided for @attachDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach document'**
+  String get attachDocument;
+
+  /// No description provided for @documentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} document(s)'**
+  String documentsCount(int count);
+
+  /// No description provided for @rejectAbsence.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get rejectAbsence;
+
+  /// No description provided for @acceptAbsenceAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept as {leave}'**
+  String acceptAbsenceAs(String leave);
+
+  /// No description provided for @rejectAbsenceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The day counts as an absence day.'**
+  String get rejectAbsenceHelp;
+
+  /// No description provided for @acceptAbsenceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'An approved leave request is saved for this day and taken from their balance. Their direct manager is told.'**
+  String get acceptAbsenceHelp;
+
+  /// No description provided for @absenceNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This absence was taken back.'**
+  String get absenceNotFound;
+
+  /// No description provided for @sickReportMissingMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach your medical report – the day can be accepted as sick leave only with it.'**
+  String get sickReportMissingMine;
+
+  /// No description provided for @decideAbsence.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision'**
+  String get decideAbsence;
+
+  /// No description provided for @sickNeedsDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick leave needs a document (medical report) attached.'**
+  String get sickNeedsDocument;
+
+  /// No description provided for @annualLeaveLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual leave left: {days} days'**
+  String annualLeaveLeft(String days);
+
+  /// No description provided for @absencesWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Absences to decide ({count})'**
+  String absencesWaiting(int count);
+
+  /// No description provided for @notifAbsenceAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} accepted your absence on {day} as {leave}'**
+  String notifAbsenceAccepted(String name, String day, String leave);
+
+  /// No description provided for @notifAbsenceRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t accept your absence on {day} – it counts as an absence day'**
+  String notifAbsenceRejected(String name, String day);
+
+  /// No description provided for @notifTeamOnLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is on leave: {dates}'**
+  String notifTeamOnLeave(String name, String dates);
+
+  /// No description provided for @correctedByHr.
+  ///
+  /// In en, this message translates to:
+  /// **'Corrected by HR'**
+  String get correctedByHr;
+
+  /// No description provided for @awayTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Away {time} (not counted)'**
+  String awayTime(String time);
+
+  /// No description provided for @correctedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Corrected by {name}'**
+  String correctedBy(String name);
+
+  /// No description provided for @correctDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct this day'**
+  String get correctDay;
+
+  /// No description provided for @removeCorrection.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove correction'**
+  String get removeCorrection;
+
+  /// No description provided for @openAbsence.
+  ///
+  /// In en, this message translates to:
+  /// **'Open absence'**
+  String get openAbsence;
+
+  /// No description provided for @openUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open user'**
+  String get openUser;
+
+  /// No description provided for @correctionNoteNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Write why the day is corrected'**
+  String get correctionNoteNeeded;
+
+  /// No description provided for @correctDayOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct {name}\'s day'**
+  String correctDayOf(String name);
+
+  /// No description provided for @correctDayHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaces what the phone recorded. Without a check-out, the phone\'s later events still count.'**
+  String get correctDayHelp;
+
+  /// No description provided for @checkOutFromPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'From the phone'**
+  String get checkOutFromPhone;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @correctionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for the correction'**
+  String get correctionNote;
+
+  /// No description provided for @identityReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm it\'s you to check in or out'**
+  String get identityReason;
+
+  /// No description provided for @identityLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries – unlock the phone with your PIN and try again.'**
+  String get identityLocked;
+
+  /// No description provided for @absencesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Absences'**
+  String get absencesTab;
+
+  /// No description provided for @absenceAcceptedFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get absenceAcceptedFilter;
+
+  /// No description provided for @absenceRejectedFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Not accepted'**
+  String get absenceRejectedFilter;
+
+  /// No description provided for @noAbsences.
+  ///
+  /// In en, this message translates to:
+  /// **'No absences here.'**
+  String get noAbsences;
+
+  /// No description provided for @transfersWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited yet ({count})'**
+  String transfersWaiting(int count);
+
+  /// No description provided for @transfersArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived ({count})'**
+  String transfersArchived(int count);
+
+  /// No description provided for @transfersAllVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Every moved client has been visited – see Archived.'**
+  String get transfersAllVisited;
+
+  /// No description provided for @transfersNoneArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing archived yet. Clients go here once the new salesperson visits or calls them, or when they\'re moved again.'**
+  String get transfersNoneArchived;
+
+  /// No description provided for @deletedUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted user'**
+  String get deletedUser;
+
+  /// No description provided for @emailOrUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Email or username'**
+  String get emailOrUsername;
+
+  /// No description provided for @username.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get username;
+
+  /// No description provided for @signInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Signs in with'**
+  String get signInWith;
+
+  /// No description provided for @usernameHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters, numbers, . _ - (3–30). They sign in with this; no email is needed.'**
+  String get usernameHelp;
+
+  /// No description provided for @invalidUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'3–30 letters (a–z), numbers, . _ or -'**
+  String get invalidUsername;
+
+  /// No description provided for @usernameInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This username is taken. Choose another one.'**
+  String get usernameInUse;
+
+  /// No description provided for @setPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set password'**
+  String get setPassword;
+
+  /// No description provided for @setPasswordFor.
+  ///
+  /// In en, this message translates to:
+  /// **'New password for {name}'**
+  String setPasswordFor(String name);
+
+  /// No description provided for @passwordSetFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed for {name}. Tell them the new one.'**
+  String passwordSetFor(String name);
+
+  /// No description provided for @usernameResetByManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts with a username can\'t get a reset email. Ask your manager to set a new password.'**
+  String get usernameResetByManager;
+
+  /// No description provided for @usernameAccountInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot your password? Ask your manager to set a new one.'**
+  String get usernameAccountInfo;
+
+  /// No description provided for @reservedEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'This address can\'t be used. Enter your own email.'**
+  String get reservedEmail;
+
+  /// No description provided for @selectRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a role'**
+  String get selectRole;
+
+  /// No description provided for @usernameAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get usernameAvailable;
+
+  /// No description provided for @usernameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Already used by another account'**
+  String get usernameTaken;
+
+  /// No description provided for @isManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Is a manager'**
+  String get isManager;
+
+  /// No description provided for @isManagerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Can be chosen as someone\'s direct manager, e.g. the accounting manager.'**
+  String get isManagerHelp;
+
+  /// No description provided for @directManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct manager'**
+  String get directManager;
+
+  /// No description provided for @directManagerAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic ({names})'**
+  String directManagerAuto(String names);
+
+  /// No description provided for @directManagerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Approves leaving early and is told when they\'re on leave or absent.'**
+  String get directManagerHelp;
+
+  /// No description provided for @askLeaveEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask to leave early'**
+  String get askLeaveEarly;
+
+  /// No description provided for @askLeaveEarlyHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your work day ends at {time}. {names} must approve before you can check out.'**
+  String askLeaveEarlyHelp(String time, String names);
+
+  /// No description provided for @earlyRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent to {names}'**
+  String earlyRequestSent(String names);
+
+  /// No description provided for @earlyWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked to leave early – waiting for {names}'**
+  String earlyWaiting(String names);
+
+  /// No description provided for @earlyApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved – you can check out'**
+  String earlyApproved(String name);
+
+  /// No description provided for @earlyRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t approve leaving early'**
+  String earlyRejected(String name);
+
+  /// No description provided for @earlyAskAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask again'**
+  String get earlyAskAgain;
+
+  /// No description provided for @earlyRequestsWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking to leave early ({count})'**
+  String earlyRequestsWaiting(int count);
+
+  /// No description provided for @notifEarlyCheckoutRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asks to leave early today'**
+  String notifEarlyCheckoutRequested(String name);
+
+  /// No description provided for @notifEarlyCheckoutApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved your early check-out – you can check out now'**
+  String notifEarlyCheckoutApproved(String name);
+
+  /// No description provided for @notifEarlyCheckoutRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t approve your early check-out'**
+  String notifEarlyCheckoutRejected(String name);
+
+  /// No description provided for @balanceColType.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get balanceColType;
+
+  /// No description provided for @balanceColEntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'Entitled'**
+  String get balanceColEntitled;
+
+  /// No description provided for @balanceColUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get balanceColUsed;
+
+  /// No description provided for @balanceColWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get balanceColWaiting;
+
+  /// No description provided for @balanceColLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get balanceColLeft;
+
+  /// No description provided for @pageAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Page access'**
+  String get pageAccess;
+
+  /// No description provided for @pageAccessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Which roles may open each page'**
+  String get pageAccessSubtitle;
+
+  /// No description provided for @pageAccessHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlighted pages are open to the role; tap a page to allow or remove it (saved right away). Greyed pages with a lock can\'t be given to that role, because the data they show is protected for it (e.g. drivers can\'t see clients).'**
+  String get pageAccessHelp;
+
+  /// No description provided for @pageAccessLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Always on for sales managers and GMs, so nobody is locked out of the settings.'**
+  String get pageAccessLocked;
+
+  /// No description provided for @pageAccessMarkedManagers.
+  ///
+  /// In en, this message translates to:
+  /// **'People marked \"Is a manager\" always see their team\'s attendance.'**
+  String get pageAccessMarkedManagers;
+
+  /// No description provided for @settingsSectionAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Access'**
+  String get settingsSectionAccess;
+
+  /// No description provided for @pageNotForRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available for this role: the data this page shows is protected for it.'**
+  String get pageNotForRole;
+
+  /// No description provided for @showSalespeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Show salespeople'**
+  String get showSalespeople;
+
+  /// No description provided for @hideSalespeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide salespeople'**
+  String get hideSalespeople;
+
+  /// No description provided for @searchAreaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Area, e.g. Riyadh, Al Salam'**
+  String get searchAreaHint;
+
+  /// No description provided for @searchAreaHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Press Enter to go there'**
+  String get searchAreaHelp;
+
+  /// No description provided for @searchAreaGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go'**
+  String get searchAreaGo;
+
+  /// No description provided for @areaNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No place found for \"{query}\"'**
+  String areaNotFound(String query);
+
+  /// No description provided for @areaSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search the place. Check the internet and try again.'**
+  String get areaSearchFailed;
+
+  /// No description provided for @searchArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get searchArea;
+
+  /// No description provided for @searchAsArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Search \"{text}\" as an area'**
+  String searchAsArea(String text);
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,7 +39,13 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
   try {
     if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     final user = await FirebaseAuth.instance.authStateChanges().first;
-    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    // Signed out (2026-10-22: arrivals were lost while signed out, so signing
+    // in later counted as arriving then): kept on the phone for the person
+    // whose sites these are, sent with their real time at the next sign-in.
+    final owner = user?.uid ?? prefs.getString(_ownerKey);
+    if (owner == null) return;
     final now = DateTime.now();
     final fix = await _freshFix();
     for (final g in params.geofences) {
@@ -55,6 +62,10 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
           continue;
         }
         extra = {'dist': distance.round(), 'acc': fix.accuracy.round()};
+      }
+      if (user == null) {
+        await _queue(prefs, owner, type, g.id, now, extra);
+        continue;
       }
       // Kept on the phone and sent when online if this times out.
       await recordAttendance(user.uid, type, siteId: g.id, at: now, extra: extra)
@@ -83,6 +94,48 @@ Future<bool> hasAlwaysLocation() async => geofencesSupported && await Permission
 
 const _signatureKey = 'attendanceGeofences';
 
+/// Whose sites the registered geofences are (the last person signed in).
+const _ownerKey = 'attendanceGeofencesOwner';
+
+/// Events that came while nobody was signed in: [{uid, type, siteId, at, extra}].
+const _queueKey = 'attendancePendingEvents';
+
+Future<void> _queue(SharedPreferences prefs, String uid, AttendanceEventType type, String siteId, DateTime at,
+    Map<String, Object>? extra) async {
+  await prefs.reload();
+  final list = [...prefs.getStringList(_queueKey) ?? const <String>[]];
+  list.add(jsonEncode({
+    'uid': uid,
+    'type': eventTypeKey(type),
+    'siteId': siteId,
+    'at': at.millisecondsSinceEpoch,
+    'extra': {...?extra, 'queued': true},
+  }));
+  await prefs.setStringList(_queueKey, list);
+}
+
+/// Sends [uid]'s events kept while signed out, with their real times; older
+/// than 3 days or someone else's are dropped.
+Future<void> _flushQueue(String uid) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.reload(); // written by the background callback's isolate
+  final list = prefs.getStringList(_queueKey);
+  if (list == null || list.isEmpty) return;
+  await prefs.remove(_queueKey);
+  final oldest = DateTime.now().subtract(const Duration(days: 3));
+  for (final raw in list) {
+    try {
+      final e = jsonDecode(raw) as Map<String, dynamic>;
+      final type = eventTypeFromKey(e['type']);
+      final at = DateTime.fromMillisecondsSinceEpoch(e['at'] as int);
+      if (e['uid'] != uid || type == null || at.isBefore(oldest)) continue;
+      await recordAttendance(uid, type, siteId: e['siteId'] as String?, at: at, extra: (e['extra'] as Map).cast<String, Object>());
+    } catch (err) {
+      debugPrint('attendance queue: $err');
+    }
+  }
+}
+
 /// Registered once since the app started.
 var _registeredThisLaunch = false;
 
@@ -95,7 +148,10 @@ var _registeredThisLaunch = false;
 final attendanceGeofencesProvider = Provider<void>((ref) {
   if (!geofencesSupported) return;
   final me = ref.watch(currentUserProvider).value;
-  final sites = ref.watch(workSitesProvider).value;
+  final sitesValue = ref.watch(workSitesProvider);
+  // Still loading (e.g. right after sign-in, with the signed-out empty list
+  // as the old value): wait, so the geofences aren't dropped meanwhile.
+  final sites = sitesValue.isLoading ? null : sitesValue.value;
   if (me == null || sites == null) return;
   final mine = [
     for (final s in sites)
@@ -103,7 +159,13 @@ final attendanceGeofencesProvider = Provider<void>((ref) {
   ];
   final force = !_registeredThisLaunch;
   _registeredThisLaunch = true;
-  unawaited(_sync(mine, force: force));
+  unawaited(() async {
+    // First what happened while signed out, so a re-registration's "already
+    // inside" doesn't become the day's first arrival.
+    await _flushQueue(me.id);
+    await (await SharedPreferences.getInstance()).setString(_ownerKey, me.id);
+    await _sync(mine, force: force);
+  }());
 });
 
 /// Re-registers after the user granted "Always" (the card asks for it).

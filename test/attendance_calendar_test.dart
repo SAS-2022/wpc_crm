@@ -46,4 +46,21 @@ void main() {
     expect(daysBetween('2026-10-30', '2026-11-02'), {'2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'});
     expect(daysBetween('2026-10-05', '2026-10-01'), isEmpty);
   });
+
+  test('reported absences: absent instead of missed, also ahead of time; approved leave wins', () {
+    final a = markMonth(
+      month: DateTime(2026, 10),
+      attended: {'2026-10-04'},
+      workDays: workDays,
+      holidays: const {},
+      leaveDays: {'2026-10-06'},
+      absentDays: {'2026-10-06', '2026-10-07', '2026-10-21', '2026-10-04'},
+      since: DateTime(2026, 10, 4),
+      today: DateTime(2026, 10, 20),
+    );
+    expect(a[DateTime(2026, 10, 7)], DayMark.absent);
+    expect(a[DateTime(2026, 10, 21)], DayMark.absent); // tomorrow, reported
+    expect(a[DateTime(2026, 10, 6)], DayMark.leave);
+    expect(a[DateTime(2026, 10, 4)], DayMark.attended); // came after all
+  });
 }
