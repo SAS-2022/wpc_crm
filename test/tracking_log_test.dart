@@ -35,4 +35,13 @@ void main() {
     expect(log.first.lasted, const Duration(minutes: 20));
     expect(log.last.event.isProblem, isFalse);
   });
+
+  test('a quiet phone lasts until the wake-up check woke it', () {
+    final log = trackingLog([
+      TrackingEvent(at: DateTime(2026, 10, 24, 12, 10), type: 'quiet'),
+      TrackingEvent(at: DateTime(2026, 10, 24, 12, 22), type: 'woken'),
+    ]);
+    expect(log.first.event.isProblem, isTrue);
+    expect(log.first.lasted, const Duration(minutes: 12));
+  });
 }

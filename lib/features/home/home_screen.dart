@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../vehicles/vehicle_widgets.dart';
 import '../../core/app_user.dart';
 import '../../core/skeleton.dart';
 import '../../core/providers.dart';
@@ -155,6 +156,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const PendingAbsencesCard(),
           // Direct managers: today's requests to leave early (hidden when none).
           const EarlyCheckoutRequestsCard(),
+          // Vehicle renewals expired or due within 30 days (hidden when none).
+          const VehicleRenewalsCard(),
           // Filters: period and person, in one row above the numbers.
           Wrap(
             spacing: 8,
@@ -421,6 +424,7 @@ class _BackOfficeHome extends ConsumerWidget {
           const LeaveApprovalsCard(),
           const PendingAbsencesCard(),
           const EarlyCheckoutRequestsCard(),
+          const VehicleRenewalsCard(),
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
@@ -443,6 +447,19 @@ class _BackOfficeHome extends ConsumerWidget {
                 title: Text(l10n.driversPage),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/drivers'),
+              ),
+            ),
+          ],
+          if (me.role.managesDrivers &&
+              (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.vehicles)) ...[
+            const SizedBox(height: 12),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.directions_car_outlined),
+                title: Text(l10n.vehicles),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/vehicles'),
               ),
             ),
           ],

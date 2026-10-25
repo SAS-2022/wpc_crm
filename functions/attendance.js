@@ -20,10 +20,14 @@
 // - a manual check-in reopens a closed day; the time between the check-out
 //   and coming back doesn't count (awayMin);
 // - still open late in the evening (no exit seen): closed at the end of the
-//   work day, marked 'auto';
-// - overtime allowed: time after the end counts (overtime); not allowed: the
-//   day counts only up to the end of the work day, and the time stayed after
-//   it is recorded as afterHoursMin (2026-10-20);
+//   work day, marked 'auto' — with overtime allowed, at the last time they
+//   were seen at the site instead (an arrival event, or a GPS fix the server
+//   passes as lastSeenAt; 2026-10-24: a phone that stopped reporting lost the
+//   evening's overtime), at most the overtime cap after the end;
+// - overtime allowed: time after the end counts (overtime) up to the
+//   person's cap (`users.overtimeMaxMin`, default 3 h — user decision
+//   2026-10-24); time beyond the cap and, without overtime, all time stayed
+//   after the end is recorded as afterHoursMin, not counted (2026-10-20);
 // - HR correction (2026-10-22, `correction` on the day, see correctedEvents):
 //   replaces what the phone recorded; checkOutType 'hr';
 // - lateMin: minutes after the start of the work day they checked in
@@ -37,6 +41,12 @@ const LATE_GRACE_MIN = 15;
 
 /** Away from the site longer than this (not allowed to leave) → checked out when they left. */
 const AWAY_GRACE_MIN = 30;
+
+/** Most overtime counted a day unless the user form sets more (user decision 2026-10-24). */
+const OVERTIME_MAX_MIN = 180;
+
+/** `users.overtimeMaxMin` when set (1 min – 24 h), else [OVERTIME_MAX_MIN]. Same as AppUser.overtimeCapMin. */
+const overtimeCap = (v) => (typeof v === 'number' && v > 0 && v <= 1440 ? Math.round(v) : OVERTIME_MAX_MIN);
 
 /** Whole minutes after the start (seconds dropped); 0 within the grace period. Same as lateMinutes in attendance_rules.dart. */
 function lateMinutes(ms, graceMin = LATE_GRACE_MIN) {
@@ -52,8 +62,9 @@ function saudiTime(date, minutes) {
 
 /**
  * @param {Array<{type: string, at: number, siteId?: string, source?: string}>} events
- * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean, graceMin?: number, awayGraceMin?: number}} o
- *   graceMin: App settings `lateGraceMin` (default LATE_GRACE_MIN); awayGraceMin: `awayGraceMin` (AWAY_GRACE_MIN).
+ * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean, overtimeMaxMin?: number, lastSeenAt?: number|null, graceMin?: number, awayGraceMin?: number}} o
+ *   graceMin: App settings `lateGraceMin` (default LATE_GRACE_MIN); awayGraceMin: `awayGraceMin` (AWAY_GRACE_MIN);
+ *   overtimeMaxMin: the person's cap (OVERTIME_MAX_MIN); lastSeenAt: last GPS fix at the site (server only).
  */
 function deriveDay(events, o) {
   const s = {
@@ -75,6 +86,9 @@ function deriveDay(events, o) {
     s.checkOutType = null;
   };
   const graceMs = (o.awayGraceMin ?? AWAY_GRACE_MIN) * MINUTE;
+  const capMs = (o.overtimeMaxMin ?? OVERTIME_MAX_MIN) * MINUTE;
+  // Last time the person was seen at the site (arrival / check-in events, GPS).
+  let seenAt = typeof o.lastSeenAt === 'number' ? o.lastSeenAt : null;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   const awayTooLong = (t) => !o.leavesSite && s.checkInAt !== null && !s.closed && !s.inside
     && s.lastExitAt !== null && s.lastExitAt < o.endMs && t >= s.lastExitAt + graceMs;
@@ -82,6 +96,7 @@ function deriveDay(events, o) {
   for (const e of sorted) {
     if (awayTooLong(e.at)) close(s.lastExitAt, 'leftSite');
     if (e.type === 'in' || e.type === 'checkIn' || e.type === 'hrIn') {
+      seenAt = Math.max(seenAt ?? 0, e.at);
       if (s.checkInAt === null) {
         s.checkInAt = e.at;
         s.checkInSource = e.type === 'checkIn' ? 'manual' : e.type === 'hrIn' ? 'hr' : 'auto';
@@ -110,16 +125,20 @@ function deriveDay(events, o) {
     else close(s.lastExitAt ?? o.endMs, 'leftEarly');
   }
   if (s.checkInAt !== null && !s.closed && o.now >= o.closeAllMs) {
-    close(Math.max(o.endMs, s.checkInAt), 'auto');
+    // No exit seen: the end of the work day, or with overtime the last time
+    // they were seen at the site (up to the cap).
+    const from = Math.max(o.endMs, s.checkInAt);
+    close(o.overtimeAllowed && seenAt !== null ? Math.min(Math.max(seenAt, from), from + capMs) : from, 'auto');
   }
   let workedMin = null, countedMin = null, overtimeMin = null, afterHoursMin = null;
   if (s.closed) {
     workedMin = Math.max(0, Math.round((s.checkOutAt - s.checkInAt - awayBefore - awayAfter) / MINUTE));
     const extra = Math.max(0, s.checkOutAt - Math.max(o.endMs, s.checkInAt) - awayAfter);
-    overtimeMin = o.overtimeAllowed ? Math.round(extra / MINUTE) : 0;
-    afterHoursMin = o.overtimeAllowed ? 0 : Math.round(extra / MINUTE);
+    const overtime = o.overtimeAllowed ? Math.min(extra, capMs) : 0;
+    overtimeMin = Math.round(overtime / MINUTE);
+    afterHoursMin = Math.round((extra - overtime) / MINUTE);
     countedMin = o.overtimeAllowed
-      ? workedMin
+      ? Math.max(0, workedMin - afterHoursMin)
       : Math.max(0, Math.round((Math.min(s.checkOutAt, o.endMs) - s.checkInAt - awayBefore) / MINUTE));
   }
   const awayMin = Math.round((awayBefore + awayAfter) / MINUTE);
@@ -142,4 +161,4 @@ function correctedEvents(events, c) {
   return [first, ...phone.filter((e) => e.at > c.checkInAt)];
 }
 
-module.exports = { deriveDay, correctedEvents, saudiTime, LATE_GRACE_MIN, AWAY_GRACE_MIN };
+module.exports = { deriveDay, correctedEvents, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN };

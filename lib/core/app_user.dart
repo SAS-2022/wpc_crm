@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../l10n/app_localizations.dart';
+import '../features/attendance/attendance_rules.dart' show defaultOvertimeMaxMin;
 import '../features/tracking/work_hours.dart';
 import 'app_version.dart';
 
@@ -165,12 +166,15 @@ class AppUser {
     this.registeredAt,
     this.workSiteIds = const [],
     this.overtimeAllowed = false,
+    this.overtimeMaxMin,
     this.attendanceRequired,
     this.leaveSiteAllowed,
     this.workSchedule,
     this.managerId,
     this.markedManager = false,
     this.supervisorId,
+    this.joiningDate,
+    this.department,
   });
 
   final String id;
@@ -231,6 +235,13 @@ class AppUser {
   final List<String> workSiteIds;
   final bool overtimeAllowed;
 
+  /// Most overtime counted a day (user form, 2026-10-24); null = 3 hours.
+  final int? overtimeMaxMin;
+  int get overtimeCapMin {
+    final v = overtimeMaxMin;
+    return v != null && v > 0 && v <= 1440 ? v : defaultOvertimeMaxMin;
+  }
+
   /// Set on the user form (2026-10-20). Not set yet: everyone outside the
   /// sales team, plus sales people already given a work site.
   final bool? attendanceRequired;
@@ -269,6 +280,29 @@ class AppUser {
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
   bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
 
+  /// Joining date 'yyyy-MM-dd' (HR, 2026-10-24): their leave year starts
+  /// on its anniversary (`leaveYearOf` in leave_rules.dart); null = the
+  /// calendar year.
+  final String? joiningDate;
+
+  /// Department id (`settings/departments`, 2026-10-24) as set on the user
+  /// form / by HR; null = [defaultDepartmentOf] their role.
+  final String? department;
+  String? get departmentId => department ?? defaultDepartmentOf(role);
+
+  /// The department a role belongs to until one is chosen (ids of
+  /// `defaultDepartments`); workers and engineers: none.
+  static String? defaultDepartmentOf(UserRole role) => switch (role) {
+        UserRole.salesExec || UserRole.kam || UserRole.salesManager => 'sales',
+        UserRole.driver || UserRole.logisticsManager => 'logistics',
+        UserRole.warehouseSupervisor => 'warehouse',
+        UserRole.gm => 'admin',
+        UserRole.hr => 'hr',
+        UserRole.accounting => 'accounting',
+        UserRole.procurement => 'procurement',
+        _ => null,
+      };
+
   static bool defaultAttendance(UserRole role, List<String> workSiteIds) => !role.isSales || workSiteIds.isNotEmpty;
 
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -291,12 +325,21 @@ class AppUser {
       registeredAt: (d['registeredAt'] as Timestamp?)?.toDate(),
       workSiteIds: List<String>.from(d['workSiteIds'] as List? ?? const []),
       overtimeAllowed: d['overtimeAllowed'] == true,
+      overtimeMaxMin: (d['overtimeMaxMin'] as num?)?.toInt(),
       attendanceRequired: d['attendanceRequired'] as bool?,
       leaveSiteAllowed: d['leaveSiteAllowed'] as bool?,
       workSchedule: WorkHours.tryParse(d['workSchedule']),
       managerId: d['managerId'] as String?,
       markedManager: d['isManager'] == true,
       supervisorId: d['supervisorId'] as String?,
+      joiningDate: switch (d['joiningDate']) {
+        final String s when DateTime.tryParse(s) != null => s,
+        _ => null,
+      },
+      department: switch (d['department']) {
+        final String s when s.isNotEmpty => s,
+        _ => null,
+      },
     );
   }
 
@@ -313,11 +356,14 @@ class AppUser {
         'position': position,
         'workSiteIds': workSiteIds,
         'overtimeAllowed': overtimeAllowed,
+        'overtimeMaxMin': overtimeAllowed ? overtimeMaxMin : null,
         'attendanceRequired': ?attendanceRequired,
         'leaveSiteAllowed': ?leaveSiteAllowed,
         'workSchedule': workSchedule?.toMap(),
         'managerId': managerId,
         'isManager': role.isManagerRole ? false : markedManager,
         'supervisorId': role == UserRole.driver ? supervisorId : null,
+        'joiningDate': joiningDate,
+        'department': department,
       };
 }

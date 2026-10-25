@@ -1,3 +1,4 @@
+import 'hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -139,10 +140,13 @@ class LeaveApprovalsCard extends ConsumerWidget {
 /// [highlightTypeId] (the request's type) is marked. Balances are readable
 /// by the HR area only, so it is shown to them.
 class LeaveBalanceTable extends ConsumerWidget {
-  const LeaveBalanceTable({super.key, required this.uid, required this.year, this.highlightTypeId});
+  const LeaveBalanceTable({super.key, required this.uid, this.day, this.highlightTypeId});
 
   final String uid;
-  final int year;
+
+  /// 'yyyy-MM-dd' in the leave year to show (the person's own year, from
+  /// their joining date); null = today's.
+  final String? day;
   final String? highlightTypeId;
 
   @override
@@ -151,19 +155,14 @@ class LeaveBalanceTable extends ConsumerWidget {
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
     final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
-    final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
+    final year = personLeaveYear(ref, uid, DateTime.tryParse(day ?? '') ?? DateTime.now());
     final requests = [
       for (final r in ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[])
         if (r.uid == uid) r.use,
     ];
-    final balances = leaveBalances(
-      types: types,
-      year: year,
-      entitledOverride: record.entitled,
-      adjustments: record.forBalance,
-      requests: requests,
-    );
+    final balances = personLeaveBalances(ref, uid: uid, year: year, types: types, requests: requests);
     if (balances.isEmpty) return const SizedBox.shrink();
+    final anyCarried = balances.values.any((b) => b.carried != 0);
     final head = theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     Widget cell(String text, {TextStyle? style, bool first = false}) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -172,7 +171,7 @@ class LeaveBalanceTable extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.leaveBalanceYear(year), style: theme.textTheme.titleSmall),
+        Text(l10n.leaveBalancePeriod(leaveYearLabel(context, joiningDateOf(ref, uid), year)), style: theme.textTheme.titleSmall),
         const SizedBox(height: 4),
         Table(
           columnWidths: const {0: FlexColumnWidth(2.2)},
@@ -183,6 +182,7 @@ class LeaveBalanceTable extends ConsumerWidget {
               children: [
                 cell(l10n.balanceColType, style: head, first: true),
                 cell(l10n.balanceColEntitled, style: head),
+                if (anyCarried) cell(l10n.balanceColCarried, style: head),
                 cell(l10n.balanceColUsed, style: head),
                 cell(l10n.balanceColWaiting, style: head),
                 cell(l10n.balanceColLeft, style: head),
@@ -197,6 +197,11 @@ class LeaveBalanceTable extends ConsumerWidget {
                   children: [
                     cell(t.name(lang), first: true, style: t.id == highlightTypeId ? const TextStyle(fontWeight: FontWeight.w600) : null),
                     cell(formatLeaveDays(b.entitled)),
+                    if (anyCarried)
+                      cell(
+                        b.carried == 0 ? '–' : '${b.carried > 0 ? '+' : ''}${formatLeaveDays(b.carried)}',
+                        style: b.carried < 0 ? TextStyle(color: theme.colorScheme.error) : null,
+                      ),
                     cell(formatLeaveDays(b.used)),
                     cell(b.pending > 0 ? formatLeaveDays(b.pending) : '–'),
                     cell(

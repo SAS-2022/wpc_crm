@@ -1,6 +1,8 @@
 // A salesperson's working day from their GPS points (user request
 // 2026-10-20): how the time between the start and end of work was spent.
-//   client   – staying at a client they checked in at that day
+//   client   – staying at a client they checked in at that day; for drivers
+//              (no check-ins, 2026-10-24) staying near a client's location
+//              = a delivery
 //   office   – staying at a work site (office, warehouse…)
 //   lunch    – up to 60 minutes of stops elsewhere around midday
 //   stopped  – staying 15+ minutes somewhere else
@@ -19,6 +21,13 @@ const MAX_STRAYS = 2;
 const CLIENT_RADIUS_M = 200;
 /** Shortest stay counted at a client (drop-ins) / anywhere else. */
 const MIN_CLIENT_STAY_MS = 2 * MINUTE;
+/**
+ * Drivers: a stay this close to a client's location (main or extra) is a
+ * delivery there, when it lasts at least [MIN_DELIVERY_MS] (shorter ones are
+ * traffic in front of the client's door).
+ */
+const DELIVERY_RADIUS_M = 200;
+const MIN_DELIVERY_MS = 5 * MINUTE;
 const MIN_STAY_MS = 5 * MINUTE;
 /** Shorter stops elsewhere count as driving (traffic lights, fuel). */
 const MIN_STOP_MS = 15 * MINUTE;
@@ -47,10 +56,12 @@ const saudiMinute = (ms) => Math.floor(((ms / MINUTE) + 180) % 1440);
  * @param {Array<{t:number, lat:number, lng:number, accuracy?:number}>} o.points sorted, one phone, rough fixes removed
  * @param {Array<{id:string, clientId:string, at:number, lat:number, lng:number}>} o.visits the day's check-ins
  * @param {Array<{id:string, lat:number, lng:number, radius:number}>} o.sites active work sites
+ * @param {Array<{clientId:string, name?:string, locationId?:string, lat:number, lng:number}>} [o.places]
+ *   client locations matched by distance alone (drivers' deliveries); none for salespeople
  * @param {number} o.startMs start of the work day
  * @param {number} o.endMs end of the work day
  */
-function buildDayTimeline({ points, visits, sites, startMs, endMs }) {
+function buildDayTimeline({ points, visits, sites, places = [], startMs, endMs }) {
   const pts = points.filter((p) => p.t >= startMs && p.t <= endMs);
   const segments = []; // {from, to, kind, stay?}
   const add = (from, to, kind, stay) => {
@@ -88,10 +99,24 @@ function buildDayTimeline({ points, visits, sites, startMs, endMs }) {
         && (!visit || d < metersBetween(here, visit))) visit = v;
     }
     const site = sites.find((s) => metersBetween(here, s) <= (s.radius || 100) + 50);
-    const kind = visit ? 'client' : site ? 'office' : 'stopped';
-    const min = kind === 'client' ? MIN_CLIENT_STAY_MS : kind === 'office' ? MIN_STAY_MS : MIN_STOP_MS;
+    // No check-in: the nearest client location (the warehouse wins over a
+    // client next to it).
+    let place = null;
+    if (!visit && !site) {
+      for (const c of places) {
+        const d = metersBetween(here, c);
+        if (d <= DELIVERY_RADIUS_M && (!place || d < place.d)) place = { ...c, d };
+      }
+    }
+    const kind = visit || place ? 'client' : site ? 'office' : 'stopped';
+    const min = visit ? MIN_CLIENT_STAY_MS : place ? MIN_DELIVERY_MS : kind === 'office' ? MIN_STAY_MS : MIN_STOP_MS;
     if (j > i && to - from >= min) {
-      stays.push({ from, to, kind, lat, lng, clientId: visit?.clientId, visitId: visit?.id, siteId: site?.id, first: i, last: j });
+      stays.push({
+        from, to, kind, lat, lng,
+        clientId: visit?.clientId ?? place?.clientId, visitId: visit?.id, siteId: site?.id,
+        place: place && { name: place.name ?? null, locationId: place.locationId ?? null, meters: Math.round(place.d) },
+        first: i, last: j,
+      });
       i = j + 1;
     } else {
       i++;
@@ -170,7 +195,11 @@ function buildDayTimeline({ points, visits, sites, startMs, endMs }) {
     points: pts.length,
     minutes: minutes(startMs, endMs),
     drivingKm: Math.round(drivingM / 100) / 10,
-    clientStays: clientStays.map((s) => ({ clientId: s.clientId, visitId: s.visitId, from: s.from, to: s.to })),
+    clientStays: clientStays.map((s) => ({
+      clientId: s.clientId, visitId: s.visitId ?? null, from: s.from, to: s.to, lat: s.lat, lng: s.lng,
+      // Matched by distance only (no check-in): name and how far from the pin.
+      ...(s.place ? { byDistance: true, clientName: s.place.name, locationId: s.place.locationId, meters: s.place.meters } : {}),
+    })),
     stops: segments
       .filter((s) => s.kind === 'stopped' || s.kind === 'lunch' || s.kind === 'office')
       .map((s) => ({
@@ -183,4 +212,4 @@ function buildDayTimeline({ points, visits, sites, startMs, endMs }) {
   };
 }
 
-module.exports = { buildDayTimeline, KINDS };
+module.exports = { buildDayTimeline, KINDS, DELIVERY_RADIUS_M };

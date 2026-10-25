@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../attendance/attendance_rules.dart' as attendance;
 import '../clients/given_items.dart' as given;
+import '../vehicles/vehicle.dart' as vehicle;
 import '../visits/visit.dart' as visit;
 
 /// One editable number of [AppSettings]: its key in RTDB `settings/app`,
@@ -26,7 +27,11 @@ enum AppSetting {
   awayGraceMin(30, 5, 240),
 
   /// Catalogs / stands due within this many days show "due soon".
-  givenDueSoonDays(14, 1, 90);
+  givenDueSoonDays(14, 1, 90),
+
+  /// Vehicle registration / insurance / inspection: reminded and on Home
+  /// this many days before the expiry (user request 2026-10-24).
+  vehicleRenewalDays(14, 1, 90);
 
   const AppSetting(this.defaultValue, this.min, this.max);
 
@@ -65,6 +70,7 @@ class AppSettings {
     given.givenDueSoonDays = this[AppSetting.givenDueSoonDays];
     attendance.lateGraceMin = this[AppSetting.lateGraceMin];
     attendance.awayGraceMin = this[AppSetting.awayGraceMin];
+    vehicle.renewalDueSoonDays = this[AppSetting.vehicleRenewalDays];
   }
 }
 

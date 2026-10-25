@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../attachments/attachments.dart';
 import '../attachments/attachments_section.dart';
+import '../clients/add_phone_prompt.dart';
 import '../clients/client.dart';
 import '../clients/client_locations_section.dart';
 import '../clients/client_tags.dart';
@@ -126,6 +127,13 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
     }
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    // No number for this client: the visit / call is saved only once one is
+    // added (user decisions 2026-10-24); cancelling keeps the notes on screen.
+    if (!client.hasPhoneNumber) {
+      if (!await showAddPhonePrompt(context, client, call: widget.call)) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.phoneNumberSaved)));
+      if (!mounted) return;
+    }
     setState(() => _busy = true);
     try {
       final userId = ref.read(currentUserProvider).value!.id;

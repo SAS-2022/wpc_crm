@@ -80,3 +80,37 @@ test('a stray GPS fix doesn\'t break a stay into driving', () => {
   assert.equal(d.minutes.client, 30);
   assert.equal(d.minutes.driving, 0);
 });
+
+test('drivers: a stay near a client location is a delivery, without a check-in', () => {
+  const places = [
+    { clientId: 'A', name: 'Client A', lat: clientA.lat + 0.001, lng: clientA.lng }, // pin ~110 m off
+    { clientId: 'B', name: 'Client B', locationId: 'f1', ...clientB },
+    { clientId: 'C', name: 'Client C', lat: clientB.lat + 0.0015, lng: clientB.lng }, // ~165 m from B
+  ];
+  const d = buildDayTimeline({ points, visits: [], sites, places, startMs: t(8), endMs: t(17) });
+  assert.deepEqual(d.clientStays.map((s) => s.clientId), ['A', 'B']); // nearest wins
+  const [a, b] = d.clientStays;
+  assert.equal(a.byDistance, true);
+  assert.equal(a.clientName, 'Client A');
+  assert.equal(a.visitId, null);
+  assert.ok(a.meters > 90 && a.meters < 130, `meters ${a.meters}`);
+  assert.equal(b.locationId, 'f1');
+  assert.ok(Math.abs((b.to - b.from) / 60000 - 30) <= 1);
+  assert.ok(d.minutes.office >= 28); // the warehouse stays office
+});
+
+test('drivers: a short stop near a client is traffic, not a delivery', () => {
+  const pts = [
+    ...drive(office, clientA, t(9), t(9, 20)),
+    ...stay(clientA, t(9, 20), t(9, 23)),
+    ...drive(clientA, clientB, t(9, 23), t(9, 40)),
+  ];
+  const d = buildDayTimeline({ points: pts, visits: [], sites: [], places: [{ clientId: 'A', ...clientA }], startMs: t(9), endMs: t(9, 40) });
+  assert.equal(d.clientStays.length, 0);
+});
+
+test('salespeople get no client time without a check-in', () => {
+  const d = buildDayTimeline({ points, visits: [], sites, startMs: t(8), endMs: t(17) });
+  assert.equal(d.clientStays.length, 0);
+  assert.equal(d.minutes.client, 0);
+});

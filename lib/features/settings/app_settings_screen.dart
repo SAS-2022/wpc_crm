@@ -1,3 +1,4 @@
+import '../hr/hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,6 +64,11 @@ class AppSettingsScreen extends ConsumerWidget {
           page(Icons.business, l10n.companies, '/companies'),
           number(Icons.more_time, AppSetting.lateGraceMin),
           number(Icons.directions_walk, AppSetting.awayGraceMin),
+          header(l10n.settingsSectionHr),
+          const AnnualCarryOverTile(),
+          page(Icons.account_tree_outlined, l10n.departments, '/departments'),
+          header(l10n.vehicles),
+          number(Icons.directions_car_outlined, AppSetting.vehicleRenewalDays),
         ],
       ),
     );
@@ -76,6 +82,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.lateGraceMin => l10n.settingLateGrace,
       AppSetting.awayGraceMin => l10n.settingAwayGrace,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
+      AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
     };
 
 String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
@@ -85,6 +92,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.lateGraceMin => l10n.settingLateGraceHelp,
       AppSetting.awayGraceMin => l10n.settingAwayGraceHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
+      AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
     };
 
 /// "30 seconds", "300 m" …
@@ -92,7 +100,7 @@ String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.trackingIntervalSec => l10n.valueSeconds(v),
       AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin => l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
-      AppSetting.givenDueSoonDays => l10n.valueDays(v),
+      AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays => l10n.valueDays(v),
     };
 
 class _NumberTile extends StatelessWidget {

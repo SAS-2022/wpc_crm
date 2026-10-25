@@ -79,7 +79,11 @@ class ClientTagsScreen extends ConsumerWidget {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(l10n.deleteTagTitle(label)),
-        content: Text(kind == TagList.positions ? l10n.deletePositionBody(used) : l10n.deleteTagBody(used)),
+        content: Text(kind == TagList.departments
+            ? l10n.deleteDepartmentBody(used)
+            : kind == TagList.positions
+            ? l10n.deletePositionBody(used)
+            : l10n.deleteTagBody(used)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
           FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.delete)),
@@ -102,19 +106,25 @@ class ClientTagsScreen extends ConsumerWidget {
     final users = ref.watch(usersProvider).value ?? const [];
     final lang = Localizations.localeOf(context).languageCode;
     final locations = kind == TagList.locationTypes;
-    final positions = kind == TagList.positions;
-    int used(String id) => positions
+    final departments = kind == TagList.departments;
+    // Departments are listed like positions (people, not clients).
+    final positions = kind == TagList.positions || departments;
+    int used(String id) => departments
+        ? users.where((u) => u.active && u.departmentId == id).length
+        : positions
         ? users.where((u) => u.position == id).length
         : clients.where((c) => locations ? c.locations.any((l) => l.typeId == id) : c.tagIds.contains(id)).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(positions ? l10n.positions : locations ? l10n.locationTypes : l10n.clientTags)),
+      appBar: AppBar(
+        title: Text(departments ? l10n.departments : positions ? l10n.positions : locations ? l10n.locationTypes : l10n.clientTags),
+      ),
       floatingActionButton: tags == null
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _edit(context, tags),
               icon: const Icon(Icons.add),
-              label: Text(positions ? l10n.addPosition : l10n.addTag),
+              label: Text(departments ? l10n.addDepartment : positions ? l10n.addPosition : l10n.addTag),
             ),
       body: tags == null
           ? const Center(child: CircularProgressIndicator())
@@ -123,11 +133,17 @@ class ClientTagsScreen extends ConsumerWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(positions ? l10n.positionsHelp : locations ? l10n.locationTypesHelp : l10n.clientTagsHelp),
+                  child: Text(departments
+                      ? l10n.departmentsHelp
+                      : positions
+                      ? l10n.positionsHelp
+                      : locations
+                      ? l10n.locationTypesHelp
+                      : l10n.clientTagsHelp),
                 ),
                 for (final t in tags)
                   ListTile(
-                    leading: Icon(positions ? Icons.work_outline : locations ? Icons.place_outlined : Icons.sell_outlined),
+                    leading: Icon(departments ? Icons.account_tree_outlined : positions ? Icons.work_outline : locations ? Icons.place_outlined : Icons.sell_outlined),
                     title: Text(t.label(lang)),
                     subtitle: Text([lang == 'ar' ? t.en : t.ar, positions ? l10n.peopleCount(used(t.id)) : l10n.clientsCountShort(used(t.id))]
                         .where((s) => s.isNotEmpty)

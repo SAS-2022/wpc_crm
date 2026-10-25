@@ -1,3 +1,5 @@
+import '../clients/client_tags.dart';
+import '../hr/hr_people.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -10,7 +12,6 @@ import '../../core/login_name.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
-import '../clients/client_tags.dart';
 import '../attendance/work_sites.dart';
 import 'companies.dart';
 import 'user_filters.dart';
@@ -298,6 +299,8 @@ class _UserFiltersSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
+    final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
+    final lang = Localizations.localeOf(context).languageCode;
     Widget heading(String text) => Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 8),
           child: Text(text, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
@@ -329,6 +332,24 @@ class _UserFiltersSheet extends ConsumerWidget {
                   label: Text(r.label(l10n)),
                   selected: filter.roles.contains(r),
                   onSelected: (on) => onChanged(filter.copyWith(roles: on ? {...filter.roles, r} : ({...filter.roles}..remove(r)))),
+                ),
+            ],
+          ),
+          heading(l10n.department),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (id, label) in [
+                for (final d in departments) (d.id, d.label(lang)),
+                ('', l10n.noDepartment),
+              ])
+                FilterChip(
+                  label: Text(label),
+                  selected: filter.departments.contains(id),
+                  onSelected: (on) => onChanged(
+                    filter.copyWith(departments: on ? {...filter.departments, id} : ({...filter.departments}..remove(id))),
+                  ),
                 ),
             ],
           ),

@@ -168,6 +168,13 @@ class Client {
   /// The main location. Imports, duplicates and plans use this one.
   bool get hasLocation => lat != null && lng != null;
 
+  /// A number to reach the client: its phone / mobile or a contact's. Without
+  /// one, the salesperson is asked for one after a visit (2026-10-24).
+  bool get hasPhoneNumber =>
+      phone.trim().isNotEmpty ||
+      mobile.trim().isNotEmpty ||
+      contacts.any((c) => c.phone.trim().isNotEmpty || c.mobile.trim().isNotEmpty);
+
   /// Every location, main first; empty without a main location.
   List<ClientLocation> get locations => [
         if (hasLocation)

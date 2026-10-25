@@ -24,6 +24,7 @@ enum AppPage {
   liveTracking(['/live'], {_kam, _sm, _gm}),
   routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws}),
   drivers(['/drivers'], {_sm, _gm, _lm, _ws}),
+  vehicles(['/vehicles'], {_sm, _gm, _lm}),
   attendance(['/attendance'], {_hr, _gm, _sm, _kam, _lm, _ws}),
   hrArea(['/hr'], {_hr, _gm, _sm}),
   users(['/users'], {_sm, _gm, _lm}),

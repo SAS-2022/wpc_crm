@@ -28,11 +28,30 @@ TimeSplit addSplits(Iterable<TimeSplit> all) => {
     };
 
 class ClientStay {
-  const ClientStay({required this.clientId, required this.from, required this.to});
+  const ClientStay({
+    required this.clientId,
+    required this.from,
+    required this.to,
+    this.lat,
+    this.lng,
+    this.byDistance = false,
+    this.clientName,
+    this.locationId,
+    this.meters,
+  });
 
   final String clientId;
   final DateTime from;
   final DateTime to;
+  final double? lat;
+  final double? lng;
+
+  /// A driver's delivery: matched to the client by distance alone (no
+  /// check-in), [meters] from the client's pin [locationId] (null = main).
+  final bool byDistance;
+  final String? clientName;
+  final String? locationId;
+  final int? meters;
 
   Duration get length => to.difference(from);
 }
@@ -101,7 +120,17 @@ class DayTimeline {
       clientStays: [
         for (final s in d['clientStays'] as List? ?? const [])
           if (s is Map && _time(s['from']) != null && _time(s['to']) != null)
-            ClientStay(clientId: s['clientId'] as String? ?? '', from: _time(s['from'])!, to: _time(s['to'])!),
+            ClientStay(
+              clientId: s['clientId'] as String? ?? '',
+              from: _time(s['from'])!,
+              to: _time(s['to'])!,
+              lat: (s['lat'] as num?)?.toDouble(),
+              lng: (s['lng'] as num?)?.toDouble(),
+              byDistance: s['byDistance'] == true,
+              clientName: s['clientName'] as String?,
+              locationId: s['locationId'] as String?,
+              meters: (s['meters'] as num?)?.toInt(),
+            ),
       ],
       stops: [
         for (final s in d['stops'] as List? ?? const [])

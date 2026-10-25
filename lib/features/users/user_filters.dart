@@ -13,6 +13,7 @@ class UserFilter {
     this.roles = const {},
     this.companyId,
     this.siteId,
+    this.departments = const {},
   });
 
   final String search;
@@ -21,8 +22,11 @@ class UserFilter {
   final String? companyId;
   final String? siteId;
 
+  /// Department ids (`AppUser.departmentId`, '' = none), 2026-10-24.
+  final Set<String> departments;
+
   /// Role, company and site (the status chips and search are shown apart).
-  int get sheetCount => roles.length + (companyId == null ? 0 : 1) + (siteId == null ? 0 : 1);
+  int get sheetCount => roles.length + departments.length + (companyId == null ? 0 : 1) + (siteId == null ? 0 : 1);
 
   UserFilter copyWith({
     String? search,
@@ -30,6 +34,7 @@ class UserFilter {
     Set<UserRole>? roles,
     String? Function()? companyId,
     String? Function()? siteId,
+    Set<String>? departments,
   }) =>
       UserFilter(
         search: search ?? this.search,
@@ -37,6 +42,7 @@ class UserFilter {
         roles: roles ?? this.roles,
         companyId: companyId == null ? this.companyId : companyId(),
         siteId: siteId == null ? this.siteId : siteId(),
+        departments: departments ?? this.departments,
       );
 
   /// [roleLabel]: the role's name in the reader's language (the role is
@@ -54,6 +60,7 @@ class UserFilter {
     if (roles.isNotEmpty && !roles.contains(u.role)) return false;
     if (companyId != null && u.companyId != companyId) return false;
     if (siteId != null && !u.workSiteIds.contains(siteId)) return false;
+    if (departments.isNotEmpty && !departments.contains(u.departmentId ?? '')) return false;
     final q = Client.normalizeName(search);
     if (q.isEmpty) return true;
     final digits = search.replaceAll(RegExp(r'\D'), '');

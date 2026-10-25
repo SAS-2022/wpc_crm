@@ -49,6 +49,9 @@ service cloud.firestore {
       // the version it runs (`appVersions`). Update reminders are admin-only.
       allow update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions']);
+      // HR sets each person's joining date and department (2026-10-24).
+      allow update: if managesHr()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department']);
       // Only the `deleteUser` Cloud Function deletes users (allowed accounts
       // only, user decision 2026-10-23).
       allow delete: if false;
@@ -142,6 +145,18 @@ service cloud.firestore {
     }
 
     // Work sites for attendance (sales manager / GM).
+    // Vehicles (2026-10-24): the sales manager, GM and logistics manager
+    // keep them (details, drivers, renewals, odometer readings). Drivers'
+    // GPS km per day are written by Cloud Functions only.
+    function managesVehicles() { return active() && me().role in ['sales_manager', 'gm', 'logistics_manager']; }
+    match /vehicles/{vehicleId} {
+      allow read, write: if managesVehicles();
+    }
+    match /driver_km/{id} {
+      allow read: if managesVehicles();
+      allow write: if false;
+    }
+
     match /work_sites/{siteId} {
       allow read: if active();
       allow write: if isAdmin();
@@ -252,6 +267,13 @@ service cloud.firestore {
     match /settings/holidays {
       allow write: if managesHr();
     }
+    // Whether annual leave carries over, and the departments list (2026-10-24).
+    match /settings/leavePolicy {
+      allow write: if managesHr();
+    }
+    match /settings/departments {
+      allow write: if managesHr();
+    }
 
     // Leave and other employee requests. The owner sends and may cancel while
     // waiting; each step of the chain is decided, in order, by the user (KAM)
@@ -306,6 +328,12 @@ service cloud.firestore {
       // By id, so the owner may also read a record HR hasn't created yet.
       allow read: if isHrArea() || (active() && balanceId.split('_')[0] == request.auth.uid);
       allow write: if managesHr();
+    }
+
+    // Closed leave years (2026-10-24), written by the closeLeaveYears function.
+    match /leave_history/{id} {
+      allow read: if isHrArea() || (active() && resource.data.uid == request.auth.uid);
+      allow write: if false;
     }
   }
 }

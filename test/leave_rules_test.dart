@@ -111,11 +111,11 @@ void main() {
       entitledOverride: const {'annual': 30},
       adjustments: const [(typeId: 'annual', days: 5), (typeId: 'sick', days: -1)],
       requests: const [
-        (typeId: 'annual', year: 2026, days: 3, status: LeaveStatus.approved),
-        (typeId: 'annual', year: 2026, days: 2, status: LeaveStatus.pending),
-        (typeId: 'annual', year: 2026, days: 9, status: LeaveStatus.rejected),
-        (typeId: 'annual', year: 2026, days: 4, status: LeaveStatus.cancelled),
-        (typeId: 'annual', year: 2025, days: 7, status: LeaveStatus.approved),
+        (typeId: 'annual', from: null, year: 2026, days: 3, status: LeaveStatus.approved),
+        (typeId: 'annual', from: null, year: 2026, days: 2, status: LeaveStatus.pending),
+        (typeId: 'annual', from: null, year: 2026, days: 9, status: LeaveStatus.rejected),
+        (typeId: 'annual', from: null, year: 2026, days: 4, status: LeaveStatus.cancelled),
+        (typeId: 'annual', from: null, year: 2025, days: 7, status: LeaveStatus.approved),
       ],
     );
     expect(b['annual']!.entitled, 35);
@@ -134,5 +134,50 @@ void main() {
       expect(back.toMap(), t.toMap());
     }
     expect(LeaveType.defaults.map((t) => t.id).toSet().length, LeaveType.defaults.length);
+  });
+
+  group('leave years (joining date)', () {
+    test('without a joining date: the calendar year', () {
+      expect(leaveYearOf(null, DateTime(2026, 3, 1)), 2026);
+      expect(leaveYearRange(null, 2026), (start: DateTime(2026), end: DateTime(2026, 12, 31)));
+    });
+
+    test('from the joining anniversary to the day before the next', () {
+      expect(leaveYearOf('2023-03-15', DateTime(2026, 3, 14)), 2025);
+      expect(leaveYearOf('2023-03-15', DateTime(2026, 3, 15)), 2026);
+      expect(leaveYearOf('2023-03-15', DateTime(2026, 12, 31)), 2026);
+      expect(leaveYearRange('2023-03-15', 2026), (start: DateTime(2026, 3, 15), end: DateTime(2027, 3, 14)));
+    });
+
+    test('joined on 29 February', () {
+      expect(leaveYearRange('2024-02-29', 2025), (start: DateTime(2025, 2, 28), end: DateTime(2026, 2, 27)));
+      expect(leaveYearOf('2024-02-29', DateTime(2028, 2, 29)), 2028);
+    });
+
+    test('requests count in the leave year of their first day; carried days', () {
+      final b = leaveBalances(
+        types: LeaveType.defaults,
+        year: 2026,
+        joiningDate: '2023-03-15',
+        entitledOverride: const {},
+        adjustments: const [],
+        carried: const {'annual': -4},
+        requests: const [
+          (typeId: 'annual', year: 2026, from: '2026-03-10', days: 5, status: LeaveStatus.approved),
+          (typeId: 'annual', year: 2027, from: '2027-01-10', days: 2, status: LeaveStatus.approved),
+          (typeId: 'annual', year: 2027, from: '2027-03-20', days: 9, status: LeaveStatus.approved),
+        ],
+      );
+      expect(b['annual']!.used, 2);
+      expect(b['annual']!.carried, -4);
+      expect(b['annual']!.remaining, 15);
+    });
+
+    test('carry: overdrawn days always, days left only when allowed', () {
+      expect(annualCarry(-3, carryOver: false), -3);
+      expect(annualCarry(-3, carryOver: true), -3);
+      expect(annualCarry(6, carryOver: false), 0);
+      expect(annualCarry(6, carryOver: true), 6);
+    });
   });
 }

@@ -59,7 +59,7 @@ class LeaveRequest {
 
   ApprovalStep? get currentStep => status == LeaveStatus.pending && stepIndex < steps.length ? steps[stepIndex] : null;
 
-  LeaveUse get use => (typeId: typeId, year: year, days: days, status: status);
+  LeaveUse get use => (typeId: typeId, year: year, from: from, days: days, status: status);
 
   factory LeaveRequest.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -176,9 +176,13 @@ final leaveAwaitingMeProvider = StreamProvider<List<LeaveRequest>>((ref) {
 
 /// HR's numbers for one person and year: `leave_balances/{uid}_{year}`.
 class LeaveBalanceRecord {
-  const LeaveBalanceRecord({required this.entitled, required this.adjustments});
+  const LeaveBalanceRecord({required this.entitled, required this.adjustments, this.carried = const {}});
 
   static const empty = LeaveBalanceRecord(entitled: {}, adjustments: []);
+
+  /// Moved from the previous leave year when it closed (`closeLeaveYears`
+  /// Cloud Function): {annual: days}, negative = overdrawn.
+  final Map<String, num> carried;
 
   /// Days per type id for this person (overrides the type's yearly days).
   final Map<String, num> entitled;
@@ -191,6 +195,10 @@ class LeaveBalanceRecord {
     return LeaveBalanceRecord(
       entitled: {
         for (final e in (d['entitled'] as Map<String, dynamic>? ?? const {}).entries)
+          if (e.value is num) e.key: e.value as num,
+      },
+      carried: {
+        for (final e in (d['carried'] as Map<String, dynamic>? ?? const {}).entries)
           if (e.value is num) e.key: e.value as num,
       },
       adjustments: [
@@ -247,7 +255,8 @@ class LeaveRepository {
       'to': to,
       'halfDay': halfDay,
       'days': days,
-      'year': from == null ? DateTime.now().year : int.parse(from.substring(0, 4)),
+      // The leave year (from their joining date) it uses days of.
+      'year': leaveYearOf(me.joiningDate, from == null ? DateTime.now() : DateTime.parse(from)),
       'reason': reason,
       'status': LeaveStatus.pending.name,
       'steps': [for (final s in chain) _stepMap(s)],
@@ -293,7 +302,7 @@ class LeaveRepository {
       'to': date,
       'halfDay': false,
       'days': days,
-      'year': int.parse(date.substring(0, 4)),
+      'year': leaveYearOf(person.joiningDate, DateTime.parse(date)),
       'reason': reason,
       'status': LeaveStatus.approved.name,
       'steps': [_stepMap(step)],

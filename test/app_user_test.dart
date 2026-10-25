@@ -42,4 +42,14 @@ void main() {
     expect(UserRole.kam.managesUsers, isFalse);
     expect(UserRole.kam.editableRoles, isEmpty);
   });
+
+  test('department: chosen one, else the role\'s', () {
+    AppUser u(UserRole role, [String? department]) =>
+        AppUser(id: 'x', name: 'x', email: '', phone: '', role: role, kamId: null, active: true, department: department);
+    expect(u(UserRole.kam).departmentId, 'sales');
+    expect(u(UserRole.driver).departmentId, 'logistics');
+    expect(u(UserRole.gm).departmentId, 'admin');
+    expect(u(UserRole.worker).departmentId, isNull);
+    expect(u(UserRole.worker, 'production').departmentId, 'production');
+  });
 }

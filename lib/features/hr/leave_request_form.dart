@@ -1,3 +1,4 @@
+import 'hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,7 +69,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
       problem = l10n.noApproverYet;
     } else if (type.isLeave && _dates == null) {
       problem = l10n.pickLeaveDates;
-    } else if (type.isLeave && _dates!.start.year != _dates!.end.year) {
+    } else if (type.isLeave && leaveYearOf(me.joiningDate, _dates!.start) != leaveYearOf(me.joiningDate, _dates!.end)) {
       problem = l10n.leaveAcrossYears;
     } else if (type.isLeave && days <= 0) {
       problem = l10n.leaveNoWorkDays;
@@ -131,16 +132,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     final chain = approvalChain(me, users);
 
     // What's left of this type after this request.
-    final year = _dates?.start.year ?? DateTime.now().year;
-    final record = ref.watch(leaveBalanceRecordProvider((me.id, year))).value ?? LeaveBalanceRecord.empty;
+    final year = leaveYearOf(me.joiningDate, _dates?.start ?? DateTime.now());
     final mine = ref.watch(myLeaveRequestsProvider).value ?? const <LeaveRequest>[];
-    final balance = leaveBalances(
-      types: [type],
-      year: year,
-      entitledOverride: record.entitled,
-      adjustments: record.forBalance,
-      requests: [for (final r in mine) r.use],
-    )[type.id];
+    final balance = personLeaveBalances(ref, uid: me.id, year: year, types: [type], requests: [for (final r in mine) r.use])[type.id];
     final fmt = DateFormat.yMMMd(locale);
 
     return Scaffold(

@@ -35,6 +35,7 @@ PersonDay personDay(
   DayResult? d, {
   required WorkHours schedule,
   required bool overtimeAllowed,
+  int overtimeMaxMin = defaultOvertimeMaxMin,
   required DateTime day,
   required DateTime now,
   bool reportedAbsent = false,
@@ -69,8 +70,10 @@ PersonDay personDay(
       scheduledMin: scheduled,
     );
   }
-  // Still open: up to now, or up to the end of the work day without overtime.
-  final upTo = overtimeAllowed || now.isBefore(end) ? now : end;
+  // Still open: up to now, or up to the end of the work day without overtime
+  // (with overtime: at most the cap after it).
+  final capEnd = end.add(Duration(minutes: overtimeAllowed ? overtimeMaxMin : 0));
+  final upTo = now.isBefore(capEnd) ? now : capEnd;
   final worked = upTo.difference(d.checkInAt!).inMinutes - (d.awayMin ?? 0);
   return (
     status: d.inside ? DayStatus.onSite : DayStatus.away,

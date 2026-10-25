@@ -127,7 +127,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
           if (r.isLeave && me.role.canSeeHr)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: LeaveBalanceTable(uid: r.uid, year: r.year, highlightTypeId: r.typeId),
+              child: LeaveBalanceTable(uid: r.uid, day: r.from, highlightTypeId: r.typeId),
             ),
           if (documentMissing)
             ListTile(

@@ -52,6 +52,7 @@ import '../features/settings/app_settings_screen.dart';
 import '../features/settings/page_access.dart';
 import '../features/settings/page_access_screen.dart';
 import '../features/settings/tracking_schedules_screen.dart';
+import '../features/vehicles/vehicles_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -86,14 +87,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           !loc.startsWith('/absence/') &&
           !loc.startsWith('/hr') &&
           !loc.startsWith('/attendance') &&
+          !(me.role.canManageHr && loc == '/departments') &&
           // Logistics manager: the drivers' live map and route history, and
           // the Users page for drivers.
           !(me.role.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
+          !(me.role.managesDrivers && loc.startsWith('/vehicles')) &&
           !(me.role.managesUsers && loc.startsWith('/users'))) {
         return '/';
       }
       if (loc == '/drivers' && !me.role.seesDrivers) return '/';
+      if (loc.startsWith('/vehicles') && !me.role.managesDrivers) return '/';
       if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
+      // Departments: HR edits them too (HR area → Leave types tab).
+      if (loc == '/departments' && !me.role.canManageHr) return '/';
       // Managers and warehouse supervisors: the attendance of the people under them.
       if (loc.startsWith('/attendance') && !me.seesTeamAttendance) return '/';
       // "My leave" is greyed out until finished; requests to approve still open.
@@ -215,7 +221,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'employee/:uid',
                   builder: (_, state) => EmployeeLeaveScreen(
                     uid: state.pathParameters['uid']!,
-                    year: int.tryParse(state.uri.queryParameters['year'] ?? '') ?? DateTime.now().year,
+                    year: int.tryParse(state.uri.queryParameters['year'] ?? ''),
                   ),
                 ),
               ],
@@ -223,6 +229,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
             // Drivers only (sales manager, GM, logistics manager).
             GoRoute(path: '/drivers', builder: (_, _) => const LiveMapScreen(driversOnly: true)),
+            // Vehicles: sales manager, GM, logistics manager (2026-10-24).
+            GoRoute(
+              path: '/vehicles',
+              builder: (_, _) => const VehiclesScreen(),
+              routes: [
+                // Before ':id' so "new" isn't read as a vehicle id.
+                GoRoute(path: 'new', builder: (_, _) => const VehicleEditScreen()),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => VehicleScreen(id: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(path: 'edit', builder: (_, state) => VehicleEditScreen(id: state.pathParameters['id']!)),
+                  ],
+                ),
+              ],
+            ),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(path: '/transfers', builder: (_, _) => const TransfersScreen()),
             GoRoute(
@@ -252,6 +274,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const ClientTagsScreen(kind: TagList.locationTypes),
             ),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
+            GoRoute(path: '/departments', builder: (_, _) => const ClientTagsScreen(kind: TagList.departments)),
             GoRoute(
               path: '/settings',
               builder: (_, _) => const AppSettingsScreen(),

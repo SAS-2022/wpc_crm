@@ -63,13 +63,27 @@ const defaultPositions = [
   ClientTag(id: 'admin_assistant', en: 'Administrative Assistant', ar: 'مساعد إداري'),
 ];
 
+/// Departments (2026-10-24): HR filters people by them; ids match
+/// `AppUser.defaultDepartmentOf`.
+const defaultDepartments = [
+  ClientTag(id: 'sales', en: 'Sales', ar: 'المبيعات'),
+  ClientTag(id: 'logistics', en: 'Logistics', ar: 'الخدمات اللوجستية'),
+  ClientTag(id: 'warehouse', en: 'Warehouse', ar: 'المستودع'),
+  ClientTag(id: 'admin', en: 'Admin', ar: 'الإدارة'),
+  ClientTag(id: 'hr', en: 'HR', ar: 'الموارد البشرية'),
+  ClientTag(id: 'accounting', en: 'Accounting', ar: 'المحاسبة'),
+  ClientTag(id: 'procurement', en: 'Procurement', ar: 'المشتريات'),
+  ClientTag(id: 'production', en: 'Production', ar: 'الإنتاج'),
+];
+
 /// The editable label lists: business tags on clients, the labels of a
 /// client's locations and job positions. Same shape ({tags: [{id, en, ar}]}),
 /// same editor.
 enum TagList {
   clientTags('settings/clientTags', defaultClientTags),
   locationTypes('settings/locationTypes', defaultLocationTypes),
-  positions('settings/positions', defaultPositions);
+  positions('settings/positions', defaultPositions),
+  departments('settings/departments', defaultDepartments);
 
   const TagList(this.path, this.defaults);
 

@@ -1,3 +1,4 @@
+import 'hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,7 +19,7 @@ class MyLeaveScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
-    final year = DateTime.now().year;
+    final year = personLeaveYear(ref, me.id, DateTime.now());
     final requests = ref.watch(myLeaveRequestsProvider).value ?? const <LeaveRequest>[];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.myLeave)),
@@ -62,14 +63,7 @@ class LeaveBalancesCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
     final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
-    final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
-    final balances = leaveBalances(
-      types: types,
-      year: year,
-      entitledOverride: record.entitled,
-      adjustments: record.forBalance,
-      requests: [for (final r in requests) r.use],
-    );
+    final balances = personLeaveBalances(ref, uid: uid, year: year, types: types, requests: [for (final r in requests) r.use]);
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       child: Padding(
@@ -79,7 +73,8 @@ class LeaveBalancesCard extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: Text(l10n.leaveBalanceYear(year), style: theme.textTheme.titleMedium),
+              child: Text(l10n.leaveBalancePeriod(leaveYearLabel(context, joiningDateOf(ref, uid), year)),
+                  style: theme.textTheme.titleMedium),
             ),
             for (final t in types)
               if (balances[t.id] case final b?)
@@ -87,7 +82,12 @@ class LeaveBalancesCard extends ConsumerWidget {
                   dense: true,
                   onTap: onTap == null ? null : () => onTap!(t),
                   title: Text(t.name(lang)),
-                  subtitle: b.pending > 0 ? Text(l10n.leavePendingDays(formatLeaveDays(b.pending))) : null,
+                  subtitle: b.pending > 0 || b.carried != 0
+                      ? Text([
+                          if (b.carried != 0) l10n.leaveCarriedDays('${b.carried > 0 ? '+' : ''}${formatLeaveDays(b.carried)}'),
+                          if (b.pending > 0) l10n.leavePendingDays(formatLeaveDays(b.pending)),
+                        ].join(' · '))
+                      : null,
                   trailing: Text(
                     l10n.leaveRemainingOf(formatLeaveDays(b.remaining), formatLeaveDays(b.entitled)),
                     style: theme.textTheme.labelLarge?.copyWith(

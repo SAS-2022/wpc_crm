@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { deriveDay, correctedEvents, saudiTime } = require('./attendance');
+const { deriveDay, correctedEvents, saudiTime, overtimeCap } = require('./attendance');
 
 const day = '2026-10-20';
 const t = (h, m = 0) => saudiTime(day, h * 60 + m);
@@ -125,4 +125,34 @@ test('HR correction replaces the phone\'s events', () => {
   assert.deepEqual([inOnly.checkInAt, inOnly.closed, inOnly.checkOutType], [t(8), true, 'leftSite']);
   // No correction: HR event types written by a phone are dropped.
   assert.deepEqual(correctedEvents([...phone, { type: 'hrOut', at: t(10) }], null), phone);
+});
+
+test('overtime is capped at 3 hours unless the person has a higher cap', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(21, 30) }];
+  const d = run(events, { now: t(22), overtimeAllowed: true });
+  assert.deepEqual([d.workedMin, d.overtimeMin, d.afterHoursMin, d.countedMin], [810, 180, 90, 720]);
+  const more = run(events, { now: t(22), overtimeAllowed: true, overtimeMaxMin: 300 });
+  assert.deepEqual([more.overtimeMin, more.afterHoursMin, more.countedMin], [270, 0, 810]);
+  assert.equal(overtimeCap(undefined), 180);
+  assert.equal(overtimeCap(300), 300);
+  assert.equal(overtimeCap(0), 180);
+});
+
+test('no exit seen, overtime allowed: closed when last seen at the site (GPS), within the cap', () => {
+  const events = [{ type: 'in', at: t(8) }];
+  const seen = run(events, { now: t(23, 55), overtimeAllowed: true, lastSeenAt: t(19, 10) });
+  assert.deepEqual([seen.checkOutAt, seen.checkOutType, seen.overtimeMin], [t(19, 10), 'auto', 130]);
+  const late = run(events, { now: t(23, 55), overtimeAllowed: true, lastSeenAt: t(23) });
+  assert.deepEqual([late.checkOutAt, late.overtimeMin], [t(20), 180]);
+  // Last seen before the end (the phone went quiet): the end of the work day, as before.
+  const quiet = run([...events, { type: 'in', at: t(11, 20) }], { now: t(23, 55), overtimeAllowed: true, lastSeenAt: t(12, 10) });
+  assert.deepEqual([quiet.checkOutAt, quiet.overtimeMin], [t(17), 0]);
+  // Without overtime the evidence doesn't matter.
+  const no = run(events, { now: t(23, 55), lastSeenAt: t(19, 10) });
+  assert.deepEqual([no.checkOutAt, no.overtimeMin], [t(17), 0]);
+});
+
+test('an arrival event after the end counts as being seen there', () => {
+  const d = run([{ type: 'in', at: t(8) }, { type: 'in', at: t(18, 30) }], { now: t(23, 55), overtimeAllowed: true });
+  assert.deepEqual([d.checkOutAt, d.overtimeMin], [t(18, 30), 90]);
 });

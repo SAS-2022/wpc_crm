@@ -161,6 +161,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           results[u.id],
           schedule: u.scheduleOr(company),
           overtimeAllowed: u.overtimeAllowed,
+          overtimeMaxMin: u.overtimeCapMin,
           day: midnight,
           now: now,
           reportedAbsent: absences.containsKey(u.id),

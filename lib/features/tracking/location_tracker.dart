@@ -73,6 +73,16 @@ class LocationTracker {
   /// null until first checked.
   bool? _onDuty;
 
+  /// Settings received since sharing started ('role', 'hours', 'schedule'):
+  /// duty is decided only once all three are in (2026-10-24: a service
+  /// restart on a Friday evening decided "off duty" from the company hours
+  /// before the person's all-day schedule arrived).
+  final _loaded = <String>{};
+
+  /// Duty changes run one after the other, so a slow "off" can't land after
+  /// a later "on" (that left Ali's presence off duty while he was tracked).
+  Future<void> _dutyChain = Future.value();
+
   DatabaseReference get _presence => FirebaseDatabase.instance.ref('presence/$uid');
 
   Future<void> start() async {
@@ -116,16 +126,19 @@ class LocationTracker {
     }));
     _subscriptions.add(FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
       _driver = event.snapshot.value == 'driver';
+      _loaded.add('role');
       _applyDuty();
-    }, onError: (_) {}));
+    }, onError: (_) => _loaded.add('role')));
     _subscriptions.add(workHoursRef.onValue.listen((event) {
       _hours = WorkHours.fromMap(event.snapshot.value);
+      _loaded.add('hours');
       _applyDuty();
-    }));
+    }, onError: (_) => _loaded.add('hours')));
     _subscriptions.add(trackingScheduleRef(uid).onValue.listen((event) {
       _schedule = TrackingSchedule.fromMap(event.snapshot.value);
+      _loaded.add('schedule');
       _applyDuty();
-    }, onError: (_) {}));
+    }, onError: (_) => _loaded.add('schedule')));
     _subscriptions.add(appSettingsRef.child(AppSetting.trackingIntervalSec.name).onValue.listen((event) {
       final interval = AppSettings.fromMap({AppSetting.trackingIntervalSec.name: event.snapshot.value}).trackingInterval;
       if (interval == _interval) return;
@@ -146,7 +159,10 @@ class LocationTracker {
   }
 
   /// Switches between sharing (work hours) and not sharing.
-  Future<void> _applyDuty() async {
+  Future<void> _applyDuty() => _dutyChain = _dutyChain.then((_) => _applyDutyNow()).catchError((_) {});
+
+  Future<void> _applyDutyNow() async {
+    if (_loaded.length < 3 || !_active) return;
     final on = _schedule.isOn(DateTime.now(), _hours, driver: _driver);
     if (on == _onDuty) return;
     _onDuty = on;
@@ -168,6 +184,19 @@ class LocationTracker {
     if (on) await _beat();
   }
 
+  /// Wake ping (wake_ping.dart): a fresh heartbeat and position now.
+  Future<void> wake() async {
+    if (!_active || _onDuty != true) return;
+    await _beat();
+    try {
+      await _send(await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)),
+      ));
+    } catch (_) {
+      // No fix in time: the heartbeat already showed the phone is alive.
+    }
+  }
+
   Future<void> stop() async {
     await _deviceSub?.cancel();
     _deviceSub = null;
@@ -186,6 +215,7 @@ class LocationTracker {
     await _positions?.cancel();
     _positions = null;
     _onDuty = null;
+    _loaded.clear();
     _heartbeat?.cancel();
     _dutyCheck?.cancel();
     await _presence.onDisconnect().cancel();
@@ -219,6 +249,8 @@ class LocationTracker {
     }
     await _presence.update({
       'lastSeen': ServerValue.timestamp,
+      // Repeated while on duty, so a stray "off" never stays.
+      'onDuty': true,
       'notifications': ?notifications,
       'gpsOn': gpsOn,
       'permission': permission.name,

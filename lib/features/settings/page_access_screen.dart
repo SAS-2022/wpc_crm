@@ -15,6 +15,7 @@ String appPageLabel(AppLocalizations l10n, AppPage p) => switch (p) {
       AppPage.liveTracking => l10n.liveTracking,
       AppPage.routeHistory => l10n.routeHistory,
       AppPage.drivers => l10n.driversPage,
+      AppPage.vehicles => l10n.vehicles,
       AppPage.attendance => l10n.attendance,
       AppPage.hrArea => l10n.hrArea,
       AppPage.users => l10n.users,

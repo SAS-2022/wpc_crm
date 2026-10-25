@@ -91,6 +91,19 @@ enum NotificationType {
   /// ([AppNotification.note] = the manager's comment).
   earlyCheckoutApproved,
   earlyCheckoutRejected,
+
+  /// `ownerId` (overtime allowed) is still at the site when their work day
+  /// ends (`attendanceUpdated` / `closeAttendance`, 2026-10-24); sent to their
+  /// direct managers and to them. [AppNotification.time] = end of the shift,
+  /// [AppNotification.siteName].
+  overtimeStarted,
+
+  /// A vehicle's registration / insurance / inspection ([AppNotification.issue],
+  /// a `Renewal` name) expires on [AppNotification.date] in
+  /// [AppNotification.count] days (≤ 0: expired); `vehicleRenewals` Cloud
+  /// Function, to logistics managers, sales managers and GMs.
+  /// [AppNotification.ref] = vehicle id, [AppNotification.vehicleName] = plate.
+  vehicleRenewalDue,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -109,6 +122,7 @@ class AppNotification {
     this.siteName = '',
     this.time = '',
     this.note = '',
+    this.vehicleName = '',
     required this.read,
     required this.createdAt,
   });
@@ -139,6 +153,9 @@ class AppNotification {
 
   /// Free text sent with it (absence reason).
   final String note;
+
+  /// Vehicle notifications: the plate when it was sent.
+  final String vehicleName;
   final bool read;
   final DateTime? createdAt;
 
@@ -157,6 +174,7 @@ class AppNotification {
       siteName: d['siteName'] as String? ?? '',
       time: d['time'] as String? ?? '',
       note: d['note'] as String? ?? '',
+      vehicleName: d['vehicleName'] as String? ?? '',
       read: d['read'] as bool? ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );

@@ -54,6 +54,22 @@ class Tracking {
     }
   }
 
+  /// Answers a wake ping (wake_ping.dart): Android starts the service again
+  /// if it was stopped, else asks it to send a position now.
+  static Future<void> wake(String uid) async {
+    if (_android) {
+      await configure();
+      final service = FlutterBackgroundService();
+      if (await service.isRunning()) {
+        service.invoke('wake');
+      } else {
+        await service.startService();
+      }
+    } else {
+      await _inApp?.wake();
+    }
+  }
+
   /// Marks the user offline and stops sending. Call before signing out.
   static Future<void> stop() async {
     if (_android) {
@@ -81,6 +97,7 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
     await tracker?.stop();
     await service.stopSelf();
   });
+  service.on('wake').listen((_) => tracker?.wake());
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final user = await FirebaseAuth.instance.authStateChanges().first;

@@ -419,7 +419,8 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       title = l10n.checkedInSince(time.format(day.checkInAt!), siteName);
       // Hours so far today (without overtime when it isn't allowed).
       final end = DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute));
-      final upTo = me.overtimeAllowed || now.isBefore(end) ? now : end;
+      final capEnd = end.add(Duration(minutes: me.overtimeAllowed ? me.overtimeCapMin : 0));
+      final upTo = now.isBefore(capEnd) ? now : capEnd;
       final so = upTo.difference(day.checkInAt!) - Duration(minutes: day.awayMin ?? 0);
       detail = [
         l10n.checkedInFor(formatMinutes(so.isNegative ? 0 : so.inMinutes)),

@@ -1,3 +1,5 @@
+import '../clients/client_tags.dart';
+import 'hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -120,7 +122,7 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
               if (r.isLeave && r.status == LeaveStatus.pending)
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 16, 12),
-                  child: LeaveBalanceTable(uid: r.uid, year: r.year, highlightTypeId: r.typeId),
+                  child: LeaveBalanceTable(uid: r.uid, day: r.from, highlightTypeId: r.typeId),
                 ),
             ],
           ],
@@ -139,44 +141,75 @@ class _BalancesTab extends ConsumerStatefulWidget {
 }
 
 class _BalancesTabState extends ConsumerState<_BalancesTab> {
-  int _year = DateTime.now().year;
   String _query = '';
+
+  /// Department ids shown; empty = everyone ('' = no department).
+  Set<String> _departments = {};
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    final locale = Localizations.localeOf(context).toString();
     final q = _query.trim().toLowerCase();
-    final people = (ref.watch(usersProvider).value ?? const <AppUser>[])
+    final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
+    final all = (ref.watch(usersProvider).value ?? const <AppUser>[])
         .where((u) => u.active && u.role != UserRole.unknown)
+        .toList();
+    int count(String id) => all.where((u) => (u.departmentId ?? '') == id).length;
+    final people = all
         .where((u) => q.isEmpty || u.name.toLowerCase().contains(q))
+        .where((u) => _departments.isEmpty || _departments.contains(u.departmentId ?? ''))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
+    void toggle(String id, bool on) => setState(() => _departments = on ? {..._departments, id} : ({..._departments}..remove(id)));
     return ListView(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-          child: Row(children: [
-            IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _year--)),
-            Text('$_year', style: Theme.of(context).textTheme.titleMedium),
-            IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _year++)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SearchBar(
-                hintText: l10n.search,
-                leading: const Icon(Icons.search),
-                elevation: const WidgetStatePropertyAll(0),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
-          ]),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: SearchBar(
+            hintText: l10n.search,
+            leading: const Icon(Icons.search),
+            elevation: const WidgetStatePropertyAll(0),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+        ),
+        // Filter by department (several can be ticked).
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final d in departments)
+                if (count(d.id) > 0)
+                  FilterChip(
+                    label: Text('${d.label(lang)} (${count(d.id)})'),
+                    selected: _departments.contains(d.id),
+                    onSelected: (on) => toggle(d.id, on),
+                  ),
+              if (count('') > 0)
+                FilterChip(
+                  label: Text('${l10n.noDepartment} (${count('')})'),
+                  selected: _departments.contains(''),
+                  onSelected: (on) => toggle('', on),
+                ),
+            ],
+          ),
         ),
         for (final u in people)
           ListTile(
             leading: CircleAvatar(child: Text(u.name.isEmpty ? '?' : u.name.characters.first)),
             title: Text(u.name),
-            subtitle: Text(u.role.label(l10n)),
+            subtitle: Text([
+              u.role.label(l10n),
+              if (u.departmentId != null) departmentName(departments, u.departmentId, lang),
+              u.joiningDate == null
+                  ? l10n.joiningDateNotSet
+                  : l10n.joinedOn(DateFormat.yMMMd(locale).format(DateTime.parse(u.joiningDate!))),
+            ].join(' · ')),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/hr/employee/${u.id}?year=$_year'),
+            onTap: () => context.push('/hr/employee/${u.id}'),
           ),
       ],
     );
@@ -214,6 +247,15 @@ class _TypesTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
+        const AnnualCarryOverTile(),
+        if (canEdit)
+          ListTile(
+            leading: const Icon(Icons.account_tree_outlined),
+            title: Text(l10n.departments),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/departments'),
+          ),
+        const Divider(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Text(l10n.leaveTypesHint, style: theme.textTheme.bodySmall),

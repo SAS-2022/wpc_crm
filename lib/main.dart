@@ -1,4 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'features/app_update/app_update.dart';
 import 'features/notifications/push.dart';
 import 'features/tracking/tracking_service.dart';
 import 'features/tracking/tracking_status.dart';
+import 'features/tracking/wake_ping.dart';
 import 'features/users/users_repository.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -22,6 +25,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Tracking.configure();
+  // Silent wake pings while the app is in the background or closed.
+  if (!kIsWeb) FirebaseMessaging.onBackgroundMessage(onBackgroundPush);
   runApp(const ProviderScope(child: WpcCrmApp()));
 }
 

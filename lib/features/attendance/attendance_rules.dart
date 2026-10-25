@@ -106,6 +106,8 @@ DayResult deriveDay(
   required DateTime now,
   required bool leavesSite,
   required bool overtimeAllowed,
+  int overtimeMaxMin = defaultOvertimeMaxMin,
+  DateTime? lastSeenAt,
   Duration? awayGrace,
 }) {
   DateTime? checkInAt, lastExitAt, checkOutAt;
@@ -132,6 +134,9 @@ DayResult deriveDay(
   }
 
   final grace = awayGrace ?? Duration(minutes: awayGraceMin);
+  final cap = Duration(minutes: overtimeMaxMin);
+  // Last time the person was seen at the site (arrival / check-in events, GPS).
+  var seenAt = lastSeenAt;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   bool awayTooLong(DateTime t) =>
       !leavesSite && checkInAt != null && !closed && !inside &&
@@ -142,6 +147,7 @@ DayResult deriveDay(
     if (awayTooLong(e.at)) close(lastExitAt!, 'leftSite');
     switch (e.type) {
       case AttendanceEventType.in_ || AttendanceEventType.checkIn || AttendanceEventType.hrIn:
+        if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
         if (checkInAt == null) {
           checkInAt = e.at;
           source = switch (e.type) {
@@ -180,16 +186,30 @@ DayResult deriveDay(
       close(lastExitAt ?? end, 'leftEarly');
     }
   }
-  if (checkInAt != null && !closed && !now.isBefore(closeAll)) close(later(end, checkInAt), 'auto');
+  if (checkInAt != null && !closed && !now.isBefore(closeAll)) {
+    // No exit seen: the end of the work day, or with overtime the last time
+    // they were seen at the site (up to the cap).
+    final from = later(end, checkInAt);
+    final seen = seenAt;
+    close(
+      overtimeAllowed && seen != null
+          ? (seen.isAfter(from.add(cap)) ? from.add(cap) : later(seen, from))
+          : from,
+      'auto',
+    );
+  }
 
   int? worked, counted, overtime, afterHours;
   if (closed) {
     final inAt = checkInAt!, outAt = checkOutAt!;
     worked = _minutes(outAt.difference(inAt) - awayBefore - awayAfter);
     final extra = outAt.difference(later(end, inAt)) - awayAfter;
-    overtime = overtimeAllowed ? _minutes(extra) : 0;
-    afterHours = overtimeAllowed ? 0 : _minutes(extra);
-    counted = overtimeAllowed ? worked : _minutes((outAt.isBefore(end) ? outAt : end).difference(inAt) - awayBefore);
+    final extraMin = _minutes(extra);
+    overtime = overtimeAllowed ? (extraMin < overtimeMaxMin ? extraMin : overtimeMaxMin) : 0;
+    afterHours = extraMin - overtime;
+    counted = overtimeAllowed
+        ? (worked - afterHours < 0 ? 0 : worked - afterHours)
+        : _minutes((outAt.isBefore(end) ? outAt : end).difference(inAt) - awayBefore);
   }
   final late = checkInAt == null || start == null ? null : lateMinutes(checkInAt.difference(start));
   return DayResult(
@@ -238,6 +258,10 @@ List<AttendanceEvent> correctedEvents(List<AttendanceEvent> events, AttendanceCo
 /// Away from the site longer than this (people not allowed to leave it) →
 /// checked out at the time they left (2026-10-22). Editable in App settings.
 var awayGraceMin = 30;
+
+/// Most overtime counted a day unless the user form sets more (user
+/// decision 2026-10-24; `OVERTIME_MAX_MIN` in attendance.js).
+const defaultOvertimeMaxMin = 180;
 
 /// Check-ins up to this many whole minutes after the start aren't late
 /// (user decision 2026-10-20: 8:15 is on time, 8:16 is late). Editable in

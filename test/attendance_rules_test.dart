@@ -6,17 +6,27 @@ void main() {
   DateTime t(int h, [int m = 0]) => DateTime(2026, 10, 20, h, m);
   AttendanceEvent e(AttendanceEventType type, DateTime at) => AttendanceEvent(type, at);
   const inn = AttendanceEventType.in_, out = AttendanceEventType.out;
-  DayResult run(List<AttendanceEvent> events,
-          {DateTime? now, bool leaves = false, bool overtime = false, DateTime? start, Duration? grace}) => deriveDay(
-        events,
-        start: start,
-        end: t(17),
-        closeAll: t(23, 55),
-        now: now ?? t(12),
-        leavesSite: leaves,
-        overtimeAllowed: overtime,
-        awayGrace: grace,
-      );
+  DayResult run(
+    List<AttendanceEvent> events, {
+    DateTime? now,
+    bool leaves = false,
+    bool overtime = false,
+    DateTime? start,
+    Duration? grace,
+    int cap = defaultOvertimeMaxMin,
+    DateTime? seen,
+  }) => deriveDay(
+    events,
+    start: start,
+    end: t(17),
+    closeAll: t(23, 55),
+    now: now ?? t(12),
+    leavesSite: leaves,
+    overtimeAllowed: overtime,
+    overtimeMaxMin: cap,
+    lastSeenAt: seen,
+    awayGrace: grace,
+  );
 
   test('checked in at the first arrival', () {
     final d = run([e(inn, t(9, 40)), e(inn, t(10))]);
@@ -28,7 +38,10 @@ void main() {
   test('leaving after 5 pm checks out; overtime counted only when allowed', () {
     final events = [e(inn, t(8)), e(out, t(18, 30))];
     final no = run(events, now: t(19));
-    expect([no.checkOutAt, no.checkOutType, no.workedMin, no.countedMin, no.overtimeMin], [t(18, 30), 'left', 630, 540, 0]);
+    expect(
+      [no.checkOutAt, no.checkOutType, no.workedMin, no.countedMin, no.overtimeMin],
+      [t(18, 30), 'left', 630, 540, 0],
+    );
     final yes = run(events, now: t(19), overtime: true);
     expect([yes.countedMin, yes.overtimeMin], [630, 90]);
   });
@@ -75,7 +88,11 @@ void main() {
     final events = [e(inn, t(8)), e(AttendanceEventType.checkOut, t(15)), e(inn, t(15, 30))];
     expect(run(events, now: t(16)).checkOutType, 'manual');
     expect(run([...events, e(AttendanceEventType.checkIn, t(15, 31))], now: t(16)).closed, isFalse);
-    final o = run([...events, e(AttendanceEventType.checkIn, t(15, 31)), e(AttendanceEventType.checkOut, t(16))], now: t(16));
+    final o = run([
+      ...events,
+      e(AttendanceEventType.checkIn, t(15, 31)),
+      e(AttendanceEventType.checkOut, t(16)),
+    ], now: t(16));
     expect([o.awayMin, o.countedMin], [31, 449]);
   });
 
@@ -122,10 +139,34 @@ void main() {
       correctedEvents(phone, AttendanceCorrection(checkInAt: t(8), checkOutAt: t(17), siteId: 'hq')),
       now: t(18),
     );
-    expect([full.checkInAt, full.checkInSource, full.siteId, full.checkOutAt, full.checkOutType, full.countedMin],
-        [t(8), 'hr', 'hq', t(17), 'hr', 540]);
+    expect(
+      [full.checkInAt, full.checkInSource, full.siteId, full.checkOutAt, full.checkOutType, full.countedMin],
+      [t(8), 'hr', 'hq', t(17), 'hr', 540],
+    );
     final inOnly = run(correctedEvents(phone.take(2).toList(), AttendanceCorrection(checkInAt: t(8))), now: t(13));
     expect([inOnly.checkInAt, inOnly.closed, inOnly.checkOutType], [t(8), true, 'leftSite']);
     expect(correctedEvents([...phone, e(AttendanceEventType.hrOut, t(10))], null).length, 3);
+  });
+
+  test('overtime is capped at 3 hours unless the person has a higher cap', () {
+    final events = [e(inn, t(8)), e(out, t(21, 30))];
+    final d = run(events, now: t(22), overtime: true);
+    expect([d.workedMin, d.overtimeMin, d.afterHoursMin, d.countedMin], [810, 180, 90, 720]);
+    final more = run(events, now: t(22), overtime: true, cap: 300);
+    expect([more.overtimeMin, more.afterHoursMin, more.countedMin], [270, 0, 810]);
+  });
+
+  test('no exit seen, overtime allowed: closed when last seen at the site, within the cap', () {
+    final events = [e(inn, t(8))];
+    final seen = run(events, now: t(23, 55), overtime: true, seen: t(19, 10));
+    expect([seen.checkOutAt, seen.checkOutType, seen.overtimeMin], [t(19, 10), 'auto', 130]);
+    final late = run(events, now: t(23, 55), overtime: true, seen: t(23));
+    expect([late.checkOutAt, late.overtimeMin], [t(20), 180]);
+    final quiet = run([...events, e(inn, t(11, 20))], now: t(23, 55), overtime: true, seen: t(12, 10));
+    expect([quiet.checkOutAt, quiet.overtimeMin], [t(17), 0]);
+    final no = run(events, now: t(23, 55), seen: t(19, 10));
+    expect([no.checkOutAt, no.overtimeMin], [t(17), 0]);
+    final arrival = run([...events, e(inn, t(18, 30))], now: t(23, 55), overtime: true);
+    expect([arrival.checkOutAt, arrival.overtimeMin], [t(18, 30), 90]);
   });
 }

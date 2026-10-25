@@ -5,7 +5,7 @@ const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
-const { deriveDay, correctedEvents, saudiTime, LATE_GRACE_MIN, AWAY_GRACE_MIN } = require('./attendance');
+const { deriveDay, correctedEvents, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN } = require('./attendance');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
@@ -130,6 +130,7 @@ const TEXTS = {
     tracking_battery: (n) => `${n} turned on battery optimization for WPC CRM – tracking may stop`,
     tracking_notificationsOff: (n) => `${n} turned off notifications for WPC CRM`,
     tracking_offline: (n) => `${n} has been offline for over 30 minutes during work hours`,
+    tracking_noAnswer: (n, c, d, o, x) => `${n}'s phone has sent nothing since ${x.time} (${c} min) and didn't answer a wake-up check – the app may be closed, or the phone off or without signal`,
     leaveRequested: (n, c, d, o) => `Leave request from ${o} – waiting for your approval`,
     leaveApproved: (n) => `${n} approved your request`,
     leaveRejected: (n) => `${n} rejected your request`,
@@ -140,6 +141,9 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `${o} registered an account – waiting for your approval`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'You are checked in' : `${n} checked in`}${x.site ? ` at ${x.site}` : ''} at ${x.time}${c > 0 ? ` – ${c} min late` : ''}`,
     attendanceLate: (n, c, d, o, x) => `You haven't checked in yet – your work day started at ${x.time}. Please be at work soon.`,
+    overtimeStarted: (n, c, d, o, x) => (x.self
+      ? `Your shift ended at ${x.time} and you're still at ${x.site} – overtime is counting. Press Check out when you leave.`
+      : `${n} is still at ${x.site} after the end of the shift (${x.time}) – overtime is counting`),
     absenceReported: (n, c, d, o, x) => `${o} won't be at work on ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
     absence: { sick: 'Sick', tired: 'Tired', cantCome: "Can't come" },
@@ -150,6 +154,10 @@ const TEXTS = {
     earlyCheckoutRequested: (n, c, d, o, x) => `${o} asks to leave early today${x.note ? ` – ${x.note}` : ''}`,
     earlyCheckoutApproved: (n) => `${n} approved your early check-out – you can check out now`,
     earlyCheckoutRejected: (n, c, d, o, x) => `${n} didn't approve your early check-out${x.note ? ` – ${x.note}` : ''}`,
+    vehicleRenewalDue: (n, c, d, o, x) => (c > 0
+      ? `${x.vehicle}: ${x.renewal} expires in ${c} days (${d})`
+      : `${x.vehicle}: ${x.renewal} has expired (${d})`),
+    renewal: { registration: 'registration (Istimara)', insurance: 'insurance', inspection: 'periodic inspection (Fahas)' },
   },
   ar: {
     title: 'WPC CRM',
@@ -166,6 +174,7 @@ const TEXTS = {
     tracking_battery: (n) => `فعّل ${n} تحسين البطارية لتطبيق WPC CRM – قد يتوقف التتبع`,
     tracking_notificationsOff: (n) => `أوقف ${n} الإشعارات لتطبيق WPC CRM`,
     tracking_offline: (n) => `${n} غير متصل منذ أكثر من 30 دقيقة خلال ساعات العمل`,
+    tracking_noAnswer: (n, c, d, o, x) => `لم يرسل هاتف ${n} شيئاً منذ الساعة ${x.time} (${c} دقيقة) ولم يستجب لفحص التنبيه – قد يكون التطبيق مغلقاً أو الهاتف مطفأً أو بلا شبكة`,
     leaveRequested: (n, c, d, o) => `طلب من ${o} – بانتظار موافقتك`,
     leaveApproved: (n) => `وافق ${n} على طلبك`,
     leaveRejected: (n) => `رفض ${n} طلبك`,
@@ -176,6 +185,9 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `سجّل ${o} حساباً – بانتظار موافقتك`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'تم تسجيل حضورك' : `سجّل ${n} حضوره`}${x.site ? ` في ${x.site}` : ''} الساعة ${x.time}${c > 0 ? ` – متأخر ${c} دقيقة` : ''}`,
     attendanceLate: (n, c, d, o, x) => `لم تسجّل حضورك بعد – بدأ يوم عملك الساعة ${x.time}. يرجى الحضور إلى العمل قريباً.`,
+    overtimeStarted: (n, c, d, o, x) => (x.self
+      ? `انتهى دوامك الساعة ${x.time} وما زلت في ${x.site} – يُحتسب العمل الإضافي. اضغط «تسجيل انصراف» عند المغادرة.`
+      : `${n} ما زال في ${x.site} بعد نهاية الدوام (${x.time}) – يُحتسب العمل الإضافي`),
     absenceReported: (n, c, d, o, x) => `${o} لن يحضر إلى العمل يوم ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
     absence: { sick: 'مريض', tired: 'متعب', cantCome: 'لا أستطيع الحضور' },
@@ -186,6 +198,10 @@ const TEXTS = {
     earlyCheckoutRequested: (n, c, d, o, x) => `يطلب ${o} الانصراف مبكراً اليوم${x.note ? ` – ${x.note}` : ''}`,
     earlyCheckoutApproved: (n) => `وافق ${n} على انصرافك المبكر – يمكنك تسجيل الانصراف الآن`,
     earlyCheckoutRejected: (n, c, d, o, x) => `لم يوافق ${n} على انصرافك المبكر${x.note ? ` – ${x.note}` : ''}`,
+    vehicleRenewalDue: (n, c, d, o, x) => (c > 0
+      ? `${x.vehicle}: ينتهي ${x.renewal} بعد ${c} يوماً (${d})`
+      : `${x.vehicle}: انتهى ${x.renewal} (${d})`),
+    renewal: { registration: 'تسجيل المركبة (الاستمارة)', insurance: 'التأمين', inspection: 'الفحص الدوري' },
   },
 };
 
@@ -236,6 +252,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
       site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId,
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
+      vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '',
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
@@ -247,9 +264,11 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type.startsWith('absence') && n.ref ? `/absence/${n.ref}`
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
           : n.type.startsWith('earlyCheckout') ? '/'
+          : n.type === 'overtimeStarted' ? (n.toId === n.ownerId ? '/' : '/attendance')
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
+          : n.type === 'vehicleRenewalDue' ? `/vehicles/${n.ref}`
           : '/notifications',
         notificationId: event.params.id,
       },
@@ -446,74 +465,110 @@ function workStartToday(hours, now) {
   return now - (minute - hours.start) * 60 * 1000 - saudi.getUTCSeconds() * 1000 - saudi.getUTCMilliseconds();
 }
 
+const { wakeStep } = require('./wakePing');
+
+/** Silent "wake" push to a person's phones (no title or text: nothing is shown). */
+async function sendWakePing(uid) {
+  const devices = await admin.firestore().collection(`users/${uid}/devices`).get();
+  const tokens = devices.docs.filter((d) => ['android', 'iOS', 'ios'].includes(d.get('platform'))).map((d) => d.id);
+  if (tokens.length === 0) return;
+  await admin.messaging().sendEachForMulticast({
+    tokens,
+    data: { type: 'wake' },
+    android: { priority: 'high', ttl: 10 * 60 * 1000 },
+    apns: { headers: { 'apns-push-type': 'background', 'apns-priority': '5' }, payload: { aps: { 'content-available': 1 } } },
+  });
+}
+
 /**
- * Every 5 minutes during work hours: a sales exec whose phone has been
- * offline for OFFLINE_ALERT_MS of work time is reported once per offline
- * spell to their KAM (to the sales managers when they have no KAM). Coming
- * back online is only logged, not notified (user decision: not too many
- * notifications).
+ * Every 5 minutes (user request 2026-10-24, replaces the presence-based
+ * offline alert): every tracked person whose phone should be sharing but has
+ * sent nothing for 10 minutes (no position, heartbeat or wake answer) gets a
+ * silent wake push; the app answers (`presence.wokenAt`), restarts tracking
+ * if Android stopped it and sends a position. No answer and quiet for the
+ * App setting `offlineAlertMin` (30) → one `trackingIssue` / `noAnswer`
+ * notification per quiet spell to their managers (sales exec: KAM, else the
+ * sales managers; KAM: sales managers; driver: sales managers, GMs, logistics
+ * managers and their warehouse supervisor). Logged and notified only within
+ * the person's hours (tracking hours, or their own attendance schedule — a
+ * driver working Fridays); pings go out whenever the phone should share
+ * (drivers / "all day": always). Logic in wakePing.js.
  */
 exports.offlineAlerts = onSchedule(
   { schedule: 'every 5 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
   async () => {
     const rtdb = admin.database();
+    const db = admin.firestore();
     const now = Date.now();
-    const [hoursSnap, schedulesSnap] = await Promise.all([
+    const [hoursSnap, schedulesSnap, presenceSnap, liveSnap, deviceSnap, alertsSnap, usersSnap, alertMin] = await Promise.all([
       rtdb.ref('settings/workHours').get(),
       rtdb.ref('settings/trackingSchedules').get(),
+      rtdb.ref('presence').get(),
+      rtdb.ref('live_locations').get(),
+      rtdb.ref('tracking_device').get(),
+      rtdb.ref('tracking_alerts').get(),
+      db.collection('users').get(),
+      appSetting('offlineAlertMin', OFFLINE_ALERT_MS / 60000, 10, 240),
     ]);
     const company = workHours(hoursSnap.val());
     const schedules = schedulesSnap.val() || {};
-    const startOf = (uid) => workStartToday(trackingHours(company, schedules[uid]), now);
-    // Nobody is at work now (company hours or anyone's own schedule).
-    if (startOf('') === null && !Object.keys(schedules).some((uid) => startOf(uid) !== null)) return;
-    const alertMs = (await appSetting('offlineAlertMin', OFFLINE_ALERT_MS / 60000, 10, 240)) * 60 * 1000;
+    const presence = presenceSnap.val() || {};
+    const live = liveSnap.val() || {};
+    const phones = deviceSnap.val() || {};
+    const alerts = alertsSnap.val() || {};
+    const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const active = (role) => users.filter((u) => u.role === role && u.active === true).map((u) => u.id);
 
-    const [presence, sentSnap] = await Promise.all([rtdb.ref('presence').get(), rtdb.ref('tracking_alerts').get()]);
-    const sent = sentSnap.val() || {};
-    const due = [];
-    presence.forEach((p) => {
-      const v = p.val() || {};
-      if (v.online !== false || typeof v.lastSeen !== 'number') return;
-      const start = startOf(p.key);
-      if (start === null) return;
-      // Only work time counts: offline overnight is reported 30 min into the day.
-      if (now - Math.max(v.lastSeen, start) < alertMs) return;
-      if (sent[p.key]?.offlineSince === v.lastSeen) return;
-      due.push({ uid: p.key, since: v.lastSeen });
-    });
-    if (due.length === 0) return;
-
-    const db = admin.firestore();
-    const users = new Map((await db.collection('users').get()).docs.map((d) => [d.id, d.data()]));
-    const managers = [...users].filter(([, u]) => u.role === 'sales_manager' && u.active === true).map(([id]) => id);
-    const gms = [...users].filter(([, u]) => u.role === 'gm' && u.active === true).map(([id]) => id);
-    const logistics = [...users].filter(([, u]) => u.role === 'logistics_manager' && u.active === true).map(([id]) => id);
+    const updates = {};
     const batch = db.batch();
-    const marks = {};
-    for (const { uid, since } of due) {
-      const user = users.get(uid);
-      marks[`${uid}/offlineSince`] = since;
-      if (!['sales_exec', 'driver'].includes(user?.role) || user.active !== true) continue;
-      const kam = user.role === 'sales_exec' ? users.get(user.kamId) : null;
-      // Drivers: the sales managers and GMs (2026-10-20).
-      const to = kam?.active === true ? [user.kamId] : user.role === 'driver' ? [...managers, ...gms, ...logistics] : managers;
-      for (const toId of to) {
-        batch.set(db.collection('notifications').doc(), {
-          toId,
-          type: 'trackingIssue',
-          issue: 'offline',
-          fromId: uid,
-          ownerId: uid,
-          date: saudiDay(now),
-          count: 0,
-          read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+    let notes = 0;
+    const pings = [];
+    for (const user of users) {
+      const uid = user.id;
+      if (user.active !== true || !['sales_exec', 'kam', 'driver'].includes(user.role) || !phones[uid]) continue;
+      const schedule = schedules[uid];
+      const hours = trackingHours(company, schedule);
+      const started = workStartToday(hours, now);
+      const allDay = schedule?.mode === 'allDay' || (schedule?.mode !== 'own' && user.role === 'driver');
+      const on = allDay || started !== null;
+      const own = user.workSchedule ? scheduleOf(user, company) : null;
+      const ownStart = own === null ? null : workStartToday(own, now);
+      const inHours = started !== null || ownStart !== null;
+      const p = presence[uid] || {};
+      const signs = [live[uid]?.updatedAt, p.lastSeen, p.wokenAt].filter((v) => typeof v === 'number');
+      const state = alerts[uid]?.wake || null;
+      const r = wakeStep({
+        now, on, inHours,
+        lastSign: signs.length ? Math.max(...signs) : null,
+        windowStart: allDay ? null : started,
+        hoursStart: inHours ? Math.min(...[started, ownStart].filter((v) => v !== null)) : null,
+        state,
+        alertMs: alertMin * 60000,
+      });
+      if (JSON.stringify(r.state) !== JSON.stringify(state)) updates[`tracking_alerts/${uid}/wake`] = r.state;
+      for (const e of r.log) updates[`tracking_events/${uid}/${saudiDay(e.t)}/${rtdb.ref().push().key}`] = e;
+      if (r.ping) pings.push(uid);
+      if (r.notify) {
+        const kam = user.role === 'sales_exec' ? users.find((u) => u.id === user.kamId && u.active === true) : null;
+        const to = new Set(kam ? [kam.id]
+          : user.role === 'driver'
+            ? [...active('sales_manager'), ...active('gm'), ...active('logistics_manager'),
+              ...users.filter((u) => u.id === user.supervisorId && u.active === true).map((u) => u.id)]
+            : active('sales_manager'));
+        to.delete(uid);
+        for (const toId of to) {
+          notes++;
+          batch.set(db.collection('notifications').doc(), {
+            toId, type: 'trackingIssue', issue: 'noAnswer', fromId: uid, ownerId: uid,
+            date: saudiDay(now), count: r.notify.minutes, time: saudiClock(r.notify.since),
+            read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
       }
     }
-    await batch.commit();
-    await rtdb.ref('tracking_alerts').update(marks);
+    await Promise.all(pings.map((uid) => sendWakePing(uid).catch((e) => console.warn('wake ping', uid, e.message))));
+    if (Object.keys(updates).length > 0) await rtdb.ref().update(updates);
+    if (notes > 0) await batch.commit();
   },
 );
 
@@ -809,6 +864,48 @@ async function announceCheckIn(data, d, user, now) {
   }).catch((e) => { if (e.code !== 6) throw e; }))); // 6 = already exists
 }
 
+/**
+ * Last GPS fix at the site on [date] (location_history; tracked people only),
+ * for a day with no exit seen (2026-10-24). Null without one.
+ */
+async function lastSeenAtSite(uid, date, siteId) {
+  if (!siteId) return null;
+  const [history, site] = await Promise.all([
+    admin.database().ref(`location_history/${uid}/${date}`).get(),
+    admin.firestore().doc(`work_sites/${siteId}`).get(),
+  ]);
+  const lat = site.get('lat'), lng = site.get('lng');
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  const radius = (site.get('radius') || 100) + 50;
+  let last = null;
+  for (const p of Object.values(history.val() || {})) {
+    if (typeof p?.t !== 'number' || typeof p.lat !== 'number' || (p.accuracy || 0) > ROUTE_MAX_ACCURACY) continue;
+    if (metersBetween(p, { lat, lng }) <= radius && (last === null || p.t > last)) last = p.t;
+  }
+  return last;
+}
+
+/**
+ * Still at the site when the shift ends with overtime allowed (user request
+ * 2026-10-24): tells the direct manager(s) and the person (so they check out
+ * when they leave, in case the phone misses the exit). Once a day.
+ */
+async function announceOvertime(data, d, user, endMs) {
+  const db = admin.firestore();
+  const users = (await db.collection('users').where('active', '==', true).get()).docs
+    .map((x) => ({ id: x.id, ...x.data() }));
+  const site = d.siteId ? (await db.doc(`work_sites/${d.siteId}`).get()).get('name') || '' : '';
+  const to = new Set([data.uid, ...directManagers(user, data.uid, users)]);
+  await Promise.all([...to].map((toId) => db.doc(`notifications/overtime_${data.uid}_${data.date}_${toId}`).create({
+    toId, fromId: data.uid, ownerId: data.uid, type: 'overtimeStarted', date: data.date,
+    siteName: site, time: saudiClock(endMs), count: 0, read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  }).catch((e) => { if (e.code !== 6) throw e; }))); // 6 = already exists
+}
+
+/** Shift-end notices only this soon after the end (not for days recalculated later). */
+const OVERTIME_NOTICE_MS = 2 * 3600 * 1000;
+
 /** Works the day out from its events (see attendance.js) and saves the result when it changed. */
 async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin }) {
   if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
@@ -820,7 +917,7 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     (data.events || []).map((e) => ({ ...e, at: ms(e.at) })),
     c ? { checkInAt: ms(c.checkInAt), checkOutAt: ms(c.checkOutAt), siteId: c.siteId } : null,
   );
-  const d = deriveDay(events, {
+  const options = {
     startMs: mine.days.includes(weekdayOf(data.date)) ? saudiTime(data.date, mine.start) : null,
     endMs: saudiTime(data.date, mine.end),
     closeAllMs: saudiTime(data.date, 23 * 60 + 55),
@@ -828,9 +925,17 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     // User form "Allowed to leave the site" (2026-10-22); not set = sales team and drivers.
     leavesSite: typeof user.leaveSiteAllowed === 'boolean' ? user.leaveSiteAllowed : LEAVES_SITE_ROLES.includes(user.role),
     overtimeAllowed: user.overtimeAllowed === true,
+    overtimeMaxMin: overtimeCap(user.overtimeMaxMin),
     graceMin,
     awayGraceMin,
-  });
+  };
+  let d = deriveDay(events, options);
+  // Closed with no exit seen: with overtime, the last GPS fix at the site
+  // tells how long they stayed.
+  if (d.checkOutType === 'auto' && options.overtimeAllowed) {
+    const lastSeenAt = await lastSeenAtSite(data.uid, data.date, d.siteId);
+    if (lastSeenAt !== null) d = deriveDay(events, { ...options, lastSeenAt });
+  }
   const update = {};
   for (const k of DERIVED) {
     const v = TIME_FIELDS.includes(k) && d[k] !== null ? admin.firestore.Timestamp.fromMillis(d[k]) : d[k];
@@ -841,6 +946,11 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
   if (d.checkInAt !== null && data.checkInNotified !== true) {
     update.checkInNotified = true;
     if (now - d.checkInAt < CHECK_IN_NOTICE_MS) await announceCheckIn(data, d, user, now);
+  }
+  if (options.overtimeAllowed && options.startMs !== null && !d.closed && d.inside && now >= options.endMs
+    && data.overtimeNotified !== true) {
+    update.overtimeNotified = true;
+    if (now - options.endMs < OVERTIME_NOTICE_MS) await announceOvertime(data, d, user, options.endMs);
   }
   if (Object.keys(update).length > 0) await ref.update(update);
 }
@@ -1001,31 +1111,38 @@ exports.attendanceReminders = onSchedule(
   },
 );
 
-// Day timelines (user request 2026-10-20): each salesperson's working day
+// Day timelines (user request 2026-10-20; drivers' deliveries 2026-10-24): each salesperson's / driver's working day
 // split into client / driving / office / lunch / stopped / no data from their
 // GPS points, saved in Firestore `day_timelines/{uid}_{yyyy-MM-dd}` for the
 // Reports routing section and Route history (see timeline.js).
 const { buildDayTimeline } = require('./timeline');
 
-/** Builds and saves one person's day; null when there's nothing to build. */
-async function saveTimeline(uid, day, hours, sites) {
-  if (!hours.days.includes(weekdayOf(day))) return null;
+/**
+ * Builds and saves one person's day; null when there's nothing to build.
+ * [places] = client locations for drivers (deliveries matched by distance,
+ * 2026-10-24); null for salespeople, whose client time comes from check-ins.
+ */
+async function saveTimeline(uid, day, hours, sites, places = null) {
+  const isDriver = places !== null;
+  if (!isDriver && !hours.days.includes(weekdayOf(day))) return null;
   const db = admin.firestore();
   const [history, visitSnap] = await Promise.all([
     admin.database().ref(`location_history/${uid}/${day}`).get(),
-    db.collection('visits').where('salesExecId', '==', uid).where('month', '==', day.slice(0, 7)).get(),
+    isDriver ? null : db.collection('visits').where('salesExecId', '==', uid).where('month', '==', day.slice(0, 7)).get(),
   ]);
   const points = mainTrack(Object.values(history.val() || {})
     .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
     .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
     .sort((a, b) => a.t - b.t));
-  const visits = visitSnap.docs
+  const visits = (visitSnap?.docs ?? [])
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((v) => v.type !== 'call' && v.checkedInAt?.toMillis && typeof v.checkInLat === 'number' && typeof v.checkInLng === 'number')
     .map((v) => ({ id: v.id, clientId: v.clientId, at: v.checkedInAt.toMillis(), lat: v.checkInLat, lng: v.checkInLng }))
     .filter((v) => saudiDay(v.at) === day)
     .sort((a, b) => a.at - b.at);
   if (points.length === 0 && visits.length === 0) return null;
+  const now = Date.now();
+  const workDay = hours.days.includes(weekdayOf(day));
   // Work hours, stretched to cover visits made a little before / after them.
   let startMs = saudiTime(day, hours.start);
   let endMs = saudiTime(day, hours.end);
@@ -1033,9 +1150,20 @@ async function saveTimeline(uid, day, hours, sites) {
     startMs = Math.min(startMs, visits[0].at - 30 * 60000);
     endMs = Math.max(endMs, visits[visits.length - 1].at + 60 * 60000);
   }
-  const now = Date.now();
+  if (isDriver) {
+    // Drivers are tracked all day (they keep the car): find the deliveries
+    // over the whole day, then stretch the work hours to cover them; off days
+    // only from the first delivery to the last.
+    const whole = buildDayTimeline({ points, visits, sites, places, startMs: saudiTime(day, 0), endMs: saudiTime(day, 1440) - 1 });
+    const stays = whole.clientStays;
+    if (!workDay && stays.length === 0) return null;
+    if (stays.length) {
+      startMs = workDay ? Math.min(startMs, stays[0].from) : stays[0].from;
+      endMs = workDay ? Math.max(endMs, stays[stays.length - 1].to) : stays[stays.length - 1].to;
+    }
+  }
   endMs = Math.min(endMs, Math.max(startMs, now)); // today: up to now
-  const t = buildDayTimeline({ points, visits, sites, startMs, endMs });
+  const t = buildDayTimeline({ points, visits, sites, places: places ?? [], startMs, endMs });
   const doc = { uid, day, month: day.slice(0, 7), ...t, final: now > endMs + 3600000, builtAt: now };
   await db.doc(`day_timelines/${uid}_${day}`).set(doc);
   return doc;
@@ -1052,6 +1180,26 @@ async function timelineContext() {
   return { hours: workHours(hoursSnap.val()), sites };
 }
 
+/** Client locations (main + extras) for drivers' deliveries; kept 10 minutes per instance. */
+let clientPlacesCache = null;
+async function clientPlaces() {
+  if (clientPlacesCache && Date.now() - clientPlacesCache.at < 10 * 60000) return clientPlacesCache.places;
+  const snap = await admin.firestore().collection('clients').select('name', 'lat', 'lng', 'extraLocations').get();
+  const places = [];
+  for (const d of snap.docs) {
+    const c = d.data();
+    if (typeof c.lat !== 'number' || typeof c.lng !== 'number') continue; // extras only count with a main
+    places.push({ clientId: d.id, name: c.name ?? '', locationId: null, lat: c.lat, lng: c.lng });
+    for (const x of Array.isArray(c.extraLocations) ? c.extraLocations : []) {
+      if (typeof x?.lat === 'number' && typeof x?.lng === 'number') {
+        places.push({ clientId: d.id, name: c.name ?? '', locationId: x.id ?? null, lat: x.lat, lng: x.lng });
+      }
+    }
+  }
+  clientPlacesCache = { at: Date.now(), places };
+  return places;
+}
+
 /** Days kept for the benchmarks when back-filling. */
 const TIMELINE_BACKFILL_DAYS = 30;
 
@@ -1061,8 +1209,11 @@ exports.buildTimelines = onSchedule(
   async () => {
     const db = admin.firestore();
     const { hours, sites } = await timelineContext();
-    const people = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam']).get()).docs
-      .filter((d) => d.get('active') === true).map((d) => d.id);
+    const users = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam', 'driver']).get()).docs
+      .filter((d) => d.get('active') === true);
+    const people = users.map((d) => d.id);
+    const drivers = new Set(users.filter((d) => d.get('role') === 'driver').map((d) => d.id));
+    const places = drivers.size ? await clientPlaces() : null;
     const today = saudiDay(Date.now());
     const days = [];
     for (let k = 1; k <= TIMELINE_BACKFILL_DAYS; k++) {
@@ -1075,7 +1226,7 @@ exports.buildTimelines = onSchedule(
       for (const day of days) {
         const old = existing.get(`${uid}_${day}`);
         if (old?.exists && old.get('final') === true) continue;
-        await saveTimeline(uid, day, hours, sites);
+        await saveTimeline(uid, day, hours, sites, drivers.has(uid) ? places : null);
         if (++built >= 400) return; // the rest tomorrow
       }
     }
@@ -1091,12 +1242,13 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
   const me = await db.doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
   const role = me.get('role');
+  const target = uid === req.auth.uid ? me : await db.doc(`users/${uid}`).get();
   if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
-    const target = await db.doc(`users/${uid}`).get();
     if (!followsPerson(role, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
   }
   const { hours, sites } = await timelineContext();
-  const doc = await saveTimeline(uid, day, hours, sites);
+  const places = target.exists && target.get('role') === 'driver' ? await clientPlaces() : null;
+  const doc = await saveTimeline(uid, day, hours, sites, places);
   return { built: doc !== null };
 });
 
@@ -1222,3 +1374,180 @@ exports.tickPlanOnPlanned = onDocumentCreated({ document: 'tasks/{id}', maxInsta
   if (!done) return;
   await event.data.ref.update({ done: true, doneAt: done.get('checkedInAt'), visitId: done.id });
 });
+
+// --- Vehicles (2026-10-24) ------------------------------------------------
+// Kilometres per driver per day from their GPS points, for the vehicles'
+// odometer estimate: Firestore `driver_km/{uid}_{day}` {uid, day, km, points,
+// final}. Renewal reminders for registration / insurance / inspection.
+const { dayKm, renewalAlerts, DUE_SOON_DAYS } = require('./vehicles');
+
+/** Days back that location history still has (cleanRouteHistory keeps 90). */
+const DRIVER_KM_DAYS = 89;
+
+async function saveDriverKm(uid, day, today) {
+  const history = await admin.database().ref(`location_history/${uid}/${day}`).get();
+  const points = mainTrack(Object.values(history.val() || {})
+    .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
+    .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
+    .sort((a, b) => a.t - b.t));
+  const doc = { uid, day, km: dayKm(points), points: points.length, final: day < today, builtAt: Date.now() };
+  await admin.firestore().doc(`driver_km/${uid}_${day}`).set(doc);
+  return doc;
+}
+
+/** Builds the missing or unfinished days of [uids] from [from] to today; at most [limit]. */
+async function fillDriverKm(uids, from, limit) {
+  const db = admin.firestore();
+  const today = saudiDay(Date.now());
+  const oldest = saudiDay(Date.parse(`${today}T12:00:00Z`) - DRIVER_KM_DAYS * 86400000);
+  const start = from && from > oldest ? from : oldest;
+  const days = [];
+  for (let ms = Date.parse(`${start}T12:00:00Z`); saudiDay(ms) <= today; ms += 86400000) days.push(saudiDay(ms));
+  if (!uids.length || !days.length) return 0;
+  const refs = uids.flatMap((uid) => days.map((day) => db.doc(`driver_km/${uid}_${day}`)));
+  const done = new Set();
+  for (let i = 0; i < refs.length; i += 300) {
+    for (const s of await db.getAll(...refs.slice(i, i + 300))) if (s.exists && s.get('final') === true) done.add(s.id);
+  }
+  let built = 0;
+  for (const uid of uids) {
+    for (const day of days) {
+      if (done.has(`${uid}_${day}`)) continue;
+      await saveDriverKm(uid, day, today);
+      if (++built >= limit) return built;
+    }
+  }
+  return built;
+}
+
+/** The drivers whose km are needed: active drivers and anyone on a vehicle. */
+async function vehicleDrivers() {
+  const db = admin.firestore();
+  const [drivers, vehicles] = await Promise.all([
+    db.collection('users').where('role', '==', 'driver').where('active', '==', true).get(),
+    db.collection('vehicles').get(),
+  ]);
+  const uids = new Set(drivers.docs.map((d) => d.id));
+  for (const v of vehicles.docs) for (const uid of v.get('driverIds') || []) uids.add(uid);
+  return [...uids];
+}
+
+/** Nightly: yesterday's km, plus any day still missing (the first run back-fills 89 days). */
+exports.driverKm = onSchedule(
+  { schedule: '45 0 * * *', timeZone: 'Asia/Riyadh', timeoutSeconds: 540, memory: '512MiB', maxInstances: 1 },
+  async () => {
+    await fillDriverKm(await vehicleDrivers(), null, 1500);
+  },
+);
+
+/** Vehicles page: today's km and missing days of these drivers, now. SM / GM / logistics manager. */
+exports.refreshDriverKm = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
+  const me = await admin.firestore().doc(`users/${req.auth.uid}`).get();
+  if (me.get('active') !== true || !['sales_manager', 'gm', 'logistics_manager'].includes(me.get('role'))) {
+    throw new HttpsError('permission-denied', 'Not allowed');
+  }
+  const { uids, from } = req.data || {};
+  if (!Array.isArray(uids) || uids.length > 30 || uids.some((u) => typeof u !== 'string' || !u || u.includes('/'))) {
+    throw new HttpsError('invalid-argument', 'uids');
+  }
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(from || '') ? from : null;
+  return { built: await fillDriverKm(uids, day, 300) };
+});
+
+/**
+ * Every morning: reminds the GMs, sales managers and logistics managers
+ * (user decisions 2026-10-24) once when a vehicle's registration, insurance or periodic
+ * inspection is App settings `vehicleRenewalDays` (default 14) days from expiring (`vehicleRenewalDue`; count = days
+ * left, date = the expiry). It stays on their Home until a new date is
+ * entered. Sent keys are kept in `vehicles.renewalNotified`.
+ */
+exports.vehicleRenewals = onSchedule(
+  { schedule: '0 8 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const today = saudiDay(Date.now());
+    const [vehicles, managers, dueSoonDays] = await Promise.all([
+      db.collection('vehicles').get(),
+      db.collection('users').where('role', 'in', ['logistics_manager', 'sales_manager', 'gm']).where('active', '==', true).get(),
+      appSetting('vehicleRenewalDays', DUE_SOON_DAYS, 1, 90),
+    ]);
+    if (managers.empty) return;
+    for (const v of vehicles.docs) {
+      const alerts = renewalAlerts(v.data(), today, v.get('renewalNotified') || [], dueSoonDays);
+      if (!alerts.length) continue;
+      const batch = db.batch();
+      for (const a of alerts) {
+        for (const m of managers.docs) {
+          batch.set(db.collection('notifications').doc(), {
+            toId: m.id, fromId: m.id, ownerId: '', type: 'vehicleRenewalDue', issue: a.item,
+            date: a.expiry, count: a.days, ref: v.id, vehicleName: v.get('plate') || '',
+            read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      batch.update(v.ref, { renewalNotified: admin.firestore.FieldValue.arrayUnion(...alerts.map((a) => a.key)) });
+      await batch.commit();
+    }
+  },
+);
+
+// --- Leave years (2026-10-24) ---------------------------------------------
+const { leaveYearOf, leaveYearRange, closeYear, DEFAULT_TYPES: DEFAULT_LEAVE_TYPES, ANNUAL } = require('./leaveYears');
+
+/** Only years ending from the day this was built are closed (no made-up history before it). */
+const LEAVE_CLOSE_FROM = '2026-10-24';
+
+/** Days after a year ends during which it is worked out again (late approvals). */
+const LEAVE_RECLOSE_DAYS = 30;
+
+/**
+ * Every night: for each active person whose leave year ended in the last
+ * 30 days, saves its numbers in `leave_history/{uid}_{year}` (days taken per
+ * type) and moves the annual leave left into the new year's
+ * `leave_balances/{uid}_{year+1}.carried.annual` — overdrawn days always,
+ * days left only with `settings/leavePolicy.annualCarryOver`. Re-done each
+ * night of those 30 days so requests approved late still count.
+ */
+exports.closeLeaveYears = onSchedule(
+  { schedule: '15 1 * * *', timeZone: 'Asia/Riyadh', timeoutSeconds: 300, maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const today = saudiDay(Date.now());
+    const [usersSnap, typesSnap, policySnap] = await Promise.all([
+      db.collection('users').where('active', '==', true).get(),
+      db.doc('settings/leaveTypes').get(),
+      db.doc('settings/leavePolicy').get(),
+    ]);
+    const types = Array.isArray(typesSnap.get('types')) ? typesSnap.get('types') : DEFAULT_LEAVE_TYPES;
+    const carryOver = policySnap.get('annualCarryOver') === true;
+    const due = [];
+    for (const u of usersSnap.docs) {
+      if (!u.get('role')) continue;
+      const joining = u.get('joiningDate') || null;
+      const year = leaveYearOf(joining, today) - 1;
+      const { from, to } = leaveYearRange(joining, year);
+      const daysSince = (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${to}T00:00:00Z`)) / 86400000;
+      if (to < LEAVE_CLOSE_FROM || daysSince > LEAVE_RECLOSE_DAYS) continue;
+      if (joining && from < joining) continue; // not employed yet then
+      due.push({ uid: u.id, joining, year });
+    }
+    if (!due.length) return;
+    const balances = await db.getAll(...due.map((d) => db.doc(`leave_balances/${d.uid}_${d.year}`)));
+    for (const [i, d] of due.entries()) {
+      const requests = (await db.collection('leave_requests').where('uid', '==', d.uid).get()).docs
+        .map((r) => r.data())
+        .filter((r) => r.isLeave !== false);
+      const r = closeYear({ types, balance: balances[i].data() || {}, requests, joining: d.joining, year: d.year, carryOver });
+      const batch = db.batch();
+      batch.set(db.doc(`leave_history/${d.uid}_${d.year}`), {
+        uid: d.uid, year: d.year, joiningDate: d.joining, ...r, carryOver,
+        builtAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      batch.set(db.doc(`leave_balances/${d.uid}_${d.year + 1}`), {
+        uid: d.uid, year: d.year + 1, carried: { [ANNUAL]: r.carriedOut },
+      }, { merge: true });
+      await batch.commit();
+    }
+  },
+);

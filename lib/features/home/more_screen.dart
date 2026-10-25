@@ -46,6 +46,7 @@ class MoreScreen extends ConsumerWidget {
       ]),
       (l10n.moreSectionPeople, [
         if (role.seesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
+        if (role.managesDrivers) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
         if (me.seesTeamAttendance && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
         // On the web again since 2026-10-22 (absences to decide).
         if (role.canSeeHr && !wide) item(Icons.badge, l10n.hrArea, '/hr'),

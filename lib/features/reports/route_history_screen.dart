@@ -157,7 +157,7 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     // The day's GPS timeline, and the team benchmark of the month (median of
     // the salespeople's measured visit length, speed and road factor).
     final timeline = person == null ? null : ref.watch(dayTimelineProvider((person.id, dayStr))).value;
-    if (person != null && person.role.isTracked && allPoints.isNotEmpty && (timeline == null || !timeline.isFinal)) {
+    if (person != null && person.role.isLocationTracked && allPoints.isNotEmpty && (timeline == null || !timeline.isFinal)) {
       _buildTimeline(person.id, dayStr, allPoints.length);
     }
     final pace = routingReport(
@@ -173,6 +173,12 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
         if (visitPoint(v) case final p?) (at: v.checkedInAt!, place: (p.latitude, p.longitude)),
     ], pace: pace, timeline: timeline);
 
+    // Drivers don't check in: their stops at a client's location (from the
+    // timeline, matched by distance) are the deliveries.
+    final isDriver = person?.role == UserRole.driver;
+    final deliveries = isDriver ? [...?timeline?.clientStays.where((s) => s.lat != null)] : const <ClientStay>[];
+    String deliveryName(ClientStay s) => clients[s.clientId]?.name ?? s.clientName ?? '?';
+
     final path = [for (final p in route.path) LatLng(p.lat, p.lng)];
     LatLng latLng(RoutePoint p) => LatLng(p.lat, p.lng);
     final runs = splitAtGaps(route.path);
@@ -180,8 +186,13 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     // Zoom to the visited clients; the whole route (which may start at home
     // or include far-off fixes) only when there are no visits.
     final visitPoints = [for (final v in visits) ?visitPoint(v)];
-    final focus = visitPoints.isNotEmpty ? visitPoints : path;
-    final fitKey = '${person?.id}|$dayStr|${visitPoints.length}|${focus.isNotEmpty}';
+    final deliveryPoints = [for (final s in deliveries) LatLng(s.lat!, s.lng!)];
+    final focus = visitPoints.isNotEmpty
+        ? visitPoints
+        : deliveryPoints.isNotEmpty
+            ? deliveryPoints
+            : path;
+    final fitKey = '${person?.id}|$dayStr|${visitPoints.length}|${deliveryPoints.length}|${focus.isNotEmpty}';
     if (_map != null && _fitted != fitKey && focus.isNotEmpty) {
       _fitted = fitKey;
       WidgetsBinding.instance.addPostFrameCallback((_) => fitPoints(_map!, focus, padding: 48));
@@ -246,7 +257,10 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
               _Fact(icon: Icons.route, label: l10n.distance, value: formatDistance(lines.meters)),
               _Fact(icon: Icons.play_arrow, label: l10n.firstLocation, value: time.format(route.first!)),
               _Fact(icon: Icons.stop, label: l10n.lastLocation, value: time.format(route.last!)),
-              _Fact(icon: Icons.event_available, label: l10n.visits, value: '${visits.length}'),
+              if (isDriver)
+                _Fact(icon: Icons.local_shipping_outlined, label: l10n.deliveries, value: '${deliveries.length}')
+              else
+                _Fact(icon: Icons.event_available, label: l10n.visits, value: '${visits.length}'),
               if (efficiency != null)
                 _Fact(
                   icon: Icons.speed,
@@ -304,6 +318,34 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                 ),
             ]),
           ),
+        // Drivers: each stop at a client, arrival to departure.
+        if (isDriver && route.path.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text(l10n.deliveries, style: theme.textTheme.titleSmall),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+            child: Text(deliveries.isEmpty ? l10n.noDeliveriesFound : l10n.deliveryStopsNote,
+                style: theme.textTheme.bodySmall?.copyWith(color: inkSecondary)),
+          ),
+          for (final (i, s) in deliveries.indexed)
+            ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: 13,
+                backgroundColor: timeKindColor(TimeKind.client),
+                child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+              title: Text([deliveryName(s), if (s.locationId != null) l10n.deliveryLocationOther].join(' · ')),
+              subtitle: Text([
+                '${time.format(s.from)} – ${time.format(s.to)}',
+                formatSplitMinutes(l10n, s.length.inMinutes),
+                if (s.meters != null) l10n.deliveryFromPin(s.meters!),
+              ].join(' · ')),
+              onTap: _map == null ? null : () => _map!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(s.lat!, s.lng!), 17)),
+            ),
+        ],
         if (efficiency != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -397,6 +439,17 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                   ? InfoWindow(title: v.clientName, snippet: time.format(v.checkedInAt!))
                   : InfoWindow.noText,
             ),
+        for (final (i, s) in deliveries.indexed)
+          Marker(
+            markerId: MarkerId('delivery-$i'),
+            position: LatLng(s.lat!, s.lng!),
+            anchor: const Offset(0.5, 0.5),
+            icon: _icons.circle(context: context, fill: timeKindColor(TimeKind.client), text: '${i + 1}'),
+            infoWindow: InfoWindow(
+              title: deliveryName(s),
+              snippet: '${time.format(s.from)} – ${time.format(s.to)} · ${formatSplitMinutes(l10n, s.length.inMinutes)}',
+            ),
+          ),
       },
     );
 
@@ -446,7 +499,8 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                 title: Text(l10n.tripDetails),
                 subtitle: Text(route.path.isEmpty
                     ? l10n.noRouteData
-                    : '${l10n.distance}: ${formatDistance(lines.meters)} · ${l10n.visits}: ${visits.length}'),
+                    : '${l10n.distance}: ${formatDistance(lines.meters)} · '
+                        '${isDriver ? l10n.deliveries : l10n.visits}: ${isDriver ? deliveries.length : visits.length}'),
                 children: [
                   ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: c.maxHeight * 0.45),

@@ -1011,6 +1011,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contact => 'Contact';
 
   @override
+  String get addPhoneTitle => 'Add a contact number';
+
+  @override
+  String addPhoneMessage(String client) {
+    return '$client has no phone number. Add one to save this visit.';
+  }
+
+  @override
+  String addPhoneMessageCall(String client) {
+    return '$client has no phone number. Add one to save this call.';
+  }
+
+  @override
+  String get pickFromContacts => 'Choose from phone contacts';
+
+  @override
+  String get phoneNumberInvalid => 'Enter a phone number (7 to 15 digits)';
+
+  @override
+  String get phoneNumberSaved => 'Contact number saved';
+
+  @override
+  String get saveAndContinue => 'Save and continue';
+
+  @override
   String get contactPerson => 'Contact person';
 
   @override
@@ -1732,6 +1757,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logOffline => 'Lost connection';
+
+  @override
+  String get logQuiet => 'Phone stopped sending';
+
+  @override
+  String get logWoken => 'Woken by the wake-up check – sending again';
+
+  @override
+  String get logResumed => 'Sending again';
+
+  @override
+  String get logNoAnswer => 'No answer to the wake-up check – managers told';
+
+  @override
+  String notifPhoneNoAnswer(String name, String time, int minutes) {
+    return '$name\'s phone has sent nothing since $time ($minutes min) and didn\'t answer a wake-up check – the app may be closed, or the phone off or without signal';
+  }
 
   @override
   String get logOnline => 'Back online';
@@ -2814,6 +2856,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overtimeAllowed => 'Overtime allowed';
 
   @override
+  String get overtimeMax => 'Most overtime a day';
+
+  @override
+  String get overtimeMaxHelp =>
+      'Overtime beyond this isn\'t counted (recorded as time stayed after hours). Standard: 3 hours.';
+
+  @override
+  String hoursCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifOvertimeStarted(String name, String site, String time) {
+    return '$name is still at $site after the end of the shift ($time) – overtime is counting';
+  }
+
+  @override
+  String notifOvertimeStartedSelf(String site, String time) {
+    return 'Your shift ended at $time and you\'re still at $site – overtime is counting. Press Check out when you leave.';
+  }
+
+  @override
   String get overtimeAllowedHelp =>
       'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.';
 
@@ -3308,6 +3378,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportTimeSplit => 'Where the work day went';
+
+  @override
+  String get deliveries => 'Deliveries';
+
+  @override
+  String get deliveryStopsNote =>
+      'Stops of 5 min or more within 200 m of a client\'s location. Times are from the driver\'s GPS: arrival to departure.';
+
+  @override
+  String deliveryFromPin(int meters) {
+    return '$meters m from the pin';
+  }
+
+  @override
+  String get noDeliveriesFound =>
+      'No stops at a client\'s location found for this day.';
+
+  @override
+  String get deliveryLocationOther => 'other location';
 
   @override
   String get timeAtClients => 'At clients';
@@ -4384,4 +4473,305 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hidePassword => 'Hide password';
+
+  @override
+  String get vehicles => 'Vehicles';
+
+  @override
+  String get addVehicle => 'Add vehicle';
+
+  @override
+  String get editVehicle => 'Edit vehicle';
+
+  @override
+  String get noVehicles =>
+      'No vehicles yet. Add the company\'s vehicles with their drivers and renewal dates.';
+
+  @override
+  String get vehiclePlate => 'Plate number';
+
+  @override
+  String get vehiclePlateRequired => 'Enter the plate number';
+
+  @override
+  String get vehicleMake => 'Make';
+
+  @override
+  String get vehicleModel => 'Model';
+
+  @override
+  String get vehicleYear => 'Year';
+
+  @override
+  String get vehicleColor => 'Colour';
+
+  @override
+  String get vehicleVin => 'Chassis number (VIN)';
+
+  @override
+  String get vehicleFirstReading => 'Odometer now (km, optional)';
+
+  @override
+  String get renewals => 'Renewals';
+
+  @override
+  String get renewalRegistration => 'Registration (Istimara)';
+
+  @override
+  String get renewalInsurance => 'Insurance';
+
+  @override
+  String get renewalInspection => 'Periodic inspection (Fahas)';
+
+  @override
+  String get renewalNotSet => 'Not set';
+
+  @override
+  String renewalDaysLeft(int days) {
+    return '$days days left';
+  }
+
+  @override
+  String get renewalExpiresToday => 'Expires today';
+
+  @override
+  String renewalExpiredAgo(int days) {
+    return 'Expired $days days ago';
+  }
+
+  @override
+  String renewalUntil(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get renewalExpiry => 'Expiry date';
+
+  @override
+  String get markRenewed => 'Renewed';
+
+  @override
+  String renewDialogTitle(String item) {
+    return 'Renew $item';
+  }
+
+  @override
+  String get renewDialogHint => 'New expiry date';
+
+  @override
+  String get changeDate => 'Change date';
+
+  @override
+  String get setDate => 'Set date';
+
+  @override
+  String get renewalHistory => 'Renewal history';
+
+  @override
+  String renewalHistoryRow(String item, String date) {
+    return '$item renewed until $date';
+  }
+
+  @override
+  String needsRenewalFilter(int count) {
+    return 'Needs renewal ($count)';
+  }
+
+  @override
+  String get showInactiveVehicles => 'Show inactive';
+
+  @override
+  String get mileage => 'Mileage';
+
+  @override
+  String kmValue(String km) {
+    return '$km km';
+  }
+
+  @override
+  String odometerEstimate(String km) {
+    return '≈ $km km now';
+  }
+
+  @override
+  String lastReading(String km, String date) {
+    return 'Last reading $km km on $date';
+  }
+
+  @override
+  String gpsKmSince(String km) {
+    return '+ $km km driven since then (drivers\' GPS)';
+  }
+
+  @override
+  String gpsKmNoReading(String km) {
+    return '$km km driven by its drivers (GPS) since they were assigned';
+  }
+
+  @override
+  String get noReadingYet =>
+      'No odometer reading yet – record one so the app can estimate the mileage.';
+
+  @override
+  String get gpsKmHelp =>
+      'GPS km are straight lines between the drivers\' location fixes, counted from the day after the last reading, so they read a little under the odometer. Record a reading now and then to correct it.';
+
+  @override
+  String get recordReading => 'Record reading';
+
+  @override
+  String get odometerKm => 'Odometer (km)';
+
+  @override
+  String get readingNote => 'Note (optional)';
+
+  @override
+  String readingLower(String km) {
+    return 'This is lower than the reading before it ($km km). Save anyway?';
+  }
+
+  @override
+  String get readings => 'Readings';
+
+  @override
+  String deleteReadingConfirm(String km) {
+    return 'Delete the reading $km km?';
+  }
+
+  @override
+  String get noDriverAssigned => 'No driver';
+
+  @override
+  String get changeDrivers => 'Change drivers';
+
+  @override
+  String driverOnOtherVehicle(String plate) {
+    return 'Now on $plate – moves to this vehicle';
+  }
+
+  @override
+  String get noDriverUsers =>
+      'No drivers yet – add users with the Driver role.';
+
+  @override
+  String deleteVehicleConfirm(String plate) {
+    return 'Delete the vehicle $plate? Its readings and renewal history are deleted too.';
+  }
+
+  @override
+  String vehicleRenewalsDue(int count) {
+    return 'Vehicle renewals due ($count)';
+  }
+
+  @override
+  String notifVehicleRenewalDue(
+    String vehicle,
+    String item,
+    int days,
+    String date,
+  ) {
+    return '$vehicle: $item expires in $days days ($date)';
+  }
+
+  @override
+  String notifVehicleRenewalExpired(String vehicle, String item, String date) {
+    return '$vehicle: $item has expired ($date)';
+  }
+
+  @override
+  String get settingVehicleRenewal => 'Vehicle renewal reminder';
+
+  @override
+  String get settingVehicleRenewalHelp =>
+      'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance or periodic inspection expires; it stays on their Home until the new date is entered.';
+
+  @override
+  String get settingsSectionHr => 'HR';
+
+  @override
+  String get department => 'Department';
+
+  @override
+  String get departments => 'Departments';
+
+  @override
+  String departmentAutomatic(String name) {
+    return 'Automatic ($name)';
+  }
+
+  @override
+  String get noDepartment => 'No department';
+
+  @override
+  String get addDepartment => 'Add department';
+
+  @override
+  String get departmentsHelp =>
+      'Departments people belong to. HR filters employees by them; until one is chosen, people get the department of their role.';
+
+  @override
+  String deleteDepartmentBody(int count) {
+    return '$count people are in this department; it will show as removed. This cannot be undone.';
+  }
+
+  @override
+  String get joiningDate => 'Joining date';
+
+  @override
+  String get joiningDateNotSet => 'Joining date not set';
+
+  @override
+  String joinedOn(String date) {
+    return 'Joined $date';
+  }
+
+  @override
+  String get leaveYearCalendarHint =>
+      'No joining date: leave balances run by calendar year (1 January – 31 December).';
+
+  @override
+  String get leaveYearJoiningHint =>
+      'Leave balances start again every year on the joining date. Annual days overdrawn are taken from the next year; days left carry over only if HR allows it.';
+
+  @override
+  String leaveBalancePeriod(String period) {
+    return 'Leave balance $period';
+  }
+
+  @override
+  String get balanceColCarried => 'Carried';
+
+  @override
+  String leaveCarriedDays(String days) {
+    return '$days from last year';
+  }
+
+  @override
+  String get pastLeaveYears => 'Past leave years';
+
+  @override
+  String annualTaken(String used, String of) {
+    return 'Annual: $used of $of days taken';
+  }
+
+  @override
+  String carriedToNextYear(String days) {
+    return '$days to the next year';
+  }
+
+  @override
+  String pastYearRow(String used, String of, String left) {
+    return '$used of $of · $left left';
+  }
+
+  @override
+  String get annualCarryOver => 'Annual leave carries over';
+
+  @override
+  String get annualCarryOverOn =>
+      'Days left at the end of a leave year move to the next year. Overdrawn days are always taken from the next year.';
+
+  @override
+  String get annualCarryOverOff =>
+      'Days left at the end of a leave year are lost (the balance resets). Overdrawn days are always taken from the next year.';
 }

@@ -6,21 +6,35 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
+import '../clients/client_tags.dart';
+import 'hr_people.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
 import 'leave_widgets.dart';
 import 'my_leave_screen.dart';
 
-/// HR area: one employee's balances for a year (HR / GM tap a type to set
-/// the person's days or add an adjustment, e.g. days carried over), the
-/// adjustments made, and all their requests.
-class EmployeeLeaveScreen extends ConsumerWidget {
-  const EmployeeLeaveScreen({super.key, required this.uid, required this.year});
+/// HR area: one employee's joining date and department, their balances for a
+/// leave year (HR / GM tap a type to set the person's days or add an
+/// adjustment), the adjustments made, the closed years and all their
+/// requests.
+class EmployeeLeaveScreen extends ConsumerStatefulWidget {
+  const EmployeeLeaveScreen({super.key, required this.uid, this.year});
 
   final String uid;
-  final int year;
 
-  Future<void> _editType(BuildContext context, WidgetRef ref, AppUser me, LeaveType type, LeaveBalanceRecord record) async {
+  /// Leave year to open; null = their current one.
+  final int? year;
+
+  @override
+  ConsumerState<EmployeeLeaveScreen> createState() => _EmployeeLeaveScreenState();
+}
+
+class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
+  int? _year;
+
+  String get uid => widget.uid;
+
+  Future<void> _editType(BuildContext context, WidgetRef ref, AppUser me, LeaveType type, LeaveBalanceRecord record, int year) async {
     final l10n = AppLocalizations.of(context);
     final lang = Localizations.localeOf(context).languageCode;
     final days = TextEditingController(text: record.entitled[type.id]?.toString() ?? '');
@@ -75,7 +89,7 @@ class EmployeeLeaveScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
@@ -84,6 +98,9 @@ class EmployeeLeaveScreen extends ConsumerWidget {
     final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
     final person = users[uid];
     final requests = ref.watch(userLeaveRequestsProvider(uid)).value ?? const <LeaveRequest>[];
+    final year = _year ?? widget.year ?? leaveYearOf(person?.joiningDate, DateTime.now());
+    final history = ref.watch(leaveHistoryProvider(uid)).value ?? const <LeaveYearRecord>[];
+    final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
     final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
     final types = {for (final t in ref.watch(leaveTypesProvider).value ?? LeaveType.defaults) t.id: t};
     final canEdit = me?.role.canManageHr ?? false;
@@ -93,16 +110,60 @@ class EmployeeLeaveScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          if (person != null)
+            Card(
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (canEdit) ...[
+                      JoiningDateField(
+                        value: person.joiningDate,
+                        onChanged: (v) => saveEmployeeHrFields(uid, joiningDate: v, department: person.department),
+                      ),
+                      DepartmentField(
+                        value: person.department,
+                        role: person.role,
+                        onChanged: (v) => saveEmployeeHrFields(uid, joiningDate: person.joiningDate, department: v),
+                      ),
+                    ] else
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(departmentName(departments, person.departmentId, lang)),
+                        subtitle: Text(person.joiningDate == null
+                            ? l10n.joiningDateNotSet
+                            : DateFormat.yMMMd(locale).format(DateTime.parse(person.joiningDate!))),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(person.joiningDate == null ? l10n.leaveYearCalendarHint : l10n.leaveYearJoiningHint,
+                        style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+            child: Row(children: [
+              IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _year = year - 1)),
+              Expanded(
+                child: Text(leaveYearLabel(context, person?.joiningDate, year),
+                    textAlign: TextAlign.center, style: theme.textTheme.titleSmall),
+              ),
+              IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _year = year + 1)),
+            ]),
+          ),
           if (canEdit)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Text(l10n.tapTypeToEdit, style: theme.textTheme.bodySmall),
             ),
           LeaveBalancesCard(
             uid: uid,
             year: year,
             requests: requests,
-            onTap: canEdit && me != null ? (t) => _editType(context, ref, me, t, record) : null,
+            onTap: canEdit && me != null ? (t) => _editType(context, ref, me, t, record, year) : null,
           ),
           if (record.adjustments.isNotEmpty) ...[
             Padding(
@@ -121,6 +182,13 @@ class EmployeeLeaveScreen extends ConsumerWidget {
                 ].where((s) => s.isNotEmpty).join(' · ')),
               ),
           ],
+          if (history.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Text(l10n.pastLeaveYears, style: theme.textTheme.titleMedium),
+            ),
+            for (final h in history) _PastYearTile(record: h, types: types),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(l10n.leaveRequests, style: theme.textTheme.titleMedium),
@@ -129,6 +197,46 @@ class EmployeeLeaveScreen extends ConsumerWidget {
           for (final r in requests) LeaveRequestTile(request: r),
         ],
       ),
+    );
+  }
+}
+
+/// A closed leave year: days taken per type, and what moved to the next year.
+class _PastYearTile extends StatelessWidget {
+  const _PastYearTile({required this.record, required this.types});
+
+  final LeaveYearRecord record;
+  final Map<String, LeaveType> types;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    final f = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    String day(String d) => DateTime.tryParse(d) == null ? d : f.format(DateTime.parse(d));
+    final annual = record.types[annualLeaveTypeId];
+    return ExpansionTile(
+      leading: const Icon(Icons.history),
+      title: Text('${day(record.from)} – ${day(record.to)}'),
+      subtitle: Text([
+        if (annual != null) l10n.annualTaken(formatLeaveDays(annual.used), formatLeaveDays(annual.entitled + annual.carried)),
+        if (record.carriedOut != 0)
+          l10n.carriedToNextYear('${record.carriedOut > 0 ? '+' : ''}${formatLeaveDays(record.carriedOut)}'),
+      ].join(' · ')),
+      children: [
+        for (final e in record.types.entries)
+          if (e.value.used != 0 || e.key == annualLeaveTypeId)
+            ListTile(
+              dense: true,
+              title: Text(types[e.key]?.name(lang) ?? e.key),
+              trailing: Text(
+                l10n.pastYearRow(formatLeaveDays(e.value.used), formatLeaveDays(e.value.entitled + e.value.carried),
+                    formatLeaveDays(e.value.remaining)),
+                style: TextStyle(color: e.value.remaining < 0 ? theme.colorScheme.error : null),
+              ),
+            ),
+      ],
     );
   }
 }

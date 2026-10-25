@@ -254,22 +254,62 @@ bool canDecide({required AppUser me, required String requesterId, required Strin
     me.id != requesterId &&
     (awaitingKey == 'uid:${me.id}' || awaitingKey == 'role:${me.role.value}');
 
+/// The type whose days left over (or overdrawn) move to the next leave year.
+const annualLeaveTypeId = 'annual';
+
+/// Leave years (user request 2026-10-24): each person's runs from their
+/// joining date's anniversary (`users.joiningDate`) to the day before the
+/// next one; without a joining date, the calendar year. A year is named by
+/// the calendar year it starts in. Same as `leaveYearOf` in
+/// functions/leaveYears.js.
+int leaveYearOf(String? joiningDate, DateTime day) {
+  final j = joiningDate == null ? null : DateTime.tryParse(joiningDate);
+  if (j == null) return day.year;
+  final start = _anniversary(j, day.year);
+  final d = DateTime(day.year, day.month, day.day);
+  return d.isBefore(start) ? day.year - 1 : day.year;
+}
+
+/// First and last day of leave year [year].
+({DateTime start, DateTime end}) leaveYearRange(String? joiningDate, int year) {
+  final j = joiningDate == null ? null : DateTime.tryParse(joiningDate);
+  if (j == null) return (start: DateTime(year), end: DateTime(year, 12, 31));
+  final next = _anniversary(j, year + 1);
+  return (start: _anniversary(j, year), end: DateTime(next.year, next.month, next.day - 1));
+}
+
+/// The joining day and month in [year] (29 February → 28 February).
+DateTime _anniversary(DateTime joining, int year) {
+  final d = DateTime(year, joining.month, joining.day);
+  return d.month == joining.month ? d : DateTime(year, joining.month + 1, 0);
+}
+
+/// What moves from a closed year's annual leave into the next one: days
+/// overdrawn always (taken from the new year); days left only when HR lets
+/// annual leave carry over (`settings/leavePolicy.annualCarryOver`).
+double annualCarry(double remaining, {required bool carryOver}) =>
+    remaining < 0 ? remaining : (carryOver ? remaining : 0);
+
 /// One person's numbers for one leave type and year.
 class LeaveBalance {
-  const LeaveBalance({required this.entitled, required this.used, required this.pending});
+  const LeaveBalance({required this.entitled, required this.used, required this.pending, this.carried = 0});
 
   /// Yearly days (HR's number for the person, else the type's) plus adjustments.
   final double entitled;
+
+  /// Moved from the year before (annual leave; negative = overdrawn then).
+  final double carried;
 
   /// Approved requests, and requests still waiting for approval.
   final double used;
   final double pending;
 
-  double get remaining => entitled - used - pending;
+  double get remaining => entitled + carried - used - pending;
 }
 
-/// A request as far as balances are concerned.
-typedef LeaveUse = ({String typeId, int year, double days, LeaveStatus status});
+/// A request as far as balances are concerned. [from] ('yyyy-MM-dd') places
+/// it in the person's leave year; requests without dates use [year].
+typedef LeaveUse = ({String typeId, int year, String? from, double days, LeaveStatus status});
 
 /// A person's adjustment (carry-over, correction), + or − days.
 typedef LeaveAdjustment = ({String typeId, double days});
@@ -278,20 +318,32 @@ typedef LeaveAdjustment = ({String typeId, double days});
 Map<String, LeaveBalance> leaveBalances({
   required List<LeaveType> types,
   required int year,
+  String? joiningDate,
   required Map<String, num> entitledOverride,
   required List<LeaveAdjustment> adjustments,
+  Map<String, num> carried = const {},
   required List<LeaveUse> requests,
 }) {
+  bool inYear(LeaveUse r) {
+    final from = r.from == null ? null : DateTime.tryParse(r.from!);
+    return from == null ? r.year == year : leaveYearOf(joiningDate, from) == year;
+  }
+
   return {
     for (final t in types)
       if (t.isLeave && t.yearlyDays != null)
         t.id: () {
           double sum(LeaveStatus s) => requests
-              .where((r) => r.typeId == t.id && r.year == year && r.status == s)
+              .where((r) => r.typeId == t.id && r.status == s && inYear(r))
               .fold(0.0, (a, r) => a + r.days);
           final entitled = (entitledOverride[t.id] ?? t.yearlyDays!).toDouble() +
               adjustments.where((a) => a.typeId == t.id).fold(0.0, (a, b) => a + b.days);
-          return LeaveBalance(entitled: entitled, used: sum(LeaveStatus.approved), pending: sum(LeaveStatus.pending));
+          return LeaveBalance(
+            entitled: entitled,
+            carried: (carried[t.id] ?? 0).toDouble(),
+            used: sum(LeaveStatus.approved),
+            pending: sum(LeaveStatus.pending),
+          );
         }(),
   };
 }

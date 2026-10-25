@@ -95,7 +95,13 @@ class AttendanceRecord {
   /// The day as it stands now: worked out from the events on the phone (so
   /// a new event shows at once), the same way the server does. [hours]: the
   /// person's schedule ([AppUser.scheduleOr]).
-  DayResult result({required WorkHours hours, required bool leavesSite, required bool overtimeAllowed, DateTime? now}) {
+  DayResult result({
+    required WorkHours hours,
+    required bool leavesSite,
+    required bool overtimeAllowed,
+    int overtimeMaxMin = defaultOvertimeMaxMin,
+    DateTime? now,
+  }) {
     final day = DateTime.parse(date);
     return deriveDay(
       correctedEvents(events, correction),
@@ -105,6 +111,7 @@ class AttendanceRecord {
       now: now ?? DateTime.now(),
       leavesSite: leavesSite,
       overtimeAllowed: overtimeAllowed,
+      overtimeMaxMin: overtimeMaxMin,
     );
   }
 
@@ -115,6 +122,7 @@ class AttendanceRecord {
       hours: user.scheduleOr(company),
       leavesSite: user.leavesSite,
       overtimeAllowed: user.overtimeAllowed,
+      overtimeMaxMin: user.overtimeCapMin,
     );
     return server?.fillFrom(local) ?? local;
   }

@@ -13,7 +13,10 @@ class TrackingEvent {
   final DateTime at;
 
   /// online, offline, gpsOn, gpsOff, onDuty, offDuty, permission (see
-  /// [value]), batteryOn, batteryOff, notificationsOff, notificationsOn.
+  /// [value]), batteryOn, batteryOff, notificationsOff, notificationsOn;
+  /// from the wake-up check (`offlineAlerts`, 2026-10-24): quiet (phone sent
+  /// nothing for 10 min), woken (answered the silent ping), resumed (sending
+  /// again by itself), noAnswer (managers told).
   final String type;
 
   /// For 'permission': always, whileInUse, denied, deniedForever.
@@ -21,7 +24,7 @@ class TrackingEvent {
 
   /// Something that stops or may stop tracking.
   bool get isProblem =>
-      const {'offline', 'gpsOff', 'batteryOn', 'notificationsOff'}.contains(type) || (type == 'permission' && value != 'always');
+      const {'offline', 'gpsOff', 'batteryOn', 'notificationsOff', 'quiet', 'noAnswer'}.contains(type) || (type == 'permission' && value != 'always');
 }
 
 /// A log row: the event and, for offline / GPS off / battery optimization /
@@ -30,10 +33,11 @@ class TrackingEvent {
 typedef TrackingLogEntry = ({TrackingEvent event, Duration? lasted});
 
 const _endedBy = {
-  'offline': 'online',
-  'gpsOff': 'gpsOn',
-  'batteryOn': 'batteryOff',
-  'notificationsOff': 'notificationsOn',
+  'offline': {'online'},
+  'gpsOff': {'gpsOn'},
+  'batteryOn': {'batteryOff'},
+  'notificationsOff': {'notificationsOn'},
+  'quiet': {'woken', 'resumed'},
 };
 
 /// The day's events in time order, each problem paired with the event that
@@ -45,7 +49,7 @@ List<TrackingLogEntry> trackingLog(List<TrackingEvent> events) {
       (
         event: e,
         lasted: switch (_endedBy[e.type]) {
-          final String end => sorted.skip(i + 1).where((n) => n.type == end).firstOrNull?.at.difference(e.at),
+          final Set<String> end => sorted.skip(i + 1).where((n) => end.contains(n.type)).firstOrNull?.at.difference(e.at),
           _ => null,
         },
       ),
@@ -91,6 +95,10 @@ class TrackingLogList extends ConsumerWidget {
         'batteryOff' => l10n.logBatteryOff,
         'notificationsOff' => l10n.logNotificationsOff,
         'notificationsOn' => l10n.logNotificationsOn,
+        'quiet' => l10n.logQuiet,
+        'woken' => l10n.logWoken,
+        'resumed' => l10n.logResumed,
+        'noAnswer' => l10n.logNoAnswer,
         'permission' => l10n.logPermission(switch (e.value) {
             'always' => l10n.permissionAlways,
             'whileInUse' => l10n.permissionWhileInUse,
@@ -108,6 +116,9 @@ class TrackingLogList extends ConsumerWidget {
         'batteryOn' || 'batteryOff' => Icons.battery_alert,
         'notificationsOff' => Icons.notifications_off,
         'notificationsOn' => Icons.notifications_active,
+        'quiet' => Icons.phonelink_off,
+        'woken' || 'resumed' => Icons.phonelink_ring,
+        'noAnswer' => Icons.report_problem_outlined,
         _ => Icons.lock_outline,
       };
 

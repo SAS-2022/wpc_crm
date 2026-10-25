@@ -1007,6 +1007,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contact => 'التواصل';
 
   @override
+  String get addPhoneTitle => 'أضف رقم تواصل';
+
+  @override
+  String addPhoneMessage(String client) {
+    return 'لا يوجد رقم هاتف لـ $client. أضف رقماً لحفظ هذه الزيارة.';
+  }
+
+  @override
+  String addPhoneMessageCall(String client) {
+    return 'لا يوجد رقم هاتف لـ $client. أضف رقماً لحفظ هذه المكالمة.';
+  }
+
+  @override
+  String get pickFromContacts => 'اختر من جهات اتصال الهاتف';
+
+  @override
+  String get phoneNumberInvalid => 'أدخل رقم هاتف (من 7 إلى 15 رقماً)';
+
+  @override
+  String get phoneNumberSaved => 'تم حفظ رقم التواصل';
+
+  @override
+  String get saveAndContinue => 'حفظ ومتابعة';
+
+  @override
   String get contactPerson => 'الشخص المسؤول';
 
   @override
@@ -1729,6 +1754,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get logOffline => 'انقطع الاتصال';
+
+  @override
+  String get logQuiet => 'توقف الهاتف عن الإرسال';
+
+  @override
+  String get logWoken => 'أيقظه فحص التنبيه – عاد للإرسال';
+
+  @override
+  String get logResumed => 'عاد للإرسال';
+
+  @override
+  String get logNoAnswer => 'لم يستجب لفحص التنبيه – تم إبلاغ المديرين';
+
+  @override
+  String notifPhoneNoAnswer(String name, String time, int minutes) {
+    return 'لم يرسل هاتف $name شيئاً منذ الساعة $time ($minutes دقيقة) ولم يستجب لفحص التنبيه – قد يكون التطبيق مغلقاً أو الهاتف مطفأً أو بلا شبكة';
+  }
 
   @override
   String get logOnline => 'عاد متصلاً';
@@ -2815,6 +2857,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get overtimeAllowed => 'العمل الإضافي مسموح';
 
   @override
+  String get overtimeMax => 'أقصى عمل إضافي في اليوم';
+
+  @override
+  String get overtimeMaxHelp =>
+      'ما يزيد على ذلك لا يُحتسب (يُسجَّل كوقت بقاء بعد الدوام). الافتراضي: 3 ساعات.';
+
+  @override
+  String hoursCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n ساعة',
+      few: '$n ساعات',
+      two: 'ساعتان',
+      one: 'ساعة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifOvertimeStarted(String name, String site, String time) {
+    return '$name ما زال في $site بعد نهاية الدوام ($time) – يُحتسب العمل الإضافي';
+  }
+
+  @override
+  String notifOvertimeStartedSelf(String site, String time) {
+    return 'انتهى دوامك الساعة $time وما زلت في $site – يُحتسب العمل الإضافي. اضغط «تسجيل انصراف» عند المغادرة.';
+  }
+
+  @override
   String get overtimeAllowedHelp =>
       'الوقت بعد نهاية يوم العمل يُحتسب عملاً إضافياً. عند الإيقاف: يُحتسب اليوم حتى نهاية يوم العمل فقط.';
 
@@ -3308,6 +3380,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportTimeSplit => 'أين ذهب يوم العمل';
+
+  @override
+  String get deliveries => 'التسليمات';
+
+  @override
+  String get deliveryStopsNote =>
+      'توقفات مدتها 5 دقائق أو أكثر على بعد 200 م من موقع عميل. الأوقات من GPS السائق: من الوصول إلى المغادرة.';
+
+  @override
+  String deliveryFromPin(int meters) {
+    return 'على بعد $meters م من الدبوس';
+  }
+
+  @override
+  String get noDeliveriesFound =>
+      'لم يُعثر على توقفات عند مواقع العملاء في هذا اليوم.';
+
+  @override
+  String get deliveryLocationOther => 'موقع آخر';
 
   @override
   String get timeAtClients => 'عند العملاء';
@@ -4387,4 +4478,304 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get hidePassword => 'إخفاء كلمة المرور';
+
+  @override
+  String get vehicles => 'المركبات';
+
+  @override
+  String get addVehicle => 'إضافة مركبة';
+
+  @override
+  String get editVehicle => 'تعديل المركبة';
+
+  @override
+  String get noVehicles =>
+      'لا توجد مركبات بعد. أضف مركبات الشركة مع سائقيها ومواعيد التجديد.';
+
+  @override
+  String get vehiclePlate => 'رقم اللوحة';
+
+  @override
+  String get vehiclePlateRequired => 'أدخل رقم اللوحة';
+
+  @override
+  String get vehicleMake => 'الشركة المصنّعة';
+
+  @override
+  String get vehicleModel => 'الطراز';
+
+  @override
+  String get vehicleYear => 'سنة الصنع';
+
+  @override
+  String get vehicleColor => 'اللون';
+
+  @override
+  String get vehicleVin => 'رقم الهيكل';
+
+  @override
+  String get vehicleFirstReading => 'قراءة العداد الآن (كم، اختياري)';
+
+  @override
+  String get renewals => 'التجديدات';
+
+  @override
+  String get renewalRegistration => 'تسجيل المركبة (الاستمارة)';
+
+  @override
+  String get renewalInsurance => 'التأمين';
+
+  @override
+  String get renewalInspection => 'الفحص الدوري';
+
+  @override
+  String get renewalNotSet => 'غير محدد';
+
+  @override
+  String renewalDaysLeft(int days) {
+    return 'متبقٍ $days يوم';
+  }
+
+  @override
+  String get renewalExpiresToday => 'ينتهي اليوم';
+
+  @override
+  String renewalExpiredAgo(int days) {
+    return 'منتهٍ منذ $days يوم';
+  }
+
+  @override
+  String renewalUntil(String date) {
+    return 'حتى $date';
+  }
+
+  @override
+  String get renewalExpiry => 'تاريخ الانتهاء';
+
+  @override
+  String get markRenewed => 'تم التجديد';
+
+  @override
+  String renewDialogTitle(String item) {
+    return 'تجديد $item';
+  }
+
+  @override
+  String get renewDialogHint => 'تاريخ الانتهاء الجديد';
+
+  @override
+  String get changeDate => 'تغيير التاريخ';
+
+  @override
+  String get setDate => 'تحديد التاريخ';
+
+  @override
+  String get renewalHistory => 'سجل التجديد';
+
+  @override
+  String renewalHistoryRow(String item, String date) {
+    return 'تجديد $item حتى $date';
+  }
+
+  @override
+  String needsRenewalFilter(int count) {
+    return 'بحاجة إلى تجديد ($count)';
+  }
+
+  @override
+  String get showInactiveVehicles => 'إظهار غير النشطة';
+
+  @override
+  String get mileage => 'المسافة المقطوعة';
+
+  @override
+  String kmValue(String km) {
+    return '$km كم';
+  }
+
+  @override
+  String odometerEstimate(String km) {
+    return '≈ $km كم الآن';
+  }
+
+  @override
+  String lastReading(String km, String date) {
+    return 'آخر قراءة $km كم بتاريخ $date';
+  }
+
+  @override
+  String gpsKmSince(String km) {
+    return '+ $km كم منذ ذلك (من GPS السائقين)';
+  }
+
+  @override
+  String gpsKmNoReading(String km) {
+    return '$km كم قطعها سائقوها (GPS) منذ تعيينهم';
+  }
+
+  @override
+  String get noReadingYet =>
+      'لا توجد قراءة للعداد بعد – سجّل قراءة ليقدّر التطبيق المسافة.';
+
+  @override
+  String get gpsKmHelp =>
+      'كيلومترات GPS خطوط مستقيمة بين مواقع السائقين، تُحسب من اليوم التالي لآخر قراءة، لذا تكون أقل قليلاً من العداد. سجّل قراءة من حين لآخر لتصحيحها.';
+
+  @override
+  String get recordReading => 'تسجيل قراءة';
+
+  @override
+  String get odometerKm => 'قراءة العداد (كم)';
+
+  @override
+  String get readingNote => 'ملاحظة (اختياري)';
+
+  @override
+  String readingLower(String km) {
+    return 'هذه القراءة أقل من القراءة السابقة ($km كم). هل تريد الحفظ؟';
+  }
+
+  @override
+  String get readings => 'القراءات';
+
+  @override
+  String deleteReadingConfirm(String km) {
+    return 'حذف القراءة $km كم؟';
+  }
+
+  @override
+  String get noDriverAssigned => 'لا يوجد سائق';
+
+  @override
+  String get changeDrivers => 'تغيير السائقين';
+
+  @override
+  String driverOnOtherVehicle(String plate) {
+    return 'حالياً على $plate – سينتقل إلى هذه المركبة';
+  }
+
+  @override
+  String get noDriverUsers => 'لا يوجد سائقون بعد – أضف مستخدمين بدور سائق.';
+
+  @override
+  String deleteVehicleConfirm(String plate) {
+    return 'حذف المركبة $plate؟ ستُحذف قراءاتها وسجل تجديدها أيضاً.';
+  }
+
+  @override
+  String vehicleRenewalsDue(int count) {
+    return 'تجديدات مركبات مستحقة ($count)';
+  }
+
+  @override
+  String notifVehicleRenewalDue(
+    String vehicle,
+    String item,
+    int days,
+    String date,
+  ) {
+    return '$vehicle: ينتهي $item بعد $days يوم ($date)';
+  }
+
+  @override
+  String notifVehicleRenewalExpired(String vehicle, String item, String date) {
+    return '$vehicle: انتهى $item ($date)';
+  }
+
+  @override
+  String get settingVehicleRenewal => 'تذكير تجديد المركبات';
+
+  @override
+  String get settingVehicleRenewalHelp =>
+      'يتلقى المدير العام ومدير المبيعات ومدير الخدمات اللوجستية تذكيراً قبل هذا العدد من الأيام من انتهاء تسجيل المركبة أو تأمينها أو فحصها الدوري، ويبقى في صفحتهم الرئيسية حتى يُدخل التاريخ الجديد.';
+
+  @override
+  String get settingsSectionHr => 'الموارد البشرية';
+
+  @override
+  String get department => 'القسم';
+
+  @override
+  String get departments => 'الأقسام';
+
+  @override
+  String departmentAutomatic(String name) {
+    return 'تلقائي ($name)';
+  }
+
+  @override
+  String get noDepartment => 'بدون قسم';
+
+  @override
+  String get addDepartment => 'إضافة قسم';
+
+  @override
+  String get departmentsHelp =>
+      'الأقسام التي ينتمي إليها الموظفون. تصفّي الموارد البشرية الموظفين حسبها، وإلى أن يُختار قسم يأخذ الموظف قسم دوره.';
+
+  @override
+  String deleteDepartmentBody(int count) {
+    return '$count موظف في هذا القسم، وسيظهر كقسم محذوف. لا يمكن التراجع.';
+  }
+
+  @override
+  String get joiningDate => 'تاريخ الالتحاق';
+
+  @override
+  String get joiningDateNotSet => 'لم يُحدد تاريخ الالتحاق';
+
+  @override
+  String joinedOn(String date) {
+    return 'التحق في $date';
+  }
+
+  @override
+  String get leaveYearCalendarHint =>
+      'لا يوجد تاريخ التحاق: تُحسب أرصدة الإجازات حسب السنة الميلادية (1 يناير – 31 ديسمبر).';
+
+  @override
+  String get leaveYearJoiningHint =>
+      'تبدأ أرصدة الإجازات من جديد كل سنة في تاريخ الالتحاق. الأيام السنوية المستهلكة بالزيادة تُخصم من السنة التالية، والأيام المتبقية تُرحّل فقط إذا سمحت الموارد البشرية بذلك.';
+
+  @override
+  String leaveBalancePeriod(String period) {
+    return 'رصيد الإجازات $period';
+  }
+
+  @override
+  String get balanceColCarried => 'مرحّل';
+
+  @override
+  String leaveCarriedDays(String days) {
+    return '$days من السنة الماضية';
+  }
+
+  @override
+  String get pastLeaveYears => 'سنوات الإجازة السابقة';
+
+  @override
+  String annualTaken(String used, String of) {
+    return 'السنوية: $used من $of يوم';
+  }
+
+  @override
+  String carriedToNextYear(String days) {
+    return '$days للسنة التالية';
+  }
+
+  @override
+  String pastYearRow(String used, String of, String left) {
+    return '$used من $of · متبقٍ $left';
+  }
+
+  @override
+  String get annualCarryOver => 'ترحيل الإجازة السنوية';
+
+  @override
+  String get annualCarryOverOn =>
+      'الأيام المتبقية في نهاية سنة الإجازة تُرحّل إلى السنة التالية. الأيام المستهلكة بالزيادة تُخصم دائماً من السنة التالية.';
+
+  @override
+  String get annualCarryOverOff =>
+      'الأيام المتبقية في نهاية سنة الإجازة تسقط (يُعاد ضبط الرصيد). الأيام المستهلكة بالزيادة تُخصم دائماً من السنة التالية.';
 }

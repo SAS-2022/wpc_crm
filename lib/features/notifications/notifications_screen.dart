@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../vehicles/vehicle.dart';
+import '../vehicles/vehicle_widgets.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -52,6 +54,12 @@ class NotificationsScreen extends ConsumerWidget {
     return b == null || b == a ? f.format(a) : '${f.format(a)} – ${f.format(b)}';
   }
 
+  static String _renewal(AppLocalizations l10n, String item) =>
+      switch (Renewal.values.asNameMap()[item]) {
+        final r? => renewalLabel(l10n, r),
+        null => item,
+      };
+
   String _checkIn(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String meId) {
     final time = _clock(context, n.time);
     return [
@@ -65,6 +73,9 @@ class NotificationsScreen extends ConsumerWidget {
       switch (n.type) {
         NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
         NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
+        NotificationType.overtimeStarted => n.ownerId == meId
+            ? l10n.notifOvertimeStartedSelf(n.siteName, _clock(context, n.time))
+            : l10n.notifOvertimeStarted(owner, n.siteName, _clock(context, n.time)),
         NotificationType.absenceReported => [
             l10n.notifAbsenceReported(owner, day, absenceReasonLabel(l10n, AbsenceReason.fromKey(n.issue))),
             if (n.note.isNotEmpty) '“${n.note}”',
@@ -81,6 +92,9 @@ class NotificationsScreen extends ConsumerWidget {
             l10n.notifEarlyCheckoutRejected(from),
             if (n.note.isNotEmpty) '“${n.note}”',
           ].join(' '),
+        NotificationType.vehicleRenewalDue => n.count > 0
+            ? l10n.notifVehicleRenewalDue(n.vehicleName, _renewal(l10n, n.issue), n.count, day)
+            : l10n.notifVehicleRenewalExpired(n.vehicleName, _renewal(l10n, n.issue), day),
         NotificationType.planSubmitted => l10n.notifPlanSubmitted(from, n.count, day),
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
@@ -105,6 +119,7 @@ class NotificationsScreen extends ConsumerWidget {
             'locationDenied' => l10n.notifLocationDenied(from),
             'notAlways' => l10n.notifLocationNotAlways(from),
             'offline' => l10n.notifTrackingOffline(from),
+            'noAnswer' => l10n.notifPhoneNoAnswer(from, _clock(context, n.time), n.count),
             'notificationsOff' => l10n.notifNotificationsOff(from),
             _ => l10n.notifBatteryOptimized(from),
           },
@@ -153,6 +168,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.attendanceCheckedIn => Icons.how_to_reg,
                     NotificationType.attendanceLate => Icons.alarm,
+                    NotificationType.overtimeStarted => Icons.more_time,
                     NotificationType.absenceReported => absenceReasonIcon(AbsenceReason.fromKey(n.issue)),
                     NotificationType.absenceAccepted => Icons.event_available,
                     NotificationType.absenceRejected => Icons.event_busy,
@@ -160,9 +176,11 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.earlyCheckoutRequested => Icons.directions_walk,
                     NotificationType.earlyCheckoutApproved => Icons.check_circle,
                     NotificationType.earlyCheckoutRejected => Icons.cancel,
+                    NotificationType.vehicleRenewalDue => Icons.directions_car_outlined,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
+                        'noAnswer' => Icons.phonelink_off,
                         'notificationsOff' => Icons.notifications_off,
                         _ => Icons.location_off,
                       },
@@ -188,9 +206,12 @@ class NotificationsScreen extends ConsumerWidget {
                         openAppStore();
                       case NotificationType.attendanceCheckedIn when n.fromId != meId:
                         context.push('/attendance');
+                      case NotificationType.overtimeStarted when n.ownerId != meId:
+                        context.push('/attendance');
                       // Home: the manager's requests card / the person's attendance card.
                       case NotificationType.attendanceCheckedIn ||
                             NotificationType.attendanceLate ||
+                            NotificationType.overtimeStarted ||
                             NotificationType.earlyCheckoutRequested ||
                             NotificationType.earlyCheckoutApproved ||
                             NotificationType.earlyCheckoutRejected:
@@ -201,6 +222,8 @@ class NotificationsScreen extends ConsumerWidget {
                         if (n.ref.isNotEmpty) context.push('/absence/${n.ref}');
                       case NotificationType.teamOnLeave:
                         if (n.ref.isNotEmpty) context.push('/leave/${n.ref}');
+                      case NotificationType.vehicleRenewalDue:
+                        if (n.ref.isNotEmpty) context.push('/vehicles/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

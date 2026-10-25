@@ -1,3 +1,4 @@
+import '../hr/hr_people.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -111,20 +112,13 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
     final color = absenceStatusColor(a, theme.colorScheme);
 
     // What's left of their annual leave in that year, for the decision.
-    final year = int.parse(a.date.substring(0, 4));
+    final year = personLeaveYear(ref, a.uid, DateTime.parse(a.date));
     final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
     final annual = types.where((t) => t.id == AbsenceLeave.annual.typeId).firstOrNull;
     LeaveBalance? annualLeft;
     if (decides && annual != null) {
-      final record = ref.watch(leaveBalanceRecordProvider((a.uid, year))).value ?? LeaveBalanceRecord.empty;
       final requests = ref.watch(userLeaveRequestsProvider(a.uid)).value ?? const <LeaveRequest>[];
-      annualLeft = leaveBalances(
-        types: [annual],
-        year: year,
-        entitledOverride: record.entitled,
-        adjustments: record.forBalance,
-        requests: [for (final r in requests) r.use],
-      )[annual.id];
+      annualLeft = personLeaveBalances(ref, uid: a.uid, year: year, types: [annual], requests: [for (final r in requests) r.use])[annual.id];
     }
 
     return Scaffold(
@@ -176,7 +170,7 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
           if (me.role.canSeeHr)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: LeaveBalanceTable(uid: a.uid, year: int.parse(a.date.substring(0, 4)), highlightTypeId: absenceLeaveTypeOf(a)),
+              child: LeaveBalanceTable(uid: a.uid, day: a.date, highlightTypeId: absenceLeaveTypeOf(a)),
             ),
           if (decides && a.pending && person != null) ...[
             Padding(
@@ -365,11 +359,7 @@ class _HrAbsencesTabState extends ConsumerState<HrAbsencesTab> {
               if (a.pending)
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(72, 0, 16, 12),
-                  child: LeaveBalanceTable(
-                    uid: a.uid,
-                    year: int.parse(a.date.substring(0, 4)),
-                    highlightTypeId: absenceLeaveTypeOf(a),
-                  ),
+                  child: LeaveBalanceTable(uid: a.uid, day: a.date, highlightTypeId: absenceLeaveTypeOf(a)),
                 ),
             ],
           ],

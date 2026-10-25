@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
 import '../notifications/notifications.dart' show directManagersOf;
 import '../../core/saving.dart';
+import '../attendance/attendance_rules.dart' show defaultOvertimeMaxMin;
 import '../attendance/work_sites.dart';
 import '../tracking/work_hours.dart';
 import '../tracking/work_hours_editor.dart';
@@ -17,6 +18,7 @@ import 'companies.dart';
 import '../settings/tracking_schedules_screen.dart';
 import '../tracking/tracking_schedule.dart';
 import '../settings/app_settings.dart';
+import '../hr/hr_people.dart';
 
 /// Create (userId == null) or edit a user. Sales manager / GM: anyone;
 /// logistics manager: drivers only ([UserRole.editableRoles]).
@@ -55,6 +57,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   String _position = '';
   Set<String> _sites = {};
   bool _overtime = false;
+  int? _overtimeMax;
 
   /// Null until set here or saved: follows the role ([AppUser.leavesSite]).
   bool? _leaveSite;
@@ -78,6 +81,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   /// A driver's warehouse supervisor.
   String? _supervisorId;
+  String? _joiningDate;
+  String? _department;
   bool _active = true;
   bool _loaded = false;
   bool _busy = false;
@@ -148,6 +153,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _managerId = u.managerId;
     _markedManager = u.markedManager;
     _supervisorId = u.supervisorId;
+    _joiningDate = u.joiningDate;
+    _department = u.department;
     _active = u.active;
     _odooName.text = u.odooName;
     _target.text = u.monthlyTarget > 0 ? '${u.monthlyTarget}' : '';
@@ -155,6 +162,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _companyId = u.companyId;
     _sites = {...u.workSiteIds};
     _overtime = u.overtimeAllowed;
+    _overtimeMax = u.overtimeMaxMin;
     _leaveSite = u.leaveSiteAllowed;
     _attendance = u.attendanceRequired;
     _schedule = u.workSchedule;
@@ -189,12 +197,15 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       position: _position,
       workSiteIds: _needsAttendance ? _sites.toList() : const [],
       overtimeAllowed: _overtime,
+      overtimeMaxMin: _overtimeMax,
       attendanceRequired: _needsAttendance,
       leaveSiteAllowed: _needsAttendance ? _leaveSite ?? _roleOrDefault.leavesSiteForWork : null,
       workSchedule: schedule,
       managerId: _managerId,
       markedManager: _markedManager,
       supervisorId: _supervisorId,
+      joiningDate: _joiningDate,
+      department: _department,
     );
     try {
       final repo = ref.read(usersRepositoryProvider);
@@ -413,6 +424,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               ],
               onChanged: (v) => setState(() => _companyId = v ?? ''),
             ),
+            DepartmentField(
+              value: _department,
+              role: _role ?? UserRole.worker,
+              onChanged: (v) => setState(() => _department = v),
+            ),
+            JoiningDateField(value: _joiningDate, onChanged: (v) => setState(() => _joiningDate = v)),
             const SizedBox(height: 16),
             DropdownButtonFormField<UserRole>(
               initialValue: _role,
@@ -565,6 +582,22 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 value: _overtime,
                 onChanged: (v) => setState(() => _overtime = v),
               ),
+              // Cap a day (user decision 2026-10-24): 3 hours unless set higher here.
+              if (_overtime)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.overtimeMax),
+                  subtitle: Text(l10n.overtimeMaxHelp),
+                  trailing: DropdownButton<int>(
+                    value: _overtimeMax ?? defaultOvertimeMaxMin,
+                    underline: const SizedBox.shrink(),
+                    items: [
+                      for (final h in [1, 2, 3, 4, 5, 6, 8, 10, 12])
+                        DropdownMenuItem(value: h * 60, child: Text(l10n.hoursCount(h))),
+                    ],
+                    onChanged: (v) => setState(() => _overtimeMax = v == defaultOvertimeMaxMin ? null : v),
+                  ),
+                ),
               // Their own days / hours; off = the company work hours.
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

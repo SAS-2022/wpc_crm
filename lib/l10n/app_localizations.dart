@@ -1832,6 +1832,48 @@ abstract class AppLocalizations {
   /// **'Contact'**
   String get contact;
 
+  /// No description provided for @addPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a contact number'**
+  String get addPhoneTitle;
+
+  /// No description provided for @addPhoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{client} has no phone number. Add one to save this visit.'**
+  String addPhoneMessage(String client);
+
+  /// No description provided for @addPhoneMessageCall.
+  ///
+  /// In en, this message translates to:
+  /// **'{client} has no phone number. Add one to save this call.'**
+  String addPhoneMessageCall(String client);
+
+  /// No description provided for @pickFromContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from phone contacts'**
+  String get pickFromContacts;
+
+  /// No description provided for @phoneNumberInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a phone number (7 to 15 digits)'**
+  String get phoneNumberInvalid;
+
+  /// No description provided for @phoneNumberSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact number saved'**
+  String get phoneNumberSaved;
+
+  /// No description provided for @saveAndContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and continue'**
+  String get saveAndContinue;
+
   /// No description provided for @contactPerson.
   ///
   /// In en, this message translates to:
@@ -3031,6 +3073,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lost connection'**
   String get logOffline;
+
+  /// No description provided for @logQuiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone stopped sending'**
+  String get logQuiet;
+
+  /// No description provided for @logWoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Woken by the wake-up check – sending again'**
+  String get logWoken;
+
+  /// No description provided for @logResumed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending again'**
+  String get logResumed;
+
+  /// No description provided for @logNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer to the wake-up check – managers told'**
+  String get logNoAnswer;
+
+  /// No description provided for @notifPhoneNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s phone has sent nothing since {time} ({minutes} min) and didn\'t answer a wake-up check – the app may be closed, or the phone off or without signal'**
+  String notifPhoneNoAnswer(String name, String time, int minutes);
 
   /// No description provided for @logOnline.
   ///
@@ -4850,6 +4922,36 @@ abstract class AppLocalizations {
   /// **'Overtime allowed'**
   String get overtimeAllowed;
 
+  /// No description provided for @overtimeMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Most overtime a day'**
+  String get overtimeMax;
+
+  /// No description provided for @overtimeMaxHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime beyond this isn\'t counted (recorded as time stayed after hours). Standard: 3 hours.'**
+  String get overtimeMaxHelp;
+
+  /// No description provided for @hoursCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 hour} other{{n} hours}}'**
+  String hoursCount(int n);
+
+  /// No description provided for @notifOvertimeStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is still at {site} after the end of the shift ({time}) – overtime is counting'**
+  String notifOvertimeStarted(String name, String site, String time);
+
+  /// No description provided for @notifOvertimeStartedSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time} and you\'re still at {site} – overtime is counting. Press Check out when you leave.'**
+  String notifOvertimeStartedSelf(String site, String time);
+
   /// No description provided for @overtimeAllowedHelp.
   ///
   /// In en, this message translates to:
@@ -5593,6 +5695,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Where the work day went'**
   String get reportTimeSplit;
+
+  /// No description provided for @deliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliveries'**
+  String get deliveries;
+
+  /// No description provided for @deliveryStopsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops of 5 min or more within 200 m of a client\'s location. Times are from the driver\'s GPS: arrival to departure.'**
+  String get deliveryStopsNote;
+
+  /// No description provided for @deliveryFromPin.
+  ///
+  /// In en, this message translates to:
+  /// **'{meters} m from the pin'**
+  String deliveryFromPin(int meters);
+
+  /// No description provided for @noDeliveriesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No stops at a client\'s location found for this day.'**
+  String get noDeliveriesFound;
+
+  /// No description provided for @deliveryLocationOther.
+  ///
+  /// In en, this message translates to:
+  /// **'other location'**
+  String get deliveryLocationOther;
 
   /// No description provided for @timeAtClients.
   ///
@@ -7333,6 +7465,479 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hide password'**
   String get hidePassword;
+
+  /// No description provided for @vehicles.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicles'**
+  String get vehicles;
+
+  /// No description provided for @addVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle'**
+  String get addVehicle;
+
+  /// No description provided for @editVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit vehicle'**
+  String get editVehicle;
+
+  /// No description provided for @noVehicles.
+  ///
+  /// In en, this message translates to:
+  /// **'No vehicles yet. Add the company\'s vehicles with their drivers and renewal dates.'**
+  String get noVehicles;
+
+  /// No description provided for @vehiclePlate.
+  ///
+  /// In en, this message translates to:
+  /// **'Plate number'**
+  String get vehiclePlate;
+
+  /// No description provided for @vehiclePlateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the plate number'**
+  String get vehiclePlateRequired;
+
+  /// No description provided for @vehicleMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Make'**
+  String get vehicleMake;
+
+  /// No description provided for @vehicleModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get vehicleModel;
+
+  /// No description provided for @vehicleYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get vehicleYear;
+
+  /// No description provided for @vehicleColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour'**
+  String get vehicleColor;
+
+  /// No description provided for @vehicleVin.
+  ///
+  /// In en, this message translates to:
+  /// **'Chassis number (VIN)'**
+  String get vehicleVin;
+
+  /// No description provided for @vehicleFirstReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Odometer now (km, optional)'**
+  String get vehicleFirstReading;
+
+  /// No description provided for @renewals.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewals'**
+  String get renewals;
+
+  /// No description provided for @renewalRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration (Istimara)'**
+  String get renewalRegistration;
+
+  /// No description provided for @renewalInsurance.
+  ///
+  /// In en, this message translates to:
+  /// **'Insurance'**
+  String get renewalInsurance;
+
+  /// No description provided for @renewalInspection.
+  ///
+  /// In en, this message translates to:
+  /// **'Periodic inspection (Fahas)'**
+  String get renewalInspection;
+
+  /// No description provided for @renewalNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get renewalNotSet;
+
+  /// No description provided for @renewalDaysLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days left'**
+  String renewalDaysLeft(int days);
+
+  /// No description provided for @renewalExpiresToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires today'**
+  String get renewalExpiresToday;
+
+  /// No description provided for @renewalExpiredAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired {days} days ago'**
+  String renewalExpiredAgo(int days);
+
+  /// No description provided for @renewalUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String renewalUntil(String date);
+
+  /// No description provided for @renewalExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry date'**
+  String get renewalExpiry;
+
+  /// No description provided for @markRenewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewed'**
+  String get markRenewed;
+
+  /// No description provided for @renewDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew {item}'**
+  String renewDialogTitle(String item);
+
+  /// No description provided for @renewDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'New expiry date'**
+  String get renewDialogHint;
+
+  /// No description provided for @changeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get changeDate;
+
+  /// No description provided for @setDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set date'**
+  String get setDate;
+
+  /// No description provided for @renewalHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewal history'**
+  String get renewalHistory;
+
+  /// No description provided for @renewalHistoryRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{item} renewed until {date}'**
+  String renewalHistoryRow(String item, String date);
+
+  /// No description provided for @needsRenewalFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs renewal ({count})'**
+  String needsRenewalFilter(int count);
+
+  /// No description provided for @showInactiveVehicles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show inactive'**
+  String get showInactiveVehicles;
+
+  /// No description provided for @mileage.
+  ///
+  /// In en, this message translates to:
+  /// **'Mileage'**
+  String get mileage;
+
+  /// No description provided for @kmValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km'**
+  String kmValue(String km);
+
+  /// No description provided for @odometerEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {km} km now'**
+  String odometerEstimate(String km);
+
+  /// No description provided for @lastReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Last reading {km} km on {date}'**
+  String lastReading(String km, String date);
+
+  /// No description provided for @gpsKmSince.
+  ///
+  /// In en, this message translates to:
+  /// **'+ {km} km driven since then (drivers\' GPS)'**
+  String gpsKmSince(String km);
+
+  /// No description provided for @gpsKmNoReading.
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km driven by its drivers (GPS) since they were assigned'**
+  String gpsKmNoReading(String km);
+
+  /// No description provided for @noReadingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No odometer reading yet – record one so the app can estimate the mileage.'**
+  String get noReadingYet;
+
+  /// No description provided for @gpsKmHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS km are straight lines between the drivers\' location fixes, counted from the day after the last reading, so they read a little under the odometer. Record a reading now and then to correct it.'**
+  String get gpsKmHelp;
+
+  /// No description provided for @recordReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Record reading'**
+  String get recordReading;
+
+  /// No description provided for @odometerKm.
+  ///
+  /// In en, this message translates to:
+  /// **'Odometer (km)'**
+  String get odometerKm;
+
+  /// No description provided for @readingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get readingNote;
+
+  /// No description provided for @readingLower.
+  ///
+  /// In en, this message translates to:
+  /// **'This is lower than the reading before it ({km} km). Save anyway?'**
+  String readingLower(String km);
+
+  /// No description provided for @readings.
+  ///
+  /// In en, this message translates to:
+  /// **'Readings'**
+  String get readings;
+
+  /// No description provided for @deleteReadingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the reading {km} km?'**
+  String deleteReadingConfirm(String km);
+
+  /// No description provided for @noDriverAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'No driver'**
+  String get noDriverAssigned;
+
+  /// No description provided for @changeDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Change drivers'**
+  String get changeDrivers;
+
+  /// No description provided for @driverOnOtherVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Now on {plate} – moves to this vehicle'**
+  String driverOnOtherVehicle(String plate);
+
+  /// No description provided for @noDriverUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'No drivers yet – add users with the Driver role.'**
+  String get noDriverUsers;
+
+  /// No description provided for @deleteVehicleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the vehicle {plate}? Its readings and renewal history are deleted too.'**
+  String deleteVehicleConfirm(String plate);
+
+  /// No description provided for @vehicleRenewalsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle renewals due ({count})'**
+  String vehicleRenewalsDue(int count);
+
+  /// No description provided for @notifVehicleRenewalDue.
+  ///
+  /// In en, this message translates to:
+  /// **'{vehicle}: {item} expires in {days} days ({date})'**
+  String notifVehicleRenewalDue(
+    String vehicle,
+    String item,
+    int days,
+    String date,
+  );
+
+  /// No description provided for @notifVehicleRenewalExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'{vehicle}: {item} has expired ({date})'**
+  String notifVehicleRenewalExpired(String vehicle, String item, String date);
+
+  /// No description provided for @settingVehicleRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle renewal reminder'**
+  String get settingVehicleRenewal;
+
+  /// No description provided for @settingVehicleRenewalHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance or periodic inspection expires; it stays on their Home until the new date is entered.'**
+  String get settingVehicleRenewalHelp;
+
+  /// No description provided for @settingsSectionHr.
+  ///
+  /// In en, this message translates to:
+  /// **'HR'**
+  String get settingsSectionHr;
+
+  /// No description provided for @department.
+  ///
+  /// In en, this message translates to:
+  /// **'Department'**
+  String get department;
+
+  /// No description provided for @departments.
+  ///
+  /// In en, this message translates to:
+  /// **'Departments'**
+  String get departments;
+
+  /// No description provided for @departmentAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic ({name})'**
+  String departmentAutomatic(String name);
+
+  /// No description provided for @noDepartment.
+  ///
+  /// In en, this message translates to:
+  /// **'No department'**
+  String get noDepartment;
+
+  /// No description provided for @addDepartment.
+  ///
+  /// In en, this message translates to:
+  /// **'Add department'**
+  String get addDepartment;
+
+  /// No description provided for @departmentsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Departments people belong to. HR filters employees by them; until one is chosen, people get the department of their role.'**
+  String get departmentsHelp;
+
+  /// No description provided for @deleteDepartmentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} people are in this department; it will show as removed. This cannot be undone.'**
+  String deleteDepartmentBody(int count);
+
+  /// No description provided for @joiningDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining date'**
+  String get joiningDate;
+
+  /// No description provided for @joiningDateNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining date not set'**
+  String get joiningDateNotSet;
+
+  /// No description provided for @joinedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined {date}'**
+  String joinedOn(String date);
+
+  /// No description provided for @leaveYearCalendarHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No joining date: leave balances run by calendar year (1 January – 31 December).'**
+  String get leaveYearCalendarHint;
+
+  /// No description provided for @leaveYearJoiningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave balances start again every year on the joining date. Annual days overdrawn are taken from the next year; days left carry over only if HR allows it.'**
+  String get leaveYearJoiningHint;
+
+  /// No description provided for @leaveBalancePeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave balance {period}'**
+  String leaveBalancePeriod(String period);
+
+  /// No description provided for @balanceColCarried.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried'**
+  String get balanceColCarried;
+
+  /// No description provided for @leaveCarriedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} from last year'**
+  String leaveCarriedDays(String days);
+
+  /// No description provided for @pastLeaveYears.
+  ///
+  /// In en, this message translates to:
+  /// **'Past leave years'**
+  String get pastLeaveYears;
+
+  /// No description provided for @annualTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual: {used} of {of} days taken'**
+  String annualTaken(String used, String of);
+
+  /// No description provided for @carriedToNextYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} to the next year'**
+  String carriedToNextYear(String days);
+
+  /// No description provided for @pastYearRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {of} · {left} left'**
+  String pastYearRow(String used, String of, String left);
+
+  /// No description provided for @annualCarryOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual leave carries over'**
+  String get annualCarryOver;
+
+  /// No description provided for @annualCarryOverOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Days left at the end of a leave year move to the next year. Overdrawn days are always taken from the next year.'**
+  String get annualCarryOverOn;
+
+  /// No description provided for @annualCarryOverOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Days left at the end of a leave year are lost (the balance resets). Overdrawn days are always taken from the next year.'**
+  String get annualCarryOverOff;
 }
 
 class _AppLocalizationsDelegate
