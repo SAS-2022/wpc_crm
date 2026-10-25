@@ -92,11 +92,17 @@ enum NotificationType {
   earlyCheckoutApproved,
   earlyCheckoutRejected,
 
-  /// `ownerId` (overtime allowed) is still at the site when their work day
-  /// ends (`attendanceUpdated` / `closeAttendance`, 2026-10-24); sent to their
-  /// direct managers and to them. [AppNotification.time] = end of the shift,
-  /// [AppNotification.siteName].
+  /// `ownerId`'s overtime started (2026-10-25): [AppNotification.issue]
+  /// 'site' = they pressed "Start overtime" (to their direct managers, who
+  /// approve it later); 'driving' = a driver still on the road after the
+  /// end (to the driver too, with the overtime sound). Before 2026-10-25:
+  /// still at the site at the end. [AppNotification.time] = end of the
+  /// shift, [AppNotification.siteName].
   overtimeStarted,
+
+  /// "Start overtime?" to the person still at the site 10 min after their
+  /// end (2026-10-25; [AppNotification.count] 1 = the reminder; own sound).
+  overtimeAsk,
 
   /// A vehicle's registration / insurance / inspection ([AppNotification.issue],
   /// a `Renewal` name) expires on [AppNotification.date] in

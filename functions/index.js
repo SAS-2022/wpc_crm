@@ -5,7 +5,10 @@ const { onValueWritten } = require('firebase-functions/v2/database');
 const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
-const { deriveDay, correctedEvents, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN } = require('./attendance');
+const {
+  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveStart, driveEnd, HOME_RADIUS_M, saudiTime, overtimeCap,
+  LATE_GRACE_MIN, AWAY_GRACE_MIN,
+} = require('./attendance');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
@@ -141,9 +144,12 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `${o} registered an account – waiting for your approval`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'You are checked in' : `${n} checked in`}${x.site ? ` at ${x.site}` : ''} at ${x.time}${c > 0 ? ` – ${c} min late` : ''}`,
     attendanceLate: (n, c, d, o, x) => `You haven't checked in yet – your work day started at ${x.time}. Please be at work soon.`,
-    overtimeStarted: (n, c, d, o, x) => (x.self
-      ? `Your shift ended at ${x.time} and you're still at ${x.site} – overtime is counting. Press Check out when you leave.`
-      : `${n} is still at ${x.site} after the end of the shift (${x.time}) – overtime is counting`),
+    overtimeStarted: (n, c, d, o, x) => (x.driving
+      ? (x.self
+        ? `Your shift ended at ${x.time} while you're on the road – overtime started. It ends when you arrive home or at the work site.`
+        : `${n} is still driving after the end of the shift (${x.time}) – overtime started, until they arrive home or at the work site`)
+      : `${n} started overtime${x.site ? ` at ${x.site}` : ''} (counted from ${x.time}) – approve it later on the Attendance page`),
+    overtimeAsk: (n, c, d, o, x) => `${c > 0 ? 'Reminder: ' : ''}Your shift ended at ${x.time} and you're still at ${x.site || 'the work site'}. Working overtime? Open the app and tap "Start overtime" – it counts from ${x.time}.`,
     absenceReported: (n, c, d, o, x) => `${o} won't be at work on ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
     absence: { sick: 'Sick', tired: 'Tired', cantCome: "Can't come" },
@@ -185,9 +191,12 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `سجّل ${o} حساباً – بانتظار موافقتك`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'تم تسجيل حضورك' : `سجّل ${n} حضوره`}${x.site ? ` في ${x.site}` : ''} الساعة ${x.time}${c > 0 ? ` – متأخر ${c} دقيقة` : ''}`,
     attendanceLate: (n, c, d, o, x) => `لم تسجّل حضورك بعد – بدأ يوم عملك الساعة ${x.time}. يرجى الحضور إلى العمل قريباً.`,
-    overtimeStarted: (n, c, d, o, x) => (x.self
-      ? `انتهى دوامك الساعة ${x.time} وما زلت في ${x.site} – يُحتسب العمل الإضافي. اضغط «تسجيل انصراف» عند المغادرة.`
-      : `${n} ما زال في ${x.site} بعد نهاية الدوام (${x.time}) – يُحتسب العمل الإضافي`),
+    overtimeStarted: (n, c, d, o, x) => (x.driving
+      ? (x.self
+        ? `انتهى دوامك الساعة ${x.time} وأنت في الطريق – بدأ العمل الإضافي. ينتهي عند وصولك إلى المنزل أو موقع العمل.`
+        : `${n} ما زال يقود بعد نهاية الدوام (${x.time}) – بدأ العمل الإضافي حتى يصل إلى المنزل أو موقع العمل`)
+      : `بدأ ${n} العمل الإضافي${x.site ? ` في ${x.site}` : ''} (يُحتسب من ${x.time}) – اعتمده لاحقاً من صفحة الحضور`),
+    overtimeAsk: (n, c, d, o, x) => `${c > 0 ? 'تذكير: ' : ''}انتهى دوامك الساعة ${x.time} وما زلت في ${x.site || 'موقع العمل'}. هل ستعمل وقتاً إضافياً؟ افتح التطبيق واضغط «بدء العمل الإضافي» – يُحتسب من ${x.time}.`,
     absenceReported: (n, c, d, o, x) => `${o} لن يحضر إلى العمل يوم ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
     absence: { sick: 'مريض', tired: 'متعب', cantCome: 'لا أستطيع الحضور' },
@@ -222,6 +231,23 @@ function formatClock(hhmm, lang) {
  * Turns each new in-app notification into a phone push to every device of the
  * recipient (tokens in `users/{uid}/devices/{token}`, saved by the app).
  */
+/**
+ * Overtime alerts (user request 2026-10-25): their own sound and a
+ * high-importance Android channel 'overtime' (created by the app,
+ * MainActivity.kt; sound res/raw/overtime_alert), shown on the lock screen;
+ * iOS plays Library/Sounds/overtime_alert.caf (copied there by the app).
+ */
+const OVERTIME_PUSH = {
+  android: {
+    priority: 'high',
+    notification: {
+      channelId: 'overtime', sound: 'overtime_alert', visibility: 'public',
+      priority: 'max', defaultVibrateTimings: true,
+    },
+  },
+  apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'overtime_alert.caf' } } },
+};
+
 exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstances: 5 }, async (event) => {
   const n = event.data?.data();
   if (!n?.toId) return;
@@ -244,13 +270,15 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
     (byLang[lang] ||= []).push(d.id);
   }
 
+  // The person's own overtime alerts (2026-10-25): their own sound and channel.
+  const overtimeAlert = n.type === 'overtimeAsk' || (n.type === 'overtimeStarted' && n.toId === n.ownerId);
   const stale = [];
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
     const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type;
     const extra = {
       client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
-      site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId,
+      site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId, driving: n.issue === 'driving',
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
       vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '',
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
@@ -265,6 +293,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
           : n.type.startsWith('earlyCheckout') ? '/'
           : n.type === 'overtimeStarted' ? (n.toId === n.ownerId ? '/' : '/attendance')
+          : n.type === 'overtimeAsk' ? '/'
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
@@ -272,8 +301,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : '/notifications',
         notificationId: event.params.id,
       },
-      android: { priority: 'high' },
-      apns: { payload: { aps: { sound: 'default' } } },
+      ...(overtimeAlert ? OVERTIME_PUSH : { android: { priority: 'high' }, apns: { payload: { aps: { sound: 'default' } } } }),
     });
     res.responses.forEach((r, i) => {
       const code = r.error?.code;
@@ -467,14 +495,17 @@ function workStartToday(hours, now) {
 
 const { wakeStep } = require('./wakePing');
 
-/** Silent "wake" push to a person's phones (no title or text: nothing is shown). */
-async function sendWakePing(uid) {
+/**
+ * Silent push to a person's phones (no title or text: nothing is shown):
+ * "wake" by default, or a site check ({type: 'siteCheck'}, attendance).
+ */
+async function sendWakePing(uid, data = { type: 'wake' }) {
   const devices = await admin.firestore().collection(`users/${uid}/devices`).get();
   const tokens = devices.docs.filter((d) => ['android', 'iOS', 'ios'].includes(d.get('platform'))).map((d) => d.id);
   if (tokens.length === 0) return;
   await admin.messaging().sendEachForMulticast({
     tokens,
-    data: { type: 'wake' },
+    data,
     android: { priority: 'high', ttl: 10 * 60 * 1000 },
     apns: { headers: { 'apns-push-type': 'background', 'apns-priority': '5' }, payload: { aps: { 'content-available': 1 } } },
   });
@@ -823,8 +854,9 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
 
 const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
 const DERIVED = ['checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
-  'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin', 'awayMin'];
-const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt'];
+  'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin', 'awayMin', 'lastSeenAt',
+  'overtimeOn', 'overtimeConfirmedAt', 'overtimeDeclined', 'overtimeEndUnknown', 'overtimeStatus'];
+const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt', 'lastSeenAt', 'overtimeConfirmedAt'];
 
 /** The person's own schedule (`users.workSchedule`, user form) or the company work hours. */
 function scheduleOf(user, hours) {
@@ -886,21 +918,33 @@ async function lastSeenAtSite(uid, date, siteId) {
 }
 
 /**
- * Still at the site when the shift ends with overtime allowed (user request
- * 2026-10-24): tells the direct manager(s) and the person (so they check out
- * when they leave, in case the phone misses the exit). Once a day.
+ * Overtime started (2026-10-25): site staff confirmed it (issue 'site') →
+ * their direct manager(s), who approve it later on the Attendance page; a
+ * driver still on the road at end + 10 min (issue 'driving') → the driver
+ * too (overtime sound). Once a day (fixed ids).
  */
-async function announceOvertime(data, d, user, endMs) {
+async function announceOvertime(data, siteId, user, endMs, issue) {
   const db = admin.firestore();
   const users = (await db.collection('users').where('active', '==', true).get()).docs
     .map((x) => ({ id: x.id, ...x.data() }));
-  const site = d.siteId ? (await db.doc(`work_sites/${d.siteId}`).get()).get('name') || '' : '';
-  const to = new Set([data.uid, ...directManagers(user, data.uid, users)]);
+  const site = siteId ? (await db.doc(`work_sites/${siteId}`).get()).get('name') || '' : '';
+  const to = new Set([...(issue === 'driving' ? [data.uid] : []), ...directManagers(user, data.uid, users)]);
   await Promise.all([...to].map((toId) => db.doc(`notifications/overtime_${data.uid}_${data.date}_${toId}`).create({
-    toId, fromId: data.uid, ownerId: data.uid, type: 'overtimeStarted', date: data.date,
+    toId, fromId: data.uid, ownerId: data.uid, type: 'overtimeStarted', issue, date: data.date,
     siteName: site, time: saudiClock(endMs), count: 0, read: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   }).catch((e) => { if (e.code !== 6) throw e; }))); // 6 = already exists
+}
+
+/** "Start overtime?" to the person (2026-10-25; count 1 = the reminder). */
+async function askOvertime(data, siteId, endMs, remind) {
+  const db = admin.firestore();
+  const site = siteId ? (await db.doc(`work_sites/${siteId}`).get()).get('name') || '' : '';
+  await db.doc(`notifications/${remind ? 'otAsk2' : 'otAsk'}_${data.uid}_${data.date}`).create({
+    toId: data.uid, fromId: data.uid, ownerId: data.uid, type: 'overtimeAsk', date: data.date,
+    siteName: site, time: saudiClock(endMs), count: remind ? 1 : 0, read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  }).catch((e) => { if (e.code !== 6) throw e; });
 }
 
 /** Shift-end notices only this soon after the end (not for days recalculated later). */
@@ -928,6 +972,11 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     overtimeMaxMin: overtimeCap(user.overtimeMaxMin),
     graceMin,
     awayGraceMin,
+    driver: user.role === 'driver',
+    // Driver overtime (driverOvertime below): running or done.
+    drive: ['running', 'done'].includes(data.driveOvertime?.status) && ms(data.driveOvertime.startAt)
+      ? { startAt: ms(data.driveOvertime.startAt), endAt: ms(data.driveOvertime.endAt) ?? null, place: data.driveOvertime.place ?? null }
+      : null,
   };
   let d = deriveDay(events, options);
   // Closed with no exit seen: with overtime, the last GPS fix at the site
@@ -936,7 +985,12 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     const lastSeenAt = await lastSeenAtSite(data.uid, data.date, d.siteId);
     if (lastSeenAt !== null) d = deriveDay(events, { ...options, lastSeenAt });
   }
+  // For the managers' approval (Attendance page, Home card): 'pending' until
+  // a manager saves `overtimeReview` {minutes, byId, at, note}.
+  d.overtimeStatus = d.closed && d.overtimeMin > 0 ? (data.overtimeReview ? 'approved' : 'pending')
+    : d.overtimeOn && !d.closed ? 'running' : null;
   const update = {};
+  if (data.overtimeUnconfirmed !== undefined) update.overtimeUnconfirmed = admin.firestore.FieldValue.delete();
   for (const k of DERIVED) {
     const v = TIME_FIELDS.includes(k) && d[k] !== null ? admin.firestore.Timestamp.fromMillis(d[k]) : d[k];
     const old = data[k];
@@ -947,10 +1001,27 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     update.checkInNotified = true;
     if (now - d.checkInAt < CHECK_IN_NOTICE_MS) await announceCheckIn(data, d, user, now);
   }
-  if (options.overtimeAllowed && options.startMs !== null && !d.closed && d.inside && now >= options.endMs
-    && data.overtimeNotified !== true) {
+  // "Start overtime?" 10 min after the end, reminded once (site staff, 2026-10-25).
+  const ask = options.startMs === null ? null : overtimeAskDue(d, {
+    ...options, askedAt: ms(data.overtimeAskedAt) ?? null, remindedAt: ms(data.overtimeRemindedAt) ?? null,
+  });
+  if (ask) {
+    update[ask === 'ask' ? 'overtimeAskedAt' : 'overtimeRemindedAt'] = admin.firestore.Timestamp.fromMillis(now);
+    await askOvertime(data, d.siteId, options.endMs, ask === 'remind');
+  }
+  // Confirmed: the direct managers are told (they approve it later).
+  if (d.overtimeConfirmedAt !== null && !options.drive && data.overtimeNotified !== true) {
     update.overtimeNotified = true;
-    if (now - options.endMs < OVERTIME_NOTICE_MS) await announceOvertime(data, d, user, options.endMs);
+    if (now - d.overtimeConfirmedAt < OVERTIME_NOTICE_MS) await announceOvertime(data, d.siteId, user, options.endMs, 'site');
+  }
+  // Still inside after the end with overtime: ask the phone (silent push)
+  // whether they're still at the site, every 30 min up to the cap
+  // (2026-10-25; a sleeping phone sends no exit, so the overtime was lost).
+  if (siteCheckDue(d, { ...options, lastCheckAt: ms(data.siteCheckAt) ?? null })) {
+    update.siteCheckAt = admin.firestore.Timestamp.fromMillis(now);
+    update.siteChecks = (data.siteChecks || 0) + 1;
+    await sendWakePing(data.uid, { type: 'siteCheck', date: data.date })
+      .catch((e) => console.warn('site check', data.uid, e.message));
   }
   if (Object.keys(update).length > 0) await ref.update(update);
 }
@@ -982,8 +1053,82 @@ exports.closeAttendance = onSchedule(
     const settings = await attendanceSettings();
     const now = Date.now();
     for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now, settings);
+    await driverOvertime(hours, now).catch((e) => console.error('driver overtime', e));
   },
 );
+
+/** A driver's places that end their overtime: their work sites (else every active one) and home. */
+async function driverPlaces(user) {
+  const sites = (await admin.firestore().collection('work_sites').where('active', '==', true).get()).docs
+    .map((d) => ({ id: d.id, ...d.data() }));
+  const ids = Array.isArray(user.workSiteIds) ? user.workSiteIds : [];
+  const mine = sites.filter((x) => ids.includes(x.id));
+  const places = (mine.length ? mine : sites).map((x) => ({ lat: x.lat, lng: x.lng, radius: x.radius || 100, kind: 'site' }));
+  const h = user.homeLocation;
+  if (typeof h?.lat === 'number' && typeof h.lng === 'number') places.push({ lat: h.lat, lng: h.lng, radius: HOME_RADIUS_M, kind: 'home' });
+  return places;
+}
+
+/**
+ * Driver overtime (user decision 2026-10-25), run with closeAttendance:
+ * - start: a checked-in driver with overtime allowed who is on the road 10
+ *   min after their end (fresh live position, not at a work site or home)
+ *   → `driveOvertime` {status 'running', startAt = end} on the day, the
+ *   driver and their direct managers told; at a site / home → {status
+ *   'none'}; no position by end + 60 min → {status 'late'} (no overtime);
+ * - end: the first arrival home or at a work site in location_history
+ *   (`driveEnd`) → {status 'done', endAt, place}; the day closes there.
+ */
+async function driverOvertime(hours, now) {
+  const db = admin.firestore();
+  const rtdb = admin.database();
+  const drivers = await db.collection('users').where('role', '==', 'driver').where('overtimeAllowed', '==', true).get();
+  for (const u of drivers.docs) {
+    const user = u.data();
+    if (user.active !== true) continue;
+    const date = saudiDay(now);
+    const mine = scheduleOf(user, hours);
+    if (!mine.days.includes(weekdayOf(date))) continue;
+    const endMs = saudiTime(date, mine.end);
+    if (now < endMs + 10 * 60000 || now > endMs + 70 * 60000) continue;
+    const ref = db.doc(`attendance/${u.id}_${date}`);
+    const day = await ref.get();
+    if (!day.exists || !day.get('checkInAt') || day.get('driveOvertime')) continue;
+    const [live, places] = await Promise.all([rtdb.ref(`live_locations/${u.id}`).get(), driverPlaces(user)]);
+    const r = driveStart({ now, endMs, live: live.val(), places });
+    if (r === 'wait') continue;
+    if (r === 'start') {
+      await ref.update({
+        driveOvertime: { status: 'running', startAt: admin.firestore.Timestamp.fromMillis(endMs), startedAt: admin.firestore.Timestamp.fromMillis(now) },
+      });
+      await announceOvertime({ uid: u.id, date }, null, user, endMs, 'driving');
+    } else {
+      await ref.update({ driveOvertime: { status: r } });
+    }
+  }
+  const running = await db.collection('attendance').where('driveOvertime.status', '==', 'running').get();
+  for (const doc of running.docs) {
+    const data = doc.data();
+    const startAt = data.driveOvertime.startAt?.toMillis?.();
+    if (!startAt || !data.uid) continue;
+    const user = (await db.doc(`users/${data.uid}`).get()).data() || {};
+    const capMs = overtimeCap(user.overtimeMaxMin) * 60000;
+    // The cap can run past midnight.
+    const days = [...new Set([data.date, saudiDay(Math.min(now, startAt + capMs))])];
+    const [places, ...histories] = await Promise.all([
+      driverPlaces(user),
+      ...days.map((day) => rtdb.ref(`location_history/${data.uid}/${day}`).get()),
+    ]);
+    const points = histories.flatMap((h) => Object.values(h.val() || {}));
+    const r = driveEnd({ points, startAt, now, capMs, places });
+    if (!r) continue;
+    await doc.ref.update({
+      'driveOvertime.status': 'done',
+      'driveOvertime.endAt': admin.firestore.Timestamp.fromMillis(r.endAt),
+      'driveOvertime.place': r.place,
+    });
+  }
+}
 
 /**
  * A person's direct manager(s) (user decision 2026-10-22): a sales exec's

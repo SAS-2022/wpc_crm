@@ -7,6 +7,7 @@ import '../../core/login_name.dart';
 import '../../core/text_input_dialog.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import 'home_location_field.dart';
 import 'users_repository.dart';
 import '../notifications/notifications.dart' show directManagersOf;
 import '../../core/saving.dart';
@@ -81,6 +82,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   /// A driver's warehouse supervisor.
   String? _supervisorId;
+  ({double lat, double lng})? _home;
   String? _joiningDate;
   String? _department;
   bool _active = true;
@@ -153,6 +155,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _managerId = u.managerId;
     _markedManager = u.markedManager;
     _supervisorId = u.supervisorId;
+    _home = u.homeLocation;
     _joiningDate = u.joiningDate;
     _department = u.department;
     _active = u.active;
@@ -204,6 +207,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       managerId: _managerId,
       markedManager: _markedManager,
       supervisorId: _supervisorId,
+      homeLocation: _home,
       joiningDate: _joiningDate,
       department: _department,
     );
@@ -501,6 +505,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   onChanged: (id) => setState(() => _supervisorId = id),
                 );
               }),
+            // Drivers: home, where their overtime ends (2026-10-25).
+            if (_role == UserRole.driver)
+              HomeLocationField(value: _home, onChanged: (v) => setState(() => _home = v)),
             // KAMs too: some Odoo clients are under a KAM until they're moved to the team.
             if (_role?.isTracked == true)
               TextFormField(

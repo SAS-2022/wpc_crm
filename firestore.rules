@@ -187,7 +187,10 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['uid', 'date', 'month', 'correction']));
       allow update: if (active() && resource.data.uid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['events']))
-        || (managesHr() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['correction']));
+        || (managesHr() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['correction']))
+        // Overtime approval (2026-10-25): HR area / managers, never their own.
+        || ((managesHr() || isManagerUser()) && resource.data.uid != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['overtimeReview']));
     }
 
     // "Not coming to work" (2026-10-22): the person reports their own day

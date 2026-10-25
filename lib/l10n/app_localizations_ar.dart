@@ -2888,7 +2888,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get overtimeAllowedHelp =>
-      'الوقت بعد نهاية يوم العمل يُحتسب عملاً إضافياً. عند الإيقاف: يُحتسب اليوم حتى نهاية يوم العمل فقط.';
+      'يُحتسب العمل الإضافي بعد بدئه: يُسأل موظفو الموقع بعد 10 دقائق من نهاية الدوام، ويبدأ تلقائياً للسائقين الذين ما زالوا في الطريق. يعتمده المدير لاحقاً.';
 
   @override
   String get attendanceRequired => 'الحضور مطلوب';
@@ -3259,6 +3259,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportWorkedHours => 'ساعات العمل';
+
+  @override
+  String get reportOvertimeApprovedHours => 'العمل الإضافي المعتمد (ساعات)';
 
   @override
   String get reportOvertimeHours => 'العمل الإضافي (ساعات)';
@@ -4196,6 +4199,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get correctedByHr => 'صحّحته الموارد البشرية';
 
   @override
+  String overtimeEndUnknown(String time) {
+    return 'نهاية العمل الإضافي غير مؤكدة · آخر تواجد $time';
+  }
+
+  @override
+  String get overtimeEndUnknownHelp =>
+      'لم يُسجَّل خروج أو وصول ولم يؤكد الهاتف مكانه بعد ذلك، لذا يتوقف العمل الإضافي عند هذا الوقت. إذا عمل لوقت أطول، صحّح هذا اليوم.';
+
+  @override
   String awayTime(String time) {
     return 'غائب $time (غير محتسب)';
   }
@@ -4778,4 +4790,124 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get annualCarryOverOff =>
       'الأيام المتبقية في نهاية سنة الإجازة تسقط (يُعاد ضبط الرصيد). الأيام المستهلكة بالزيادة تُخصم دائماً من السنة التالية.';
+
+  @override
+  String overtimeQuestion(String time) {
+    return 'انتهى دوامك الساعة $time. هل ستعمل وقتاً إضافياً؟';
+  }
+
+  @override
+  String overtimeQuestionHelp(String time) {
+    return 'يُحتسب العمل الإضافي من $time عند بدئه وأنت في موقع العمل.';
+  }
+
+  @override
+  String get overtimeDeclinedText => 'لا عمل إضافي اليوم – هل غيّرت رأيك؟';
+
+  @override
+  String get startOvertime => 'بدء العمل الإضافي';
+
+  @override
+  String get notToday => 'ليس اليوم';
+
+  @override
+  String get later => 'لاحقاً';
+
+  @override
+  String get overtimeNotAtSite =>
+      'أنت لست في موقع العمل – لا يمكن بدء العمل الإضافي إلا هناك.';
+
+  @override
+  String overtimeStartedToast(String time) {
+    return 'بدأ العمل الإضافي – يُحتسب من $time';
+  }
+
+  @override
+  String overtimeSince(String time, String duration) {
+    return 'عمل إضافي منذ $time · $duration';
+  }
+
+  @override
+  String get driveOvertimeTitle => 'بدأ العمل الإضافي';
+
+  @override
+  String driveOvertimeRunning(String time) {
+    return 'عمل إضافي منذ $time – ينتهي عند وصولك إلى المنزل أو موقع العمل.';
+  }
+
+  @override
+  String overtimeWaiting(String duration) {
+    return 'عمل إضافي $duration · بانتظار الاعتماد';
+  }
+
+  @override
+  String overtimeApprovedText(String duration) {
+    return 'العمل الإضافي المعتمد: $duration';
+  }
+
+  @override
+  String overtimeApprovedBy(String duration, String name) {
+    return 'اعتمد $name مدة $duration';
+  }
+
+  @override
+  String get approveOvertime => 'اعتماد العمل الإضافي';
+
+  @override
+  String overtimeRecorded(String duration, String from, String to) {
+    return 'المسجّل: $duration ($from – $to)';
+  }
+
+  @override
+  String overtimeToApprove(int count) {
+    return 'عمل إضافي بانتظار الاعتماد ($count)';
+  }
+
+  @override
+  String get overtimeApprovedMinutes => 'العمل الإضافي المعتمد';
+
+  @override
+  String get checkOutArrivedHome => 'وصل إلى المنزل (عمل إضافي أثناء القيادة)';
+
+  @override
+  String get checkOutArrivedSite =>
+      'وصل إلى موقع العمل (عمل إضافي أثناء القيادة)';
+
+  @override
+  String get checkOutOvertimeCap => 'بلغ الحد الأقصى للعمل الإضافي';
+
+  @override
+  String get homeLocation => 'موقع المنزل';
+
+  @override
+  String get homeLocationHelp =>
+      'ينتهي العمل الإضافي للسائق عند وصوله إلى هنا أو إلى موقع العمل.';
+
+  @override
+  String get homeLocationNotSet => 'غير محدد';
+
+  @override
+  String notifOvertimeAsk(String time, String site) {
+    return 'انتهى دوامك الساعة $time وما زلت في $site. هل ستعمل وقتاً إضافياً؟ اضغط لبدئه.';
+  }
+
+  @override
+  String notifOvertimeAskReminder(String time) {
+    return 'تذكير: انتهى دوامك الساعة $time. هل ستعمل وقتاً إضافياً؟ اضغط لبدئه.';
+  }
+
+  @override
+  String notifOvertimeConfirmed(String name, String site, String time) {
+    return 'بدأ $name العمل الإضافي$site (من $time) – اعتمده من صفحة الحضور';
+  }
+
+  @override
+  String notifDriveOvertime(String name, String time) {
+    return '$name ما زال يقود بعد نهاية الدوام ($time) – بدأ العمل الإضافي';
+  }
+
+  @override
+  String notifDriveOvertimeSelf(String time) {
+    return 'انتهى دوامك الساعة $time وأنت في الطريق – بدأ العمل الإضافي. ينتهي عند وصولك إلى المنزل أو موقع العمل.';
+  }
 }

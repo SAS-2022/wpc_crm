@@ -2,15 +2,21 @@
 // server's result is what counts, this copy shows it on the phone at once,
 // also offline). See that file for the rules (user decisions 2026-10-19).
 
-/// What a phone records: arrived / left (geofence) or the buttons; hrIn /
-/// hrOut come only from HR's correction of the day ([correctedEvents]).
-enum AttendanceEventType { in_, out, checkIn, checkOut, hrIn, hrOut }
+/// What a phone records: arrived / left (geofence), the buttons, or still at
+/// the site (`seen`, answer to a site check after the end of the work day,
+/// 2026-10-25), "Start overtime" / "Not today" (otStart / otDecline,
+/// 2026-10-25); hrIn / hrOut come only from HR's correction of the day
+/// ([correctedEvents]).
+enum AttendanceEventType { in_, out, checkIn, checkOut, seen, otStart, otDecline, hrIn, hrOut }
 
 AttendanceEventType? eventTypeFromKey(Object? key) => switch (key) {
       'in' => AttendanceEventType.in_,
       'out' => AttendanceEventType.out,
       'checkIn' => AttendanceEventType.checkIn,
       'checkOut' => AttendanceEventType.checkOut,
+      'seen' => AttendanceEventType.seen,
+      'otStart' => AttendanceEventType.otStart,
+      'otDecline' => AttendanceEventType.otDecline,
       'hrIn' => AttendanceEventType.hrIn,
       'hrOut' => AttendanceEventType.hrOut,
       _ => null,
@@ -21,19 +27,39 @@ String eventTypeKey(AttendanceEventType t) => switch (t) {
       AttendanceEventType.out => 'out',
       AttendanceEventType.checkIn => 'checkIn',
       AttendanceEventType.checkOut => 'checkOut',
+      AttendanceEventType.seen => 'seen',
+      AttendanceEventType.otStart => 'otStart',
+      AttendanceEventType.otDecline => 'otDecline',
       AttendanceEventType.hrIn => 'hrIn',
       AttendanceEventType.hrOut => 'hrOut',
     };
 
 class AttendanceEvent {
-  const AttendanceEvent(this.type, this.at, {this.siteId});
+  const AttendanceEvent(this.type, this.at, {this.siteId, this.check = false});
 
   final AttendanceEventType type;
   final DateTime at;
   final String? siteId;
+
+  /// Recorded by a site check (an `out` then means "found gone").
+  final bool check;
 }
 
-/// left | manual | leftSite | leftEarly | endOfDay | auto | hr
+/// Driver overtime on a day (server, `driveOvertime`, 2026-10-25): started
+/// at the end of the work day when the driver was on the road 10 min later;
+/// ends on arriving home or at a work site ([place] 'home' | 'site'), at the
+/// cap ('cap') or unknown (null, phone silent).
+class DriveOvertime {
+  const DriveOvertime({required this.startAt, this.endAt, this.place});
+
+  final DateTime startAt;
+  final DateTime? endAt;
+  final String? place;
+
+  bool get running => endAt == null;
+}
+
+/// left | manual | leftSite | leftEarly | endOfDay | auto | hr | arrivedHome | arrivedSite | overtimeCap
 class DayResult {
   const DayResult({
     this.checkInAt,
@@ -49,6 +75,11 @@ class DayResult {
     this.lateMin,
     this.afterHoursMin,
     this.awayMin,
+    this.lastSeenAt,
+    this.overtimeOn = false,
+    this.overtimeConfirmedAt,
+    this.overtimeDeclined = false,
+    this.overtimeEndUnknown = false,
   });
 
   final DateTime? checkInAt;
@@ -76,6 +107,25 @@ class DayResult {
   /// counted; 2026-10-22). Null on days worked out before it existed.
   final int? awayMin;
 
+  /// Last time the person was known to be at the site (arrival, check-in,
+  /// site check, GPS fix).
+  final DateTime? lastSeenAt;
+
+  /// Overtime counts today: allowed and started ("Start overtime" or a
+  /// driver on the road after the end; 2026-10-25).
+  final bool overtimeOn;
+
+  /// When they pressed "Start overtime" (it still counts from the end).
+  final DateTime? overtimeConfirmedAt;
+
+  /// "Not today" to the overtime question.
+  final bool overtimeDeclined;
+
+  /// Overtime started, closed with no exit / arrival seen and not seen up
+  /// to the overtime cap: when it ended is unknown (HR may correct the
+  /// day; 2026-10-25).
+  final bool overtimeEndUnknown;
+
   bool get checkedIn => checkInAt != null;
   bool get closed => checkOutAt != null;
 
@@ -95,6 +145,11 @@ class DayResult {
         lateMin: lateMin ?? other.lateMin,
         afterHoursMin: afterHoursMin ?? other.afterHoursMin,
         awayMin: awayMin ?? other.awayMin,
+        lastSeenAt: lastSeenAt ?? other.lastSeenAt,
+        overtimeOn: overtimeOn,
+        overtimeConfirmedAt: overtimeConfirmedAt,
+        overtimeDeclined: overtimeDeclined,
+        overtimeEndUnknown: overtimeEndUnknown,
       );
 }
 
@@ -109,6 +164,7 @@ DayResult deriveDay(
   int overtimeMaxMin = defaultOvertimeMaxMin,
   DateTime? lastSeenAt,
   Duration? awayGrace,
+  DriveOvertime? drive,
 }) {
   DateTime? checkInAt, lastExitAt, checkOutAt;
   String? source, siteId, outType;
@@ -142,7 +198,19 @@ DayResult deriveDay(
       !leavesSite && checkInAt != null && !closed && !inside &&
       lastExitAt != null && lastExitAt.isBefore(end) && !t.isBefore(lastExitAt.add(grace));
 
-  final sorted = [...events]..sort((a, b) => a.at.compareTo(b.at));
+  DateTime later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
+  // Overtime started ("Start overtime") / declined.
+  DateTime? confirmedAt;
+  var declined = false;
+  final sorted = [
+    for (final e in events)
+      // Driving overtime: only a check-out counts after it started.
+      if (drive == null ||
+          !e.at.isAfter(drive.startAt) ||
+          e.type == AttendanceEventType.checkOut ||
+          e.type == AttendanceEventType.hrOut)
+        e,
+  ]..sort((a, b) => a.at.compareTo(b.at));
   for (final e in sorted) {
     if (awayTooLong(e.at)) close(lastExitAt!, 'leftSite');
     switch (e.type) {
@@ -168,35 +236,60 @@ DayResult deriveDay(
         }
         inside = true;
         lastExitAt = null;
+      case AttendanceEventType.otStart:
+        if (checkInAt != null && !closed) confirmedAt ??= e.at;
+      case AttendanceEventType.otDecline:
+        if (checkInAt != null && !closed) declined = true;
+      case AttendanceEventType.seen:
+        if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
+        if (checkInAt != null && !closed) {
+          inside = true;
+          lastExitAt = null;
+        }
       case AttendanceEventType.out:
         inside = false;
         if (checkInAt == null || closed) continue;
-        lastExitAt = e.at;
-        if (!e.at.isBefore(end)) close(e.at, 'left');
+        // Found gone by a site check: left after they were last seen.
+        final seen = seenAt;
+        final at = e.check && seen != null ? _earlier(e.at, later(later(seen, end), checkInAt)) : e.at;
+        lastExitAt = at;
+        if (!e.at.isBefore(end)) close(at, 'left');
       case AttendanceEventType.checkOut || AttendanceEventType.hrOut:
         if (checkInAt != null && !closed) close(e.at, e.type == AttendanceEventType.hrOut ? 'hr' : 'manual');
     }
   }
-  DateTime later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
-  if (awayTooLong(now)) close(lastExitAt!, 'leftSite');
-  if (checkInAt != null && !closed && !now.isBefore(end) && !inside) {
-    if (leavesSite) {
-      close(later(end, checkInAt), 'endOfDay');
-    } else {
-      close(lastExitAt ?? end, 'leftEarly');
+  final overtimeOn = overtimeAllowed && (drive != null || confirmedAt != null);
+  if (drive != null && checkInAt != null && !closed) {
+    // Driving: open until the server finds the arrival (or the cap).
+    final endAt = drive.endAt;
+    if (endAt != null) {
+      final type = switch (drive.place) {
+        'home' => 'arrivedHome',
+        'site' => 'arrivedSite',
+        'cap' => 'overtimeCap',
+        _ => 'auto',
+      };
+      close(later(later(endAt, end), checkInAt), type);
     }
-  }
-  if (checkInAt != null && !closed && !now.isBefore(closeAll)) {
-    // No exit seen: the end of the work day, or with overtime the last time
-    // they were seen at the site (up to the cap).
-    final from = later(end, checkInAt);
-    final seen = seenAt;
-    close(
-      overtimeAllowed && seen != null
-          ? (seen.isAfter(from.add(cap)) ? from.add(cap) : later(seen, from))
-          : from,
-      'auto',
-    );
+  } else {
+    if (awayTooLong(now)) close(lastExitAt!, 'leftSite');
+    if (checkInAt != null && !closed && !now.isBefore(end) && !inside) {
+      if (leavesSite) {
+        close(later(end, checkInAt), 'endOfDay');
+      } else {
+        close(lastExitAt ?? end, 'leftEarly');
+      }
+    }
+    if (checkInAt != null && !closed && !now.isBefore(closeAll)) {
+      // No exit seen: the end of the work day, or with overtime started the
+      // last time they were seen at the site (up to the cap).
+      final from = later(end, checkInAt);
+      final seen = seenAt;
+      close(
+        overtimeOn && seen != null ? (seen.isAfter(from.add(cap)) ? from.add(cap) : later(seen, from)) : from,
+        'auto',
+      );
+    }
   }
 
   int? worked, counted, overtime, afterHours;
@@ -205,13 +298,15 @@ DayResult deriveDay(
     worked = _minutes(outAt.difference(inAt) - awayBefore - awayAfter);
     final extra = outAt.difference(later(end, inAt)) - awayAfter;
     final extraMin = _minutes(extra);
-    overtime = overtimeAllowed ? (extraMin < overtimeMaxMin ? extraMin : overtimeMaxMin) : 0;
+    overtime = overtimeOn ? (extraMin < overtimeMaxMin ? extraMin : overtimeMaxMin) : 0;
     afterHours = extraMin - overtime;
-    counted = overtimeAllowed
+    counted = overtimeOn
         ? (worked - afterHours < 0 ? 0 : worked - afterHours)
         : _minutes((outAt.isBefore(end) ? outAt : end).difference(inAt) - awayBefore);
   }
   final late = checkInAt == null || start == null ? null : lateMinutes(checkInAt.difference(start));
+  // Overtime started, no exit / arrival seen and not seen up to the cap: when it ended is unknown.
+  final endUnknown = closed && outType == 'auto' && overtimeOn && checkOutAt!.isBefore(later(end, checkInAt!).add(cap));
   return DayResult(
     checkInAt: checkInAt,
     checkInSource: source,
@@ -226,8 +321,15 @@ DayResult deriveDay(
     lateMin: late,
     afterHoursMin: afterHours,
     awayMin: _minutes(awayBefore + awayAfter),
+    lastSeenAt: seenAt,
+    overtimeOn: overtimeOn,
+    overtimeConfirmedAt: confirmedAt,
+    overtimeDeclined: declined,
+    overtimeEndUnknown: endUnknown,
   );
 }
+
+DateTime _earlier(DateTime a, DateTime b) => a.isBefore(b) ? a : b;
 
 /// HR's correction of a day (2026-10-22): stored on the attendance day as
 /// `correction` {checkInAt, checkOutAt?, siteId?, note, byId, at}.
@@ -273,6 +375,20 @@ var lateGraceMin = 15;
 int lateMinutes(Duration afterStart) {
   final m = afterStart.inMinutes;
   return m > lateGraceMin ? m : 0;
+}
+
+/// What a site check's GPS fix says (2026-10-25): [distance] from the site
+/// centre and the fix [accuracy] in metres. Within the radius (plus the fix
+/// accuracy, up to 100 m) = still there; clearly beyond it (50 m more) =
+/// gone; a rough fix (worse than 150 m) or the edge in between can't tell.
+enum SiteCheckResult { seen, gone, unknown }
+
+SiteCheckResult siteCheckResult({required double distance, required double accuracy, required double radius}) {
+  if (accuracy > 150) return SiteCheckResult.unknown;
+  final margin = accuracy.clamp(0, 100);
+  if (distance <= radius + margin) return SiteCheckResult.seen;
+  if (distance - margin > radius + 50) return SiteCheckResult.gone;
+  return SiteCheckResult.unknown;
 }
 
 int _minutes(Duration d) => d.isNegative ? 0 : (d.inSeconds / 60).round();

@@ -2,6 +2,10 @@ package com.wisora.wpc
 
 import android.app.ActivityManager
 import android.app.AppOpsManager
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.media.AudioAttributes
 import android.app.usage.UsageStatsManager
 import android.content.ComponentName
 import android.content.Context
@@ -12,6 +16,7 @@ import android.provider.Settings
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.Locale
 
 /**
  * "wpc/device": what can stop background tracking on this phone (2026-10-19,
@@ -29,6 +34,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        createOvertimeChannel()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wpc/device").setMethodCallHandler { call, result ->
             when (call.method) {
                 "info" -> result.success(info())
@@ -37,6 +43,36 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /**
+     * Overtime alerts (2026-10-25, "Start overtime?" / driving overtime
+     * started): their own sound (res/raw/overtime_alert), high importance
+     * (pops up), shown in full on the lock screen. The server sends these
+     * pushes with channel "overtime" (functions/index.js OVERTIME_PUSH).
+     */
+    private fun createOvertimeChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel("overtime") != null) return
+        val arabic = Locale.getDefault().language == "ar"
+        val channel = NotificationChannel(
+            "overtime",
+            if (arabic) "العمل الإضافي" else "Overtime",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = if (arabic) "سؤال بدء العمل الإضافي وبدء العمل الإضافي أثناء القيادة" else "Start overtime? and driving overtime started"
+            setSound(
+                Uri.parse("android.resource://$packageName/raw/overtime_alert"),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        manager.createNotificationChannel(channel)
     }
 
     private fun info(): Map<String, Any?> {

@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/app_user.dart';
+import '../../core/place_buttons.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
-import '../clients/location_picker_screen.dart';
 import '../users/users_repository.dart';
 import 'work_sites.dart';
 
@@ -189,18 +189,10 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
             title: Text(
               _point == null ? l10n.workSiteNoPlace : '${_point!.latitude.toStringAsFixed(5)}, ${_point!.longitude.toStringAsFixed(5)}',
             ),
-            trailing: OutlinedButton.icon(
-              icon: const Icon(Icons.map_outlined),
-              label: Text(l10n.pickOnMap),
-              onPressed: () async {
-                final picked = await Navigator.push<LatLng>(
-                  context,
-                  MaterialPageRoute(builder: (_) => LocationPickerScreen(initial: _point)),
-                );
-                if (picked != null) setState(() => _point = picked);
-              },
-            ),
           ),
+          // My location, a pasted Maps link or the map (2026-10-25, user request).
+          PlaceButtons(point: _point, onPicked: (p) => setState(() => _point = p)),
+          const SizedBox(height: 12),
           if (_point != null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),

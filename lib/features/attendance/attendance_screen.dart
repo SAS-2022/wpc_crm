@@ -252,7 +252,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         subtitle: Text([
           [u.role.label(l10n), siteOf(u)].where((s) => s.isNotEmpty).join(' · '),
           line,
-          if (records[u.id]?.correction != null) l10n.correctedByHr,
+          if (records[u.id]?.correction != null)
+            l10n.correctedByHr
+          else if (d != null && d.overtimeEndUnknown && d.lastSeenAt != null)
+            l10n.overtimeEndUnknown(time.format(d.lastSeenAt!)),
+          if (records[u.id]?.overtimeWaiting ?? false) l10n.overtimeWaiting(formatMinutes(d?.overtimeMin ?? 0)),
         ].join('\n')),
         isThreeLine: true,
         trailing: p.workedMin > 0 ? Text(formatMinutes(p.workedMin), style: theme.textTheme.titleSmall) : null,

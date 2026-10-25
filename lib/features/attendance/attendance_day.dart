@@ -71,8 +71,8 @@ PersonDay personDay(
     );
   }
   // Still open: up to now, or up to the end of the work day without overtime
-  // (with overtime: at most the cap after it).
-  final capEnd = end.add(Duration(minutes: overtimeAllowed ? overtimeMaxMin : 0));
+  // (with overtime started: at most the cap after it).
+  final capEnd = end.add(Duration(minutes: overtimeAllowed && d.overtimeOn ? overtimeMaxMin : 0));
   final upTo = now.isBefore(capEnd) ? now : capEnd;
   final worked = upTo.difference(d.checkInAt!).inMinutes - (d.awayMin ?? 0);
   return (

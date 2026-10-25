@@ -73,9 +73,18 @@ class NotificationsScreen extends ConsumerWidget {
       switch (n.type) {
         NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
         NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
-        NotificationType.overtimeStarted => n.ownerId == meId
-            ? l10n.notifOvertimeStartedSelf(n.siteName, _clock(context, n.time))
-            : l10n.notifOvertimeStarted(owner, n.siteName, _clock(context, n.time)),
+        NotificationType.overtimeStarted => switch (n.issue) {
+            'driving' => n.ownerId == meId
+                ? l10n.notifDriveOvertimeSelf(_clock(context, n.time))
+                : l10n.notifDriveOvertime(owner, _clock(context, n.time)),
+            'site' => l10n.notifOvertimeConfirmed(owner, n.siteName.isEmpty ? '' : ' · ${n.siteName}', _clock(context, n.time)),
+            _ => n.ownerId == meId
+                ? l10n.notifOvertimeStartedSelf(n.siteName, _clock(context, n.time))
+                : l10n.notifOvertimeStarted(owner, n.siteName, _clock(context, n.time)),
+          },
+        NotificationType.overtimeAsk => n.count > 0
+            ? l10n.notifOvertimeAskReminder(_clock(context, n.time))
+            : l10n.notifOvertimeAsk(_clock(context, n.time), n.siteName),
         NotificationType.absenceReported => [
             l10n.notifAbsenceReported(owner, day, absenceReasonLabel(l10n, AbsenceReason.fromKey(n.issue))),
             if (n.note.isNotEmpty) '“${n.note}”',
@@ -168,7 +177,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.attendanceCheckedIn => Icons.how_to_reg,
                     NotificationType.attendanceLate => Icons.alarm,
-                    NotificationType.overtimeStarted => Icons.more_time,
+                    NotificationType.overtimeStarted || NotificationType.overtimeAsk => Icons.more_time,
                     NotificationType.absenceReported => absenceReasonIcon(AbsenceReason.fromKey(n.issue)),
                     NotificationType.absenceAccepted => Icons.event_available,
                     NotificationType.absenceRejected => Icons.event_busy,
@@ -212,6 +221,7 @@ class NotificationsScreen extends ConsumerWidget {
                       case NotificationType.attendanceCheckedIn ||
                             NotificationType.attendanceLate ||
                             NotificationType.overtimeStarted ||
+                            NotificationType.overtimeAsk ||
                             NotificationType.earlyCheckoutRequested ||
                             NotificationType.earlyCheckoutApproved ||
                             NotificationType.earlyCheckoutRejected:

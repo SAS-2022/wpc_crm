@@ -14,6 +14,8 @@ import 'absence_sheet.dart' show absenceReasonLabel, absenceStatusText;
 import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'overtime.dart' show canApproveOvertime;
+import 'overtime_widgets.dart' show showApproveOvertimeDialog;
 import 'work_sites.dart';
 
 /// Attendance page, tapping a person: their day (times, how it closed, a
@@ -41,6 +43,11 @@ Future<void> showAttendanceDaySheet(
         final sites = {for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) s.id: s.name};
         final c = record?.correction;
         final d = result;
+        final me = ref.watch(currentUserProvider).value;
+        final review = record?.review;
+        // Overtime recorded (2026-10-25): approved by a manager, minutes adjustable.
+        final hasOvertime = d != null && d.closed && (d.overtimeMin ?? 0) > 0 && record != null;
+        final mayApprove = hasOvertime && me != null && canApproveOvertime(me, person, users.values.toList());
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -59,6 +66,14 @@ Future<void> showAttendanceDaySheet(
                     Text('${l10n.checkedOutAt(time.format(d.checkOutAt!))} · ${checkOutTypeLabel(l10n, d.checkOutType)}'),
                   if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
                   if ((d.awayMin ?? 0) > 0) Text(l10n.awayTime(formatMinutes(d.awayMin!))),
+                  if (d.overtimeEndUnknown && d.lastSeenAt != null && c == null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.overtimeEndUnknown(time.format(d.lastSeenAt!)),
+                      style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                    ),
+                    Text(l10n.overtimeEndUnknownHelp, style: Theme.of(sheet).textTheme.bodySmall),
+                  ],
                 ],
                 if (c != null) ...[
                   const SizedBox(height: 8),
@@ -66,6 +81,16 @@ Future<void> showAttendanceDaySheet(
                     [l10n.correctedBy(users[c.byId]?.name ?? ''), if (c.note.isNotEmpty) '“${c.note}”'].join(' · '),
                     style: TextStyle(color: Theme.of(sheet).colorScheme.primary),
                   ),
+                ],
+                if (hasOvertime) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    review != null
+                        ? l10n.overtimeApprovedBy(formatMinutes(review.minutes), users[review.byId]?.name ?? '')
+                        : l10n.overtimeWaiting(formatMinutes(d.overtimeMin!)),
+                    style: TextStyle(color: review != null ? Colors.green.shade700 : Colors.orange.shade800),
+                  ),
+                  if (review != null && review.note.isNotEmpty) Text('“${review.note}”'),
                 ],
                 if (absence != null) ...[
                   const SizedBox(height: 8),
@@ -77,6 +102,15 @@ Future<void> showAttendanceDaySheet(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (mayApprove)
+                      FilledButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(sheet);
+                          await showApproveOvertimeDialog(context, me: me, person: person, record: record, result: d);
+                        },
+                        icon: const Icon(Icons.more_time),
+                        label: Text(l10n.approveOvertime),
+                      ),
                     if (canCorrect)
                       FilledButton.tonalIcon(
                         onPressed: () async {

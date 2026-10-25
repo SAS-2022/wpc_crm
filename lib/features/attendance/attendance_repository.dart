@@ -33,9 +33,29 @@ Future<void> recordAttendance(String uid, AttendanceEventType type, {String? sit
   }, SetOptions(merge: true));
 }
 
+/// A manager's approval of a day's overtime (2026-10-25, `overtimeReview`):
+/// [minutes] approved (may differ from what was recorded), with a note.
+class OvertimeReview {
+  const OvertimeReview({required this.minutes, required this.byId, this.at, this.note = ''});
+
+  final int minutes;
+  final String byId;
+  final DateTime? at;
+  final String note;
+}
+
 /// One person's day as stored (events + the server's result).
 class AttendanceRecord {
-  const AttendanceRecord({required this.uid, required this.date, required this.events, required this.server, this.correction});
+  const AttendanceRecord({
+    required this.uid,
+    required this.date,
+    required this.events,
+    required this.server,
+    this.correction,
+    this.drive,
+    this.review,
+    this.overtimeStatus,
+  });
 
   final String uid;
   final String date;
@@ -47,6 +67,18 @@ class AttendanceRecord {
   /// HR's correction of the day, if any (replaces what the phone recorded).
   final AttendanceCorrection? correction;
 
+  /// Driver overtime (server, 2026-10-25), running or done.
+  final DriveOvertime? drive;
+
+  /// The manager's approval of the overtime, if any.
+  final OvertimeReview? review;
+
+  /// Server: 'running' | 'pending' (recorded, waiting for approval) | 'approved' | null.
+  final String? overtimeStatus;
+
+  /// Overtime recorded and not approved yet.
+  bool get overtimeWaiting => overtimeStatus == 'pending' && review == null;
+
   factory AttendanceRecord.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     DateTime? time(String k) => (d[k] as Timestamp?)?.toDate();
@@ -56,7 +88,12 @@ class AttendanceRecord {
       events: [
         for (final e in d['events'] as List? ?? const [])
           if (e is Map && eventTypeFromKey(e['type']) != null && e['at'] is Timestamp)
-            AttendanceEvent(eventTypeFromKey(e['type'])!, (e['at'] as Timestamp).toDate(), siteId: e['siteId'] as String?),
+            AttendanceEvent(
+              eventTypeFromKey(e['type'])!,
+              (e['at'] as Timestamp).toDate(),
+              siteId: e['siteId'] as String?,
+              check: e['check'] == true,
+            ),
       ],
       correction: switch (d['correction']) {
         {'checkInAt': final Timestamp inAt} && final Map c => AttendanceCorrection(
@@ -68,6 +105,24 @@ class AttendanceRecord {
           ),
         _ => null,
       },
+      drive: switch (d['driveOvertime']) {
+        {'status': 'running' || 'done', 'startAt': final Timestamp start} && final Map v => DriveOvertime(
+            startAt: start.toDate(),
+            endAt: (v['endAt'] as Timestamp?)?.toDate(),
+            place: v['place'] as String?,
+          ),
+        _ => null,
+      },
+      review: switch (d['overtimeReview']) {
+        {'minutes': final num minutes} && final Map v => OvertimeReview(
+            minutes: minutes.toInt(),
+            byId: v['byId'] as String? ?? '',
+            at: (v['at'] as Timestamp?)?.toDate(),
+            note: v['note'] as String? ?? '',
+          ),
+        _ => null,
+      },
+      overtimeStatus: d['overtimeStatus'] as String?,
       server: d.containsKey('closed')
           ? DayResult(
               checkInAt: time('checkInAt'),
@@ -87,6 +142,11 @@ class AttendanceRecord {
               },
               afterHoursMin: (d['afterHoursMin'] as num?)?.toInt(),
               awayMin: (d['awayMin'] as num?)?.toInt(),
+              lastSeenAt: time('lastSeenAt'),
+              overtimeOn: d['overtimeOn'] == true,
+              overtimeConfirmedAt: time('overtimeConfirmedAt'),
+              overtimeDeclined: d['overtimeDeclined'] == true,
+              overtimeEndUnknown: d['overtimeEndUnknown'] == true,
             )
           : null,
     );
@@ -112,6 +172,7 @@ class AttendanceRecord {
       leavesSite: leavesSite,
       overtimeAllowed: overtimeAllowed,
       overtimeMaxMin: overtimeMaxMin,
+      drive: drive,
     );
   }
 
@@ -145,6 +206,25 @@ Future<void> correctAttendance(String uid, String day, AttendanceCorrection c, S
         'at': FieldValue.serverTimestamp(),
       },
     }, SetOptions(merge: true)));
+
+/// A manager approves [uid]'s overtime on [day] (2026-10-25), possibly
+/// changing the minutes.
+Future<void> approveOvertime(String uid, String day, {required int minutes, required String byId, String note = ''}) =>
+    saving(() => attendanceDoc(uid, day).update({
+          'overtimeReview': {'minutes': minutes, 'byId': byId, 'note': note, 'at': FieldValue.serverTimestamp()},
+        }));
+
+/// Days with overtime waiting for a manager's approval (Home card; the app
+/// keeps the people the viewer manages).
+final overtimeToApproveProvider = StreamProvider<List<AttendanceRecord>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.seesTeamAttendance) return Stream.value(const []);
+  return FirebaseFirestore.instance
+      .collection('attendance')
+      .where('overtimeStatus', isEqualTo: 'pending')
+      .snapshots()
+      .map((s) => [for (final d in s.docs) AttendanceRecord.fromDoc(d)]..sort((a, b) => b.date.compareTo(a.date)));
+});
 
 /// Back to what the phone recorded.
 Future<void> removeAttendanceCorrection(String uid, String day) =>

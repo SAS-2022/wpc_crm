@@ -15,8 +15,12 @@ void main() {
     Duration? grace,
     int cap = defaultOvertimeMaxMin,
     DateTime? seen,
+    bool confirm = true,
+    DriveOvertime? drive,
   }) => deriveDay(
-    events,
+    // With overtime the tests confirm it at 17:01 ("Start overtime", 2026-10-25) unless confirm: false.
+    overtime && confirm ? [...events, e(AttendanceEventType.otStart, t(17, 1))] : events,
+    drive: drive,
     start: start,
     end: t(17),
     closeAll: t(23, 55),
@@ -168,5 +172,83 @@ void main() {
     expect([no.checkOutAt, no.overtimeMin], [t(17), 0]);
     final arrival = run([...events, e(inn, t(18, 30))], now: t(23, 55), overtime: true);
     expect([arrival.checkOutAt, arrival.overtimeMin], [t(18, 30), 90]);
+  });
+
+  // Site checks (2026-10-25), same as attendance.test.js.
+  const seenT = AttendanceEventType.seen;
+  test('silent phone, no site check answered: closed at the end, overtime unconfirmed', () {
+    final d = run([e(inn, t(6, 56))], overtime: true, now: t(23, 55), seen: t(8, 4));
+    expect([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown, d.lastSeenAt], [t(17), 'auto', 0, true, t(8, 4)]);
+    expect(run([e(inn, t(6, 56))], now: t(23, 55)).overtimeEndUnknown, isFalse);
+  });
+
+  test('site checks answered "still here": overtime up to the last one', () {
+    final events = [e(inn, t(6, 56)), e(seenT, t(17, 2)), e(seenT, t(17, 32)), e(seenT, t(18, 2))];
+    final open = run(events, overtime: true, now: t(18, 10));
+    expect([open.closed, open.inside], [false, true]);
+    final d = run(events, overtime: true, now: t(23, 55));
+    expect([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(18, 2), 'auto', 62, true]);
+    final capped = run([...events, e(seenT, t(20, 5))], overtime: true, now: t(23, 55));
+    expect([capped.checkOutAt, capped.overtimeMin, capped.overtimeEndUnknown], [t(20), 180, false]);
+  });
+
+  test('a site check that finds them gone checks out at the last time seen', () {
+    final gone = AttendanceEvent(out, t(17, 32), check: true);
+    final d = run([e(inn, t(8)), e(seenT, t(17, 2)), gone], overtime: true, now: t(17, 40));
+    expect([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 2, false]);
+    final early = run([e(inn, t(8)), AttendanceEvent(out, t(17, 2), check: true)], overtime: true, now: t(17, 5));
+    expect([early.checkOutAt, early.overtimeMin], [t(17), 0]);
+    expect(run([e(inn, t(8)), e(out, t(18))], now: t(19)).checkOutAt, t(18));
+  });
+
+  test('site check GPS fix: there, gone or unknown', () {
+    expect(siteCheckResult(distance: 40, accuracy: 15, radius: 100), SiteCheckResult.seen);
+    expect(siteCheckResult(distance: 130, accuracy: 40, radius: 100), SiteCheckResult.seen);
+    expect(siteCheckResult(distance: 160, accuracy: 5, radius: 100), SiteCheckResult.gone);
+    expect(siteCheckResult(distance: 140, accuracy: 5, radius: 100), SiteCheckResult.unknown);
+    expect(siteCheckResult(distance: 40, accuracy: 300, radius: 100), SiteCheckResult.unknown);
+  });
+
+  // Overtime has to be started (2026-10-25), same as attendance.test.js.
+  test('site staff: staying without "Start overtime" counts nothing after the end', () {
+    final d = run([e(inn, t(8)), e(out, t(18, 30))], overtime: true, confirm: false, now: t(19));
+    expect([d.overtimeOn, d.overtimeMin, d.afterHoursMin, d.countedMin], [false, 0, 90, 540]);
+    expect(run([e(inn, t(8))], overtime: true, confirm: false, now: t(23, 55)).overtimeEndUnknown, isFalse);
+  });
+
+  test('confirmed at 6 pm, still on site → overtime counts from 5 pm', () {
+    final events = [e(inn, t(8)), e(AttendanceEventType.otStart, t(18)), e(out, t(18, 40))];
+    final d = run(events, overtime: true, confirm: false, now: t(19));
+    expect([d.overtimeConfirmedAt, d.overtimeMin, d.checkOutType], [t(18), 100, 'left']);
+    final after = run(
+      [e(inn, t(8)), e(out, t(18)), e(AttendanceEventType.otStart, t(18, 10))],
+      overtime: true,
+      confirm: false,
+      now: t(19),
+    );
+    expect([after.overtimeConfirmedAt, after.overtimeMin], [null, 0]);
+    expect(run(events, now: t(19)).overtimeMin, 0);
+  });
+
+  test('"Not today" then "Start overtime" (pressed by mistake) → overtime counts from the end', () {
+    final events = [e(inn, t(8)), e(AttendanceEventType.otDecline, t(17, 12)), e(AttendanceEventType.otStart, t(17, 40)), e(out, t(18))];
+    final d = run(events, overtime: true, confirm: false, now: t(19));
+    expect([d.overtimeOn, d.overtimeDeclined, d.overtimeConfirmedAt, d.overtimeMin], [true, true, t(17, 40), 60]);
+  });
+
+  test('driving overtime on the day: open while driving, closed at the arrival', () {
+    final events = [e(inn, t(7)), e(out, t(15)), e(inn, t(18, 30)), e(out, t(18, 40))];
+    DayResult go(DriveOvertime? drive, DateTime now, [List<AttendanceEvent> more = const []]) =>
+        run([...events, ...more], overtime: true, confirm: false, leaves: true, now: now, drive: drive);
+    final driving = go(DriveOvertime(startAt: t(17)), t(18));
+    expect([driving.closed, driving.overtimeOn], [false, true]);
+    final home = go(DriveOvertime(startAt: t(17), endAt: t(18, 50), place: 'home'), t(19));
+    expect([home.checkOutAt, home.checkOutType, home.overtimeMin, home.overtimeEndUnknown], [t(18, 50), 'arrivedHome', 110, false]);
+    final unknown = go(DriveOvertime(startAt: t(17), endAt: t(17, 40)), t(20, 5));
+    expect([unknown.checkOutType, unknown.overtimeMin, unknown.overtimeEndUnknown], ['auto', 40, true]);
+    final checkOut = go(DriveOvertime(startAt: t(17)), t(18), [e(AttendanceEventType.checkOut, t(17, 30))]);
+    expect([checkOut.checkOutAt, checkOut.checkOutType, checkOut.overtimeMin], [t(17, 30), 'manual', 30]);
+    final none = go(null, t(19));
+    expect([none.checkOutType, none.overtimeMin], ['left', 0]);
   });
 }

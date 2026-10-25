@@ -1,11 +1,17 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { deriveDay, correctedEvents, saudiTime, overtimeCap } = require('./attendance');
+const {
+  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveStart, driveEnd, saudiTime, overtimeCap,
+} = require('./attendance');
 
 const day = '2026-10-20';
 const t = (h, m = 0) => saudiTime(day, h * 60 + m);
 const base = { endMs: t(17), closeAllMs: t(23, 55), leavesSite: false, overtimeAllowed: false };
-const run = (events, o = {}) => deriveDay(events, { ...base, now: t(12), ...o });
+// With overtime allowed the tests confirm it at 17:01 ("Start overtime", 2026-10-25) unless `confirm: false`.
+const run = (events, o = {}) => deriveDay(
+  o.overtimeAllowed && o.confirm !== false ? [...events, { type: 'otStart', at: t(17, 1) }] : events,
+  { ...base, now: t(12), ...o },
+);
 
 test('checked in at the first arrival, whatever the time', () => {
   const d = run([{ type: 'in', at: t(9, 40), siteId: 'hq' }, { type: 'in', at: t(10) }]);
@@ -155,4 +161,141 @@ test('no exit seen, overtime allowed: closed when last seen at the site (GPS), w
 test('an arrival event after the end counts as being seen there', () => {
   const d = run([{ type: 'in', at: t(8) }, { type: 'in', at: t(18, 30) }], { now: t(23, 55), overtimeAllowed: true });
   assert.deepEqual([d.checkOutAt, d.overtimeMin], [t(18, 30), 90]);
+});
+
+// Site checks (2026-10-25): Worker Number Two's 24 Oct — arrived 06:56, phone
+// silent from 08:04, never left; closed at 17:00 without overtime.
+test('silent phone, no site check answered: closed at the end, overtime unconfirmed', () => {
+  const ot = { overtimeAllowed: true, now: t(23, 55) };
+  const d = run([{ type: 'in', at: t(6, 56) }], { ...ot, lastSeenAt: t(8, 4) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown, d.lastSeenAt],
+    [t(17), 'auto', 0, true, t(8, 4)]);
+  // Without overtime there is nothing to confirm.
+  assert.equal(run([{ type: 'in', at: t(6, 56) }], { now: t(23, 55) }).overtimeEndUnknown, false);
+});
+
+test('site checks answered "still here": overtime up to the last one', () => {
+  const events = [{ type: 'in', at: t(6, 56) }, { type: 'seen', at: t(17, 2) }, { type: 'seen', at: t(17, 32) },
+    { type: 'seen', at: t(18, 2) }];
+  const open = run(events, { overtimeAllowed: true, now: t(18, 10) });
+  assert.deepEqual([open.closed, open.inside], [false, true]);
+  const d = run(events, { overtimeAllowed: true, now: t(23, 55) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(18, 2), 'auto', 62, true]);
+  // Seen up to the cap: nothing left to confirm.
+  const capped = run([...events, { type: 'seen', at: t(20, 5) }], { overtimeAllowed: true, now: t(23, 55) });
+  assert.deepEqual([capped.checkOutAt, capped.overtimeMin, capped.overtimeEndUnknown], [t(20), 180, false]);
+});
+
+test('a site check that finds them gone checks out at the last time seen', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'seen', at: t(17, 2) }, { type: 'out', at: t(17, 32), check: true }];
+  const d = run(events, { overtimeAllowed: true, now: t(17, 40) });
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 2, false]);
+  // Not seen since the end: the end of the work day.
+  const early = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 2), check: true }], { overtimeAllowed: true, now: t(17, 5) });
+  assert.deepEqual([early.checkOutAt, early.overtimeMin], [t(17), 0]);
+  // A geofence exit keeps its own time.
+  assert.equal(run([{ type: 'in', at: t(8) }, { type: 'out', at: t(18) }], { now: t(19) }).checkOutAt, t(18));
+});
+
+test('site checks are sent after the end, every 30 min, until the cap', () => {
+  const inside = { checkInAt: t(8), closed: false, inside: true, overtimeConfirmedAt: t(17, 5) };
+  const o = { endMs: t(17), closeAllMs: t(23, 55), overtimeAllowed: true };
+  assert.equal(siteCheckDue({ ...inside, overtimeConfirmedAt: null }, { ...o, now: t(17, 13) }), false); // not started
+  assert.equal(siteCheckDue(inside, { ...o, now: t(16, 55) }), false);
+  assert.equal(siteCheckDue(inside, { ...o, now: t(17, 3) }), true);
+  assert.equal(siteCheckDue(inside, { ...o, now: t(17, 13), lastCheckAt: t(17, 3) }), false);
+  assert.equal(siteCheckDue(inside, { ...o, now: t(17, 30), lastCheckAt: t(17, 3) }), true); // schedule jitter
+  assert.equal(siteCheckDue(inside, { ...o, now: t(20, 5) }), false); // past the 3 h cap
+  assert.equal(siteCheckDue(inside, { ...o, now: t(21), overtimeMaxMin: 300 }), true);
+  assert.equal(siteCheckDue(inside, { ...o, now: t(17, 3), overtimeAllowed: false }), false);
+  assert.equal(siteCheckDue({ ...inside, inside: false }, { ...o, now: t(17, 3) }), false);
+  assert.equal(siteCheckDue({ ...inside, closed: true }, { ...o, now: t(17, 3) }), false);
+});
+
+// Overtime has to be started (user decisions 2026-10-25).
+test('site staff: staying without "Start overtime" counts nothing after the end', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(18, 30) }];
+  const d = run(events, { overtimeAllowed: true, confirm: false, now: t(19) });
+  assert.deepEqual([d.overtimeOn, d.overtimeMin, d.afterHoursMin, d.countedMin], [false, 0, 90, 540]);
+  // Silent phone, never confirmed: no "end unknown" either.
+  assert.equal(run([{ type: 'in', at: t(8) }], { overtimeAllowed: true, confirm: false, now: t(23, 55) }).overtimeEndUnknown, false);
+});
+
+test('confirmed at 6 pm, still on site → overtime counts from 5 pm', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'otStart', at: t(18) }, { type: 'out', at: t(18, 40) }];
+  const d = run(events, { overtimeAllowed: true, confirm: false, now: t(19) });
+  assert.deepEqual([d.overtimeConfirmedAt, d.overtimeMin, d.checkOutType], [t(18), 100, 'left']);
+  // Confirming after leaving the site doesn't count.
+  const after = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(18) }, { type: 'otStart', at: t(18, 10) }],
+    { overtimeAllowed: true, confirm: false, now: t(19) });
+  assert.deepEqual([after.overtimeConfirmedAt, after.overtimeMin], [null, 0]);
+  // Without overtime allowed a confirmation changes nothing.
+  assert.equal(run(events, { now: t(19) }).overtimeMin, 0);
+});
+
+test('"Not today" then "Start overtime" (pressed by mistake) → overtime counts from the end', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'otDecline', at: t(17, 12) }, { type: 'otStart', at: t(17, 40) },
+    { type: 'out', at: t(18) }];
+  const d = run(events, { overtimeAllowed: true, confirm: false, now: t(19) });
+  assert.deepEqual([d.overtimeOn, d.overtimeDeclined, d.overtimeConfirmedAt, d.overtimeMin], [true, true, t(17, 40), 60]);
+});
+
+test('"Start overtime?" asked at end + 10 min, reminded once 30 min later', () => {
+  const d = { checkInAt: t(8), closed: false, inside: true, overtimeConfirmedAt: null, overtimeDeclined: false };
+  const o = { endMs: t(17), closeAllMs: t(23, 55), overtimeAllowed: true };
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 5) }), null);
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 10) }), 'ask');
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 20), askedAt: t(17, 10) }), null);
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 40), askedAt: t(17, 10) }), 'remind');
+  assert.equal(overtimeAskDue(d, { ...o, now: t(18, 30), askedAt: t(17, 10), remindedAt: t(17, 40) }), null);
+  assert.equal(overtimeAskDue({ ...d, overtimeConfirmedAt: t(17, 12) }, { ...o, now: t(17, 40), askedAt: t(17, 10) }), null);
+  assert.equal(overtimeAskDue({ ...d, overtimeDeclined: true }, { ...o, now: t(17, 40), askedAt: t(17, 10) }), null);
+  assert.equal(overtimeAskDue({ ...d, inside: false }, { ...o, now: t(17, 10) }), null);
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 10), driver: true }), null);
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 10), overtimeAllowed: false }), null);
+});
+
+const site = { lat: 24.786, lng: 46.796, radius: 100, kind: 'site' };
+const home = { lat: 24.70, lng: 46.70, radius: 150, kind: 'home' };
+const road = { lat: 24.74, lng: 46.75 };
+
+test('driver overtime starts on the road at end + 10 min, not at the site or home', () => {
+  const o = { endMs: t(17), places: [site, home] };
+  const live = (p, at = t(17, 9)) => ({ ...p, accuracy: 10, updatedAt: at });
+  assert.equal(driveStart({ ...o, now: t(17, 5), live: live(road) }), 'wait');
+  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(road) }), 'start');
+  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(site) }), 'none');
+  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(home) }), 'none');
+  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17, 5)) }), 'wait'); // 25 min old: too old
+  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17, 20)) }), 'start');
+  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17)) }), 'wait');
+  assert.equal(driveStart({ ...o, now: t(18, 5), live: null }), 'late');
+});
+
+test('driver overtime ends on arriving home or at a site (two fixes there), else the cap', () => {
+  const o = { startAt: t(17), capMs: 180 * 60000, places: [site, home] };
+  const at = (p, h, m) => ({ ...p, accuracy: 10, t: t(h, m) });
+  const points = [at(road, 17, 10), at(home, 18, 20), at(home, 18, 21)];
+  assert.deepEqual(driveEnd({ ...o, points, now: t(18, 30) }), { endAt: t(18, 20), place: 'home' });
+  // Driving past the site: one fix there doesn't end it.
+  assert.equal(driveEnd({ ...o, points: [at(site, 17, 30), at(road, 17, 31)], now: t(17, 40) }), null);
+  assert.deepEqual(driveEnd({ ...o, points: [at(road, 19, 50), at(road, 20, 1)], now: t(20, 5) }), { endAt: t(20), place: 'cap' });
+  assert.deepEqual(driveEnd({ ...o, points: [at(road, 17, 40)], now: t(20, 5) }), { endAt: t(17, 40), place: null });
+  assert.equal(driveEnd({ ...o, points: [at(road, 17, 40)], now: t(19) }), null);
+});
+
+test('driving overtime on the day: open while driving, closed at the arrival', () => {
+  const events = [{ type: 'in', at: t(7) }, { type: 'out', at: t(15) }, { type: 'in', at: t(18, 30) }, { type: 'out', at: t(18, 40) }];
+  const o = { overtimeAllowed: true, confirm: false, leavesSite: true };
+  const driving = run(events, { ...o, now: t(18), drive: { startAt: t(17) } });
+  assert.deepEqual([driving.closed, driving.overtimeOn], [false, true]);
+  const home = run(events, { ...o, now: t(19), drive: { startAt: t(17), endAt: t(18, 50), place: 'home' } });
+  assert.deepEqual([home.checkOutAt, home.checkOutType, home.overtimeMin, home.overtimeEndUnknown], [t(18, 50), 'arrivedHome', 110, false]);
+  const unknown = run(events, { ...o, now: t(20, 5), drive: { startAt: t(17), endAt: t(17, 40), place: null } });
+  assert.deepEqual([unknown.checkOutType, unknown.overtimeMin, unknown.overtimeEndUnknown], ['auto', 40, true]);
+  // A check-out while driving ends it.
+  const out = run([...events, { type: 'checkOut', at: t(17, 30) }], { ...o, now: t(18), drive: { startAt: t(17) } });
+  assert.deepEqual([out.checkOutAt, out.checkOutType, out.overtimeMin], [t(17, 30), 'manual', 30]);
+  // No driving overtime: the phone's events as before (back at the site, left at 18:40).
+  assert.deepEqual([run(events, { ...o, now: t(19) }).checkOutType, run(events, { ...o, now: t(19) }).overtimeMin], ['left', 0]);
 });

@@ -16,7 +16,7 @@ import 'attendance_rules.dart';
 // Shown in the HR area and exported to Excel.
 
 class AttendanceReportDay {
-  const AttendanceReportDay(this.date, this.mark, this.result, [this.absence]);
+  const AttendanceReportDay(this.date, this.mark, this.result, [this.absence, this.approvedOvertimeMin]);
 
   final DateTime date;
   final DayMark mark;
@@ -26,6 +26,9 @@ class AttendanceReportDay {
 
   /// "Not coming to work" reported for the day.
   final Absence? absence;
+
+  /// Overtime a manager approved that day (null = not approved; 2026-10-25).
+  final int? approvedOvertimeMin;
 }
 
 class AttendanceReportRow {
@@ -49,6 +52,9 @@ class AttendanceReportRow {
   int get lateMin => _results.fold(0, (s, r) => s + (r.lateMin ?? 0));
   int get workedMin => _results.fold(0, (s, r) => s + (r.countedMin ?? 0));
   int get overtimeMin => _results.fold(0, (s, r) => s + (r.overtimeMin ?? 0));
+
+  /// Overtime approved by managers (2026-10-25), possibly changed from what was recorded.
+  int get approvedOvertimeMin => days.fold(0, (s, d) => s + (d.approvedOvertimeMin ?? 0));
   int get afterHoursMin => _results.fold(0, (s, r) => s + (r.afterHoursMin ?? 0));
 }
 
@@ -65,6 +71,7 @@ AttendanceReportRow reportRow({
   required Set<String> holidays,
   required Set<String> leaveDays,
   Map<String, Absence> absences = const {},
+  Map<String, int> approvedOvertime = const {},
   required DateTime today,
 }) {
   final attended = {for (final MapEntry(:key, :value) in results.entries) if (value.checkedIn) key};
@@ -84,7 +91,7 @@ AttendanceReportRow reportRow({
     schedule: schedule,
     days: [
       for (final MapEntry(key: d, value: m) in marks.entries)
-        AttendanceReportDay(d, m, results[_key.format(d)], absences[_key.format(d)]),
+        AttendanceReportDay(d, m, results[_key.format(d)], absences[_key.format(d)], approvedOvertime[_key.format(d)]),
     ],
   );
 }
@@ -169,6 +176,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportLateHours,
     l10n.reportWorkedHours,
     l10n.reportOvertimeHours,
+    l10n.reportOvertimeApprovedHours,
     l10n.reportStayedAfterHours,
   ], widths: {0: 28, 4: 34});
   for (final r in rows) {
@@ -186,6 +194,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
       DoubleCellValue(hoursOf(r.lateMin)),
       DoubleCellValue(hoursOf(r.workedMin)),
       DoubleCellValue(hoursOf(r.overtimeMin)),
+      DoubleCellValue(hoursOf(r.approvedOvertimeMin)),
       DoubleCellValue(hoursOf(r.afterHoursMin)),
     ]);
   }
@@ -202,6 +211,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportLateMinutes,
     l10n.reportWorkedHours,
     l10n.reportOvertimeHours,
+    l10n.reportOvertimeApprovedHours,
     l10n.reportStayedAfterHours,
   ], widths: {0: 28, 2: 22, 3: 22, 6: 26});
   final dayFormat = DateFormat('EEE yyyy-MM-dd', x.languageCode);
@@ -221,6 +231,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
         res?.lateMin == null ? null : IntCellValue(res!.lateMin!),
         res?.countedMin == null ? null : DoubleCellValue(hoursOf(res!.countedMin!)),
         res?.overtimeMin == null ? null : DoubleCellValue(hoursOf(res!.overtimeMin!)),
+        d.approvedOvertimeMin == null ? null : DoubleCellValue(hoursOf(d.approvedOvertimeMin!)),
         res?.afterHoursMin == null ? null : DoubleCellValue(hoursOf(res!.afterHoursMin!)),
       ]);
     }

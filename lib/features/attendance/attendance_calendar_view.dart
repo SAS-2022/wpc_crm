@@ -72,6 +72,8 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
                 if ((d.lateMin ?? 0) > 0) Text(l10n.lateBy(formatMinutes(d.lateMin!))),
                 if ((d.overtimeMin ?? 0) > 0) Text(l10n.overtimeTime(formatMinutes(d.overtimeMin!))),
+                if (d.overtimeEndUnknown && d.lastSeenAt != null)
+                  Text(l10n.overtimeEndUnknown(time.format(d.lastSeenAt!)), style: TextStyle(color: Colors.orange.shade800)),
                 if ((d.afterHoursMin ?? 0) > 0) Text(l10n.stayedAfterTime(formatMinutes(d.afterHoursMin!))),
               ],
               if ((d == null || !d.checkedIn) && absence != null) ...[

@@ -23,7 +23,9 @@ void main() {
     final noon = at(d, DateTime(2026, 10, 21, 12));
     expect([noon.status, noon.workedMin, noon.lateMin], [DayStatus.onSite, 210, 30]);
     expect(at(d, DateTime(2026, 10, 21, 18)).workedMin, 510); // stops at 17:00
-    expect(at(d, DateTime(2026, 10, 21, 18), overtime: true).workedMin, 570);
+    expect(at(d, DateTime(2026, 10, 21, 18), overtime: true).workedMin, 510); // not started
+    final started = DayResult(checkInAt: d.checkInAt, inside: true, overtimeOn: true, overtimeConfirmedAt: DateTime(2026, 10, 21, 17, 12));
+    expect(at(started, DateTime(2026, 10, 21, 18), overtime: true).workedMin, 570);
     final left = DayResult(checkInAt: DateTime(2026, 10, 21, 8), inside: false, lastExitAt: DateTime(2026, 10, 21, 11));
     expect(at(left, DateTime(2026, 10, 21, 12)).status, DayStatus.away);
   });

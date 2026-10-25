@@ -2885,7 +2885,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get overtimeAllowedHelp =>
-      'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.';
+      'Overtime counts once it\'s started: site staff are asked 10 min after the end of their work day; drivers still on the road then start it automatically. A manager approves it later.';
 
   @override
   String get attendanceRequired => 'Attendance required';
@@ -3257,6 +3257,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportWorkedHours => 'Hours worked';
+
+  @override
+  String get reportOvertimeApprovedHours => 'Overtime approved (hours)';
 
   @override
   String get reportOvertimeHours => 'Overtime (hours)';
@@ -4191,6 +4194,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get correctedByHr => 'Corrected by HR';
 
   @override
+  String overtimeEndUnknown(String time) {
+    return 'Overtime end not confirmed · last seen $time';
+  }
+
+  @override
+  String get overtimeEndUnknownHelp =>
+      'No exit or arrival was seen and the phone didn\'t confirm where they were after that, so overtime stops there. If they worked longer, correct this day.';
+
+  @override
   String awayTime(String time) {
     return 'Away $time (not counted)';
   }
@@ -4774,4 +4786,124 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get annualCarryOverOff =>
       'Days left at the end of a leave year are lost (the balance resets). Overdrawn days are always taken from the next year.';
+
+  @override
+  String overtimeQuestion(String time) {
+    return 'Your shift ended at $time. Working overtime?';
+  }
+
+  @override
+  String overtimeQuestionHelp(String time) {
+    return 'Overtime counts from $time once you start it, while you\'re at the work site.';
+  }
+
+  @override
+  String get overtimeDeclinedText => 'No overtime today – changed your mind?';
+
+  @override
+  String get startOvertime => 'Start overtime';
+
+  @override
+  String get notToday => 'Not today';
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String get overtimeNotAtSite =>
+      'You\'re not at the work site – overtime can only be started there.';
+
+  @override
+  String overtimeStartedToast(String time) {
+    return 'Overtime started – it counts from $time';
+  }
+
+  @override
+  String overtimeSince(String time, String duration) {
+    return 'Overtime since $time · $duration';
+  }
+
+  @override
+  String get driveOvertimeTitle => 'Overtime started';
+
+  @override
+  String driveOvertimeRunning(String time) {
+    return 'Overtime since $time – it ends when you arrive home or at the work site.';
+  }
+
+  @override
+  String overtimeWaiting(String duration) {
+    return 'Overtime $duration · waiting for approval';
+  }
+
+  @override
+  String overtimeApprovedText(String duration) {
+    return 'Overtime approved: $duration';
+  }
+
+  @override
+  String overtimeApprovedBy(String duration, String name) {
+    return 'Approved $duration by $name';
+  }
+
+  @override
+  String get approveOvertime => 'Approve overtime';
+
+  @override
+  String overtimeRecorded(String duration, String from, String to) {
+    return 'Recorded: $duration ($from – $to)';
+  }
+
+  @override
+  String overtimeToApprove(int count) {
+    return 'Overtime to approve ($count)';
+  }
+
+  @override
+  String get overtimeApprovedMinutes => 'Approved overtime';
+
+  @override
+  String get checkOutArrivedHome => 'arrived home (driving overtime)';
+
+  @override
+  String get checkOutArrivedSite =>
+      'arrived at the work site (driving overtime)';
+
+  @override
+  String get checkOutOvertimeCap => 'overtime limit reached';
+
+  @override
+  String get homeLocation => 'Home location';
+
+  @override
+  String get homeLocationHelp =>
+      'A driver\'s overtime ends when they arrive here or at a work site.';
+
+  @override
+  String get homeLocationNotSet => 'Not set';
+
+  @override
+  String notifOvertimeAsk(String time, String site) {
+    return 'Your shift ended at $time and you\'re still at $site. Working overtime? Tap to start it.';
+  }
+
+  @override
+  String notifOvertimeAskReminder(String time) {
+    return 'Reminder: your shift ended at $time. Working overtime? Tap to start it.';
+  }
+
+  @override
+  String notifOvertimeConfirmed(String name, String site, String time) {
+    return '$name started overtime$site (from $time) – approve it on the Attendance page';
+  }
+
+  @override
+  String notifDriveOvertime(String name, String time) {
+    return '$name is still driving after the end of the shift ($time) – overtime started';
+  }
+
+  @override
+  String notifDriveOvertimeSelf(String time) {
+    return 'Your shift ended at $time while you\'re on the road – overtime started. It ends when you arrive home or at the work site.';
+  }
 }

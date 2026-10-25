@@ -24,6 +24,7 @@ import 'progress_charts.dart';
 import 'stats.dart';
 import 'stats_widgets.dart';
 import '../attendance/absence_screen.dart' show PendingAbsencesCard;
+import '../attendance/overtime_widgets.dart' show OvertimeApprovalsCard;
 import '../attendance/early_checkout_card.dart';
 import '../settings/page_access.dart';
 import '../attendance/attendance_card.dart';
@@ -156,6 +157,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const PendingAbsencesCard(),
           // Direct managers: today's requests to leave early (hidden when none).
           const EarlyCheckoutRequestsCard(),
+          // Managers / HR area: overtime waiting for their approval (hidden when none).
+          OvertimeApprovalsCard(me: me),
           // Vehicle renewals expired or due within 30 days (hidden when none).
           const VehicleRenewalsCard(),
           // Filters: period and person, in one row above the numbers.
@@ -424,6 +427,7 @@ class _BackOfficeHome extends ConsumerWidget {
           const LeaveApprovalsCard(),
           const PendingAbsencesCard(),
           const EarlyCheckoutRequestsCard(),
+          OvertimeApprovalsCard(me: me),
           const VehicleRenewalsCard(),
           Card(
             margin: EdgeInsets.zero,

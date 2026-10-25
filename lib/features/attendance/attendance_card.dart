@@ -24,6 +24,7 @@ import 'attendance_rules.dart';
 import 'early_checkout.dart';
 import 'geofences.dart';
 import 'identity_check.dart';
+import 'overtime_widgets.dart';
 import 'work_sites.dart';
 
 String checkOutTypeLabel(AppLocalizations l10n, String? type) => switch (type) {
@@ -34,6 +35,9 @@ String checkOutTypeLabel(AppLocalizations l10n, String? type) => switch (type) {
   'endOfDay' => l10n.checkOutEndOfDay,
   'auto' => l10n.checkOutAuto,
   'hr' => l10n.checkOutHr,
+  'arrivedHome' => l10n.checkOutArrivedHome,
+  'arrivedSite' => l10n.checkOutArrivedSite,
+  'overtimeCap' => l10n.checkOutOvertimeCap,
   _ => '',
 };
 
@@ -419,7 +423,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       title = l10n.checkedInSince(time.format(day.checkInAt!), siteName);
       // Hours so far today (without overtime when it isn't allowed).
       final end = DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute));
-      final capEnd = end.add(Duration(minutes: me.overtimeAllowed ? me.overtimeCapMin : 0));
+      final capEnd = end.add(Duration(minutes: me.overtimeAllowed && day.overtimeOn ? me.overtimeCapMin : 0));
       final upTo = now.isBefore(capEnd) ? now : capEnd;
       final so = upTo.difference(day.checkInAt!) - Duration(minutes: day.awayMin ?? 0);
       detail = [
@@ -459,6 +463,8 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                 subtitle: detail.isEmpty ? null : Text(detail),
               ),
             if (absentTomorrow != null) AbsenceNotice(absence: absentTomorrow, today: false),
+            // "Start overtime?" / overtime running / waiting for approval (2026-10-25).
+            OvertimeSection(me: me, record: record, day: day),
             if (early != null)
               ListTile(
                 dense: true,

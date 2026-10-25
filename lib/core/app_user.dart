@@ -175,6 +175,7 @@ class AppUser {
     this.supervisorId,
     this.joiningDate,
     this.department,
+    this.homeLocation,
   });
 
   final String id;
@@ -276,6 +277,11 @@ class AppUser {
   /// logistics manager.
   final String? supervisorId;
 
+  /// A driver's home (`users.homeLocation` {lat, lng}, 2026-10-25): their
+  /// overtime after the work day ends when they arrive here or at a work
+  /// site (they take the company car home).
+  final ({double lat, double lng})? homeLocation;
+
   /// Attendance page for the people under them (2026-10-23): managers and
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
   bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
@@ -332,6 +338,10 @@ class AppUser {
       managerId: d['managerId'] as String?,
       markedManager: d['isManager'] == true,
       supervisorId: d['supervisorId'] as String?,
+      homeLocation: switch (d['homeLocation']) {
+        {'lat': final num lat, 'lng': final num lng} => (lat: lat.toDouble(), lng: lng.toDouble()),
+        _ => null,
+      },
       joiningDate: switch (d['joiningDate']) {
         final String s when DateTime.tryParse(s) != null => s,
         _ => null,
@@ -363,6 +373,9 @@ class AppUser {
         'managerId': managerId,
         'isManager': role.isManagerRole ? false : markedManager,
         'supervisorId': role == UserRole.driver ? supervisorId : null,
+        'homeLocation': role == UserRole.driver && homeLocation != null
+            ? {'lat': homeLocation!.lat, 'lng': homeLocation!.lng}
+            : null,
         'joiningDate': joiningDate,
         'department': department,
       };

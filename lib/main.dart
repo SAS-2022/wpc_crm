@@ -18,6 +18,7 @@ import 'l10n/app_localizations.dart';
 import 'core/saving.dart';
 import 'core/text_scale.dart';
 import 'core/app_version.dart';
+import 'core/notification_sounds.dart';
 import 'features/attendance/geofences.dart';
 import 'features/settings/app_settings.dart';
 
@@ -27,6 +28,8 @@ Future<void> main() async {
   await Tracking.configure();
   // Silent wake pings while the app is in the background or closed.
   if (!kIsWeb) FirebaseMessaging.onBackgroundMessage(onBackgroundPush);
+  // iOS: the overtime alert's own sound (notification_sounds.dart).
+  installNotificationSounds().ignore();
   runApp(const ProviderScope(child: WpcCrmApp()));
 }
 

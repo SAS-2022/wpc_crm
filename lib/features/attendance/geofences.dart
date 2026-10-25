@@ -47,7 +47,7 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
     final owner = user?.uid ?? prefs.getString(_ownerKey);
     if (owner == null) return;
     final now = DateTime.now();
-    final fix = await _freshFix();
+    final fix = await freshAttendanceFix();
     for (final g in params.geofences) {
       Map<String, Object>? extra;
       if (fix != null) {
@@ -76,9 +76,9 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
   }
 }
 
-/// A GPS fix to confirm a geofence event; null when none comes in time
-/// (the event is then trusted).
-Future<Position?> _freshFix() async {
+/// A GPS fix to confirm a geofence event or answer a site check; null when
+/// none comes in time (a geofence event is then trusted).
+Future<Position?> freshAttendanceFix() async {
   try {
     return await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 25)),

@@ -85,7 +85,10 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                       ?siteNames[res.siteId],
                       if ((res.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(res.lateMin!)),
                       if (res.checkOutType != null) checkOutTypeLabel(l10n, res.checkOutType),
-                      if ((res.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(res.overtimeMin!)),
+                      if ((res.overtimeMin ?? 0) > 0)
+                        d.approvedOvertimeMin == null
+                            ? l10n.overtimeWaiting(formatMinutes(res.overtimeMin!))
+                            : l10n.overtimeApprovedText(formatMinutes(d.approvedOvertimeMin!)),
                       if ((res.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(res.afterHoursMin!)),
                     ].where((s) => s.isNotEmpty).join(' · '),
                   _ => reportDayStatus(l10n, d),
@@ -122,10 +125,12 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
     ]..sort((a, b) => a.name.compareTo(b.name));
 
     final byUser = <String, Map<String, DayResult>>{};
+    final approved = <String, Map<String, int>>{};
     final users = {for (final u in people) u.id: u};
     for (final r in records.value ?? const <AttendanceRecord>[]) {
       final u = users[r.uid];
       if (u != null) (byUser[r.uid] ??= {})[r.date] = r.best(u, company);
+      if (u != null && r.review != null) (approved[r.uid] ??= {})[r.date] = r.review!.minutes;
     }
     final absences = <String, Map<String, Absence>>{};
     for (final a in ref.watch(monthAbsencesProvider(monthKey)).value ?? const <Absence>[]) {
@@ -146,6 +151,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                 ...daysBetween(r.from!, r.to!),
           },
           absences: absences[u.id] ?? const {},
+          approvedOvertime: approved[u.id] ?? const {},
           today: now,
         ),
     ];
@@ -206,7 +212,8 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                               [
                                 if (r.absent > 0) l10n.daysReportedAbsent(r.absent),
                                 if (r.lateDays > 0) l10n.reportLateLine(r.lateDays, formatMinutes(r.lateMin)),
-                                if (r.overtimeMin > 0) l10n.overtimeTime(formatMinutes(r.overtimeMin)),
+                                if (r.overtimeMin > 0)
+                                  '${l10n.overtimeTime(formatMinutes(r.overtimeMin))} (${l10n.overtimeApprovedText(formatMinutes(r.approvedOvertimeMin))})',
                                 if (r.afterHoursMin > 0) l10n.reportStayedLine(formatMinutes(r.afterHoursMin)),
                               ].join(' · '),
                             ].where((s) => s.isNotEmpty).join('\n')),

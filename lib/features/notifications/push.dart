@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../core/router.dart';
+import '../attendance/site_check.dart';
 import '../tracking/wake_ping.dart';
 
 /// Phones only; the web dashboard uses the in-app list.
@@ -39,9 +40,11 @@ final pushProvider = Provider<void>((ref) {
   final subs = <StreamSubscription<dynamic>>[
     messaging.onTokenRefresh.listen((t) => save(t).ignore()),
     FirebaseMessaging.onMessageOpenedApp.listen(open),
-    // Wake ping while the app is open (Android may have stopped the service).
+    // Wake ping while the app is open (Android may have stopped the service);
+    // attendance site check (site_check.dart).
     FirebaseMessaging.onMessage.listen((m) {
       if (m.data['type'] == 'wake') answerWakePing().ignore();
+      if (m.data['type'] == 'siteCheck') answerSiteCheck().ignore();
     }),
   ];
   ref.onDispose(() {

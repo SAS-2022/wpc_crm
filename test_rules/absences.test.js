@@ -89,4 +89,19 @@ describe('absences', () => {
     await assertFails(updateDoc(doc(fs('hr'), 'attendance/worker_2026-10-22'), { closed: true }));
     await assertFails(setDoc(doc(fs('hr'), 'attendance/other_2026-10-22'), day)); // id must match
   });
+
+  test('overtime approval: HR area / managers, never their own, only overtimeReview', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'attendance/worker_2026-10-25'), { uid: 'worker', date: '2026-10-25', overtimeMin: 90 });
+      await setDoc(doc(ctx.firestore(), 'attendance/kam_2026-10-25'), { uid: 'kam', date: '2026-10-25', overtimeMin: 30 });
+    });
+    const review = { overtimeReview: { minutes: 60, byId: 'x', note: '' } };
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'attendance/worker_2026-10-25'), review));
+    await assertSucceeds(updateDoc(doc(fs('kam'), 'attendance/worker_2026-10-25'), review));
+    await assertFails(updateDoc(doc(fs('kam'), 'attendance/kam_2026-10-25'), review)); // own
+    const changed = { overtimeReview: { minutes: 90, byId: 'y', note: '' } }; // (an unchanged write changes nothing)
+    await assertFails(updateDoc(doc(fs('worker'), 'attendance/worker_2026-10-25'), changed));
+    await assertFails(updateDoc(doc(fs('other'), 'attendance/worker_2026-10-25'), changed));
+    await assertFails(updateDoc(doc(fs('hr'), 'attendance/worker_2026-10-25'), { ...review, overtimeMin: 200 }));
+  });
 });

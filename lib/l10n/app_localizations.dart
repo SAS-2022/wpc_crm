@@ -4955,7 +4955,7 @@ abstract class AppLocalizations {
   /// No description provided for @overtimeAllowedHelp.
   ///
   /// In en, this message translates to:
-  /// **'Time after the end of the work day counts as overtime. Off: the day counts only up to the end of the work day.'**
+  /// **'Overtime counts once it\'s started: site staff are asked 10 min after the end of their work day; drivers still on the road then start it automatically. A manager approves it later.'**
   String get overtimeAllowedHelp;
 
   /// No description provided for @attendanceRequired.
@@ -5515,6 +5515,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hours worked'**
   String get reportWorkedHours;
+
+  /// No description provided for @reportOvertimeApprovedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime approved (hours)'**
+  String get reportOvertimeApprovedHours;
 
   /// No description provided for @reportOvertimeHours.
   ///
@@ -7004,6 +7010,18 @@ abstract class AppLocalizations {
   /// **'Corrected by HR'**
   String get correctedByHr;
 
+  /// No description provided for @overtimeEndUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime end not confirmed · last seen {time}'**
+  String overtimeEndUnknown(String time);
+
+  /// No description provided for @overtimeEndUnknownHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'No exit or arrival was seen and the phone didn\'t confirm where they were after that, so overtime stops there. If they worked longer, correct this day.'**
+  String get overtimeEndUnknownHelp;
+
   /// No description provided for @awayTime.
   ///
   /// In en, this message translates to:
@@ -7938,6 +7956,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Days left at the end of a leave year are lost (the balance resets). Overdrawn days are always taken from the next year.'**
   String get annualCarryOverOff;
+
+  /// No description provided for @overtimeQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time}. Working overtime?'**
+  String overtimeQuestion(String time);
+
+  /// No description provided for @overtimeQuestionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime counts from {time} once you start it, while you\'re at the work site.'**
+  String overtimeQuestionHelp(String time);
+
+  /// No description provided for @overtimeDeclinedText.
+  ///
+  /// In en, this message translates to:
+  /// **'No overtime today – changed your mind?'**
+  String get overtimeDeclinedText;
+
+  /// No description provided for @startOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start overtime'**
+  String get startOvertime;
+
+  /// No description provided for @notToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Not today'**
+  String get notToday;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @overtimeNotAtSite.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not at the work site – overtime can only be started there.'**
+  String get overtimeNotAtSite;
+
+  /// No description provided for @overtimeStartedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime started – it counts from {time}'**
+  String overtimeStartedToast(String time);
+
+  /// No description provided for @overtimeSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime since {time} · {duration}'**
+  String overtimeSince(String time, String duration);
+
+  /// No description provided for @driveOvertimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime started'**
+  String get driveOvertimeTitle;
+
+  /// No description provided for @driveOvertimeRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime since {time} – it ends when you arrive home or at the work site.'**
+  String driveOvertimeRunning(String time);
+
+  /// No description provided for @overtimeWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime {duration} · waiting for approval'**
+  String overtimeWaiting(String duration);
+
+  /// No description provided for @overtimeApprovedText.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime approved: {duration}'**
+  String overtimeApprovedText(String duration);
+
+  /// No description provided for @overtimeApprovedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved {duration} by {name}'**
+  String overtimeApprovedBy(String duration, String name);
+
+  /// No description provided for @approveOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve overtime'**
+  String get approveOvertime;
+
+  /// No description provided for @overtimeRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded: {duration} ({from} – {to})'**
+  String overtimeRecorded(String duration, String from, String to);
+
+  /// No description provided for @overtimeToApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime to approve ({count})'**
+  String overtimeToApprove(int count);
+
+  /// No description provided for @overtimeApprovedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved overtime'**
+  String get overtimeApprovedMinutes;
+
+  /// No description provided for @checkOutArrivedHome.
+  ///
+  /// In en, this message translates to:
+  /// **'arrived home (driving overtime)'**
+  String get checkOutArrivedHome;
+
+  /// No description provided for @checkOutArrivedSite.
+  ///
+  /// In en, this message translates to:
+  /// **'arrived at the work site (driving overtime)'**
+  String get checkOutArrivedSite;
+
+  /// No description provided for @checkOutOvertimeCap.
+  ///
+  /// In en, this message translates to:
+  /// **'overtime limit reached'**
+  String get checkOutOvertimeCap;
+
+  /// No description provided for @homeLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Home location'**
+  String get homeLocation;
+
+  /// No description provided for @homeLocationHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'A driver\'s overtime ends when they arrive here or at a work site.'**
+  String get homeLocationHelp;
+
+  /// No description provided for @homeLocationNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get homeLocationNotSet;
+
+  /// No description provided for @notifOvertimeAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time} and you\'re still at {site}. Working overtime? Tap to start it.'**
+  String notifOvertimeAsk(String time, String site);
+
+  /// No description provided for @notifOvertimeAskReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder: your shift ended at {time}. Working overtime? Tap to start it.'**
+  String notifOvertimeAskReminder(String time);
+
+  /// No description provided for @notifOvertimeConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} started overtime{site} (from {time}) – approve it on the Attendance page'**
+  String notifOvertimeConfirmed(String name, String site, String time);
+
+  /// No description provided for @notifDriveOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is still driving after the end of the shift ({time}) – overtime started'**
+  String notifDriveOvertime(String name, String time);
+
+  /// No description provided for @notifDriveOvertimeSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time} while you\'re on the road – overtime started. It ends when you arrive home or at the work site.'**
+  String notifDriveOvertimeSelf(String time);
 }
 
 class _AppLocalizationsDelegate
