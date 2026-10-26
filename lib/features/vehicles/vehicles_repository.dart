@@ -159,14 +159,15 @@ Future<void> setRenewal(Vehicle vehicle, Renewal item, String? expiry, {required
         }));
 
 /// Records an oil change at [km] on [day]; it's also an odometer reading
-/// (same id), so the mileage estimate starts from it.
-Future<void> addOilChange(String vehicleId, {required int km, required String day, String note = ''}) => saving(() {
+/// (same id, unless [asReading] is false), so the mileage estimate starts from it.
+Future<void> addOilChange(String vehicleId, {required int km, required String day, String note = '', bool asReading = true}) =>
+    saving(() {
       final now = DateTime.now();
       final change = OilChange(id: '${now.millisecondsSinceEpoch}', km: km, day: day, at: now, byId: _uid, note: note);
       final reading = OdometerReading(id: change.id, km: km, day: day, at: now, byId: _uid, note: note);
       return _vehicles.doc(vehicleId).update({
         'oilLog': FieldValue.arrayUnion([change.toMap()]),
-        'readings': FieldValue.arrayUnion([reading.toMap()]),
+        if (asReading) 'readings': FieldValue.arrayUnion([reading.toMap()]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });

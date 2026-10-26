@@ -247,7 +247,7 @@ class SnappedLeg {
   final DateTime to;
   final double meters;
 
-  /// Road shape; null = no believable road route, drawn straight.
+  /// Road shape; null = no believable road route, drawn along the fixes.
   final List<(double, double)>? points;
 }
 
@@ -305,7 +305,10 @@ List<(double, double)> decodePolyline(String encoded) {
       straight([for (final p in run) if (!p.t.isBefore(cursor) && !p.t.isAfter(leg.from)) p], line);
       final from = run.firstWhere((p) => p.t == leg.from, orElse: () => run.first);
       final to = run.firstWhere((p) => p.t == leg.to, orElse: () => run.last);
-      line.addAll(leg.points ?? [(from.lat, from.lng), (to.lat, to.lng)]);
+      // No believable road route: along the fixes (since 2026-10-26 the
+      // server's meters are the distance along them too).
+      final along = [for (final p in run) if (!p.t.isBefore(leg.from) && !p.t.isAfter(leg.to)) (p.lat, p.lng)];
+      line.addAll(leg.points ?? (along.length >= 2 ? along : [(from.lat, from.lng), (to.lat, to.lng)]));
       meters += leg.meters;
       cursor = leg.to;
     }

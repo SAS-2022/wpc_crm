@@ -164,19 +164,19 @@ void main() {
     expect(points[2].$2, closeTo(-126.453, 1e-6));
   });
 
-  test('route lines use road legs and skip fixes standing inside them', () {
+  test('route lines use road legs; legs without a road follow the fixes', () {
     final t0 = DateTime(2026, 10, 14, 8);
     DateTime at(int minute) => t0.add(Duration(minutes: minute));
     RoutePoint p(double lat, int minute) => RoutePoint(lat: lat, lng: 46.6, t: at(minute), accuracy: 10);
     final run = [p(24.70, 0), p(24.71, 2), p(24.7101, 4), p(24.72, 6), p(24.73, 8)];
     final legs = [
       SnappedLeg(from: at(0), to: at(2), meters: 1500, points: const [(24.70, 46.6), (24.705, 46.61), (24.71, 46.6)]),
-      SnappedLeg(from: at(2), to: at(6), meters: 1300), // no believable road: straight
+      SnappedLeg(from: at(2), to: at(6), meters: 1300), // no believable road: along the fixes
     ];
     final result = routeLines([run], legs);
     expect(result.lines.single, [
       (24.70, 46.6), (24.705, 46.61), (24.71, 46.6), // road leg
-      (24.71, 46.6), (24.72, 46.6), // straight leg; the fix at minute 4 is skipped
+      (24.71, 46.6), (24.7101, 46.6), (24.72, 46.6), // no road: the fixes, minute 4 included
       (24.73, 46.6), // not snapped yet
     ]);
     expect(result.meters, closeTo(1500 + 1300 + 1112, 5));

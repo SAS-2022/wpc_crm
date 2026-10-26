@@ -4982,4 +4982,24 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get settingOilDueSoonHelp =>
       'يُذكَّر المدير العام ومدير المبيعات ومدير الخدمات اللوجستية قبل موعد تغيير زيت المركبة بهذا العدد من الكيلومترات (تقدير من آخر قراءة وكيلومترات GPS لسائقيها)، ومرة أخرى عند حلول الموعد؛ ويبقى في صفحتهم الرئيسية حتى يُسجَّل التغيير.';
+
+  @override
+  String get lastOilChangeKm => 'آخر تغيير زيت عند (كم، اختياري)';
+
+  @override
+  String get lastOilChangeDay => 'تاريخ آخر تغيير زيت';
+
+  @override
+  String oilOdometerHelp(String km) {
+    return 'تقدير التطبيق الآن ≈ $km كم. أدخل قراءة العداد: إن اختلفت يُعتمد رقمك كعداد المركبة.';
+  }
+
+  @override
+  String get oilOdometerHelpNoEstimate =>
+      'أدخل قراءة العداد؛ وتُعتمد أيضاً كعداد المركبة.';
+
+  @override
+  String oilMileageCorrected(String km, String estimate) {
+    return 'صُحّح العداد إلى $km كم (كان التقدير $estimate كم)';
+  }
 }

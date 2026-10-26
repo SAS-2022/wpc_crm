@@ -2624,5 +2624,12 @@
   "notifVehicleOilDue": "{vehicle}: oil change is due (was due at {at} km)",
   "@notifVehicleOilDue": {"placeholders": {"vehicle": {"type": "String"}, "at": {"type": "String"}}},
   "settingOilDueSoon": "Oil change reminder",
-  "settingOilDueSoonHelp": "The GM, sales manager and logistics manager are reminded this many km before a vehicle's oil change is due (estimated from the last reading and its drivers' GPS km), and again when it's due; it stays on their Home until the change is recorded."
+  "settingOilDueSoonHelp": "The GM, sales manager and logistics manager are reminded this many km before a vehicle's oil change is due (estimated from the last reading and its drivers' GPS km), and again when it's due; it stays on their Home until the change is recorded.",
+  "lastOilChangeKm": "Last oil change at (km, optional)",
+  "lastOilChangeDay": "Day of the last oil change",
+  "oilOdometerHelp": "The app estimates ≈ {km} km now. Enter what the odometer shows: if it's different, your number becomes the car's km.",
+  "@oilOdometerHelp": {"placeholders": {"km": {"type": "String"}}},
+  "oilOdometerHelpNoEstimate": "Enter what the odometer shows; it also becomes the car's km.",
+  "oilMileageCorrected": "Mileage corrected to {km} km (the estimate was {estimate} km)",
+  "@oilMileageCorrected": {"placeholders": {"km": {"type": "String"}, "estimate": {"type": "String"}}}
 }

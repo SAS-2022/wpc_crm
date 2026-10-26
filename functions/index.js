@@ -669,6 +669,8 @@ const ROUTE_MIN_MOVE = 150; // closer fixes count as standing still (no routing 
 const ROUTE_MIN_GAP_MS = 100 * 1000;
 const ROUTE_LEGS_PER_CALL = 10; // ≤10 intermediate waypoints stays on the cheaper Routes SKU
 const ROUTE_MAX_LEGS = 400; // per call, a safety cap on cost
+// Loops the car never drove are refused, single rough spikes ignored (2026-10-26).
+const { spikeTimes, legFixes, legValue, recheckLeg } = require('./routeCheck');
 
 function metersBetween(a, b) {
   const rad = (d) => (d * Math.PI) / 180;
@@ -709,12 +711,16 @@ function mainTrack(path) {
   ].sort((a, b) => a.t - b.t);
 }
 
-/** Fixes worth routing between: good accuracy, one phone's track, per run of continuous tracking, stops collapsed. */
-function routeLegs(raw) {
-  const path = mainTrack(Object.values(raw || {})
+/** A day's usable fixes: good accuracy, one phone's track, sorted. */
+function routePath(raw) {
+  return mainTrack(Object.values(raw || {})
     .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
     .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
     .sort((a, b) => a.t - b.t));
+}
+
+/** Fixes of [path] worth routing between, per run of continuous tracking, stops collapsed. */
+function routeLegs(path) {
   const legs = [];
   let last = null; // last kept fix
   let prev = null; // last fix seen
@@ -775,8 +781,10 @@ function followsPerson(role, callerId, target) {
  * and saves it in RTDB `route_snapped/{uid}/{day}` {n: history points handled,
  * legs: {"<fromT>_<toT>": {p: encoded polyline, m: meters} | {s: true, m}}}.
  * Legs already saved are not asked again, so each stretch is paid for once.
- * A road route much longer or slower than the time between the fixes allows
- * is replaced by a straight line (s: true). Callable by supervisors (KAM for
+ * A road route much longer than the path through the phone's fixes, or
+ * slower than the time between them allows, is replaced by the fixes'
+ * path (s: true, m = distance along the fixes; routeCheck.js), and saved
+ * legs are re-checked the same way. Callable by supervisors (KAM for
  * their team) and the person themselves.
  */
 exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req) => {
@@ -798,7 +806,18 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   const raw = history.val() || {};
   const done = saved.val() || {};
   const key = ([a, b]) => `${a.t}_${b.t}`;
-  const missing = routeLegs(raw).filter((leg) => !done[key(leg)]).slice(0, ROUTE_MAX_LEGS);
+  const path = routePath(raw);
+  const spikes = spikeTimes(path);
+  const legs = routeLegs(path);
+  const missing = legs.filter((leg) => !done[key(leg)]).slice(0, ROUTE_MAX_LEGS);
+
+  // Legs saved before are checked again with today's rules (no API call).
+  const updates = {};
+  for (const leg of legs) {
+    const stored = done[key(leg)];
+    const next = stored && recheckLeg(stored, legFixes(path, spikes, leg[0], leg[1]));
+    if (next) updates[`legs/${key(leg)}`] = next;
+  }
 
   // Consecutive missing legs (sharing a fix) go into one request.
   const chains = [];
@@ -808,21 +827,16 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
     else chains.push([leg]);
   }
 
-  const updates = {};
   if (chains.length) {
     const { access_token: token } = await admin.credential.applicationDefault().getAccessToken();
     await Promise.all(chains.map(async (chain) => {
       const legs = await computeRoute([chain[0][0], ...chain.map((l) => l[1])], token);
       chain.forEach(([a, b], i) => {
-        const straight = Math.round(metersBetween(a, b));
         const r = legs?.[i];
-        const meters = r?.distanceMeters ?? 0;
-        const seconds = parseInt(r?.duration || '0', 10);
-        const elapsed = (b.t - a.t) / 1000;
-        const plausible = r?.polyline?.encodedPolyline &&
-          meters <= Math.max(2.5 * straight, straight + 2000) &&
-          seconds <= Math.max(2 * elapsed, elapsed + 300);
-        updates[`legs/${a.t}_${b.t}`] = plausible ? { p: r.polyline.encodedPolyline, m: meters } : { s: true, m: straight };
+        const route = r?.polyline?.encodedPolyline
+          ? { p: r.polyline.encodedPolyline, m: r.distanceMeters ?? 0, seconds: parseInt(r.duration || '0', 10) }
+          : null;
+        updates[`legs/${a.t}_${b.t}`] = legValue(route, legFixes(path, spikes, a, b));
       });
     }));
   }
@@ -831,8 +845,10 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   return { snapped: Object.keys(updates).length - 1 };
 });
 
-// For tests.
+// For tests and one-off scripts.
 exports._mainTrack = mainTrack;
+exports._routePath = routePath;
+exports._routeLegs = routeLegs;
 
 // ---------------------------------------------------------------------------
 // Self-registration and attendance (user request 2026-10-19).
@@ -1541,7 +1557,8 @@ async function saveDriverKm(uid, day, today) {
     .filter((p) => typeof p?.lat === 'number' && typeof p?.lng === 'number' && typeof p?.t === 'number')
     .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
     .sort((a, b) => a.t - b.t));
-  const doc = { uid, day, km: dayKm(points), points: points.length, final: day < today, builtAt: Date.now() };
+  const spikes = spikeTimes(points);
+  const doc = { uid, day, km: dayKm(points.filter((p) => !spikes.has(p.t))), points: points.length, final: day < today, builtAt: Date.now() };
   await admin.firestore().doc(`driver_km/${uid}_${day}`).set(doc);
   return doc;
 }

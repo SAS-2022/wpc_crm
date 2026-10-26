@@ -168,9 +168,13 @@ Future<void> renewVehicle(BuildContext context, Vehicle v, Renewal r) async {
   if (ok == true) await setRenewal(v, r, day, renewed: true);
 }
 
-/// Asks for the km and day of an oil change (km offered: the estimate) and records it.
+/// Asks for the km and day of an oil change (km offered: the estimate) and
+/// records it. The km typed is the odometer: it's saved as a reading too,
+/// so when it differs from the estimate it replaces it (user request
+/// 2026-10-26); the difference is shown after saving.
 Future<void> recordOilChange(BuildContext context, Vehicle v, int? estimate) async {
   final l10n = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
   final km = TextEditingController(text: estimate == null ? '' : '$estimate');
   final note = TextEditingController();
   var day = vehicleDay(DateTime.now());
@@ -181,7 +185,12 @@ Future<void> recordOilChange(BuildContext context, Vehicle v, int? estimate) asy
         title: Text(l10n.recordOilChangeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              estimate == null ? l10n.oilOdometerHelpNoEstimate : l10n.oilOdometerHelp(formatKm(context, estimate)),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             TextField(
               controller: km,
               autofocus: true,
@@ -219,7 +228,14 @@ Future<void> recordOilChange(BuildContext context, Vehicle v, int? estimate) asy
   final text = note.text.trim();
   km.dispose();
   note.dispose();
-  if (ok == true && value != null) await addOilChange(v.id, km: value, day: day, note: text);
+  if (ok != true || value == null || !context.mounted) return;
+  final estimateText = estimate == null ? '' : formatKm(context, estimate);
+  final valueText = formatKm(context, value);
+  await addOilChange(v.id, km: value, day: day, note: text);
+  // Only today's change corrects "now"; a backdated one is history.
+  if (estimate != null && day == vehicleDay(DateTime.now()) && (value - estimate).abs() >= 1) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.oilMileageCorrected(valueText, estimateText))));
+  }
 }
 
 /// Home card for the GM, sales manager and logistics manager (user

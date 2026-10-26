@@ -4978,4 +4978,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingOilDueSoonHelp =>
       'The GM, sales manager and logistics manager are reminded this many km before a vehicle\'s oil change is due (estimated from the last reading and its drivers\' GPS km), and again when it\'s due; it stays on their Home until the change is recorded.';
+
+  @override
+  String get lastOilChangeKm => 'Last oil change at (km, optional)';
+
+  @override
+  String get lastOilChangeDay => 'Day of the last oil change';
+
+  @override
+  String oilOdometerHelp(String km) {
+    return 'The app estimates ≈ $km km now. Enter what the odometer shows: if it\'s different, your number becomes the car\'s km.';
+  }
+
+  @override
+  String get oilOdometerHelpNoEstimate =>
+      'Enter what the odometer shows; it also becomes the car\'s km.';
+
+  @override
+  String oilMileageCorrected(String km, String estimate) {
+    return 'Mileage corrected to $km km (the estimate was $estimate km)';
+  }
 }

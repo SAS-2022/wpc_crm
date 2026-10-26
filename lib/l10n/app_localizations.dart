@@ -8238,6 +8238,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The GM, sales manager and logistics manager are reminded this many km before a vehicle\'s oil change is due (estimated from the last reading and its drivers\' GPS km), and again when it\'s due; it stays on their Home until the change is recorded.'**
   String get settingOilDueSoonHelp;
+
+  /// No description provided for @lastOilChangeKm.
+  ///
+  /// In en, this message translates to:
+  /// **'Last oil change at (km, optional)'**
+  String get lastOilChangeKm;
+
+  /// No description provided for @lastOilChangeDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of the last oil change'**
+  String get lastOilChangeDay;
+
+  /// No description provided for @oilOdometerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The app estimates ≈ {km} km now. Enter what the odometer shows: if it\'s different, your number becomes the car\'s km.'**
+  String oilOdometerHelp(String km);
+
+  /// No description provided for @oilOdometerHelpNoEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter what the odometer shows; it also becomes the car\'s km.'**
+  String get oilOdometerHelpNoEstimate;
+
+  /// No description provided for @oilMileageCorrected.
+  ///
+  /// In en, this message translates to:
+  /// **'Mileage corrected to {km} km (the estimate was {estimate} km)'**
+  String oilMileageCorrected(String km, String estimate);
 }
 
 class _AppLocalizationsDelegate

@@ -622,6 +622,8 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
   final _notes = TextEditingController();
   final _km = TextEditingController();
   final _oilInterval = TextEditingController();
+  final _lastOilKm = TextEditingController();
+  String? _lastOilDay;
   bool _active = true;
   final Map<Renewal, String?> _expiries = {};
   bool _filled = false;
@@ -629,7 +631,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
 
   @override
   void dispose() {
-    for (final c in [_plate, _make, _model, _year, _color, _vin, _notes, _km, _oilInterval]) {
+    for (final c in [_plate, _make, _model, _year, _color, _vin, _notes, _km, _oilInterval, _lastOilKm]) {
       c.dispose();
     }
     super.dispose();
@@ -645,6 +647,8 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
     _vin.text = v.vin;
     _notes.text = v.notes;
     _oilInterval.text = v.oilIntervalKm?.toString() ?? '';
+    _lastOilKm.text = v.lastOilChange?.km.toString() ?? '';
+    _lastOilDay = v.lastOilChange?.day;
     _active = v.active;
   }
 
@@ -673,6 +677,20 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
         firstKm: widget.id == null ? km : null,
         oilIntervalKm: switch (int.tryParse(_oilInterval.text.trim())) { final n? when n > 0 => n, _ => null },
       );
+      // "Last oil change" (2026-10-26): a new or changed one is recorded
+      // like "Oil changed" (also an odometer reading).
+      final oilKm = int.tryParse(_lastOilKm.text.trim());
+      final last = widget.id == null ? null : ref.read(vehicleProvider(widget.id!))?.lastOilChange;
+      final oilDay = _lastOilDay ?? vehicleDay(DateTime.now());
+      if (oilKm != null && (last == null || last.km != oilKm || last.day != oilDay)) {
+        // Not a reading when a reading of that day or later shows more
+        // (e.g. "Odometer now" above): it would replace the newer number.
+        final readings = widget.id == null
+            ? [if (km != null) OdometerReading(id: '', km: km, day: vehicleDay(DateTime.now()))]
+            : ref.read(vehicleProvider(widget.id!))?.readings ?? const <OdometerReading>[];
+        final newer = readings.any((r) => r.day.compareTo(oilDay) >= 0 && r.km > oilKm);
+        await addOilChange(id, km: oilKm, day: oilDay, asReading: !newer);
+      }
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
       widget.id == null ? router.pushReplacement('/vehicles/$id') : router.pop();
     } catch (e) {
@@ -714,6 +732,31 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
           field(_vin, l10n.vehicleVin),
           field(_notes, l10n.notes, maxLines: 3),
           field(_oilInterval, l10n.oilIntervalKm, keyboard: TextInputType.number),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: field(_lastOilKm, l10n.lastOilChangeKm, keyboard: TextInputType.number)),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.edit_calendar),
+                  label: Text(formatVehicleDay(context, _lastOilDay ?? vehicleDay(DateTime.now()))),
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.tryParse(_lastOilDay ?? '') ?? now,
+                      firstDate: DateTime(now.year - 10),
+                      lastDate: now,
+                      helpText: l10n.lastOilChangeDay,
+                    );
+                    if (picked != null) setState(() => _lastOilDay = vehicleDay(picked));
+                  },
+                ),
+              ),
+            ],
+          ),
           if (widget.id == null) ...[
             field(_km, l10n.vehicleFirstReading, keyboard: TextInputType.number),
             Text(l10n.renewals, style: Theme.of(context).textTheme.titleSmall),
