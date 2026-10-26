@@ -499,7 +499,7 @@ function workStartToday(hours, now) {
   return now - (minute - hours.start) * 60 * 1000 - saudi.getUTCSeconds() * 1000 - saudi.getUTCMilliseconds();
 }
 
-const { wakeStep } = require('./wakePing');
+const { wakeStep, REPING_MS } = require('./wakePing');
 
 /**
  * Silent push to a person's phones (no title or text: nothing is shown):
@@ -512,8 +512,13 @@ async function sendWakePing(uid, data = { type: 'wake' }) {
   await admin.messaging().sendEachForMulticast({
     tokens,
     data,
-    android: { priority: 'high', ttl: 10 * 60 * 1000 },
-    apns: { headers: { 'apns-push-type': 'background', 'apns-priority': '5' }, payload: { aps: { 'content-available': 1 } } },
+    // Kept until the next ping (2026-10-26, was 10 min): a phone without
+    // signal gets it as soon as it's back online.
+    android: { priority: 'high', ttl: REPING_MS },
+    apns: {
+      headers: { 'apns-push-type': 'background', 'apns-priority': '5', 'apns-expiration': String(Math.floor((Date.now() + REPING_MS) / 1000)) },
+      payload: { aps: { 'content-available': 1 } },
+    },
   });
 }
 
