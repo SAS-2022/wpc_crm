@@ -35,35 +35,51 @@ class WorkSitesScreen extends ConsumerWidget {
                 child: Text(l10n.noWorkSites, textAlign: TextAlign.center),
               ),
             )
-          : ListView(
-              padding: const EdgeInsets.only(bottom: 88),
-              children: [
-                for (final s in sites)
-                  Card(
-                    margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Snapshot of the place and its check-in circle.
-                        SiteSnapshot(point: LatLng(s.lat, s.lng), radius: s.radius),
-                        ListTile(
-                          leading: Icon(Icons.apartment, color: s.active ? null : Theme.of(context).disabledColor),
-                          title: Text(s.name),
-                          subtitle: Text(
-                            [
-                              l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
-                              l10n.radiusMeters(s.radius.round()),
-                              if (!s.active) l10n.inactive,
-                            ].join(' · '),
+          // Grid of cards: one column on phones, more on wide screens (~380 px
+          // a card) so a site doesn't fill the whole page on the web.
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                const gap = 12.0;
+                final cols = (constraints.maxWidth / 380).floor().clamp(1, 4);
+                final cardWidth = (constraints.maxWidth - gap * (cols + 1)) / cols;
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(gap, gap, gap, 88),
+                  child: Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final s in sites)
+                        SizedBox(
+                          width: cardWidth,
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Snapshot of the place and its check-in circle.
+                                SiteSnapshot(point: LatLng(s.lat, s.lng), radius: s.radius),
+                                ListTile(
+                                  leading: Icon(Icons.apartment, color: s.active ? null : Theme.of(context).disabledColor),
+                                  title: Text(s.name),
+                                  subtitle: Text(
+                                    [
+                                      l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
+                                      l10n.radiusMeters(s.radius.round()),
+                                      if (!s.active) l10n.inactive,
+                                    ].join(' · '),
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () => open(s),
+                                ),
+                              ],
+                            ),
                           ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => open(s),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-              ],
+                );
+              },
             ),
     );
   }
