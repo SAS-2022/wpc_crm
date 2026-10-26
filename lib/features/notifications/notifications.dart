@@ -110,6 +110,11 @@ enum NotificationType {
   /// Function, to logistics managers, sales managers and GMs.
   /// [AppNotification.ref] = vehicle id, [AppNotification.vehicleName] = plate.
   vehicleRenewalDue,
+
+  /// A vehicle's oil change (2026-10-26): [AppNotification.count] km left
+  /// (≤ 0: due), [AppNotification.note] = the odometer km it's due at; same
+  /// people and fields as [vehicleRenewalDue].
+  vehicleOilDue,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud

@@ -4586,7 +4586,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String needsRenewalFilter(int count) {
-    return 'Needs renewal ($count)';
+    return 'Renewal or oil due ($count)';
   }
 
   @override
@@ -4672,7 +4672,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String vehicleRenewalsDue(int count) {
-    return 'Vehicle renewals due ($count)';
+    return 'Vehicle renewals and oil changes due ($count)';
   }
 
   @override
@@ -4695,7 +4695,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingVehicleRenewalHelp =>
-      'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance or periodic inspection expires; it stays on their Home until the new date is entered.';
+      'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance, periodic inspection or operating card expires; it stays on their Home until the new date is entered.';
 
   @override
   String get settingsSectionHr => 'HR';
@@ -4906,4 +4906,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifDriveOvertimeSelf(String time) {
     return 'Your shift ended at $time while you\'re on the road – overtime started. It ends when you arrive home or at the work site.';
   }
+
+  @override
+  String get renewalOperatingCard => 'Operating card (work permit)';
+
+  @override
+  String get oilChange => 'Oil change';
+
+  @override
+  String get oilIntervalKm => 'Oil change every (km, optional)';
+
+  @override
+  String oilEvery(String km) {
+    return 'Every $km km';
+  }
+
+  @override
+  String oilNextAt(String km) {
+    return 'Next at $km km';
+  }
+
+  @override
+  String oilLastChange(String km, String date) {
+    return 'Last changed at $km km on $date';
+  }
+
+  @override
+  String oilKmLeft(String km) {
+    return '$km km left';
+  }
+
+  @override
+  String oilOverdue(String km) {
+    return 'Due – $km km over';
+  }
+
+  @override
+  String get oilNoChangeYet => 'No oil change recorded';
+
+  @override
+  String get oilNotTracked =>
+      'Set how often the oil is changed (in km) and the GM, sales manager and logistics manager are reminded before it\'s due.';
+
+  @override
+  String get setOilInterval => 'Set interval';
+
+  @override
+  String get recordOilChange => 'Oil changed';
+
+  @override
+  String get recordOilChangeTitle => 'Record oil change';
+
+  @override
+  String deleteOilChangeConfirm(String km) {
+    return 'Remove the oil change at $km km? Its odometer reading stays.';
+  }
+
+  @override
+  String notifVehicleOilDueSoon(String vehicle, int km, String at) {
+    return '$vehicle: oil change due in $km km (at $at km)';
+  }
+
+  @override
+  String notifVehicleOilDue(String vehicle, String at) {
+    return '$vehicle: oil change is due (was due at $at km)';
+  }
+
+  @override
+  String get settingOilDueSoon => 'Oil change reminder';
+
+  @override
+  String get settingOilDueSoonHelp =>
+      'The GM, sales manager and logistics manager are reminded this many km before a vehicle\'s oil change is due (estimated from the last reading and its drivers\' GPS km), and again when it\'s due; it stays on their Home until the change is recorded.';
 }

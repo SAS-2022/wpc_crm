@@ -133,4 +133,42 @@ void main() {
     expect(car(expiries: {Renewal.insurance: '2026-11-20'}).needsRenewal(today), isFalse);
     expect(car(expiries: {Renewal.inspection: '2026-10-01'}).worstState(today), RenewalState.expired);
   });
+
+  group('oil change', () {
+    Vehicle oilCar({int? interval = 5000, List<OilChange> log = const [], bool active = true}) =>
+        Vehicle(id: 'v', plate: 'ABC', oilIntervalKm: interval, oilLog: log, active: active);
+    const changed = OilChange(id: '1', km: 10000, day: '2026-09-01');
+
+    test('next km and km left from the last change', () {
+      final v = oilCar(log: [const OilChange(id: '0', km: 5000, day: '2026-05-01'), changed]);
+      expect(v.nextOilKm, 15000);
+      expect(v.oilKmLeft(14200), 800);
+      expect(v.oil(14200), OilState.ok);
+      expect(v.oil(14500), OilState.dueSoon);
+      expect(v.oil(15000), OilState.due);
+      expect(v.oil(15300), OilState.due);
+    });
+
+    test('missing without an interval, a change, an estimate, or when inactive', () {
+      expect(oilCar(interval: null, log: [changed]).oil(20000), OilState.missing);
+      expect(oilCar().oil(20000), OilState.missing);
+      expect(oilCar(log: [changed]).oil(null), OilState.missing);
+      expect(oilCar(log: [changed], active: false).oil(20000), OilState.missing);
+    });
+
+    test('read from the document, oldest first; bad interval ignored', () {
+      final v = Vehicle.fromMap('v', {
+        'plate': 'ABC',
+        'oilIntervalKm': 0,
+        'oilLog': [
+          {'id': 'b', 'km': 9000, 'day': '2026-10-01'},
+          {'id': 'a', 'km': 4000, 'day': '2026-04-01'},
+        ],
+        'expiries': {'operatingCard': '2027-01-31'},
+      });
+      expect(v.oilIntervalKm, isNull);
+      expect(v.lastOilChange?.km, 9000);
+      expect(v.expiries[Renewal.operatingCard], '2027-01-31');
+    });
+  });
 }

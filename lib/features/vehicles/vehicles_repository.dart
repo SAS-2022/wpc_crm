@@ -63,6 +63,7 @@ Future<String> saveVehicle({
   required bool active,
   Map<Renewal, String?> expiries = const {},
   int? firstKm,
+  int? oilIntervalKm,
 }) =>
     saving(() async {
       final ref = id == null ? _vehicles.doc() : _vehicles.doc(id);
@@ -75,6 +76,7 @@ Future<String> saveVehicle({
         'vin': vin,
         'notes': notes,
         'active': active,
+        'oilIntervalKm': oilIntervalKm,
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (id == null) {
@@ -155,3 +157,25 @@ Future<void> setRenewal(Vehicle vehicle, Renewal item, String? expiry, {required
             ]),
           'updatedAt': FieldValue.serverTimestamp(),
         }));
+
+/// Records an oil change at [km] on [day]; it's also an odometer reading
+/// (same id), so the mileage estimate starts from it.
+Future<void> addOilChange(String vehicleId, {required int km, required String day, String note = ''}) => saving(() {
+      final now = DateTime.now();
+      final change = OilChange(id: '${now.millisecondsSinceEpoch}', km: km, day: day, at: now, byId: _uid, note: note);
+      final reading = OdometerReading(id: change.id, km: km, day: day, at: now, byId: _uid, note: note);
+      return _vehicles.doc(vehicleId).update({
+        'oilLog': FieldValue.arrayUnion([change.toMap()]),
+        'readings': FieldValue.arrayUnion([reading.toMap()]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+
+/// Removes an oil change (its odometer reading stays).
+Future<void> deleteOilChange(Vehicle vehicle, String id) => saving(() => _vehicles.doc(vehicle.id).update({
+      'oilLog': [
+        for (final c in vehicle.oilLog)
+          if (c.id != id) c.toMap(),
+      ],
+      'updatedAt': FieldValue.serverTimestamp(),
+    }));

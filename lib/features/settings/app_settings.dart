@@ -31,7 +31,11 @@ enum AppSetting {
 
   /// Vehicle registration / insurance / inspection: reminded and on Home
   /// this many days before the expiry (user request 2026-10-24).
-  vehicleRenewalDays(14, 1, 90);
+  vehicleRenewalDays(14, 1, 90),
+
+  /// Vehicle oil change: reminded and on Home this many km before it's due
+  /// (user request 2026-10-26).
+  oilDueSoonKm(500, 100, 5000);
 
   const AppSetting(this.defaultValue, this.min, this.max);
 
@@ -71,6 +75,7 @@ class AppSettings {
     attendance.lateGraceMin = this[AppSetting.lateGraceMin];
     attendance.awayGraceMin = this[AppSetting.awayGraceMin];
     vehicle.renewalDueSoonDays = this[AppSetting.vehicleRenewalDays];
+    vehicle.oilDueSoonKm = this[AppSetting.oilDueSoonKm];
   }
 }
 

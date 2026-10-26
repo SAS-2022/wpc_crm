@@ -9,10 +9,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // color, vin, notes, active, driverIds, driverLog [{driverId, from, to?}],
 // expiries {registration|insurance|inspection: 'yyyy-MM-dd'}, readings [{id,
 // km, day, at, byId, note}], renewalLog [{item, expiry, previous, byId, at}],
-// renewalNotified (keys sent by `vehicleRenewals`). Same renewal rules as
-// functions/vehicles.js.
+// renewalNotified (keys sent by `vehicleRenewals`, also `oil:…`),
+// oilIntervalKm, oilLog [{id, km, day, at, byId, note}]. Same renewal and
+// oil-change rules as functions/vehicles.js.
 
-enum Renewal { registration, insurance, inspection }
+/// Yearly papers; `operatingCard` = the TGA operating card (work permit)
+/// of commercial vehicles (user request 2026-10-26).
+enum Renewal { registration, insurance, inspection, operatingCard }
 
 enum RenewalState { missing, ok, dueSoon, expired }
 
@@ -101,6 +104,39 @@ class DriverSpell {
   Map<String, Object?> toMap() => {'driverId': driverId, 'from': from, 'to': to};
 }
 
+/// An oil change at [km] on [day] (also saved as an odometer reading with the same id).
+class OilChange {
+  const OilChange({required this.id, required this.km, required this.day, this.at, this.byId = '', this.note = ''});
+
+  final String id;
+  final int km;
+  final String day;
+  final DateTime? at;
+  final String byId;
+  final String note;
+
+  static OilChange? fromMap(Object? m) {
+    final r = OdometerReading.fromMap(m);
+    return r == null ? null : OilChange(id: r.id, km: r.km, day: r.day, at: r.at, byId: r.byId, note: r.note);
+  }
+
+  Map<String, Object?> toMap() => {'id': id, 'km': km, 'day': day, 'at': at, 'byId': byId, 'note': note};
+}
+
+enum OilState { missing, ok, dueSoon, due }
+
+/// Oil change "due soon" this many km before it's due: App settings →
+/// Vehicles (`AppSetting.oilDueSoonKm`, default 500), set by `AppSettings.apply`.
+var oilDueSoonKm = 500;
+
+/// Missing without an interval or a recorded change (or no estimate).
+OilState oilState(int? kmLeft) {
+  if (kmLeft == null) return OilState.missing;
+  if (kmLeft <= 0) return OilState.due;
+  if (kmLeft <= oilDueSoonKm) return OilState.dueSoon;
+  return OilState.ok;
+}
+
 class RenewalEntry {
   const RenewalEntry({required this.item, required this.expiry, this.previous, this.byId = '', this.at});
 
@@ -140,6 +176,8 @@ class Vehicle {
     this.expiries = const {},
     this.readings = const [],
     this.renewalLog = const [],
+    this.oilIntervalKm,
+    this.oilLog = const [],
   });
 
   final String id;
@@ -160,6 +198,22 @@ class Vehicle {
   /// Oldest first.
   final List<OdometerReading> readings;
   final List<RenewalEntry> renewalLog;
+
+  /// Oil changed every this many km (null = not tracked).
+  final int? oilIntervalKm;
+
+  /// Oldest first.
+  final List<OilChange> oilLog;
+
+  OilChange? get lastOilChange => oilLog.isEmpty ? null : oilLog.last;
+
+  /// The odometer at which the next oil change is due.
+  int? get nextOilKm => oilIntervalKm == null || lastOilChange == null ? null : lastOilChange!.km + oilIntervalKm!;
+
+  /// Km left until the next oil change at the [estimate] (negative = overdue).
+  int? oilKmLeft(int? estimate) => nextOilKm == null || estimate == null ? null : nextOilKm! - estimate;
+
+  OilState oil(int? estimate) => active ? oilState(oilKmLeft(estimate)) : OilState.missing;
 
   /// "Toyota Hilux 2022".
   String get title => [make, model, if (year != null) '$year'].where((s) => s.isNotEmpty).join(' ');
@@ -193,6 +247,7 @@ class Vehicle {
 
   factory Vehicle.fromMap(String id, Map<String, dynamic> d) {
     final exp = d['expiries'];
+    final interval = (d['oilIntervalKm'] as num?)?.toInt();
     final readings = [
       for (final m in d['readings'] as List? ?? const []) ?OdometerReading.fromMap(m),
     ]..sort((a, b) {
@@ -222,6 +277,13 @@ class Vehicle {
       renewalLog: [
         for (final m in d['renewalLog'] as List? ?? const []) ?RenewalEntry.fromMap(m),
       ]..sort((a, b) => (b.at ?? DateTime(0)).compareTo(a.at ?? DateTime(0))),
+      oilIntervalKm: interval != null && interval > 0 ? interval : null,
+      oilLog: [
+        for (final m in d['oilLog'] as List? ?? const []) ?OilChange.fromMap(m),
+      ]..sort((a, b) {
+          final byDay = a.day.compareTo(b.day);
+          return byDay != 0 ? byDay : a.km.compareTo(b.km);
+        }),
     );
   }
 }

@@ -40,18 +40,23 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
       _refreshed = true;
       refreshDriverKm({for (final v in vehicles) ...v.driverIds}.toList(), from);
     }
-    final due = vehicles.where((v) => v.needsRenewal(today)).length;
+    final mileage = {for (final v in vehicles) v.id: vehicleMileage(v, km)};
+    bool needs(Vehicle v) => vehicleNeedsAttention(v, today, mileage[v.id]!.estimate);
+    final due = vehicles.where(needs).length;
     final inactive = vehicles.where((v) => !v.active).length;
     final shown = [
       for (final v in vehicles)
-        if ((v.active || _showInactive) && (!_dueOnly || v.needsRenewal(today))) v,
+        if ((v.active || _showInactive) && (!_dueOnly || needs(v))) v,
     ]..sort((a, b) {
-        // Active first, then expired, then due soon, then by plate.
-        int rank(Vehicle v) => !v.active ? 3 : switch (v.worstState(today)) {
-              RenewalState.expired => 0,
-              RenewalState.dueSoon => 1,
-              _ => 2,
-            };
+        // Active first, then expired / oil due, then due soon, then by plate.
+        int rank(Vehicle v) {
+          if (!v.active) return 3;
+          final oil = v.oil(mileage[v.id]!.estimate);
+          final worst = v.worstState(today);
+          if (worst == RenewalState.expired || oil == OilState.due) return 0;
+          if (worst == RenewalState.dueSoon || oil == OilState.dueSoon) return 1;
+          return 2;
+        }
         final byRank = rank(a).compareTo(rank(b));
         return byRank != 0 ? byRank : a.plate.compareTo(b.plate);
       });
@@ -98,7 +103,7 @@ class _VehiclesScreenState extends ConsumerState<VehiclesScreen> {
                       ],
                     ),
                   ),
-                for (final v in shown) _VehicleCard(vehicle: v, users: users, mileage: vehicleMileage(v, km), today: today),
+                for (final v in shown) _VehicleCard(vehicle: v, users: users, mileage: mileage[v.id]!, today: today),
               ],
             ),
     );
@@ -157,7 +162,10 @@ class _VehicleCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: [for (final r in Renewal.values) RenewalChip(vehicle: v, item: r, today: today)],
+                children: [
+                  for (final r in Renewal.values) RenewalChip(vehicle: v, item: r, today: today),
+                  if (v.oilIntervalKm != null) OilChip(vehicle: v, estimate: mileage.estimate),
+                ],
               ),
             ],
           ),
@@ -493,6 +501,64 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
             ),
           ),
           section(
+            l10n.oilChange,
+            [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (v.oilIntervalKm == null)
+                      Text(l10n.oilNotTracked, style: theme.textTheme.bodySmall)
+                    else ...[
+                      Text(
+                        oilStatusText(context, v, mileage.estimate),
+                        style: theme.textTheme.titleMedium?.copyWith(color: oilColor(context, v.oil(mileage.estimate))),
+                      ),
+                      Text([
+                        l10n.oilEvery(formatKm(context, v.oilIntervalKm!)),
+                        if (v.nextOilKm != null) l10n.oilNextAt(formatKm(context, v.nextOilKm!)),
+                      ].join(' · ')),
+                      if (v.lastOilChange case final c?)
+                        Text(l10n.oilLastChange(formatKm(context, c.km), formatVehicleDay(context, c.day)), style: theme.textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+              for (final c in v.oilLog.reversed)
+                ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.oil_barrel_outlined),
+                  title: Text(l10n.kmValue(formatKm(context, c.km))),
+                  subtitle: Text([formatVehicleDay(context, c.day), users[c.byId]?.name ?? '', c.note].where((s) => s.isNotEmpty).join(' · ')),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: l10n.delete,
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (dialog) => AlertDialog(
+                          content: Text(l10n.deleteOilChangeConfirm(formatKm(context, c.km))),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+                            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.delete)),
+                          ],
+                        ),
+                      );
+                      if (ok == true) await deleteOilChange(v, c.id);
+                    },
+                  ),
+                ),
+            ],
+            action: v.oilIntervalKm == null
+                ? TextButton(onPressed: () => context.push('/vehicles/${v.id}/edit'), child: Text(l10n.setOilInterval))
+                : FilledButton.tonalIcon(
+                    icon: const Icon(Icons.oil_barrel_outlined),
+                    label: Text(l10n.recordOilChange),
+                    onPressed: () => recordOilChange(context, v, mileage.estimate),
+                  ),
+          ),
+          section(
             l10n.drivers,
             [
               if (v.driverIds.isEmpty)
@@ -555,6 +621,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
   final _vin = TextEditingController();
   final _notes = TextEditingController();
   final _km = TextEditingController();
+  final _oilInterval = TextEditingController();
   bool _active = true;
   final Map<Renewal, String?> _expiries = {};
   bool _filled = false;
@@ -562,7 +629,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
 
   @override
   void dispose() {
-    for (final c in [_plate, _make, _model, _year, _color, _vin, _notes, _km]) {
+    for (final c in [_plate, _make, _model, _year, _color, _vin, _notes, _km, _oilInterval]) {
       c.dispose();
     }
     super.dispose();
@@ -577,6 +644,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
     _color.text = v.color;
     _vin.text = v.vin;
     _notes.text = v.notes;
+    _oilInterval.text = v.oilIntervalKm?.toString() ?? '';
     _active = v.active;
   }
 
@@ -603,6 +671,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
         active: _active,
         expiries: widget.id == null ? _expiries : const {},
         firstKm: widget.id == null ? km : null,
+        oilIntervalKm: switch (int.tryParse(_oilInterval.text.trim())) { final n? when n > 0 => n, _ => null },
       );
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
       widget.id == null ? router.pushReplacement('/vehicles/$id') : router.pop();
@@ -644,6 +713,7 @@ class _VehicleEditScreenState extends ConsumerState<VehicleEditScreen> {
           field(_color, l10n.vehicleColor),
           field(_vin, l10n.vehicleVin),
           field(_notes, l10n.notes, maxLines: 3),
+          field(_oilInterval, l10n.oilIntervalKm, keyboard: TextInputType.number),
           if (widget.id == null) ...[
             field(_km, l10n.vehicleFirstReading, keyboard: TextInputType.number),
             Text(l10n.renewals, style: Theme.of(context).textTheme.titleSmall),

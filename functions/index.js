@@ -163,7 +163,10 @@ const TEXTS = {
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ${x.renewal} expires in ${c} days (${d})`
       : `${x.vehicle}: ${x.renewal} has expired (${d})`),
-    renewal: { registration: 'registration (Istimara)', insurance: 'insurance', inspection: 'periodic inspection (Fahas)' },
+    renewal: { registration: 'registration (Istimara)', insurance: 'insurance', inspection: 'periodic inspection (Fahas)', operatingCard: 'operating card (work permit)' },
+    vehicleOilDue: (n, c, d, o, x) => (c > 0
+      ? `${x.vehicle}: oil change due in ${c} km (at ${x.km} km)`
+      : `${x.vehicle}: oil change is due (was due at ${x.km} km)`),
   },
   ar: {
     title: 'WPC CRM',
@@ -210,7 +213,10 @@ const TEXTS = {
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ينتهي ${x.renewal} بعد ${c} يوماً (${d})`
       : `${x.vehicle}: انتهى ${x.renewal} (${d})`),
-    renewal: { registration: 'تسجيل المركبة (الاستمارة)', insurance: 'التأمين', inspection: 'الفحص الدوري' },
+    renewal: { registration: 'تسجيل المركبة (الاستمارة)', insurance: 'التأمين', inspection: 'الفحص الدوري', operatingCard: 'بطاقة التشغيل' },
+    vehicleOilDue: (n, c, d, o, x) => (c > 0
+      ? `${x.vehicle}: تغيير الزيت بعد ${c} كم (عند ${x.km} كم)`
+      : `${x.vehicle}: حان موعد تغيير الزيت (كان عند ${x.km} كم)`),
   },
 };
 
@@ -280,7 +286,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
       site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId, driving: n.issue === 'driving',
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
-      vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '',
+      vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '', km: String(n.note || ''),
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
@@ -297,7 +303,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
-          : n.type === 'vehicleRenewalDue' ? `/vehicles/${n.ref}`
+          : (n.type === 'vehicleRenewalDue' || n.type === 'vehicleOilDue') ? `/vehicles/${n.ref}`
           : '/notifications',
         notificationId: event.params.id,
       },
@@ -1524,7 +1530,7 @@ exports.tickPlanOnPlanned = onDocumentCreated({ document: 'tasks/{id}', maxInsta
 // Kilometres per driver per day from their GPS points, for the vehicles'
 // odometer estimate: Firestore `driver_km/{uid}_{day}` {uid, day, km, points,
 // final}. Renewal reminders for registration / insurance / inspection.
-const { dayKm, renewalAlerts, DUE_SOON_DAYS } = require('./vehicles');
+const { dayKm, renewalAlerts, lastReading, vehicleEstimate, oilAlerts, DUE_SOON_DAYS, OIL_DUE_SOON_KM } = require('./vehicles');
 
 /** Days back that location history still has (cleanRouteHistory keeps 90). */
 const DRIVER_KM_DAYS = 89;
@@ -1602,26 +1608,48 @@ exports.refreshDriverKm = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async
 
 /**
  * Every morning: reminds the GMs, sales managers and logistics managers
- * (user decisions 2026-10-24) once when a vehicle's registration, insurance or periodic
- * inspection is App settings `vehicleRenewalDays` (default 14) days from expiring (`vehicleRenewalDue`; count = days
+ * (user decisions 2026-10-24) once when a vehicle's registration, insurance, periodic
+ * inspection or operating card is App settings `vehicleRenewalDays` (default 14) days from expiring (`vehicleRenewalDue`; count = days
  * left, date = the expiry). It stays on their Home until a new date is
- * entered. Sent keys are kept in `vehicles.renewalNotified`.
+ * entered. Sent keys are kept in `vehicles.renewalNotified`. Oil changes
+ * (2026-10-26): `vehicleOilDue` once when the estimate is App settings
+ * `oilDueSoonKm` (500) from the next change and once when it's reached
+ * (count = km left, note = the km it's due at).
  */
 exports.vehicleRenewals = onSchedule(
   { schedule: '0 8 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
   async () => {
     const db = admin.firestore();
     const today = saudiDay(Date.now());
-    const [vehicles, managers, dueSoonDays] = await Promise.all([
+    const [vehicles, managers, dueSoonDays, oilSoonKm] = await Promise.all([
       db.collection('vehicles').get(),
       db.collection('users').where('role', 'in', ['logistics_manager', 'sales_manager', 'gm']).where('active', '==', true).get(),
       appSetting('vehicleRenewalDays', DUE_SOON_DAYS, 1, 90),
+      appSetting('oilDueSoonKm', OIL_DUE_SOON_KM, 100, 5000),
     ]);
     if (managers.empty) return;
+    // Oil changes (2026-10-26): odometer estimate from the drivers' GPS km
+    // (yesterday's were built at 00:45), one driver_km range read for all.
+    const oilCars = vehicles.docs.filter((v) => v.get('oilIntervalKm') > 0 && (v.get('oilLog') || []).length && lastReading(v.data()));
+    const since = oilCars.map((v) => lastReading(v.data()).day).sort()[0];
+    const kmDocs = since
+      ? (await db.collection('driver_km').where('day', '>', since).get()).docs.map((d) => d.data())
+      : [];
     for (const v of vehicles.docs) {
-      const alerts = renewalAlerts(v.data(), today, v.get('renewalNotified') || [], dueSoonDays);
-      if (!alerts.length) continue;
+      const notified = v.get('renewalNotified') || [];
+      const alerts = renewalAlerts(v.data(), today, notified, dueSoonDays);
+      const oil = oilCars.includes(v) ? oilAlerts(v.data(), vehicleEstimate(v.data(), kmDocs), notified, oilSoonKm) : [];
+      if (!alerts.length && !oil.length) continue;
       const batch = db.batch();
+      for (const a of oil) {
+        for (const m of managers.docs) {
+          batch.set(db.collection('notifications').doc(), {
+            toId: m.id, fromId: m.id, ownerId: '', type: 'vehicleOilDue', date: today,
+            count: a.kmLeft, note: String(a.nextKm), ref: v.id, vehicleName: v.get('plate') || '',
+            read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
       for (const a of alerts) {
         for (const m of managers.docs) {
           batch.set(db.collection('notifications').doc(), {
@@ -1631,7 +1659,7 @@ exports.vehicleRenewals = onSchedule(
           });
         }
       }
-      batch.update(v.ref, { renewalNotified: admin.firestore.FieldValue.arrayUnion(...alerts.map((a) => a.key)) });
+      batch.update(v.ref, { renewalNotified: admin.firestore.FieldValue.arrayUnion(...[...alerts, ...oil].map((a) => a.key)) });
       await batch.commit();
     }
   },

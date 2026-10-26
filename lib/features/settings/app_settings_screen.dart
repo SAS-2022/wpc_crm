@@ -69,6 +69,7 @@ class AppSettingsScreen extends ConsumerWidget {
           page(Icons.account_tree_outlined, l10n.departments, '/departments'),
           header(l10n.vehicles),
           number(Icons.directions_car_outlined, AppSetting.vehicleRenewalDays),
+          number(Icons.oil_barrel_outlined, AppSetting.oilDueSoonKm),
         ],
       ),
     );
@@ -83,6 +84,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.awayGraceMin => l10n.settingAwayGrace,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
+      AppSetting.oilDueSoonKm => l10n.settingOilDueSoon,
     };
 
 String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
@@ -93,6 +95,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.awayGraceMin => l10n.settingAwayGraceHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
+      AppSetting.oilDueSoonKm => l10n.settingOilDueSoonHelp,
     };
 
 /// "30 seconds", "300 m" …
@@ -101,6 +104,7 @@ String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin => l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
       AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays => l10n.valueDays(v),
+      AppSetting.oilDueSoonKm => l10n.kmValue('$v'),
     };
 
 class _NumberTile extends StatelessWidget {

@@ -7661,7 +7661,7 @@ abstract class AppLocalizations {
   /// No description provided for @needsRenewalFilter.
   ///
   /// In en, this message translates to:
-  /// **'Needs renewal ({count})'**
+  /// **'Renewal or oil due ({count})'**
   String needsRenewalFilter(int count);
 
   /// No description provided for @showInactiveVehicles.
@@ -7787,7 +7787,7 @@ abstract class AppLocalizations {
   /// No description provided for @vehicleRenewalsDue.
   ///
   /// In en, this message translates to:
-  /// **'Vehicle renewals due ({count})'**
+  /// **'Vehicle renewals and oil changes due ({count})'**
   String vehicleRenewalsDue(int count);
 
   /// No description provided for @notifVehicleRenewalDue.
@@ -7816,7 +7816,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingVehicleRenewalHelp.
   ///
   /// In en, this message translates to:
-  /// **'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance or periodic inspection expires; it stays on their Home until the new date is entered.'**
+  /// **'The GM, sales manager and logistics manager are reminded this many days before a vehicle\'s registration, insurance, periodic inspection or operating card expires; it stays on their Home until the new date is entered.'**
   String get settingVehicleRenewalHelp;
 
   /// No description provided for @settingsSectionHr.
@@ -8130,6 +8130,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your shift ended at {time} while you\'re on the road – overtime started. It ends when you arrive home or at the work site.'**
   String notifDriveOvertimeSelf(String time);
+
+  /// No description provided for @renewalOperatingCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating card (work permit)'**
+  String get renewalOperatingCard;
+
+  /// No description provided for @oilChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Oil change'**
+  String get oilChange;
+
+  /// No description provided for @oilIntervalKm.
+  ///
+  /// In en, this message translates to:
+  /// **'Oil change every (km, optional)'**
+  String get oilIntervalKm;
+
+  /// No description provided for @oilEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {km} km'**
+  String oilEvery(String km);
+
+  /// No description provided for @oilNextAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Next at {km} km'**
+  String oilNextAt(String km);
+
+  /// No description provided for @oilLastChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Last changed at {km} km on {date}'**
+  String oilLastChange(String km, String date);
+
+  /// No description provided for @oilKmLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km left'**
+  String oilKmLeft(String km);
+
+  /// No description provided for @oilOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due – {km} km over'**
+  String oilOverdue(String km);
+
+  /// No description provided for @oilNoChangeYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No oil change recorded'**
+  String get oilNoChangeYet;
+
+  /// No description provided for @oilNotTracked.
+  ///
+  /// In en, this message translates to:
+  /// **'Set how often the oil is changed (in km) and the GM, sales manager and logistics manager are reminded before it\'s due.'**
+  String get oilNotTracked;
+
+  /// No description provided for @setOilInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Set interval'**
+  String get setOilInterval;
+
+  /// No description provided for @recordOilChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Oil changed'**
+  String get recordOilChange;
+
+  /// No description provided for @recordOilChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record oil change'**
+  String get recordOilChangeTitle;
+
+  /// No description provided for @deleteOilChangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the oil change at {km} km? Its odometer reading stays.'**
+  String deleteOilChangeConfirm(String km);
+
+  /// No description provided for @notifVehicleOilDueSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'{vehicle}: oil change due in {km} km (at {at} km)'**
+  String notifVehicleOilDueSoon(String vehicle, int km, String at);
+
+  /// No description provided for @notifVehicleOilDue.
+  ///
+  /// In en, this message translates to:
+  /// **'{vehicle}: oil change is due (was due at {at} km)'**
+  String notifVehicleOilDue(String vehicle, String at);
+
+  /// No description provided for @settingOilDueSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Oil change reminder'**
+  String get settingOilDueSoon;
+
+  /// No description provided for @settingOilDueSoonHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The GM, sales manager and logistics manager are reminded this many km before a vehicle\'s oil change is due (estimated from the last reading and its drivers\' GPS km), and again when it\'s due; it stays on their Home until the change is recorded.'**
+  String get settingOilDueSoonHelp;
 }
 
 class _AppLocalizationsDelegate

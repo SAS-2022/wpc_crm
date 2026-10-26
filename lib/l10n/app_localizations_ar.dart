@@ -4591,7 +4591,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String needsRenewalFilter(int count) {
-    return 'بحاجة إلى تجديد ($count)';
+    return 'تجديد أو زيت مستحق ($count)';
   }
 
   @override
@@ -4676,7 +4676,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String vehicleRenewalsDue(int count) {
-    return 'تجديدات مركبات مستحقة ($count)';
+    return 'تجديدات وتغيير زيت مستحقة للمركبات ($count)';
   }
 
   @override
@@ -4699,7 +4699,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingVehicleRenewalHelp =>
-      'يتلقى المدير العام ومدير المبيعات ومدير الخدمات اللوجستية تذكيراً قبل هذا العدد من الأيام من انتهاء تسجيل المركبة أو تأمينها أو فحصها الدوري، ويبقى في صفحتهم الرئيسية حتى يُدخل التاريخ الجديد.';
+      'يتلقى المدير العام ومدير المبيعات ومدير الخدمات اللوجستية تذكيراً قبل هذا العدد من الأيام من انتهاء تسجيل المركبة أو تأمينها أو فحصها الدوري أو بطاقة التشغيل، ويبقى في صفحتهم الرئيسية حتى يُدخل التاريخ الجديد.';
 
   @override
   String get settingsSectionHr => 'الموارد البشرية';
@@ -4910,4 +4910,76 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifDriveOvertimeSelf(String time) {
     return 'انتهى دوامك الساعة $time وأنت في الطريق – بدأ العمل الإضافي. ينتهي عند وصولك إلى المنزل أو موقع العمل.';
   }
+
+  @override
+  String get renewalOperatingCard => 'بطاقة التشغيل';
+
+  @override
+  String get oilChange => 'تغيير الزيت';
+
+  @override
+  String get oilIntervalKm => 'تغيير الزيت كل (كم، اختياري)';
+
+  @override
+  String oilEvery(String km) {
+    return 'كل $km كم';
+  }
+
+  @override
+  String oilNextAt(String km) {
+    return 'التالي عند $km كم';
+  }
+
+  @override
+  String oilLastChange(String km, String date) {
+    return 'آخر تغيير عند $km كم بتاريخ $date';
+  }
+
+  @override
+  String oilKmLeft(String km) {
+    return 'باقي $km كم';
+  }
+
+  @override
+  String oilOverdue(String km) {
+    return 'مستحق – تجاوز $km كم';
+  }
+
+  @override
+  String get oilNoChangeYet => 'لم يُسجّل تغيير زيت';
+
+  @override
+  String get oilNotTracked =>
+      'حدّد كل كم كيلومتر يُغيَّر الزيت، فيُذكَّر المدير العام ومدير المبيعات ومدير الخدمات اللوجستية قبل موعده.';
+
+  @override
+  String get setOilInterval => 'تحديد المسافة';
+
+  @override
+  String get recordOilChange => 'تم تغيير الزيت';
+
+  @override
+  String get recordOilChangeTitle => 'تسجيل تغيير الزيت';
+
+  @override
+  String deleteOilChangeConfirm(String km) {
+    return 'حذف تغيير الزيت عند $km كم؟ تبقى قراءة العداد.';
+  }
+
+  @override
+  String notifVehicleOilDueSoon(String vehicle, int km, String at) {
+    return '$vehicle: تغيير الزيت بعد $km كم (عند $at كم)';
+  }
+
+  @override
+  String notifVehicleOilDue(String vehicle, String at) {
+    return '$vehicle: حان موعد تغيير الزيت (كان عند $at كم)';
+  }
+
+  @override
+  String get settingOilDueSoon => 'تذكير تغيير الزيت';
+
+  @override
+  String get settingOilDueSoonHelp =>
+      'يُذكَّر المدير العام ومدير المبيعات ومدير الخدمات اللوجستية قبل موعد تغيير زيت المركبة بهذا العدد من الكيلومترات (تقدير من آخر قراءة وكيلومترات GPS لسائقيها)، ومرة أخرى عند حلول الموعد؛ ويبقى في صفحتهم الرئيسية حتى يُسجَّل التغيير.';
 }

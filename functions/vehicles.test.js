@@ -61,3 +61,46 @@ test('the number of days comes from App settings', () => {
   assert.deepStrictEqual(renewalAlerts(v, '2026-10-24'), []);
   assert.deepStrictEqual(renewalAlerts(v, '2026-10-24', [], 30).map((a) => a.days), [30]);
 });
+
+test('renewalAlerts covers the operating card', () => {
+  const alerts = renewalAlerts({ expiries: { operatingCard: '2026-11-01' } }, '2026-10-26');
+  assert.deepStrictEqual(alerts.map((a) => a.key), ['operatingCard:2026-11-01']);
+});
+
+const { vehicleEstimate, oilAlerts } = require('./vehicles');
+
+test('vehicleEstimate adds drivers km after the last reading, inside their spells', () => {
+  const v = {
+    readings: [{ km: 1000, day: '2026-10-20' }, { km: 1200, day: '2026-10-22' }],
+    driverLog: [{ driverId: 'a', from: '2026-10-01', to: '2026-10-24' }, { driverId: 'b', from: '2026-10-25', to: null }],
+  };
+  const km = [
+    { uid: 'a', day: '2026-10-22', km: 50 }, // reading's day: left out
+    { uid: 'a', day: '2026-10-23', km: 40.4 },
+    { uid: 'a', day: '2026-10-25', km: 99 }, // after a's spell
+    { uid: 'b', day: '2026-10-25', km: 10 },
+    { uid: 'c', day: '2026-10-25', km: 77 }, // never on it
+  ];
+  assert.strictEqual(vehicleEstimate(v, km), 1250);
+  assert.strictEqual(vehicleEstimate({ driverLog: v.driverLog }, km), null);
+});
+
+test('oilAlerts: soon once, due once, again after a new change', () => {
+  const v = { oilIntervalKm: 5000, oilLog: [{ km: 10000, day: '2026-09-01' }] };
+  assert.deepStrictEqual(oilAlerts(v, 14000), []);
+  assert.deepStrictEqual(oilAlerts(v, 14600), [{ key: 'oil:15000:soon', nextKm: 15000, kmLeft: 400 }]);
+  assert.deepStrictEqual(oilAlerts(v, 14600, ['oil:15000:soon']), []);
+  assert.deepStrictEqual(oilAlerts(v, 15100, ['oil:15000:soon']), [{ key: 'oil:15000:due', nextKm: 15000, kmLeft: -100 }]);
+  // Jumped straight past due: only the due one.
+  assert.deepStrictEqual(oilAlerts(v, 15100).map((a) => a.key), ['oil:15000:due']);
+  const changed = { ...v, oilLog: [...v.oilLog, { km: 15100, day: '2026-10-26' }] };
+  assert.deepStrictEqual(oilAlerts(changed, 15100, ['oil:15000:soon', 'oil:15000:due']), []);
+  assert.deepStrictEqual(oilAlerts(changed, 19700).map((a) => a.key), ['oil:20100:soon']);
+});
+
+test('oilAlerts needs an interval, a recorded change and an estimate', () => {
+  assert.deepStrictEqual(oilAlerts({ oilLog: [{ km: 1, day: '2026-01-01' }] }, 99999), []);
+  assert.deepStrictEqual(oilAlerts({ oilIntervalKm: 5000 }, 99999), []);
+  assert.deepStrictEqual(oilAlerts({ oilIntervalKm: 5000, oilLog: [{ km: 1, day: '2026-01-01' }] }, null), []);
+  assert.deepStrictEqual(oilAlerts({ active: false, oilIntervalKm: 5000, oilLog: [{ km: 1, day: '2026-01-01' }] }, 99999), []);
+});

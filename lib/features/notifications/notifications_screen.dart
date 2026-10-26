@@ -104,6 +104,9 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.vehicleRenewalDue => n.count > 0
             ? l10n.notifVehicleRenewalDue(n.vehicleName, _renewal(l10n, n.issue), n.count, day)
             : l10n.notifVehicleRenewalExpired(n.vehicleName, _renewal(l10n, n.issue), day),
+        NotificationType.vehicleOilDue => n.count > 0
+            ? l10n.notifVehicleOilDueSoon(n.vehicleName, n.count, formatKm(context, int.tryParse(n.note) ?? 0))
+            : l10n.notifVehicleOilDue(n.vehicleName, formatKm(context, int.tryParse(n.note) ?? 0)),
         NotificationType.planSubmitted => l10n.notifPlanSubmitted(from, n.count, day),
         NotificationType.planApproved => l10n.notifPlanApproved(from, day),
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
@@ -186,6 +189,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.earlyCheckoutApproved => Icons.check_circle,
                     NotificationType.earlyCheckoutRejected => Icons.cancel,
                     NotificationType.vehicleRenewalDue => Icons.directions_car_outlined,
+                    NotificationType.vehicleOilDue => Icons.oil_barrel_outlined,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -232,7 +236,7 @@ class NotificationsScreen extends ConsumerWidget {
                         if (n.ref.isNotEmpty) context.push('/absence/${n.ref}');
                       case NotificationType.teamOnLeave:
                         if (n.ref.isNotEmpty) context.push('/leave/${n.ref}');
-                      case NotificationType.vehicleRenewalDue:
+                      case NotificationType.vehicleRenewalDue || NotificationType.vehicleOilDue:
                         if (n.ref.isNotEmpty) context.push('/vehicles/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
