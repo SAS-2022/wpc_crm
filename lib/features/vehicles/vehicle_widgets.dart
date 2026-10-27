@@ -175,66 +175,109 @@ Future<void> renewVehicle(BuildContext context, Vehicle v, Renewal r) async {
 Future<void> recordOilChange(BuildContext context, Vehicle v, int? estimate) async {
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final km = TextEditingController(text: estimate == null ? '' : '$estimate');
-  final note = TextEditingController();
-  var day = vehicleDay(DateTime.now());
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (dialog) => StatefulBuilder(
-      builder: (dialog, setDialog) => AlertDialog(
-        title: Text(l10n.recordOilChangeTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              estimate == null ? l10n.oilOdometerHelpNoEstimate : l10n.oilOdometerHelp(formatKm(context, estimate)),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            TextField(
-              controller: km,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(labelText: l10n.odometerKm),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.event),
-              title: Text(formatVehicleDay(context, day)),
-              trailing: const Icon(Icons.edit_calendar),
-              onTap: () async {
-                final now = DateTime.now();
-                final picked = await showDatePicker(
-                  context: dialog,
-                  initialDate: DateTime.tryParse(day) ?? now,
-                  firstDate: DateTime(now.year - 10),
-                  lastDate: now,
-                );
-                if (picked != null) setDialog(() => day = vehicleDay(picked));
-              },
-            ),
-            TextField(controller: note, decoration: InputDecoration(labelText: l10n.readingNote)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.save)),
-        ],
-      ),
-    ),
+  final r = await showKmDayDialog(
+    context,
+    title: l10n.recordOilChangeTitle,
+    help: estimate == null ? l10n.oilOdometerHelpNoEstimate : l10n.oilOdometerHelp(formatKm(context, estimate)),
+    initialKm: estimate,
   );
-  final value = int.tryParse(km.text.trim());
-  final text = note.text.trim();
-  km.dispose();
-  note.dispose();
-  if (ok != true || value == null || !context.mounted) return;
+  if (r == null || !context.mounted) return;
+  final (km: value, :day, note: text) = r;
   final estimateText = estimate == null ? '' : formatKm(context, estimate);
   final valueText = formatKm(context, value);
   await addOilChange(v.id, km: value, day: day, note: text);
   // Only today's change corrects "now"; a backdated one is history.
   if (estimate != null && day == vehicleDay(DateTime.now()) && (value - estimate).abs() >= 1) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.oilMileageCorrected(valueText, estimateText))));
+  }
+}
+
+/// Asks for an odometer km, its day (today or earlier) and a note; null when
+/// cancelled or no km was typed. The dialog owns its controllers, so they are
+/// disposed only after the closing animation (disposing them right after
+/// showDialog returned threw "TextEditingController used after being disposed").
+Future<({int km, String day, String note})?> showKmDayDialog(
+  BuildContext context, {
+  required String title,
+  String? help,
+  int? initialKm,
+}) =>
+    showDialog<({int km, String day, String note})>(
+      context: context,
+      builder: (_) => _KmDayDialog(title: title, help: help, initialKm: initialKm),
+    );
+
+class _KmDayDialog extends StatefulWidget {
+  const _KmDayDialog({required this.title, required this.help, required this.initialKm});
+
+  final String title;
+  final String? help;
+  final int? initialKm;
+
+  @override
+  State<_KmDayDialog> createState() => _KmDayDialogState();
+}
+
+class _KmDayDialogState extends State<_KmDayDialog> {
+  late final _km = TextEditingController(text: widget.initialKm == null ? '' : '${widget.initialKm}');
+  final _note = TextEditingController();
+  var _day = vehicleDay(DateTime.now());
+
+  @override
+  void dispose() {
+    _km.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final help = widget.help;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (help != null) Text(help, style: Theme.of(context).textTheme.bodySmall),
+          TextField(
+            controller: _km,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(labelText: l10n.odometerKm),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event),
+            title: Text(formatVehicleDay(context, _day)),
+            trailing: const Icon(Icons.edit_calendar),
+            onTap: () async {
+              final now = DateTime.now();
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.tryParse(_day) ?? now,
+                firstDate: DateTime(now.year - 10),
+                lastDate: now,
+              );
+              if (picked != null && mounted) setState(() => _day = vehicleDay(picked));
+            },
+          ),
+          TextField(controller: _note, decoration: InputDecoration(labelText: l10n.readingNote)),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        FilledButton(
+          onPressed: () {
+            final km = int.tryParse(_km.text.trim());
+            Navigator.pop(context, km == null ? null : (km: km, day: _day, note: _note.text.trim()));
+          },
+          child: Text(l10n.save),
+        ),
+      ],
+    );
   }
 }
 

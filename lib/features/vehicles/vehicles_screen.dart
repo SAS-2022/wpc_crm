@@ -202,49 +202,9 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
 
   Future<void> _recordReading(Vehicle v, VehicleMileage m) async {
     final l10n = AppLocalizations.of(context);
-    final km = TextEditingController(text: m.estimate == null ? '' : '${m.estimate}');
-    final note = TextEditingController();
-    var day = vehicleDay(DateTime.now());
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialog) => StatefulBuilder(
-        builder: (dialog, setDialog) => AlertDialog(
-          title: Text(l10n.recordReading),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: km,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(labelText: l10n.odometerKm),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event),
-                title: Text(formatVehicleDay(context, day)),
-                trailing: const Icon(Icons.edit_calendar),
-                onTap: () async {
-                  final picked = await _pickDay(day, last: DateTime.now());
-                  if (picked != null) setDialog(() => day = picked);
-                },
-              ),
-              TextField(controller: note, decoration: InputDecoration(labelText: l10n.readingNote)),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
-            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.save)),
-          ],
-        ),
-      ),
-    );
-    final value = int.tryParse(km.text.trim());
-    km.dispose();
-    final text = note.text.trim();
-    note.dispose();
-    if (ok != true || value == null || !mounted) return;
+    final r = await showKmDayDialog(context, title: l10n.recordReading, initialKm: m.estimate);
+    if (r == null || !mounted) return;
+    final (km: value, :day, note: text) = r;
     // A reading lower than one taken before it is probably a typo.
     final before = [for (final r in v.readings) if (r.day.compareTo(day) <= 0) r];
     if (before.isNotEmpty && value < before.last.km) {
