@@ -248,3 +248,35 @@ describe('leave and deleting users (2026-10-23)', () => {
     await assertFails(deleteDoc(doc(fs('sm'), 'users/exec')));
   });
 });
+
+describe('drivers set their own home location once (2026-10-27)', () => {
+  const home = { homeLocation: { lat: 26.4, lng: 50.1 } };
+
+  test('a driver without one sets it', async () => {
+    await assertSucceeds(updateDoc(doc(fs('driver'), 'users/driver'), home));
+  });
+
+  test('once set, the driver can\'t change it; the logistics manager can', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'users/driver'), home));
+    await assertFails(updateDoc(doc(fs('driver'), 'users/driver'), { homeLocation: { lat: 1, lng: 2 } }));
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/driver'), { homeLocation: { lat: 1, lng: 2 } }));
+  });
+
+  test('only drivers, only the home location, only lat / lng', async () => {
+    await assertFails(updateDoc(doc(fs('acc'), 'users/acc'), home));
+    await assertFails(updateDoc(doc(fs('driver'), 'users/driver'), { ...home, role: 'gm' }));
+    await assertFails(updateDoc(doc(fs('driver'), 'users/driver'), { homeLocation: { lat: 1, lng: 2, x: 3 } }));
+    await assertFails(updateDoc(doc(fs('driver'), 'users/driver'), { homeLocation: { lat: '1', lng: 2 } }));
+  });
+});
+
+describe('overtime approval by the driver\'s managers (2026-10-27)', () => {
+  test('the logistics manager approves or rejects a driver\'s overtime; the driver can\'t', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'attendance/driver_2026-10-26'),
+      { uid: 'driver', date: '2026-10-26', events: [] }));
+    const review = (rejected) => ({ overtimeReview: { minutes: rejected ? 0 : 30, byId: 'lm', note: '', rejected, at: serverTimestamp() } });
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'attendance/driver_2026-10-26'), review(true)));
+    await assertSucceeds(updateDoc(doc(fs('ws'), 'attendance/driver_2026-10-26'), review(false)));
+    await assertFails(updateDoc(doc(fs('driver'), 'attendance/driver_2026-10-26'), review(false)));
+  });
+});

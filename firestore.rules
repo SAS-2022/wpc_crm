@@ -49,6 +49,13 @@ service cloud.firestore {
       // the version it runs (`appVersions`). Update reminders are admin-only.
       allow update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions']);
+      // A driver sets their own home location (2026-10-27, it decides their
+      // overtime) only while none is set; after that the user form changes it.
+      allow update: if request.auth != null && request.auth.uid == uid && resource.data.role == 'driver'
+        && resource.data.get('homeLocation', null) == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeLocation'])
+        && request.resource.data.homeLocation.keys().hasOnly(['lat', 'lng'])
+        && request.resource.data.homeLocation.lat is number && request.resource.data.homeLocation.lng is number;
       // HR sets each person's joining date and department (2026-10-24).
       allow update: if managesHr()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department']);

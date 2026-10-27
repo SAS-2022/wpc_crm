@@ -26,6 +26,11 @@ enum AppSetting {
   /// checked out at the time they left (2026-10-22).
   awayGraceMin(30, 5, 240),
 
+  /// Drivers still driving at the end of the work day who get home within
+  /// this many minutes are driving home: no overtime (user rules 2026-10-27;
+  /// `driveHomeGraceMin` in functions/index.js).
+  driveHomeGraceMin(30, 0, 120),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90),
 

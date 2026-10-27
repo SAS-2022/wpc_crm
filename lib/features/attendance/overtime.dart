@@ -14,12 +14,14 @@ import 'work_sites.dart';
 //   sound + a pop-up when the app opens; reminded once after 30 min). Only
 //   "Start overtime" makes the time after the end count — from the end,
 //   whenever they confirm (still at the site). "Not today" stops the asking;
-// - drivers aren't asked: on the road 10 min after the end, their overtime
-//   starts by itself and ends when they arrive home (`users.homeLocation`)
-//   or at a work site (server, functions/attendance.js `driveStart` /
-//   `driveEnd`); at a site or home they get none;
+// - drivers aren't asked (rules 2026-10-27, server functions/attendance.js
+//   `driveDecide` / `driveEnd`): at a work site or home at the end → none,
+//   also when they drive home afterwards; still driving at the end → none if
+//   they get home within App setting `driveHomeGraceMin` (30 min, the drive
+//   home), else overtime from the end until they arrive at a work site or
+//   home (`users.homeLocation`, which drivers are asked to set);
 // - overtime is recorded at once and waits for a manager's approval
-//   (Attendance page, Home card), who may change the minutes.
+//   (Attendance page, Home card), who may change the minutes or reject it.
 
 /// "Start overtime?" is asked this long after the end (same as ASK_AFTER_MS).
 const overtimeAskAfter = Duration(minutes: 10);

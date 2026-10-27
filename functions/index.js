@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
-  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveStart, driveEnd, HOME_RADIUS_M, saudiTime, overtimeCap,
+  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
   LATE_GRACE_MIN, AWAY_GRACE_MIN,
 } = require('./attendance');
 
@@ -1013,8 +1013,10 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     if (lastSeenAt !== null) d = deriveDay(events, { ...options, lastSeenAt });
   }
   // For the managers' approval (Attendance page, Home card): 'pending' until
-  // a manager saves `overtimeReview` {minutes, byId, at, note}.
-  d.overtimeStatus = d.closed && d.overtimeMin > 0 ? (data.overtimeReview ? 'approved' : 'pending')
+  // a manager saves `overtimeReview` {minutes, byId, at, note, rejected?}
+  // (rejected 2026-10-27: minutes 0).
+  d.overtimeStatus = d.closed && d.overtimeMin > 0
+    ? (data.overtimeReview ? (data.overtimeReview.rejected === true ? 'rejected' : 'approved') : 'pending')
     : d.overtimeOn && !d.closed ? 'running' : null;
   const update = {};
   if (data.overtimeUnconfirmed !== undefined) update.overtimeUnconfirmed = admin.firestore.FieldValue.delete();
@@ -1101,19 +1103,25 @@ async function driverPlaces(user) {
 }
 
 /**
- * Driver overtime (user decision 2026-10-25), run with closeAttendance:
- * - start: a checked-in driver with overtime allowed who is on the road 10
- *   min after their end (fresh live position, not at a work site or home)
- *   → `driveOvertime` {status 'running', startAt = end} on the day, the
- *   driver and their direct managers told; at a site / home → {status
- *   'none'}; no position by end + 60 min → {status 'late'} (no overtime);
- * - end: the first arrival home or at a work site in location_history
- *   (`driveEnd`) → {status 'done', endAt, place}; the day closes there.
+ * Driver overtime (user decisions 2026-10-25, rules 2026-10-27), run with
+ * closeAttendance, decided at end + `driveHomeGraceMin` (App settings, 30;
+ * at least 10 min) from location_history (`driveDecide`):
+ * - at a work site or home at the end, or still driving and home within the
+ *   grace (the drive home) → {status 'none'};
+ * - still driving at the end and already arrived at a site (or home after
+ *   the grace) → {status 'done', startAt = end, endAt, place};
+ * - still driving, not arrived → {status 'running'}, the driver and their
+ *   direct managers told; `driveEnd` later finds the arrival → 'done';
+ * - no fix near the end by an hour after the decision time → {status 'late'}.
+ * The day closes at the arrival; the manager approves / changes / rejects it.
  */
 async function driverOvertime(hours, now) {
   const db = admin.firestore();
   const rtdb = admin.database();
   const drivers = await db.collection('users').where('role', '==', 'driver').where('overtimeAllowed', '==', true).get();
+  // Arriving home this soon after the end = the drive home (App settings, 2026-10-27).
+  const homeGraceMs = (await appSetting('driveHomeGraceMin', DRIVE_HOME_GRACE_MIN, 0, 120)) * 60000;
+  const decideAfterMs = Math.max(10 * 60000, homeGraceMs);
   for (const u of drivers.docs) {
     const user = u.data();
     if (user.active !== true) continue;
@@ -1121,18 +1129,20 @@ async function driverOvertime(hours, now) {
     const mine = scheduleOf(user, hours);
     if (!mine.days.includes(weekdayOf(date))) continue;
     const endMs = saudiTime(date, mine.end);
-    if (now < endMs + 10 * 60000 || now > endMs + 70 * 60000) continue;
+    if (now < endMs + decideAfterMs || now > endMs + decideAfterMs + 70 * 60000) continue;
     const ref = db.doc(`attendance/${u.id}_${date}`);
     const day = await ref.get();
     if (!day.exists || !day.get('checkInAt') || day.get('driveOvertime')) continue;
-    const [live, places] = await Promise.all([rtdb.ref(`live_locations/${u.id}`).get(), driverPlaces(user)]);
-    const r = driveStart({ now, endMs, live: live.val(), places });
+    const [history, places] = await Promise.all([rtdb.ref(`location_history/${u.id}/${date}`).get(), driverPlaces(user)]);
+    const r = driveDecide({ points: Object.values(history.val() || {}), endMs, now, homeGraceMs, places });
     if (r === 'wait') continue;
-    if (r === 'start') {
-      await ref.update({
-        driveOvertime: { status: 'running', startAt: admin.firestore.Timestamp.fromMillis(endMs), startedAt: admin.firestore.Timestamp.fromMillis(now) },
-      });
+    const ts = admin.firestore.Timestamp.fromMillis;
+    if (r.status === 'running') {
+      await ref.update({ driveOvertime: { status: 'running', startAt: ts(endMs), startedAt: ts(now) } });
       await announceOvertime({ uid: u.id, date }, null, user, endMs, 'driving');
+    } else if (r.status === 'done') {
+      // Already back (e.g. at the site at 17:25): recorded, waits for the manager's approval.
+      await ref.update({ driveOvertime: { status: 'done', startAt: ts(endMs), startedAt: ts(now), endAt: ts(r.endAt), place: r.place } });
     } else {
       await ref.update({ driveOvertime: { status: r } });
     }

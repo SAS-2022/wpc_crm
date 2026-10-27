@@ -64,6 +64,7 @@ class AppSettingsScreen extends ConsumerWidget {
           page(Icons.business, l10n.companies, '/companies'),
           number(Icons.more_time, AppSetting.lateGraceMin),
           number(Icons.directions_walk, AppSetting.awayGraceMin),
+          number(Icons.home_outlined, AppSetting.driveHomeGraceMin),
           header(l10n.settingsSectionHr),
           const AnnualCarryOverTile(),
           page(Icons.account_tree_outlined, l10n.departments, '/departments'),
@@ -82,6 +83,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.visitRadiusM => l10n.settingVisitRadius,
       AppSetting.lateGraceMin => l10n.settingLateGrace,
       AppSetting.awayGraceMin => l10n.settingAwayGrace,
+      AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGrace,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoon,
@@ -93,6 +95,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.visitRadiusM => l10n.settingVisitRadiusHelp,
       AppSetting.lateGraceMin => l10n.settingLateGraceHelp,
       AppSetting.awayGraceMin => l10n.settingAwayGraceHelp,
+      AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGraceHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoonHelp,
@@ -101,7 +104,8 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
 /// "30 seconds", "300 m" …
 String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.trackingIntervalSec => l10n.valueSeconds(v),
-      AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin => l10n.valueMinutes(v),
+      AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin || AppSetting.driveHomeGraceMin =>
+        l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
       AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays => l10n.valueDays(v),
       AppSetting.oilDueSoonKm => l10n.kmValue('$v'),

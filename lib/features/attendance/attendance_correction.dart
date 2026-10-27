@@ -85,10 +85,18 @@ Future<void> showAttendanceDaySheet(
                 if (hasOvertime) ...[
                   const SizedBox(height: 8),
                   Text(
-                    review != null
-                        ? l10n.overtimeApprovedBy(formatMinutes(review.minutes), users[review.byId]?.name ?? '')
-                        : l10n.overtimeWaiting(formatMinutes(d.overtimeMin!)),
-                    style: TextStyle(color: review != null ? Colors.green.shade700 : Colors.orange.shade800),
+                    review == null
+                        ? l10n.overtimeWaiting(formatMinutes(d.overtimeMin!))
+                        : review.rejected
+                        ? l10n.overtimeRejectedBy(users[review.byId]?.name ?? '')
+                        : l10n.overtimeApprovedBy(formatMinutes(review.minutes), users[review.byId]?.name ?? ''),
+                    style: TextStyle(
+                      color: review == null
+                          ? Colors.orange.shade800
+                          : review.rejected
+                          ? Theme.of(sheet).colorScheme.error
+                          : Colors.green.shade700,
+                    ),
                   ),
                   if (review != null && review.note.isNotEmpty) Text('“${review.note}”'),
                 ],

@@ -267,10 +267,12 @@ function overtimeAskDue(d, o) {
 
 /** Home counts within this radius (m) for drivers' overtime. */
 const HOME_RADIUS_M = 150;
-/** Driver overtime is decided between end + 10 min and end + 60 min (a fresh position needed). */
+/** No position near the end by the decision time + this long: not decided, no overtime. */
 const DRIVE_DECIDE_UNTIL_MS = 60 * MINUTE;
-/** A live position older than this can't tell where the driver is. */
+/** A fix this close to the end tells where the driver was at the end. */
 const DRIVE_FRESH_MS = 15 * MINUTE;
+/** Arriving home this soon after the end is the drive home, not overtime (App setting `driveHomeGraceMin`). */
+const DRIVE_HOME_GRACE_MIN = 30;
 
 /** Meters between two {lat, lng}. */
 function meters(a, b) {
@@ -290,18 +292,42 @@ function placeAt(p, places) {
 }
 
 /**
- * Whether a driver's overtime starts (2026-10-25): 'start' (on the road at
- * end + 10 min), 'none' (at a work site or home: no overtime), 'wait' (no
- * fresh position yet, or too early) or 'late' (no position by end + 60 min:
- * not decided, no overtime).
- * @param {{now: number, endMs: number, live: {lat: number, lng: number, accuracy?: number, updatedAt?: number}|null, places: Array}} o
+ * A driver's overtime (user rules 2026-10-27), from the day's GPS points
+ * ({lat, lng, accuracy, t}), decided at end + the home grace (at least 10 min):
+ * - at a work site or home at the end → 'none' (a drive home afterwards is
+ *   not overtime);
+ * - still driving at the end: arriving home within the grace → 'none' (the
+ *   drive home); arriving at a site, or home later → {status: 'done', endAt,
+ *   place} (overtime = end → arrival); not arrived yet → {status: 'running'}
+ *   (`driveEnd` finds the arrival later);
+ * - 'wait' (too early, or no fix near the end yet), 'late' (still no fix
+ *   near the end an hour after the decision time: no overtime).
+ * @param {{points: Array, endMs: number, now: number, homeGraceMs: number, places: Array}} o
  */
-function driveStart({ now, endMs, live, places }) {
-  if (now < endMs + ASK_AFTER_MS) return 'wait';
-  const fresh = live && typeof live.lat === 'number' && typeof live.updatedAt === 'number'
-    && live.updatedAt >= now - DRIVE_FRESH_MS && (live.accuracy ?? 0) <= 150;
-  if (!fresh) return now > endMs + DRIVE_DECIDE_UNTIL_MS ? 'late' : 'wait';
-  return placeAt(live, places) ? 'none' : 'start';
+function driveDecide({ points, endMs, now, homeGraceMs, places }) {
+  const decideAt = endMs + Math.max(ASK_AFTER_MS, homeGraceMs);
+  if (now < decideAt) return 'wait';
+  const pts = points.filter((p) => typeof p?.t === 'number' && typeof p.lat === 'number' && (p.accuracy ?? 0) <= 100)
+    .sort((a, b) => a.t - b.t);
+  // Where they were at the end: the last fix in the 15 min before it, else the first in the 15 min after.
+  const atEnd = pts.filter((p) => p.t <= endMs && p.t >= endMs - DRIVE_FRESH_MS).at(-1)
+    ?? pts.find((p) => p.t > endMs && p.t <= endMs + DRIVE_FRESH_MS);
+  if (!atEnd) return now > decideAt + DRIVE_DECIDE_UNTIL_MS ? 'late' : 'wait';
+  if (placeAt(atEnd, places)) return 'none';
+  const arrival = firstArrival(pts.filter((p) => p.t >= endMs), places);
+  if (!arrival) return { status: 'running' };
+  if (arrival.place === 'home' && arrival.endAt <= endMs + homeGraceMs) return 'none';
+  return { status: 'done', ...arrival };
+}
+
+/** The first arrival in [pts] (sorted): two fixes in a row at the same place (one could be driving past). */
+function firstArrival(pts, places, beforeMs = Infinity) {
+  for (let i = 0; i + 1 < pts.length; i++) {
+    if (pts[i].t >= beforeMs) break;
+    const kind = placeAt(pts[i], places);
+    if (kind && placeAt(pts[i + 1], places) === kind) return { endAt: pts[i].t, place: kind };
+  }
+  return null;
 }
 
 /**
@@ -316,17 +342,14 @@ function driveEnd({ points, startAt, now, capMs, places }) {
   const pts = points.filter((p) => typeof p?.t === 'number' && p.t >= startAt && typeof p.lat === 'number'
     && (p.accuracy ?? 0) <= 100).sort((a, b) => a.t - b.t);
   const capAt = startAt + capMs;
-  for (let i = 0; i + 1 < pts.length; i++) {
-    if (pts[i].t >= capAt) break;
-    const kind = placeAt(pts[i], places);
-    if (kind && placeAt(pts[i + 1], places) === kind) return { endAt: pts[i].t, place: kind };
-  }
+  const arrival = firstArrival(pts, places, capAt);
+  if (arrival) return arrival;
   if (pts.some((p) => p.t >= capAt)) return { endAt: capAt, place: 'cap' };
   if (now >= capAt) return { endAt: pts.length ? pts[pts.length - 1].t : startAt, place: null };
   return null;
 }
 
 module.exports = {
-  overtimeAskDue, driveStart, driveEnd, HOME_RADIUS_M,
+  overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
   deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN,
 };

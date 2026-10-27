@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveStart, driveEnd, saudiTime, overtimeCap,
+  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap,
 } = require('./attendance');
 
 const day = '2026-10-20';
@@ -266,17 +266,35 @@ const site = { lat: 24.786, lng: 46.796, radius: 100, kind: 'site' };
 const home = { lat: 24.70, lng: 46.70, radius: 150, kind: 'home' };
 const road = { lat: 24.74, lng: 46.75 };
 
-test('driver overtime starts on the road at end + 10 min, not at the site or home', () => {
-  const o = { endMs: t(17), places: [site, home] };
-  const live = (p, at = t(17, 9)) => ({ ...p, accuracy: 10, updatedAt: at });
-  assert.equal(driveStart({ ...o, now: t(17, 5), live: live(road) }), 'wait');
-  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(road) }), 'start');
-  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(site) }), 'none');
-  assert.equal(driveStart({ ...o, now: t(17, 10), live: live(home) }), 'none');
-  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17, 5)) }), 'wait'); // 25 min old: too old
-  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17, 20)) }), 'start');
-  assert.equal(driveStart({ ...o, now: t(17, 30), live: live(road, t(17)) }), 'wait');
-  assert.equal(driveStart({ ...o, now: t(18, 5), live: null }), 'late');
+test('driver overtime (2026-10-27 rules): the drive home is not overtime, still on a job at 5 pm is', () => {
+  const o = { endMs: t(17), homeGraceMs: 30 * 60000, places: [site, home] };
+  const at = (p, h, m) => ({ ...p, accuracy: 10, t: t(h, m) });
+  const decide = (points, now = t(17, 30)) => driveDecide({ ...o, points, now });
+  // Decided only at end + grace.
+  assert.equal(decide([at(road, 17, 0)], t(17, 20)), 'wait');
+  // At the site at 5 pm, drove home 17:15–17:30: none.
+  assert.equal(decide([at(site, 16, 58), at(road, 17, 15), at(home, 17, 29)]), 'none');
+  // At home at 5 pm: none.
+  assert.equal(decide([at(home, 16, 59), at(home, 17, 5)]), 'none');
+  // Left the site before 5, home by 17:15 (two fixes): the drive home, none.
+  const commute = [at(site, 16, 40), at(road, 16, 55), at(road, 17, 5), at(home, 17, 15), at(home, 17, 16)];
+  assert.equal(decide(commute), 'none');
+  // Driving at 5 pm and arriving at the site after it: overtime until then.
+  assert.deepEqual(decide([at(road, 16, 58), at(road, 17, 10), at(site, 17, 25), at(site, 17, 26)]),
+    { status: 'done', endAt: t(17, 25), place: 'site' });
+  // Driving at 5 pm, not arrived by 17:30: running (driveEnd finds the arrival).
+  assert.deepEqual(decide([at(road, 16, 58), at(road, 17, 29)]), { status: 'running' });
+  // Home only after the grace: overtime until home.
+  assert.deepEqual(decide([at(road, 16, 58), at(road, 17, 30), at(home, 17, 45), at(home, 17, 46)], t(17, 50)),
+    { status: 'done', endAt: t(17, 45), place: 'home' });
+  // Grace 0: any arrival home after 5 counts.
+  assert.deepEqual(driveDecide({ ...o, homeGraceMs: 0, points: commute, now: t(17, 30) }),
+    { status: 'done', endAt: t(17, 15), place: 'home' });
+  // No fix near 5 pm: wait, then late an hour after the decision time.
+  assert.equal(decide([at(road, 16, 30)], t(17, 40)), 'wait');
+  assert.equal(decide([at(road, 16, 30)], t(18, 31)), 'late');
+  // Rough fixes don't count.
+  assert.equal(decide([{ ...road, accuracy: 300, t: t(17) }], t(17, 40)), 'wait');
 });
 
 test('driver overtime ends on arriving home or at a site (two fixes there), else the cap', () => {

@@ -14,6 +14,7 @@ import '../clients/visit_rules.dart';
 import '../notifications/notifications_screen.dart';
 import '../plan/plan_task.dart';
 import '../tracking/tracking_card.dart';
+import '../users/home_location_card.dart';
 import '../users/users_repository.dart';
 import '../hr/leave_rules.dart' show myLeaveEnabled;
 import '../hr/leave_widgets.dart';
@@ -418,6 +419,8 @@ class _BackOfficeHome extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Drivers without a home location: asked to set it (decides their overtime).
+          SetHomeLocationCard(me: me),
           // Drivers share their location like the sales team: permissions / phone health.
           if (me.role.isLocationTracked) const TrackingCard(),
           // Today's check-in (big Check in / Check out button) and the month calendar.

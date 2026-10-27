@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -129,9 +130,11 @@ class _OvertimeSectionState extends ConsumerState<OvertimeSection> {
       text = l10n.overtimeSince(time.format(end), formatMinutes(so < 0 ? 0 : so));
     } else if (day.closed && (day.overtimeMin ?? 0) > 0) {
       final review = widget.record?.review;
-      text = review != null
-          ? l10n.overtimeApprovedText(formatMinutes(review.minutes))
-          : l10n.overtimeWaiting(formatMinutes(day.overtimeMin!));
+      text = review == null
+          ? l10n.overtimeWaiting(formatMinutes(day.overtimeMin!))
+          : review.rejected
+          ? l10n.overtimeRejectedText
+          : l10n.overtimeApprovedText(formatMinutes(review.minutes));
     } else {
       text = null;
     }
@@ -270,7 +273,8 @@ class _OvertimePromptGateState extends ConsumerState<OvertimePromptGate> with Wi
 }
 
 /// A manager approves [person]'s overtime on [record]'s day, possibly
-/// changing the minutes (15-minute steps).
+/// changing the minutes (15-minute steps), or rejects it (2026-10-27). For
+/// tracked people (drivers) "Route history" shows the day's drive.
 Future<void> showApproveOvertimeDialog(
   BuildContext context, {
   required AppUser me,
@@ -278,58 +282,100 @@ Future<void> showApproveOvertimeDialog(
   required AttendanceRecord record,
   required DayResult result,
 }) async {
-  final l10n = AppLocalizations.of(context);
-  final time = DateFormat.jm(Localizations.localeOf(context).toString());
-  final recorded = result.overtimeMin ?? 0;
-  var minutes = record.review?.minutes ?? recorded;
-  final note = TextEditingController(text: record.review?.note ?? '');
-  final end = result.checkOutAt;
-  final from = end?.subtract(Duration(minutes: recorded));
-  final ok = await showDialog<bool>(
+  final r = await showDialog<({int minutes, String note, bool rejected})>(
     context: context,
-    builder: (dialog) => StatefulBuilder(
-      builder: (dialog, setState) => AlertDialog(
-        title: Text('${l10n.approveOvertime} · ${person.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString()).format(DateTime.parse(record.date))),
-            if (from != null && end != null)
-              Text(l10n.overtimeRecorded(formatMinutes(recorded), time.format(from), time.format(end))),
-            const SizedBox(height: 12),
-            Text(l10n.overtimeApprovedMinutes, style: Theme.of(dialog).textTheme.labelLarge),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton.outlined(
-                  icon: const Icon(Icons.remove),
-                  onPressed: minutes <= 0 ? null : () => setState(() => minutes = (minutes - 15).clamp(0, 720)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(formatMinutes(minutes), style: Theme.of(dialog).textTheme.headlineSmall),
-                ),
-                IconButton.outlined(
-                  icon: const Icon(Icons.add),
-                  onPressed: minutes >= 720 ? null : () => setState(() => minutes = (minutes + 15).clamp(0, 720)),
-                ),
-              ],
+    builder: (_) => _ApproveOvertimeDialog(person: person, record: record, result: result),
+  );
+  if (r == null) return;
+  await approveOvertime(person.id, record.date, minutes: r.minutes, byId: me.id, note: r.note, rejected: r.rejected);
+}
+
+/// Owns its note controller, so it's disposed only after the closing animation.
+class _ApproveOvertimeDialog extends StatefulWidget {
+  const _ApproveOvertimeDialog({required this.person, required this.record, required this.result});
+
+  final AppUser person;
+  final AttendanceRecord record;
+  final DayResult result;
+
+  @override
+  State<_ApproveOvertimeDialog> createState() => _ApproveOvertimeDialogState();
+}
+
+class _ApproveOvertimeDialogState extends State<_ApproveOvertimeDialog> {
+  late final _recorded = widget.result.overtimeMin ?? 0;
+  late var _minutes = widget.record.review?.minutes ?? _recorded;
+  late final _note = TextEditingController(text: widget.record.review?.note ?? '');
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  void _done(bool rejected) => Navigator.pop(context, (minutes: _minutes, note: _note.text.trim(), rejected: rejected));
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    final time = DateFormat.jm(locale);
+    final end = widget.result.checkOutAt;
+    final from = end?.subtract(Duration(minutes: _recorded));
+    final person = widget.person;
+    return AlertDialog(
+      title: Text('${l10n.approveOvertime} · ${person.name}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(DateFormat.yMMMMEEEEd(locale).format(DateTime.parse(widget.record.date))),
+          if (from != null && end != null)
+            Text(l10n.overtimeRecorded(formatMinutes(_recorded), time.format(from), time.format(end))),
+          if (person.role.isLocationTracked)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                icon: const Icon(Icons.route),
+                label: Text(l10n.routeHistory),
+                onPressed: () => context.push('/history?uid=${person.id}&date=${widget.record.date}'),
+              ),
             ),
-            TextField(controller: note, decoration: InputDecoration(labelText: l10n.noteOptional)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.approveOvertime)),
+          const SizedBox(height: 12),
+          Text(l10n.overtimeApprovedMinutes, style: Theme.of(context).textTheme.labelLarge),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton.outlined(
+                icon: const Icon(Icons.remove),
+                onPressed: _minutes <= 0 ? null : () => setState(() => _minutes = (_minutes - 15).clamp(0, 720)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(formatMinutes(_minutes), style: Theme.of(context).textTheme.headlineSmall),
+              ),
+              IconButton.outlined(
+                icon: const Icon(Icons.add),
+                onPressed: _minutes >= 720 ? null : () => setState(() => _minutes = (_minutes + 15).clamp(0, 720)),
+              ),
+            ],
+          ),
+          TextField(controller: _note, decoration: InputDecoration(labelText: l10n.noteOptional)),
+          const SizedBox(height: 8),
+          Text(l10n.overtimeRejectHelp, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
-    ),
-  );
-  if (ok == true) {
-    await approveOvertime(person.id, record.date, minutes: minutes, byId: me.id, note: note.text.trim());
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+          onPressed: () => _done(true),
+          child: Text(l10n.rejectOvertime),
+        ),
+        FilledButton(onPressed: () => _done(false), child: Text(l10n.approveOvertime)),
+      ],
+    );
   }
-  note.dispose();
 }
 
 /// Home (managers, HR area): days whose overtime waits for approval by the

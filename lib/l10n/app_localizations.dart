@@ -8065,6 +8065,60 @@ abstract class AppLocalizations {
   /// **'Approved overtime'**
   String get overtimeApprovedMinutes;
 
+  /// No description provided for @rejectOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get rejectOvertime;
+
+  /// No description provided for @overtimeRejectedText.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime not approved'**
+  String get overtimeRejectedText;
+
+  /// No description provided for @overtimeRejectedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved by {name}'**
+  String overtimeRejectedBy(String name);
+
+  /// No description provided for @overtimeRejectHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejecting counts none of this overtime. To count part of it, change the time and approve instead.'**
+  String get overtimeRejectHelp;
+
+  /// No description provided for @settingDriveHomeGrace.
+  ///
+  /// In en, this message translates to:
+  /// **'Drive home after work (drivers)'**
+  String get settingDriveHomeGrace;
+
+  /// No description provided for @settingDriveHomeGraceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'A driver still driving when the work day ends who gets home within this time is driving home: no overtime. At a work site or home at the end: no overtime. Arriving at a work site after the end, or home later than this, counts as overtime from the end.'**
+  String get settingDriveHomeGraceHelp;
+
+  /// No description provided for @setHomeLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your home location'**
+  String get setHomeLocationTitle;
+
+  /// No description provided for @setHomeLocationText.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed for your overtime: the drive home after work isn\'t overtime. At home, tap \"Use my location\", or pick it on the map. Once saved, only your manager can change it.'**
+  String get setHomeLocationText;
+
+  /// No description provided for @homeLocationSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Home location saved'**
+  String get homeLocationSaved;
+
   /// No description provided for @checkOutArrivedHome.
   ///
   /// In en, this message translates to:
@@ -8092,7 +8146,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeLocationHelp.
   ///
   /// In en, this message translates to:
-  /// **'A driver\'s overtime ends when they arrive here or at a work site.'**
+  /// **'A driver\'s overtime ends when they arrive here or at a work site; getting home soon after the end of the work day is the drive home, not overtime.'**
   String get homeLocationHelp;
 
   /// No description provided for @homeLocationNotSet.

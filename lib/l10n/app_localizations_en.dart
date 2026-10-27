@@ -4863,6 +4863,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overtimeApprovedMinutes => 'Approved overtime';
 
   @override
+  String get rejectOvertime => 'Reject';
+
+  @override
+  String get overtimeRejectedText => 'Overtime not approved';
+
+  @override
+  String overtimeRejectedBy(String name) {
+    return 'Not approved by $name';
+  }
+
+  @override
+  String get overtimeRejectHelp =>
+      'Rejecting counts none of this overtime. To count part of it, change the time and approve instead.';
+
+  @override
+  String get settingDriveHomeGrace => 'Drive home after work (drivers)';
+
+  @override
+  String get settingDriveHomeGraceHelp =>
+      'A driver still driving when the work day ends who gets home within this time is driving home: no overtime. At a work site or home at the end: no overtime. Arriving at a work site after the end, or home later than this, counts as overtime from the end.';
+
+  @override
+  String get setHomeLocationTitle => 'Set your home location';
+
+  @override
+  String get setHomeLocationText =>
+      'Needed for your overtime: the drive home after work isn\'t overtime. At home, tap \"Use my location\", or pick it on the map. Once saved, only your manager can change it.';
+
+  @override
+  String get homeLocationSaved => 'Home location saved';
+
+  @override
   String get checkOutArrivedHome => 'arrived home (driving overtime)';
 
   @override
@@ -4877,7 +4909,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeLocationHelp =>
-      'A driver\'s overtime ends when they arrive here or at a work site.';
+      'A driver\'s overtime ends when they arrive here or at a work site; getting home soon after the end of the work day is the drive home, not overtime.';
 
   @override
   String get homeLocationNotSet => 'Not set';

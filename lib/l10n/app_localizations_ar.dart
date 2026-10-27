@@ -4867,6 +4867,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get overtimeApprovedMinutes => 'العمل الإضافي المعتمد';
 
   @override
+  String get rejectOvertime => 'رفض';
+
+  @override
+  String get overtimeRejectedText => 'لم يُعتمد العمل الإضافي';
+
+  @override
+  String overtimeRejectedBy(String name) {
+    return 'رفض $name العمل الإضافي';
+  }
+
+  @override
+  String get overtimeRejectHelp =>
+      'الرفض لا يحتسب أي وقت من هذا العمل الإضافي. لاحتساب جزء منه غيّر المدة ثم اعتمده.';
+
+  @override
+  String get settingDriveHomeGrace =>
+      'طريق العودة إلى المنزل بعد الدوام (السائقون)';
+
+  @override
+  String get settingDriveHomeGraceHelp =>
+      'السائق الذي ما زال يقود عند نهاية الدوام ويصل إلى منزله خلال هذه المدة يكون في طريق العودة: لا عمل إضافي. إذا كان في موقع العمل أو المنزل عند النهاية: لا عمل إضافي. الوصول إلى موقع العمل بعد النهاية، أو إلى المنزل بعد هذه المدة، يُحتسب عملًا إضافيًا من نهاية الدوام.';
+
+  @override
+  String get setHomeLocationTitle => 'حدّد موقع منزلك';
+
+  @override
+  String get setHomeLocationText =>
+      'مطلوب لحساب العمل الإضافي: طريق العودة إلى المنزل بعد الدوام ليس عملًا إضافيًا. وأنت في المنزل اضغط \"استخدام موقعي\"، أو اختره على الخريطة. بعد الحفظ لا يغيّره إلا مديرك.';
+
+  @override
+  String get homeLocationSaved => 'تم حفظ موقع المنزل';
+
+  @override
   String get checkOutArrivedHome => 'وصل إلى المنزل (عمل إضافي أثناء القيادة)';
 
   @override
@@ -4881,7 +4914,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homeLocationHelp =>
-      'ينتهي العمل الإضافي للسائق عند وصوله إلى هنا أو إلى موقع العمل.';
+      'ينتهي العمل الإضافي للسائق عند وصوله إلى هنا أو إلى موقع العمل؛ الوصول إلى المنزل بعد نهاية الدوام بقليل هو طريق العودة وليس عملًا إضافيًا.';
 
   @override
   String get homeLocationNotSet => 'غير محدد';

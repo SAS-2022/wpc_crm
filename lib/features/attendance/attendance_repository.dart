@@ -34,14 +34,16 @@ Future<void> recordAttendance(String uid, AttendanceEventType type, {String? sit
 }
 
 /// A manager's approval of a day's overtime (2026-10-25, `overtimeReview`):
-/// [minutes] approved (may differ from what was recorded), with a note.
+/// [minutes] approved (may differ from what was recorded), with a note;
+/// [rejected] (2026-10-27): none of it counts (minutes 0).
 class OvertimeReview {
-  const OvertimeReview({required this.minutes, required this.byId, this.at, this.note = ''});
+  const OvertimeReview({required this.minutes, required this.byId, this.at, this.note = '', this.rejected = false});
 
   final int minutes;
   final String byId;
   final DateTime? at;
   final String note;
+  final bool rejected;
 }
 
 /// One person's day as stored (events + the server's result).
@@ -119,6 +121,7 @@ class AttendanceRecord {
             byId: v['byId'] as String? ?? '',
             at: (v['at'] as Timestamp?)?.toDate(),
             note: v['note'] as String? ?? '',
+            rejected: v['rejected'] == true,
           ),
         _ => null,
       },
@@ -208,10 +211,23 @@ Future<void> correctAttendance(String uid, String day, AttendanceCorrection c, S
     }, SetOptions(merge: true)));
 
 /// A manager approves [uid]'s overtime on [day] (2026-10-25), possibly
-/// changing the minutes.
-Future<void> approveOvertime(String uid, String day, {required int minutes, required String byId, String note = ''}) =>
+/// changing the minutes, or rejects it ([rejected]: 0 minutes, 2026-10-27).
+Future<void> approveOvertime(
+  String uid,
+  String day, {
+  required int minutes,
+  required String byId,
+  String note = '',
+  bool rejected = false,
+}) =>
     saving(() => attendanceDoc(uid, day).update({
-          'overtimeReview': {'minutes': minutes, 'byId': byId, 'note': note, 'at': FieldValue.serverTimestamp()},
+          'overtimeReview': {
+            'minutes': rejected ? 0 : minutes,
+            'byId': byId,
+            'note': note,
+            'rejected': rejected,
+            'at': FieldValue.serverTimestamp(),
+          },
         }));
 
 /// Days with overtime waiting for a manager's approval (Home card; the app

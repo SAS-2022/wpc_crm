@@ -85,6 +85,11 @@ class UsersRepository {
         return assigned;
       });
 
+  /// A driver sets their own home location (2026-10-27); the rules allow it
+  /// only while none is set — after that the user form changes it.
+  Future<void> setOwnHomeLocation(String uid, double lat, double lng) =>
+      saving(() => _users.doc(uid).update({'homeLocation': {'lat': lat, 'lng': lng}}));
+
   Future<void> rejectRegistration(String uid) =>
       saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false}));
 
