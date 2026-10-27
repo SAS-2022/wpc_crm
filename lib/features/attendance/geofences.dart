@@ -11,6 +11,7 @@ import 'package:native_geofence/native_geofence.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/crash_reports.dart';
 import '../../core/providers.dart';
 import '../../firebase_options.dart';
 import 'attendance_repository.dart';
@@ -37,7 +38,10 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
   };
   if (type == null) return;
   try {
-    if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      await setUpCrashReports('geofence');
+    }
     final user = await FirebaseAuth.instance.authStateChanges().first;
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();

@@ -7,6 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 
+import '../../core/crash_reports.dart';
 import '../../core/app_user.dart';
 import '../../firebase_options.dart';
 import 'location_tracker.dart';
@@ -100,6 +101,7 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
   service.on('wake').listen((_) => tracker?.wake());
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await setUpCrashReports('trackingService');
   final user = await FirebaseAuth.instance.authStateChanges().first;
   // Also reached after a reboot: only track signed-in field staff.
   final role = user == null ? null : (await FirebaseDatabase.instance.ref('roles/${user.uid}').get()).value;

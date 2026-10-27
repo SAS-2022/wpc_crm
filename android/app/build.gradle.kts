@@ -4,6 +4,8 @@ plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
+    // Crash reports: uploads the R8 mapping of release builds (crash_reports.dart).
+    id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")

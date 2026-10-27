@@ -18,6 +18,7 @@ import 'l10n/app_localizations.dart';
 import 'core/saving.dart';
 import 'core/text_scale.dart';
 import 'core/app_version.dart';
+import 'core/crash_reports.dart';
 import 'core/notification_sounds.dart';
 import 'features/attendance/geofences.dart';
 import 'features/settings/app_settings.dart';
@@ -25,6 +26,7 @@ import 'features/settings/app_settings.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await setUpCrashReports('app');
   await Tracking.configure();
   // Silent wake pings while the app is in the background or closed.
   if (!kIsWeb) FirebaseMessaging.onBackgroundMessage(onBackgroundPush);
@@ -43,6 +45,7 @@ class WpcCrmApp extends ConsumerWidget {
     // Registers this phone for push notifications while signed in.
     ref.listen(pushProvider, (_, _) {});
     ref.listen(appVersionReporterProvider, (_, _) {});
+    ref.listen(crashReportUserProvider, (_, _) {});
     ref.listen(attendanceGeofencesProvider, (_, _) {});
     // GM / manager: keeps the RTDB role copies the database rules read in sync.
     ref.listen(roleMirrorProvider, (_, _) {});

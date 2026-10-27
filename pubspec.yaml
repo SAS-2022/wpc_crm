@@ -71,6 +71,7 @@ dependencies:
   pdf: ^3.12.0
   local_auth: ^3.0.2
   flutter_native_contact_picker: 0.0.12
+  firebase_crashlytics: 5.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

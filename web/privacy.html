@@ -69,6 +69,7 @@
       <tr><td>Photos and files</td><td>Photos taken with the camera or chosen from your photo library, and files you attach to clients or visits, with file name and size.</td><td>Documenting client visits.</td></tr>
       <tr><td>Plans and notifications</td><td>Daily plan items, tasks to do at clients with your comments and the time you completed them, approvals, and in-app notifications.</td><td>Planning and approving visits.</td></tr>
       <tr><td>Device</td><td>A push notification token for your phone, its platform (Android or iOS) and your app language. Your language choice is also saved on the phone.</td><td>Sending notifications in your language.</td></tr>
+      <tr><td>Crash reports</td><td>When the app crashes or hits an error on a phone, a report is sent with the error and where it happened in the app, the phone model, operating system version, app version, the time, your user ID and role. It contains no location, client data or messages.</td><td>Finding and fixing errors in the app.</td></tr>
       <tr><td>Client business data</td><td>Company names, contact people, phone numbers, email and street addresses, map locations, categories and account balances of the company's customers, mostly imported from the company's Odoo system.</td><td>Managing customer visits.</td></tr>
     </table>
     </div>
@@ -85,14 +86,14 @@
       <li><strong>You</strong>: your own clients, visits, plans and statistics.</li>
       <li><strong>Your key account manager</strong>: the data of the sales executives they supervise, including live location and route history.</li>
       <li><strong>Sales manager and general manager</strong>: the data of all staff.</li>
-      <li><strong>Service providers</strong>: Google, which runs the services the app is built on (Firebase Authentication, Cloud Firestore, Realtime Database, Cloud Storage, Cloud Functions and Cloud Messaging, and Google Maps). Push notifications to iPhones are delivered through Apple. These providers process data only to run the service.</li>
+      <li><strong>Service providers</strong>: Google, which runs the services the app is built on (Firebase Authentication, Cloud Firestore, Realtime Database, Cloud Storage, Cloud Functions, Cloud Messaging and Crashlytics, and Google Maps). Push notifications to iPhones are delivered through Apple. These providers process data only to run the service.</li>
     </ul>
 
     <h2>Where the data is stored</h2>
     <p>Data is stored on Google Cloud servers in the United States and is encrypted in transit (HTTPS) and at rest.</p>
 
     <h2>How long we keep it</h2>
-    <p>Route history (the positions sent every 30 seconds) is deleted automatically after 90 days, and the tracking log (online, GPS, permission and battery changes) after 30 days. Other data is kept while you work with the company and for as long as the company needs it for its sales records. When your account is removed, you can no longer sign in and your profile is deleted; visit records remain part of the company's sales history unless you ask for them to be deleted.</p>
+    <p>Route history (the positions sent every 30 seconds) is deleted automatically after 90 days, the tracking log (online, GPS, permission and battery changes) after 30 days, and crash reports after 90 days. Other data is kept while you work with the company and for as long as the company needs it for its sales records. When your account is removed, you can no longer sign in and your profile is deleted; visit records remain part of the company's sales history unless you ask for them to be deleted.</p>
 
     <h2 id="delete">Your choices and rights</h2>
     <ul>
@@ -123,6 +124,7 @@
       <tr><td>الصور والملفات</td><td>الصور الملتقطة بالكاميرا أو المختارة من مكتبة الصور، والملفات التي ترفقها بالعملاء أو الزيارات، مع اسم الملف وحجمه.</td><td>توثيق زيارات العملاء.</td></tr>
       <tr><td>الخطط والإشعارات</td><td>بنود الخطة اليومية، والمهام المطلوبة عند العملاء مع تعليقاتك ووقت إنجازها، والموافقات، والإشعارات داخل التطبيق.</td><td>تخطيط الزيارات والموافقة عليها.</td></tr>
       <tr><td>الجهاز</td><td>رمز الإشعارات لهاتفك، ونوع النظام (أندرويد أو iOS)، ولغة التطبيق. ويُحفظ اختيار اللغة أيضًا على الهاتف.</td><td>إرسال الإشعارات بلغتك.</td></tr>
+      <tr><td>تقارير الأعطال</td><td>عندما يتعطل التطبيق أو يواجه خطأ على الهاتف، يُرسل تقرير يتضمن الخطأ ومكان حدوثه في التطبيق، وطراز الهاتف، وإصدار نظام التشغيل، وإصدار التطبيق، والوقت، ومعرّف المستخدم ودورك. ولا يتضمن أي موقع أو بيانات عملاء أو رسائل.</td><td>اكتشاف أخطاء التطبيق وإصلاحها.</td></tr>
       <tr><td>بيانات العملاء التجارية</td><td>أسماء الشركات، وأشخاص التواصل، وأرقام الهواتف، والبريد الإلكتروني، والعناوين، والمواقع على الخريطة، والفئات، وأرصدة الحسابات لعملاء الشركة، ومعظمها مستورد من نظام Odoo الخاص بالشركة.</td><td>إدارة زيارات العملاء.</td></tr>
     </table>
     </div>
@@ -139,14 +141,14 @@
       <li><strong>أنت</strong>: عملاؤك وزياراتك وخططك وإحصائياتك.</li>
       <li><strong>مدير الحسابات الرئيسية الخاص بك</strong>: بيانات مندوبي المبيعات الذين يشرف عليهم، بما في ذلك الموقع المباشر وسجل المسار.</li>
       <li><strong>مدير المبيعات والمدير العام</strong>: بيانات جميع الموظفين.</li>
-      <li><strong>مزودو الخدمة</strong>: شركة Google التي تشغّل الخدمات التي بُني عليها التطبيق (Firebase Authentication وCloud Firestore وRealtime Database وCloud Storage وCloud Functions وCloud Messaging، وخرائط Google). وتُرسل الإشعارات إلى أجهزة iPhone عبر Apple. يعالج هؤلاء المزودون البيانات لتشغيل الخدمة فقط.</li>
+      <li><strong>مزودو الخدمة</strong>: شركة Google التي تشغّل الخدمات التي بُني عليها التطبيق (Firebase Authentication وCloud Firestore وRealtime Database وCloud Storage وCloud Functions وCloud Messaging وCrashlytics، وخرائط Google). وتُرسل الإشعارات إلى أجهزة iPhone عبر Apple. يعالج هؤلاء المزودون البيانات لتشغيل الخدمة فقط.</li>
     </ul>
 
     <h2>أين تُخزّن البيانات</h2>
     <p>تُخزّن البيانات على خوادم Google Cloud في الولايات المتحدة، وهي مشفّرة أثناء النقل (HTTPS) وأثناء التخزين.</p>
 
     <h2>مدة الاحتفاظ بالبيانات</h2>
-    <p>يُحذف سجل المسار (المواقع المرسلة كل 30 ثانية) تلقائيًا بعد 90 يومًا، ويُحذف سجل التتبع (تغيّرات الاتصال وGPS والإذن والبطارية) بعد 30 يومًا. ونحتفظ بالبيانات الأخرى طوال فترة عملك مع الشركة، وطالما احتاجت الشركة إليها لسجلات المبيعات. عند إزالة حسابك لا يمكنك تسجيل الدخول ويُحذف ملفك الشخصي، وتبقى سجلات الزيارات جزءًا من سجل مبيعات الشركة ما لم تطلب حذفها.</p>
+    <p>يُحذف سجل المسار (المواقع المرسلة كل 30 ثانية) تلقائيًا بعد 90 يومًا، ويُحذف سجل التتبع (تغيّرات الاتصال وGPS والإذن والبطارية) بعد 30 يومًا، وتقارير الأعطال بعد 90 يومًا. ونحتفظ بالبيانات الأخرى طوال فترة عملك مع الشركة، وطالما احتاجت الشركة إليها لسجلات المبيعات. عند إزالة حسابك لا يمكنك تسجيل الدخول ويُحذف ملفك الشخصي، وتبقى سجلات الزيارات جزءًا من سجل مبيعات الشركة ما لم تطلب حذفها.</p>
 
     <h2 id="delete-ar">خياراتك وحقوقك</h2>
     <ul>

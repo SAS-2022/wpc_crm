@@ -280,3 +280,12 @@ describe('overtime approval by the driver\'s managers (2026-10-27)', () => {
     await assertFails(updateDoc(doc(fs('driver'), 'attendance/driver_2026-10-26'), review(false)));
   });
 });
+
+describe('own per-day docs can be watched before they exist (2026-10-27)', () => {
+  test('attendance, early check-out request and absence of today: owner yes, others no', async () => {
+    for (const c of ['attendance', 'checkout_requests', 'absences']) {
+      await assertSucceeds(getDoc(doc(fs('driver'), `${c}/driver_2026-10-27`)));
+      await assertFails(getDoc(doc(fs('acc'), `${c}/driver_2026-10-27`)));
+    }
+  });
+});
