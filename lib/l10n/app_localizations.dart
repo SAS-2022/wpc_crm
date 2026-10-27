@@ -4610,6 +4610,18 @@ abstract class AppLocalizations {
   /// **'New salesperson'**
   String get newSalesperson;
 
+  /// No description provided for @movedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved by'**
+  String get movedBy;
+
+  /// No description provided for @movedByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved by: {name}'**
+  String movedByName(String name);
+
   /// No description provided for @motionDriving.
   ///
   /// In en, this message translates to:

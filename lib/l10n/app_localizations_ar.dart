@@ -2678,6 +2678,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newSalesperson => 'المندوب الجديد';
 
   @override
+  String get movedBy => 'نقلها';
+
+  @override
+  String movedByName(String name) {
+    return 'نقلها: $name';
+  }
+
+  @override
   String get motionDriving => 'يقود';
 
   @override

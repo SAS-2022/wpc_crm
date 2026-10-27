@@ -2677,6 +2677,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newSalesperson => 'New salesperson';
 
   @override
+  String get movedBy => 'Moved by';
+
+  @override
+  String movedByName(String name) {
+    return 'Moved by: $name';
+  }
+
+  @override
   String get motionDriving => 'Driving';
 
   @override

@@ -751,6 +751,8 @@
   "transferNotVisited": "لم تتم الزيارة · {days} يوم منذ النقل",
   "transferMovedAgain": "نُقل مرة أخرى لاحقاً",
   "newSalesperson": "المندوب الجديد",
+  "movedBy": "نقلها",
+  "movedByName": "نقلها: {name}",
   "motionDriving": "يقود",
   "motionWalking": "يمشي",
   "motionStopped": "متوقف",

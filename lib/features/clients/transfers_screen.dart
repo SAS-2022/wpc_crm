@@ -35,6 +35,9 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   /// New salesperson filter; null = everyone.
   String? _person;
 
+  /// Who moved the clients (user request 2026-10-27); null = anyone.
+  String? _mover;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -62,7 +65,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final shown = [for (final r in all) if (r.archived == _archived) r];
     final targets = {for (final r in shown) r.transfer.toId!};
     if (_person != null && !targets.contains(_person)) _person = null;
-    final rows = [for (final r in shown) if (_person == null || r.transfer.toId == _person) r];
+    final movers = {for (final r in shown) r.transfer.byId};
+    if (_mover != null && !movers.contains(_mover)) _mover = null;
+    final rows = [
+      for (final r in shown)
+        if ((_person == null || r.transfer.toId == _person) && (_mover == null || r.transfer.byId == _mover)) r,
+    ];
     final visited = all.where((r) => r.contacted).length;
 
     return Scaffold(
@@ -112,6 +120,22 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                   ],
                   onChanged: (v) => setState(() => _person = v),
                 ),
+              if (movers.length > 1)
+                DropdownButton<String?>(
+                  value: _mover,
+                  underline: const SizedBox.shrink(),
+                  hint: Text(l10n.movedBy),
+                  // The chosen name says it's the mover, not the new salesperson.
+                  selectedItemBuilder: (_) => [
+                    Text(l10n.movedBy),
+                    for (final id in _sorted(movers, nameOf)) Text(l10n.movedByName(nameOf(id))),
+                  ],
+                  items: [
+                    DropdownMenuItem(value: null, child: Text(l10n.everyone)),
+                    for (final id in _sorted(movers, nameOf)) DropdownMenuItem(value: id, child: Text(nameOf(id))),
+                  ],
+                  onChanged: (v) => setState(() => _mover = v),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -128,6 +152,10 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     );
   }
 }
+
+/// People by name.
+List<String?> _sorted(Iterable<String?> ids, String Function(String?) nameOf) =>
+    ids.toList()..sort((a, b) => nameOf(a).compareTo(nameOf(b)));
 
 class _TransferTile extends StatelessWidget {
   const _TransferTile({required this.row, required this.nameOf, required this.locale});
