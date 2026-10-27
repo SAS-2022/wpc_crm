@@ -1075,11 +1075,15 @@ exports.closeAttendance = onSchedule(
   { schedule: 'every 10 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
   async () => {
     const open = await admin.firestore().collection('attendance').where('closed', '==', false).get();
-    if (open.empty) return;
     const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
-    const settings = await attendanceSettings();
     const now = Date.now();
-    for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now, settings);
+    if (!open.empty) {
+      const settings = await attendanceSettings();
+      for (const d of open.docs) await updateAttendance(d.ref, d.data(), hours, now, settings);
+    }
+    // Also with no open day: a driver who left the site earlier is closed at
+    // the end ('endOfDay') and still has to be checked for driving overtime
+    // (26 Oct: Worker Number Two's overtime never started because of that).
     await driverOvertime(hours, now).catch((e) => console.error('driver overtime', e));
   },
 );

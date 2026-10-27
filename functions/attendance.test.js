@@ -70,6 +70,13 @@ test('sales / drivers: leaving during the day keeps them in; closed at 5 pm', ()
   assert.deepEqual([d.checkOutAt, d.checkOutType, d.workedMin], [t(17), 'endOfDay', 540]);
 });
 
+test('sales / drivers: away at 5 pm, a later exit (geofences again) keeps the 5 pm check-out', () => {
+  // Worker Number Two, 26 Oct: left at 15:27, two exits at 18:18 had moved it to 18:18.
+  const events = [{ type: 'in', at: t(8, 46) }, { type: 'out', at: t(15, 27) }, { type: 'out', at: t(18, 18) }];
+  const d = run(events, { now: t(18, 20), leavesSite: true, overtimeAllowed: true, confirm: false });
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.afterHoursMin], [t(17), 'endOfDay', 0]);
+});
+
 test('still at the site at 5 pm: open until they leave', () => {
   const d = run([{ type: 'in', at: t(8) }], { now: t(17, 30) });
   assert.equal(d.closed, false);

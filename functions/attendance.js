@@ -150,8 +150,15 @@ function deriveDay(events, o) {
         s.lastExitAt = null;
       }
     } else if (e.type === 'out') {
+      const wasInside = s.inside;
       s.inside = false;
       if (s.checkInAt === null || s.closed) continue;
+      // Already away when the end came (allowed to leave): the day closed at
+      // the end; a later exit (e.g. geofences registered again) doesn't move it.
+      if (!wasInside && o.leavesSite && !drive && e.at >= o.endMs) {
+        close(Math.max(o.endMs, s.checkInAt), 'endOfDay');
+        continue;
+      }
       // Found gone by a site check: left after they were last seen.
       const at = e.check === true && seenAt !== null ? Math.min(e.at, Math.max(seenAt, o.endMs, s.checkInAt)) : e.at;
       s.lastExitAt = at;

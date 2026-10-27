@@ -247,8 +247,15 @@ DayResult deriveDay(
           lastExitAt = null;
         }
       case AttendanceEventType.out:
+        final wasInside = inside;
         inside = false;
         if (checkInAt == null || closed) continue;
+        // Already away when the end came (allowed to leave): the day closed at
+        // the end; a later exit (e.g. geofences registered again) doesn't move it.
+        if (!wasInside && leavesSite && drive == null && !e.at.isBefore(end)) {
+          close(later(end, checkInAt), 'endOfDay');
+          continue;
+        }
         // Found gone by a site check: left after they were last seen.
         final seen = seenAt;
         final at = e.check && seen != null ? _earlier(e.at, later(later(seen, end), checkInAt)) : e.at;

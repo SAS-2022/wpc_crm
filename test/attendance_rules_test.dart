@@ -88,6 +88,13 @@ void main() {
     expect([d.checkOutAt, d.checkOutType, d.workedMin], [t(17), 'endOfDay', 540]);
   });
 
+  test('sales / drivers: away at 5 pm, a later exit keeps the 5 pm check-out', () {
+    // Worker Number Two, 26 Oct: left at 15:27, two exits at 18:18 had moved it to 18:18.
+    final d = run([e(inn, t(8, 46)), e(out, t(15, 27)), e(out, t(18, 18))],
+        now: t(18, 20), leaves: true, overtime: true, confirm: false);
+    expect([d.checkOutAt, d.checkOutType, d.afterHoursMin], [t(17), 'endOfDay', 0]);
+  });
+
   test('manual check-out; arriving again doesn\'t reopen, a manual check-in does', () {
     final events = [e(inn, t(8)), e(AttendanceEventType.checkOut, t(15)), e(inn, t(15, 30))];
     expect(run(events, now: t(16)).checkOutType, 'manual');
