@@ -80,12 +80,17 @@ class DayResult {
     this.overtimeConfirmedAt,
     this.overtimeDeclined = false,
     this.overtimeEndUnknown = false,
+    this.checkInEventAt,
   });
 
   final DateTime? checkInAt;
 
   /// 'auto' (arrived), 'manual' (button) or 'hr' (corrected by HR).
   final String? checkInSource;
+
+  /// The check-in event's own time when GPS showed them at the site earlier
+  /// ([checkInAt] = that arrival, 2026-10-28); null otherwise.
+  final DateTime? checkInEventAt;
   final String? siteId;
   final bool inside;
   final DateTime? lastExitAt;
@@ -150,6 +155,7 @@ class DayResult {
         overtimeConfirmedAt: overtimeConfirmedAt,
         overtimeDeclined: overtimeDeclined,
         overtimeEndUnknown: overtimeEndUnknown,
+        checkInEventAt: checkInEventAt ?? other.checkInEventAt,
       );
 }
 
@@ -165,8 +171,9 @@ DayResult deriveDay(
   DateTime? lastSeenAt,
   Duration? awayGrace,
   DriveOvertime? drive,
+  DateTime? arrivedAt,
 }) {
-  DateTime? checkInAt, lastExitAt, checkOutAt;
+  DateTime? checkInAt, lastExitAt, checkOutAt, checkInEventAt;
   String? source, siteId, outType;
   var inside = false;
   var closed = false;
@@ -218,6 +225,11 @@ DayResult deriveDay(
         if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
         if (checkInAt == null) {
           checkInAt = e.at;
+          // At the site before the check-in (GPS, server's `arrivedAt`): the day starts then.
+          if (e.type != AttendanceEventType.hrIn && arrivedAt != null && arrivedAt.isBefore(e.at)) {
+            checkInAt = arrivedAt;
+            checkInEventAt = e.at;
+          }
           source = switch (e.type) {
             AttendanceEventType.checkIn => 'manual',
             AttendanceEventType.hrIn => 'hr',
@@ -333,6 +345,7 @@ DayResult deriveDay(
     overtimeConfirmedAt: confirmedAt,
     overtimeDeclined: declined,
     overtimeEndUnknown: endUnknown,
+    checkInEventAt: checkInEventAt,
   );
 }
 

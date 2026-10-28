@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../attendance/at_site_prompt.dart';
 import '../attendance/overtime_widgets.dart' show OvertimePromptGate;
 import '../settings/page_access.dart';
 
@@ -44,8 +45,9 @@ class AppShell extends ConsumerWidget {
     // Clients / Visits also go when turned off (App settings → Page access).
     final branches = visibleBranches(ref);
     return Scaffold(
-      // "Start overtime?" / "Overtime started" pop-ups (2026-10-25).
-      body: OvertimePromptGate(child: shell),
+      // "Start overtime?" / "Overtime started" pop-ups (2026-10-25); "You're
+      // at the work site – check in" (2026-10-28).
+      body: AtSitePromptGate(child: OvertimePromptGate(child: shell)),
       bottomNavigationBar: NavigationBar(
         selectedIndex: branches.contains(shell.currentIndex) ? branches.indexOf(shell.currentIndex) : 0,
         // Tapping the current tab again goes back to its first screen.

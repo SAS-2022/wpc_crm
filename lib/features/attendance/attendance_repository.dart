@@ -57,6 +57,7 @@ class AttendanceRecord {
     this.drive,
     this.review,
     this.overtimeStatus,
+    this.arrivedAt,
   });
 
   final String uid;
@@ -74,6 +75,10 @@ class AttendanceRecord {
 
   /// The manager's approval of the overtime, if any.
   final OvertimeReview? review;
+
+  /// Server (2026-10-28): GPS arrival at the site before the day's first
+  /// check-in event (`arrivedAt`); the check-in counts from then.
+  final DateTime? arrivedAt;
 
   /// Server: 'running' | 'pending' (recorded, waiting for approval) | 'approved' | null.
   final String? overtimeStatus;
@@ -126,6 +131,7 @@ class AttendanceRecord {
         _ => null,
       },
       overtimeStatus: d['overtimeStatus'] as String?,
+      arrivedAt: time('arrivedAt'),
       server: d.containsKey('closed')
           ? DayResult(
               checkInAt: time('checkInAt'),
@@ -150,6 +156,7 @@ class AttendanceRecord {
               overtimeConfirmedAt: time('overtimeConfirmedAt'),
               overtimeDeclined: d['overtimeDeclined'] == true,
               overtimeEndUnknown: d['overtimeEndUnknown'] == true,
+              checkInEventAt: time('checkInEventAt'),
             )
           : null,
     );
@@ -176,6 +183,7 @@ class AttendanceRecord {
       overtimeAllowed: overtimeAllowed,
       overtimeMaxMin: overtimeMaxMin,
       drive: drive,
+      arrivedAt: arrivedAt,
     );
   }
 

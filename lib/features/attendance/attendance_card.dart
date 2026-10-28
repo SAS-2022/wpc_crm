@@ -19,6 +19,7 @@ import '../tracking/work_hours.dart';
 import '../visits/visit.dart' show formatDistance;
 import 'absence.dart';
 import 'absence_sheet.dart';
+import 'at_site_prompt.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
 import 'early_checkout.dart';
@@ -69,6 +70,9 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkPermission();
+    // "Check in" on the at-site pop-up (2026-10-28).
+    checkInRequested.addListener(_onCheckInRequested);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onCheckInRequested());
     _tick = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -76,6 +80,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
 
   @override
   void dispose() {
+    checkInRequested.removeListener(_onCheckInRequested);
     _tick?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -240,6 +245,12 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         actions: [TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel))],
       ),
     );
+  }
+
+  void _onCheckInRequested() {
+    if (!checkInRequested.value || !mounted || _busy) return;
+    checkInRequested.value = false;
+    _checkIn();
   }
 
   Future<void> _checkIn() async {
@@ -427,6 +438,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       final upTo = now.isBefore(capEnd) ? now : capEnd;
       final so = upTo.difference(day.checkInAt!) - Duration(minutes: day.awayMin ?? 0);
       detail = [
+        if (day.checkInEventAt != null) l10n.arrivedByGps(time.format(day.checkInEventAt!)),
         l10n.checkedInFor(formatMinutes(so.isNegative ? 0 : so.inMinutes)),
         day.inside || day.lastExitAt == null ? l10n.atTheSite : l10n.leftSiteAt(time.format(day.lastExitAt!)),
       ].join(' · ');

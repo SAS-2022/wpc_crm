@@ -17,10 +17,12 @@ void main() {
     DateTime? seen,
     bool confirm = true,
     DriveOvertime? drive,
+    DateTime? arrived,
   }) => deriveDay(
     // With overtime the tests confirm it at 17:01 ("Start overtime", 2026-10-25) unless confirm: false.
     overtime && confirm ? [...events, e(AttendanceEventType.otStart, t(17, 1))] : events,
     drive: drive,
+    arrivedAt: arrived,
     start: start,
     end: t(17),
     closeAll: t(23, 55),
@@ -257,5 +259,15 @@ void main() {
     expect([checkOut.checkOutAt, checkOut.checkOutType, checkOut.overtimeMin], [t(17, 30), 'manual', 30]);
     final none = go(null, t(19));
     expect([none.checkOutType, none.overtimeMin], ['left', 0]);
+  });
+
+  test('GPS arrival before the check-in: the day starts then (Driver Number Two, 27 Oct)', () {
+    final events = [e(out, t(7, 54)), e(AttendanceEventType.checkIn, t(9, 22))];
+    final d = run(events, start: t(8), arrived: t(8, 42));
+    expect([d.checkInAt, d.checkInEventAt, d.checkInSource, d.lateMin], [t(8, 42), t(9, 22), 'manual', 42]);
+    final plain = run(events, start: t(8));
+    expect([plain.checkInAt, plain.checkInEventAt], [t(9, 22), null]);
+    expect(run(events, arrived: t(9, 30)).checkInAt, t(9, 22));
+    expect(run([e(AttendanceEventType.hrIn, t(9))], arrived: t(8)).checkInAt, t(9));
   });
 }

@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
-  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
+  deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
   LATE_GRACE_MIN, AWAY_GRACE_MIN,
 } = require('./attendance');
 
@@ -144,6 +144,7 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `${o} registered an account – waiting for your approval`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'You are checked in' : `${n} checked in`}${x.site ? ` at ${x.site}` : ''} at ${x.time}${c > 0 ? ` – ${c} min late` : ''}`,
     attendanceLate: (n, c, d, o, x) => `You haven't checked in yet – your work day started at ${x.time}. Please be at work soon.`,
+    attendanceAtSite: (n, c, d, o, x) => `You're at ${x.site || 'your work site'} since ${x.time} but not checked in – open the app and check in.`,
     overtimeStarted: (n, c, d, o, x) => (x.driving
       ? (x.self
         ? `Your shift ended at ${x.time} while you're on the road – overtime started. It ends when you arrive home or at the work site.`
@@ -194,6 +195,7 @@ const TEXTS = {
     registrationRequested: (n, c, d, o) => `سجّل ${o} حساباً – بانتظار موافقتك`,
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'تم تسجيل حضورك' : `سجّل ${n} حضوره`}${x.site ? ` في ${x.site}` : ''} الساعة ${x.time}${c > 0 ? ` – متأخر ${c} دقيقة` : ''}`,
     attendanceLate: (n, c, d, o, x) => `لم تسجّل حضورك بعد – بدأ يوم عملك الساعة ${x.time}. يرجى الحضور إلى العمل قريباً.`,
+    attendanceAtSite: (n, c, d, o, x) => `أنت في ${x.site || 'موقع العمل'} منذ الساعة ${x.time} ولم تسجّل حضورك – افتح التطبيق وسجّل الحضور.`,
     overtimeStarted: (n, c, d, o, x) => (x.driving
       ? (x.self
         ? `انتهى دوامك الساعة ${x.time} وأنت في الطريق – بدأ العمل الإضافي. ينتهي عند وصولك إلى المنزل أو موقع العمل.`
@@ -277,7 +279,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   }
 
   // The person's own overtime alerts (2026-10-25): their own sound and channel.
-  const overtimeAlert = n.type === 'overtimeAsk' || (n.type === 'overtimeStarted' && n.toId === n.ownerId);
+  const overtimeAlert = n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' || (n.type === 'overtimeStarted' && n.toId === n.ownerId);
   const stale = [];
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
@@ -299,7 +301,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
           : n.type.startsWith('earlyCheckout') ? '/'
           : n.type === 'overtimeStarted' ? (n.toId === n.ownerId ? '/' : '/attendance')
-          : n.type === 'overtimeAsk' ? '/'
+          : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
@@ -882,8 +884,8 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
 const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
 const DERIVED = ['checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
   'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin', 'awayMin', 'lastSeenAt',
-  'overtimeOn', 'overtimeConfirmedAt', 'overtimeDeclined', 'overtimeEndUnknown', 'overtimeStatus'];
-const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt', 'lastSeenAt', 'overtimeConfirmedAt'];
+  'overtimeOn', 'overtimeConfirmedAt', 'overtimeDeclined', 'overtimeEndUnknown', 'overtimeStatus', 'checkInEventAt'];
+const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt', 'lastSeenAt', 'overtimeConfirmedAt', 'checkInEventAt'];
 
 /** The person's own schedule (`users.workSchedule`, user form) or the company work hours. */
 function scheduleOf(user, hours) {
@@ -942,6 +944,36 @@ async function lastSeenAtSite(uid, date, siteId) {
     if (metersBetween(p, { lat, lng }) <= radius && (last === null || p.t > last)) last = p.t;
   }
   return last;
+}
+
+/** A site's {lat, lng, radius}, or null. */
+async function siteOf(siteId) {
+  if (!siteId) return null;
+  const site = await admin.firestore().doc(`work_sites/${siteId}`).get();
+  const lat = site.get('lat'), lng = site.get('lng');
+  return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng, radius: site.get('radius') || 100 } : null;
+}
+
+/**
+ * GPS arrival (2026-10-28) of the stay the day's first check-in event
+ * falls in, from location_history (tracked people; others have none).
+ * Worked out once per first event: `arrivalFor` = that event's time,
+ * `arrivedAt` = the arrival (null = none earlier). Returns {arrivedAt, update}.
+ */
+async function gpsArrival(data, events) {
+  const ms = (v) => (v?.toMillis ? v.toMillis() : v);
+  const first = events.filter((e) => ['in', 'checkIn', 'hrIn'].includes(e.type) && typeof e.at === 'number')
+    .sort((a, b) => a.at - b.at)[0];
+  if (!first || first.type === 'hrIn') return { arrivedAt: null, update: {} };
+  if (ms(data.arrivalFor) === first.at) return { arrivedAt: ms(data.arrivedAt) ?? null, update: {} };
+  const [history, site] = await Promise.all([
+    admin.database().ref(`location_history/${data.uid}/${data.date}`).get(),
+    siteOf(first.siteId),
+  ]);
+  const found = site ? siteArrival(Object.values(history.val() || {}), site, first.at) : null;
+  const arrivedAt = found !== null && found < first.at ? found : null;
+  const ts = admin.firestore.Timestamp.fromMillis;
+  return { arrivedAt, update: { arrivalFor: ts(first.at), arrivedAt: arrivedAt === null ? null : ts(arrivedAt) } };
 }
 
 /**
@@ -1005,6 +1037,9 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
       ? { startAt: ms(data.driveOvertime.startAt), endAt: ms(data.driveOvertime.endAt) ?? null, place: data.driveOvertime.place ?? null }
       : null,
   };
+  // At the site before the first check-in event (GPS): the day starts then (2026-10-28).
+  const arrival = await gpsArrival(data, events);
+  options.arrivedAt = arrival.arrivedAt;
   let d = deriveDay(events, options);
   // Closed with no exit seen: with overtime, the last GPS fix at the site
   // tells how long they stayed.
@@ -1018,7 +1053,7 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
   d.overtimeStatus = d.closed && d.overtimeMin > 0
     ? (data.overtimeReview ? (data.overtimeReview.rejected === true ? 'rejected' : 'approved') : 'pending')
     : d.overtimeOn && !d.closed ? 'running' : null;
-  const update = {};
+  const update = { ...arrival.update };
   if (data.overtimeUnconfirmed !== undefined) update.overtimeUnconfirmed = admin.firestore.FieldValue.delete();
   for (const k of DERIVED) {
     const v = TIME_FIELDS.includes(k) && d[k] !== null ? admin.firestore.Timestamp.fromMillis(d[k]) : d[k];
@@ -1297,6 +1332,76 @@ exports.attendanceReminders = onSchedule(
   },
 );
 
+/**
+ * Every 5 minutes (2026-10-28, after Driver Number Two's 27 Oct: at the
+ * site from 08:42, the geofence never fired, checked in by hand at 09:22):
+ * tracked people (sales exec, KAM, driver) who need attendance, aren't
+ * checked in and whose live position (≤15 min old) has been at one of their
+ * sites (two fixes or more, `siteArrival`) are told to check in
+ * (`attendanceAtSite`, alert sound, opens Home); reminded once 30 min later.
+ * Work days, from 2 h before the start until the end; not on leave / absent.
+ * Their check-in then starts at that GPS arrival anyway (`gpsArrival`).
+ * Sent in RTDB `attendance_at_site/{uid}` {date, count, at} (admin only).
+ */
+exports.atSiteReminders = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const now = Date.now();
+    const today = saudiDay(now);
+    const saudi = new Date(now + 3 * 3600 * 1000);
+    const minute = saudi.getUTCHours() * 60 + saudi.getUTCMinutes();
+    const db = admin.firestore();
+    const rtdb = admin.database();
+    const holidays = (await db.doc('settings/holidays').get()).get('dates') || [];
+    if (holidays.includes(today)) return;
+    const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
+    const users = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam', 'driver']).get()).docs
+      .filter((d) => checksAttendance(d.data()))
+      .filter((d) => {
+        const h = scheduleOf(d.data(), hours);
+        return h.days.includes(weekdayOf(today)) && minute >= h.start - 120 && minute < h.end;
+      });
+    if (users.length === 0) return;
+    const [live, sentSnap, sitesSnap] = await Promise.all([
+      rtdb.ref('live_locations').get(),
+      rtdb.ref('attendance_at_site').get(),
+      db.collection('work_sites').where('active', '==', true).get(),
+    ]);
+    const sites = Object.fromEntries(sitesSnap.docs.map((d) => [d.id, { id: d.id, ...d.data(), radius: d.get('radius') || 100 }]));
+    const sent = sentSnap.val() || {};
+    for (const u of users) {
+      const p = live.val()?.[u.id];
+      const fixAt = p?.fixAt || p?.updatedAt;
+      if (typeof p?.lat !== 'number' || typeof fixAt !== 'number' || now - fixAt > 15 * 60000 || (p.accuracy || 0) > 100) continue;
+      const due = atSiteReminderDue(sent[u.id], today, now);
+      if (!due) continue;
+      const mine = (u.get('workSiteIds') || []).map((id) => sites[id]).filter(Boolean);
+      const margin = Math.min(p.accuracy || 0, 100);
+      const site = mine.find((x) => metersBetween(p, x) <= x.radius + margin);
+      if (!site) continue;
+      const [day, absence, leave, history] = await Promise.all([
+        db.doc(`attendance/${u.id}_${today}`).get(),
+        db.doc(`absences/${u.id}_${today}`).get(),
+        db.collection('leave_requests').where('uid', '==', u.id).where('status', '==', 'approved').get(),
+        rtdb.ref(`location_history/${u.id}/${today}`).get(),
+      ]);
+      if (day.get('checkInAt') || (day.get('events') || []).some((e) => e.type === 'in' || e.type === 'checkIn')) continue;
+      if (absence.exists) continue;
+      if (leave.docs.some((l) => l.get('isLeave') !== false && l.get('from') <= today && l.get('to') >= today)) continue;
+      const points = Object.values(history.val() || {});
+      const arrivedAt = siteArrival(points, site, now);
+      // Two fixes there at least (one could be driving past).
+      if (arrivedAt === null || points.filter((x) => x.t >= arrivedAt).length < 2) continue;
+      await db.collection('notifications').add({
+        toId: u.id, fromId: u.id, ownerId: u.id, type: 'attendanceAtSite', date: today, count: due === 'remind' ? 1 : 0,
+        siteName: site.name || '', time: saudiClock(arrivedAt), read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await rtdb.ref(`attendance_at_site/${u.id}`).set({ date: today, count: due === 'remind' ? 2 : 1, at: now });
+    }
+  },
+);
+
 // Day timelines (user request 2026-10-20; drivers' deliveries 2026-10-24): each salesperson's / driver's working day
 // split into client / driving / office / lunch / stopped / no data from their
 // GPS points, saved in Firestore `day_timelines/{uid}_{yyyy-MM-dd}` for the
@@ -1484,7 +1589,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
   await userRef.delete();
   await admin.database().ref().update(Object.fromEntries([
     'roles', 'live_locations', 'presence', 'tracking_device', 'settings/trackingSchedules', 'location_history',
-    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders',
+    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site',
   ].map((path) => [`${path}/${uid}`, null])));
   try {
     await admin.auth().deleteUser(uid);

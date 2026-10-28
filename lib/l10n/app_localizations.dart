@@ -8334,6 +8334,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mileage corrected to {km} km (the estimate was {estimate} km)'**
   String oilMileageCorrected(String km, String estimate);
+
+  /// No description provided for @arrivedByGps.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted from the arrival at the site (GPS) · Check in pressed at {time}'**
+  String arrivedByGps(String time);
+
+  /// No description provided for @atSiteNotCheckedInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re at the work site'**
+  String get atSiteNotCheckedInTitle;
+
+  /// No description provided for @atSiteNotCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re at {site} but not checked in. Check in now.'**
+  String atSiteNotCheckedIn(String site);
+
+  /// No description provided for @notifAtSite.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re at {site} since {time} but not checked in – check in'**
+  String notifAtSite(String site, String time);
 }
 
 class _AppLocalizationsDelegate

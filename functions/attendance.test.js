@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  deriveDay, correctedEvents, siteCheckDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap,
+  deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap,
 } = require('./attendance');
 
 const day = '2026-10-20';
@@ -323,4 +323,39 @@ test('driving overtime on the day: open while driving, closed at the arrival', (
   assert.deepEqual([out.checkOutAt, out.checkOutType, out.overtimeMin], [t(17, 30), 'manual', 30]);
   // No driving overtime: the phone's events as before (back at the site, left at 18:40).
   assert.deepEqual([run(events, { ...o, now: t(19) }).checkOutType, run(events, { ...o, now: t(19) }).overtimeMin], ['left', 0]);
+});
+
+test('GPS arrival before the check-in: the day starts then (Driver Number Two, 27 Oct)', () => {
+  const events = [{ type: 'out', at: t(7, 54) }, { type: 'checkIn', at: t(9, 22), siteId: 'dmm' }];
+  const d = run(events, { startMs: t(8), arrivedAt: t(8, 42), now: t(12) });
+  assert.deepEqual([d.checkInAt, d.checkInEventAt, d.checkInSource, d.lateMin], [t(8, 42), t(9, 22), 'manual', 42]);
+  const plain = run(events, { startMs: t(8), now: t(12) });
+  assert.deepEqual([plain.checkInAt, plain.checkInEventAt], [t(9, 22), null]);
+  // Never later than the event, never for HR's correction.
+  assert.equal(run(events, { arrivedAt: t(9, 30) }).checkInAt, t(9, 22));
+  assert.equal(run([{ type: 'hrIn', at: t(9) }], { arrivedAt: t(8) }).checkInAt, t(9));
+});
+
+test('siteArrival: start of the stay the check-in falls in', () => {
+  const site = { lat: 26.4432, lng: 50.0405, radius: 100 };
+  const at = (h, m, dLat, accuracy = 5) => ({ t: t(h, m), lat: site.lat + dLat, lng: site.lng, accuracy });
+  const far = 0.01, near = 0.0003; // ~1.1 km, ~33 m
+  const pts = [at(7, 50, far), at(8, 30, far), at(8, 42, near), at(8, 50, near), at(9, 0, far, 300) /* rough */,
+    at(9, 10, 0.0012) /* edge: 133 m */, at(9, 20, near)];
+  assert.equal(siteArrival(pts, site, t(9, 22)), t(8, 42));
+  // Left and came back: only the last stay.
+  assert.equal(siteArrival([...pts, at(9, 40, far), at(10, 0, near)], site, t(10, 5)), t(10, 0));
+  // Last fix outside, or too old.
+  assert.equal(siteArrival([at(8, 42, near), at(9, 0, far)], site, t(9, 22)), null);
+  assert.equal(siteArrival([at(8, 42, near)], site, t(9, 22)), null);
+  // A gap over 30 min ends the stay.
+  assert.equal(siteArrival([at(8, 0, near), at(8, 40, near), at(9, 0, near)], site, t(9, 5)), t(8, 40));
+});
+
+test('at-site reminder: once, again 30 min later, then no more that day', () => {
+  assert.equal(atSiteReminderDue(null, day, t(9)), 'ask');
+  assert.equal(atSiteReminderDue({ date: '2026-10-19', count: 2, at: 0 }, day, t(9)), 'ask');
+  assert.equal(atSiteReminderDue({ date: day, count: 1, at: t(9) }, day, t(9, 20)), null);
+  assert.equal(atSiteReminderDue({ date: day, count: 1, at: t(9) }, day, t(9, 30)), 'remind');
+  assert.equal(atSiteReminderDue({ date: day, count: 2, at: t(9) }, day, t(11)), null);
 });

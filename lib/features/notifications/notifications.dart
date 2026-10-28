@@ -66,6 +66,10 @@ enum NotificationType {
   /// (`attendanceReminders`); [AppNotification.time] = start time.
   attendanceLate,
 
+  /// At their work site (live GPS, `atSiteReminders`, 2026-10-28) but not
+  /// checked in; [AppNotification.time] = arrival, count 1 = the reminder.
+  attendanceAtSite,
+
   /// `ownerId` reported "not coming to work" on [AppNotification.date]
   /// (`absenceReported` Cloud Function, to their KAM, HR and the GMs);
   /// [AppNotification.issue] = reason (sick / tired / cantCome),

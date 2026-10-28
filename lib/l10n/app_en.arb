@@ -2644,5 +2644,12 @@
   "@oilOdometerHelp": {"placeholders": {"km": {"type": "String"}}},
   "oilOdometerHelpNoEstimate": "Enter what the odometer shows; it also becomes the car's km.",
   "oilMileageCorrected": "Mileage corrected to {km} km (the estimate was {estimate} km)",
-  "@oilMileageCorrected": {"placeholders": {"km": {"type": "String"}, "estimate": {"type": "String"}}}
+  "@oilMileageCorrected": {"placeholders": {"km": {"type": "String"}, "estimate": {"type": "String"}}},
+  "arrivedByGps": "Counted from the arrival at the site (GPS) · Check in pressed at {time}",
+  "@arrivedByGps": {"placeholders": {"time": {"type": "String"}}},
+  "atSiteNotCheckedInTitle": "You're at the work site",
+  "atSiteNotCheckedIn": "You're at {site} but not checked in. Check in now.",
+  "@atSiteNotCheckedIn": {"placeholders": {"site": {"type": "String"}}},
+  "notifAtSite": "You're at {site} since {time} but not checked in – check in",
+  "@notifAtSite": {"placeholders": {"site": {"type": "String"}, "time": {"type": "String"}}}
 }

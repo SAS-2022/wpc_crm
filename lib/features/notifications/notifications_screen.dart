@@ -73,6 +73,7 @@ class NotificationsScreen extends ConsumerWidget {
       switch (n.type) {
         NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
         NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
+        NotificationType.attendanceAtSite => l10n.notifAtSite(n.siteName, _clock(context, n.time)),
         NotificationType.overtimeStarted => switch (n.issue) {
             'driving' => n.ownerId == meId
                 ? l10n.notifDriveOvertimeSelf(_clock(context, n.time))
@@ -180,6 +181,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.attendanceCheckedIn => Icons.how_to_reg,
                     NotificationType.attendanceLate => Icons.alarm,
+                    NotificationType.attendanceAtSite => Icons.warning_amber_rounded,
                     NotificationType.overtimeStarted || NotificationType.overtimeAsk => Icons.more_time,
                     NotificationType.absenceReported => absenceReasonIcon(AbsenceReason.fromKey(n.issue)),
                     NotificationType.absenceAccepted => Icons.event_available,
@@ -224,6 +226,7 @@ class NotificationsScreen extends ConsumerWidget {
                       // Home: the manager's requests card / the person's attendance card.
                       case NotificationType.attendanceCheckedIn ||
                             NotificationType.attendanceLate ||
+                            NotificationType.attendanceAtSite ||
                             NotificationType.overtimeStarted ||
                             NotificationType.overtimeAsk ||
                             NotificationType.earlyCheckoutRequested ||

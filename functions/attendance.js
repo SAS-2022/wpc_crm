@@ -52,6 +52,12 @@
 //   after the end is recorded as afterHoursMin, not counted (2026-10-20);
 // - HR correction (2026-10-22, `correction` on the day, see correctedEvents):
 //   replaces what the phone recorded; checkOutType 'hr';
+// - arrived earlier than the check-in (2026-10-28, after Driver Number Two's
+//   27 Oct: GPS at the Dammam site from 08:42, the geofence never fired, he
+//   pressed Check in at 09:22): the day's first check-in starts at the
+//   arrival of that stay seen by GPS (`o.arrivedAt`, server: `siteArrival`
+//   over location_history; tracked people only); checkInEventAt keeps the
+//   event's own time;
 // - lateMin: minutes after the start of the work day they checked in
 //   (startMs null = not a work day for them: no lateness); up to 15 minutes
 //   is on time (grace period).
@@ -87,12 +93,13 @@ function saudiTime(date, minutes) {
  * @param {{startMs?: number|null, endMs: number, closeAllMs: number, now: number, leavesSite: boolean, overtimeAllowed: boolean, overtimeMaxMin?: number, lastSeenAt?: number|null, graceMin?: number, awayGraceMin?: number, drive?: {startAt: number, endAt?: number|null, place?: string|null}|null}} o
  *   drive: driver overtime (server: `driveOvertime` running / done on the day); place 'home' | 'site' | 'cap' | null (end unknown).
  *   graceMin: App settings `lateGraceMin` (default LATE_GRACE_MIN); awayGraceMin: `awayGraceMin` (AWAY_GRACE_MIN);
- *   overtimeMaxMin: the person's cap (OVERTIME_MAX_MIN); lastSeenAt: last GPS fix at the site (server only).
+ *   overtimeMaxMin: the person's cap (OVERTIME_MAX_MIN); lastSeenAt: last GPS fix at the site (server only);
+ *   arrivedAt: GPS arrival of the stay the day's first check-in falls in (server: `siteArrival`).
  */
 function deriveDay(events, o) {
   const s = {
     checkInAt: null, checkInSource: null, siteId: null, inside: false, lastExitAt: null,
-    checkOutAt: null, checkOutType: null, closed: false,
+    checkOutAt: null, checkOutType: null, closed: false, checkInEventAt: null,
   };
   const close = (at, type) => {
     s.checkOutAt = at;
@@ -128,6 +135,11 @@ function deriveDay(events, o) {
       seenAt = Math.max(seenAt ?? 0, e.at);
       if (s.checkInAt === null) {
         s.checkInAt = e.at;
+        // At the site before the check-in (GPS): the day starts then.
+        if (e.type !== 'hrIn' && typeof o.arrivedAt === 'number' && o.arrivedAt < e.at) {
+          s.checkInAt = o.arrivedAt;
+          s.checkInEventAt = e.at;
+        }
         s.checkInSource = e.type === 'checkIn' ? 'manual' : e.type === 'hrIn' ? 'hr' : 'auto';
         s.siteId = e.siteId || null;
       } else if (s.closed) {
@@ -320,6 +332,46 @@ function driveDecide({ points, endMs, now, homeGraceMs, places }) {
   return { status: 'done', ...arrival };
 }
 
+/** Fixes further apart than this end a stay (nobody knows where they were in between). */
+const STAY_GAP_MS = 30 * MINUTE;
+
+/**
+ * When the stay at [site] {lat, lng, radius} that [atMs] falls in began,
+ * from GPS points {lat, lng, accuracy, t} (2026-10-28): walking back from
+ * the last fix at or before [atMs], the earliest fix inside (radius + its
+ * accuracy, up to 100 m) before a fix clearly outside (50 m more) or a gap
+ * over 30 min. Rough fixes (worse than 100 m) and fixes at the edge are
+ * skipped. Null when the last fix is clearly outside or older than 30 min.
+ */
+function siteArrival(points, site, atMs) {
+  const pts = points.filter((p) => typeof p?.t === 'number' && typeof p.lat === 'number' && p.t <= atMs
+    && (p.accuracy ?? 0) <= 100).sort((a, b) => b.t - a.t);
+  let arrival = null, prevT = atMs;
+  for (const p of pts) {
+    if (prevT - p.t > STAY_GAP_MS) break;
+    prevT = p.t;
+    const margin = Math.min(Math.max(p.accuracy || 0, 0), 100);
+    const d = meters(p, site);
+    if (d <= site.radius + margin) arrival = p.t;
+    else if (d - margin > site.radius + 50) break;
+  }
+  return arrival;
+}
+
+/** At-site reminder (not checked in) at most this often, twice a day (2026-10-28). */
+const AT_SITE_REMIND_MS = 30 * MINUTE;
+
+/**
+ * Whether to tell someone who isn't checked in that they're at their site
+ * (2026-10-28): 'ask' | 'remind' | null. [sent] = RTDB
+ * `attendance_at_site/{uid}` {date, count, at}.
+ */
+function atSiteReminderDue(sent, date, now) {
+  if (!sent || sent.date !== date) return 'ask';
+  if ((sent.count || 0) < 2 && now - (sent.at || 0) >= AT_SITE_REMIND_MS - 2 * MINUTE) return 'remind';
+  return null;
+}
+
 /** The first arrival in [pts] (sorted): two fixes in a row at the same place (one could be driving past). */
 function firstArrival(pts, places, beforeMs = Infinity) {
   for (let i = 0; i + 1 < pts.length; i++) {
@@ -350,6 +402,6 @@ function driveEnd({ points, startAt, now, capMs, places }) {
 }
 
 module.exports = {
-  overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
+  siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
   deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN,
 };

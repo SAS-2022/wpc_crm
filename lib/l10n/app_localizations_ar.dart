@@ -5043,4 +5043,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String oilMileageCorrected(String km, String estimate) {
     return 'صُحّح العداد إلى $km كم (كان التقدير $estimate كم)';
   }
+
+  @override
+  String arrivedByGps(String time) {
+    return 'محسوب من وقت الوصول إلى الموقع (GPS) · تم الضغط على تسجيل الحضور الساعة $time';
+  }
+
+  @override
+  String get atSiteNotCheckedInTitle => 'أنت في موقع العمل';
+
+  @override
+  String atSiteNotCheckedIn(String site) {
+    return 'أنت في $site ولم تسجّل حضورك. سجّل حضورك الآن.';
+  }
+
+  @override
+  String notifAtSite(String site, String time) {
+    return 'أنت في $site منذ الساعة $time ولم تسجّل حضورك – سجّل الحضور';
+  }
 }

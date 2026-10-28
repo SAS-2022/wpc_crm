@@ -68,6 +68,7 @@ class _MyAttendanceCalendarState extends ConsumerState<MyAttendanceCalendar> {
                 })
               else ...[
                 Text(l10n.checkedInSince(time.format(d.checkInAt!), sites[d.siteId] ?? '')),
+                if (d.checkInEventAt != null) Text(l10n.arrivedByGps(time.format(d.checkInEventAt!))),
                 if (d.closed) Text('${l10n.checkedOutAt(time.format(d.checkOutAt!))} · ${checkOutTypeLabel(l10n, d.checkOutType)}'),
                 if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
                 if ((d.lateMin ?? 0) > 0) Text(l10n.lateBy(formatMinutes(d.lateMin!))),

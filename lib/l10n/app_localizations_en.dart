@@ -5038,4 +5038,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String oilMileageCorrected(String km, String estimate) {
     return 'Mileage corrected to $km km (the estimate was $estimate km)';
   }
+
+  @override
+  String arrivedByGps(String time) {
+    return 'Counted from the arrival at the site (GPS) · Check in pressed at $time';
+  }
+
+  @override
+  String get atSiteNotCheckedInTitle => 'You\'re at the work site';
+
+  @override
+  String atSiteNotCheckedIn(String site) {
+    return 'You\'re at $site but not checked in. Check in now.';
+  }
+
+  @override
+  String notifAtSite(String site, String time) {
+    return 'You\'re at $site since $time but not checked in – check in';
+  }
 }
