@@ -67,6 +67,11 @@ enum UserRole {
   /// field staff and drivers (user request 2026-10-20; drivers are shown
   /// apart, see [isDriver]).
   bool get isLocationTracked => isTracked || this == driver;
+
+  /// Office staff whose GPS is recorded (not shared live) during the
+  /// recording hours when they check attendance (2026-10-28, see
+  /// [AppUser.recordsGps]): the back office except drivers.
+  bool get recordsGps => isBackOffice && !isLocationTracked;
   bool get isDriver => this == driver;
 
   /// Sees the drivers' live locations and route history: sales manager, GM
@@ -255,6 +260,12 @@ class AppUser {
 
   /// Checks in and out: attendance required and at least one work site.
   bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;
+
+  /// GPS recorded 08:00–18:00 on their work days, only into the route
+  /// history (no live map, no presence or alerts) — user request
+  /// 2026-10-28 after a missed geofence arrival: the server then sees when
+  /// they really arrived (`gpsArrival`) and whether they're at the site.
+  bool get recordsGps => active && role.recordsGps && checksAttendance;
 
   /// Their own attendance days and hours (2026-10-20, user form); null =
   /// the company work hours (More → Work hours).

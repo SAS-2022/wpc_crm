@@ -2168,7 +2168,7 @@
   "openBatterySaver": "Battery saver",
   "locationDisclosureTitle": "Location use in the background",
   "locationDisclosureTracking": "WPC CRM collects location data to show your position to your managers on the live team map, to save your daily route history and to confirm that client visits happen at the client, during your work hours, even when the app is closed or not in use.",
-  "locationDisclosureAttendance": "WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. Your location is only checked when you enter or leave a work site.",
+  "locationDisclosureAttendance": "WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. For office staff the app also records your location from 08:00 to 18:00 on your work days, so your arrival and check-in times are correct; it is not shown on any live map.",
   "locationDisclosureNext": "Your location is used only for your work with the company and is not used for advertising. On the next screen, choose \"Allow all the time\".",
   "locationDisclosureNo": "No thanks",
   "locationDisclosureContinue": "Continue",

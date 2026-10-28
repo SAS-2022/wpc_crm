@@ -1332,11 +1332,15 @@ exports.attendanceReminders = onSchedule(
   },
 );
 
+/** Office staff whose GPS is recorded 08:00–18:00, not shared live (2026-10-28; `UserRole.recordsGps`). */
+const GPS_RECORDED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'logistics_manager', 'warehouse_supervisor'];
+
 /**
  * Every 5 minutes (2026-10-28, after Driver Number Two's 27 Oct: at the
  * site from 08:42, the geofence never fired, checked in by hand at 09:22):
- * tracked people (sales exec, KAM, driver) who need attendance, aren't
- * checked in and whose live position (≤15 min old) has been at one of their
+ * tracked people (sales exec, KAM, driver) and office staff whose GPS is
+ * recorded (2026-10-28, `GPS_RECORDED_ROLES`) who need attendance, aren't
+ * checked in and whose last GPS point (≤15 min old) has been at one of their
  * sites (two fixes or more, `siteArrival`) are told to check in
  * (`attendanceAtSite`, alert sound, opens Home); reminded once 30 min later.
  * Work days, from 2 h before the start until the end; not on leave / absent.
@@ -1355,26 +1359,26 @@ exports.atSiteReminders = onSchedule(
     const holidays = (await db.doc('settings/holidays').get()).get('dates') || [];
     if (holidays.includes(today)) return;
     const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
-    const users = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam', 'driver']).get()).docs
+    const users = (await db.collection('users').where('role', 'in', ['sales_exec', 'kam', 'driver', ...GPS_RECORDED_ROLES]).get()).docs
       .filter((d) => checksAttendance(d.data()))
       .filter((d) => {
         const h = scheduleOf(d.data(), hours);
         return h.days.includes(weekdayOf(today)) && minute >= h.start - 120 && minute < h.end;
       });
     if (users.length === 0) return;
-    const [live, sentSnap, sitesSnap] = await Promise.all([
-      rtdb.ref('live_locations').get(),
+    const [sentSnap, sitesSnap] = await Promise.all([
       rtdb.ref('attendance_at_site').get(),
       db.collection('work_sites').where('active', '==', true).get(),
     ]);
     const sites = Object.fromEntries(sitesSnap.docs.map((d) => [d.id, { id: d.id, ...d.data(), radius: d.get('radius') || 100 }]));
     const sent = sentSnap.val() || {};
     for (const u of users) {
-      const p = live.val()?.[u.id];
-      const fixAt = p?.fixAt || p?.updatedAt;
-      if (typeof p?.lat !== 'number' || typeof fixAt !== 'number' || now - fixAt > 15 * 60000 || (p.accuracy || 0) > 100) continue;
       const due = atSiteReminderDue(sent[u.id], today, now);
       if (!due) continue;
+      // The latest point of today's route history (push keys sort by time).
+      const last = await rtdb.ref(`location_history/${u.id}/${today}`).orderByKey().limitToLast(1).get();
+      const p = Object.values(last.val() || {})[0];
+      if (typeof p?.lat !== 'number' || typeof p.t !== 'number' || now - p.t > 15 * 60000 || (p.accuracy || 0) > 100) continue;
       const mine = (u.get('workSiteIds') || []).map((id) => sites[id]).filter(Boolean);
       const margin = Math.min(p.accuracy || 0, 100);
       const site = mine.find((x) => metersBetween(p, x) <= x.radius + margin);

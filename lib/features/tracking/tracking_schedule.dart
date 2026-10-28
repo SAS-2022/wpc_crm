@@ -3,6 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'work_hours.dart';
 
+/// Office staff GPS recording (2026-10-28, user: "start at 8 and end at
+/// 6"): these hours on their work days ([AppUser.recordsGps]).
+const recordStartMinute = 8 * 60;
+const recordEndMinute = 18 * 60;
+
+/// Recording hours on [days] (their own attendance days or the company's).
+WorkHours recordingHours(Set<int> days) =>
+    WorkHours(days: days, startMinute: recordStartMinute, endMinute: recordEndMinute);
+
 /// When one person's location is shared (2026-10-21, App settings →
 /// Tracking schedules): the company work hours (drivers: all day), their own
 /// days / hours, or all day.
@@ -41,11 +50,14 @@ class TrackingSchedule {
       };
 
   /// Whether the location is shared at [now]. Drivers keep the company car,
-  /// so their standard is all day (user decision 2026-10-20).
-  bool isOn(DateTime now, WorkHours company, {required bool driver}) => switch (mode) {
+  /// so their standard is all day (user decision 2026-10-20). Office staff
+  /// ([recordOnly]): 08:00–18:00 on [days] (null = the company's days).
+  bool isOn(DateTime now, WorkHours company, {required bool driver, bool recordOnly = false, Set<int>? days}) =>
+      switch (mode) {
         TrackingMode.allDay => true,
         TrackingMode.own => hours!.isOn(now),
-        TrackingMode.standard => driver || company.isOn(now),
+        TrackingMode.standard =>
+          driver || (recordOnly ? recordingHours(days ?? company.days) : company).isOn(now),
       };
 }
 

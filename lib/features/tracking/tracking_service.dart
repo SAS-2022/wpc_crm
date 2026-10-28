@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -15,6 +16,9 @@ import 'location_tracker.dart';
 /// Roles whose location the background service shares; same as
 /// `UserRole.isLocationTracked` (drivers added 2026-10-20).
 final _trackedRoles = {for (final r in UserRole.values) if (r.isLocationTracked) r.value};
+
+/// Office staff whose GPS is only recorded (2026-10-28, [AppUser.recordsGps]).
+final _recordedRoles = {for (final r in UserRole.values) if (r.recordsGps) r.value};
 
 /// Starts and stops live tracking. Android: a foreground service with its own
 /// isolate that survives the app being closed and restarts after reboot.
@@ -45,12 +49,14 @@ class Tracking {
     );
   }
 
-  static Future<void> start(String uid) async {
+  /// [recordOnly] / [recordDays]: office staff (iOS; the Android service
+  /// reads them itself).
+  static Future<void> start(String uid, {bool recordOnly = false, Set<int>? recordDays}) async {
     if (_android) {
       final service = FlutterBackgroundService();
       if (!await service.isRunning()) await service.startService();
     } else if (_ios && _inApp == null) {
-      _inApp = LocationTracker(uid);
+      _inApp = LocationTracker(uid, recordOnly: recordOnly, recordDays: recordDays);
       await _inApp!.start();
     }
   }
@@ -105,19 +111,36 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
   final user = await FirebaseAuth.instance.authStateChanges().first;
   // Also reached after a reboot: only track signed-in field staff.
   final role = user == null ? null : (await FirebaseDatabase.instance.ref('roles/${user.uid}').get()).value;
-  if (user == null || !_trackedRoles.contains(role) || stopRequested) {
+  // Office staff: recorded only while they check attendance (users doc).
+  AppUser? recorded;
+  if (user != null && !_trackedRoles.contains(role) && _recordedRoles.contains(role)) {
+    try {
+      final me = AppUser.fromDoc(await FirebaseFirestore.instance.doc('users/${user.uid}').get());
+      if (me.recordsGps) recorded = me;
+    } catch (_) {
+      // Unknown: not recorded.
+    }
+  }
+  if (user == null || (!_trackedRoles.contains(role) && recorded == null) || stopRequested) {
     await service.stopSelf();
     return;
   }
+  final recordOnly = recorded != null;
   tracker = LocationTracker(
     user.uid,
+    recordOnly: recordOnly,
+    recordDays: recorded?.workSchedule?.days,
     onDutyChanged: (on) {
       // The service notification can't go away (Android would stop the
       // service), so off duty it says nothing is shared.
       if (service is AndroidServiceInstance) {
         service.setForegroundNotificationInfo(
           title: 'WPC CRM',
-          content: on ? 'Sharing your location with your team (work hours)' : 'Off duty – your location is not shared',
+          content: recordOnly
+              ? (on ? 'Recording your location for attendance (08:00–18:00)' : 'Off duty – your location is not recorded')
+              : on
+              ? 'Sharing your location with your team (work hours)'
+              : 'Off duty – your location is not shared',
         );
       }
     },

@@ -11,6 +11,18 @@ void main() {
   const company = WorkHours.defaults;
 
   group('TrackingSchedule', () {
+    test('office staff: recorded 08:00–18:00 on their work days (2026-10-28)', () {
+      const std = TrackingSchedule.standard();
+      bool on(DateTime t, {Set<int>? days}) => std.isOn(t, company, driver: false, recordOnly: true, days: days);
+      expect(on(DateTime.utc(2026, 10, 21, 4, 59)), isFalse); // 07:59
+      expect(on(DateTime.utc(2026, 10, 21, 5)), isTrue); // 08:00
+      expect(on(DateTime.utc(2026, 10, 21, 14, 30)), isTrue); // 17:30, after the company end
+      expect(on(DateTime.utc(2026, 10, 21, 15)), isFalse); // 18:00
+      expect(on(friNoon), isFalse);
+      expect(on(friNoon, days: {DateTime.friday}), isTrue); // own attendance days
+      expect(const TrackingSchedule.allDay().isOn(wedEvening, company, driver: false, recordOnly: true), isTrue);
+    });
+
     test('missing or invalid entry is standard', () {
       expect(TrackingSchedule.fromMap(null).mode, TrackingMode.standard);
       expect(TrackingSchedule.fromMap({'mode': 'own', 'days': [], 'start': 60, 'end': 120}).mode, TrackingMode.standard);

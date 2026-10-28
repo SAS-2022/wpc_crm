@@ -18,18 +18,20 @@ class TrackingStatus {
 
 bool get _android => defaultTargetPlatform == TargetPlatform.android;
 
-/// For sales executives, KAMs and drivers: checks permissions and starts tracking.
-/// null for everyone else (and on the web). Kept alive by the app widget.
+/// For sales executives, KAMs and drivers: checks permissions and starts tracking;
+/// office staff who check attendance: GPS recorded only ([AppUser.recordsGps],
+/// 2026-10-28). null for everyone else (and on the web). Kept alive by the app widget.
 final trackingStatusProvider = FutureProvider<TrackingStatus?>((ref) async {
   final me = ref.watch(currentUserProvider).value;
   if (kIsWeb || me == null) return null;
-  if (!me.active || !me.role.isLocationTracked) {
+  final recordOnly = !me.role.isLocationTracked && me.recordsGps;
+  if (!me.active || !(me.role.isLocationTracked || recordOnly)) {
     await Tracking.stop();
     return null;
   }
   final issues = await checkTrackingIssues();
   final canRun = !issues.contains(TrackingIssue.locationDenied);
-  if (canRun) await Tracking.start(me.id);
+  if (canRun) await Tracking.start(me.id, recordOnly: recordOnly, recordDays: me.workSchedule?.days);
   return TrackingStatus(running: canRun, issues: issues);
 });
 

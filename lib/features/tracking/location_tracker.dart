@@ -35,10 +35,18 @@ const heartbeatInterval = Duration(minutes: 2);
 /// Only the phone registered in `tracking_device/{uid}` sends anything
 /// (see tracking_device.dart); on any other phone signed in to the same
 /// account the tracker waits silently until that phone is chosen.
+///
+/// [recordOnly] (office staff, 2026-10-28): positions go only to the route
+/// history during the recording hours — no live map position, no presence,
+/// heartbeat or alerts.
 class LocationTracker {
-  LocationTracker(this.uid, {this.onDutyChanged, this.onStandby});
+  LocationTracker(this.uid, {this.onDutyChanged, this.onStandby, this.recordOnly = false, this.recordDays});
 
   final String uid;
+  final bool recordOnly;
+
+  /// Their own attendance days (`users.workSchedule`); null = the company's.
+  final Set<int>? recordDays;
 
   /// Called when work hours start (true) or end (false), e.g. to change the
   /// Android service notification.
@@ -56,6 +64,7 @@ class LocationTracker {
   Timer? _heartbeat;
   Timer? _dutyCheck;
   DateTime? _lastSent;
+
   /// Still / walking / driving and since when in one place, sent with each fix.
   final _motion = MotionTracker();
   bool _connected = false;
@@ -87,6 +96,9 @@ class LocationTracker {
 
   Future<void> start() async {
     _deviceId = await localDeviceId();
+    // Office staff have no "Use this phone" (no tracking card): the phone
+    // that starts recording takes over (e.g. a new phone).
+    if (recordOnly) await claimTracking(uid, _deviceId).catchError((_) {});
     _deviceSub = trackingDeviceRef(uid).onValue.listen((event) async {
       final owner = (event.snapshot.value as Map?)?['id'];
       if (owner == null) {
@@ -108,54 +120,72 @@ class LocationTracker {
   }
 
   Future<void> _startSharing() async {
-    _subscriptions.add(FirebaseDatabase.instance.ref('.info/connected').onValue.listen((event) async {
-      _connected = event.snapshot.value == true;
-      if (!_connected) return;
-      // Registered on the server: runs when the phone disconnects
-      // (no signal, switched off, app killed).
-      await _presence.onDisconnect().update({'online': false, 'lastSeen': ServerValue.timestamp});
-      await _presence.update({'online': true, 'lastSeen': ServerValue.timestamp});
-    }));
+    if (!recordOnly) _watchPresence();
+    _subscriptions.add(
+      FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
+        _driver = event.snapshot.value == 'driver';
+        _loaded.add('role');
+        _applyDuty();
+      }, onError: (_) => _loaded.add('role')),
+    );
+    _subscriptions.add(
+      workHoursRef.onValue.listen((event) {
+        _hours = WorkHours.fromMap(event.snapshot.value);
+        _loaded.add('hours');
+        _applyDuty();
+      }, onError: (_) => _loaded.add('hours')),
+    );
+    _subscriptions.add(
+      trackingScheduleRef(uid).onValue.listen((event) {
+        _schedule = TrackingSchedule.fromMap(event.snapshot.value);
+        _loaded.add('schedule');
+        _applyDuty();
+      }, onError: (_) => _loaded.add('schedule')),
+    );
+    _subscriptions.add(
+      appSettingsRef.child(AppSetting.trackingIntervalSec.name).onValue.listen((event) {
+        final interval = AppSettings.fromMap({AppSetting.trackingIntervalSec.name: event.snapshot.value})
+            .trackingInterval;
+        if (interval == _interval) return;
+        _interval = interval;
+        // Restarts the position stream with the new interval.
+        if (_onDuty == true) {
+          _onDuty = null;
+          _applyDuty();
+        }
+      }, onError: (_) {}),
+    );
+    _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
+    await _applyDuty();
+  }
+
+  /// Online / offline, GPS state and the heartbeat (not for [recordOnly]).
+  void _watchPresence() {
+    _subscriptions.add(
+      FirebaseDatabase.instance.ref('.info/connected').onValue.listen((event) async {
+        _connected = event.snapshot.value == true;
+        if (!_connected) return;
+        // Registered on the server: runs when the phone disconnects
+        // (no signal, switched off, app killed).
+        await _presence.onDisconnect().update({'online': false, 'lastSeen': ServerValue.timestamp});
+        await _presence.update({'online': true, 'lastSeen': ServerValue.timestamp});
+      }),
+    );
     // After a quick reconnect the server may notice the old, dropped
     // connection only later and run its onDisconnect, marking a connected
     // phone offline. Put it right while connected.
-    _subscriptions.add(_presence.child('online').onValue.listen((event) {
-      if (_connected && event.snapshot.value == false) {
-        _presence.update({'online': true, 'lastSeen': ServerValue.timestamp}).ignore();
-      }
-    }));
-    _subscriptions.add(FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
-      _driver = event.snapshot.value == 'driver';
-      _loaded.add('role');
-      _applyDuty();
-    }, onError: (_) => _loaded.add('role')));
-    _subscriptions.add(workHoursRef.onValue.listen((event) {
-      _hours = WorkHours.fromMap(event.snapshot.value);
-      _loaded.add('hours');
-      _applyDuty();
-    }, onError: (_) => _loaded.add('hours')));
-    _subscriptions.add(trackingScheduleRef(uid).onValue.listen((event) {
-      _schedule = TrackingSchedule.fromMap(event.snapshot.value);
-      _loaded.add('schedule');
-      _applyDuty();
-    }, onError: (_) => _loaded.add('schedule')));
-    _subscriptions.add(appSettingsRef.child(AppSetting.trackingIntervalSec.name).onValue.listen((event) {
-      final interval = AppSettings.fromMap({AppSetting.trackingIntervalSec.name: event.snapshot.value}).trackingInterval;
-      if (interval == _interval) return;
-      _interval = interval;
-      // Restarts the position stream with the new interval.
-      if (_onDuty == true) {
-        _onDuty = null;
-        _applyDuty();
-      }
-    }, onError: (_) {}));
+    _subscriptions.add(
+      _presence.child('online').onValue.listen((event) {
+        if (_connected && event.snapshot.value == false) {
+          _presence.update({'online': true, 'lastSeen': ServerValue.timestamp}).ignore();
+        }
+      }),
+    );
     // GPS switched on / off: report at once rather than at the next heartbeat.
     if (!kIsWeb) {
       _subscriptions.add(Geolocator.getServiceStatusStream().listen((_) => _beat(), onError: (_) {}));
     }
-    _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
     _heartbeat = Timer.periodic(heartbeatInterval, (_) => _beat());
-    await _applyDuty();
   }
 
   /// Switches between sharing (work hours) and not sharing.
@@ -163,22 +193,20 @@ class LocationTracker {
 
   Future<void> _applyDutyNow() async {
     if (_loaded.length < 3 || !_active) return;
-    final on = _schedule.isOn(DateTime.now(), _hours, driver: _driver);
+    final on = _schedule.isOn(DateTime.now(), _hours, driver: _driver, recordOnly: recordOnly, days: recordDays);
     if (on == _onDuty) return;
     _onDuty = on;
     await _positions?.cancel();
     // Off duty a coarse, low-power stream keeps iOS from suspending the app
     // (so sharing resumes on its own when work starts); its fixes are dropped.
-    _positions = Geolocator.getPositionStream(locationSettings: on ? _settings() : _idleSettings()).listen(
-      on ? _send : (_) {},
-      onError: (_) => _beat(),
-    );
+    _positions = Geolocator.getPositionStream(locationSettings: on ? _settings() : _idleSettings())
+        .listen(on ? _send : (_) {}, onError: (_) => _beat());
     if (!on) {
       _lastSent = null;
       _motion.reset();
-      await FirebaseDatabase.instance.ref('live_locations/$uid').remove();
+      if (!recordOnly) await FirebaseDatabase.instance.ref('live_locations/$uid').remove();
     }
-    await _presence.update({'onDuty': on});
+    if (!recordOnly) await _presence.update({'onDuty': on});
     onDutyChanged?.call(on);
     // Fresh GPS / permission state for the start of the day.
     if (on) await _beat();
@@ -189,9 +217,11 @@ class LocationTracker {
     if (!_active || _onDuty != true) return;
     await _beat();
     try {
-      await _send(await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)),
-      ));
+      await _send(
+        await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 20)),
+        ),
+      );
     } catch (_) {
       // No fix in time: the heartbeat already showed the phone is alive.
     }
@@ -203,7 +233,7 @@ class LocationTracker {
     if (!_active) return; // another phone owns the presence
     _active = false;
     await _stopSharing();
-    await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
+    if (!recordOnly) await _presence.update({'online': false, 'lastSeen': ServerValue.timestamp});
   }
 
   /// Stops sending without touching the presence (another phone may own it).
@@ -218,13 +248,13 @@ class LocationTracker {
     _loaded.clear();
     _heartbeat?.cancel();
     _dutyCheck?.cancel();
-    await _presence.onDisconnect().cancel();
+    if (!recordOnly) await _presence.onDisconnect().cancel();
   }
 
   /// Status heartbeat; silent outside work hours (user decision): only the
   /// connection itself (online / offline) is kept by the server then.
   Future<void> _beat() async {
-    if (_onDuty != true || !_active) return;
+    if (_onDuty != true || !_active || recordOnly) return;
     var gpsOn = false;
     var permission = LocationPermission.denied;
     bool? batteryOptimized;
@@ -271,20 +301,18 @@ class LocationTracker {
     // The OS may deliver fixes more often than asked for; keep one per interval.
     if (_lastSent != null && now.difference(_lastSent!) < _interval * 0.75) return;
     _lastSent = now;
-    final point = {
-      'lat': p.latitude,
-      'lng': p.longitude,
-      'accuracy': p.accuracy,
-      'mocked': p.isMocked,
-    };
-    await FirebaseDatabase.instance.ref('live_locations/$uid').set({
-      ...point,
-      'speed': p.speed,
-      'fixAt': p.timestamp.millisecondsSinceEpoch,
-      'stillSince': motion.stillSince.millisecondsSinceEpoch,
-      'motion': motion.motion.name,
-      'updatedAt': ServerValue.timestamp,
-    });
+    final point = {'lat': p.latitude, 'lng': p.longitude, 'accuracy': p.accuracy, 'mocked': p.isMocked};
+    // Office staff: recorded only, never on the live map (user request 2026-10-28).
+    if (!recordOnly) {
+      await FirebaseDatabase.instance.ref('live_locations/$uid').set({
+        ...point,
+        'speed': p.speed,
+        'fixAt': p.timestamp.millisecondsSinceEpoch,
+        'stillSince': motion.stillSince.millisecondsSinceEpoch,
+        'motion': motion.motion.name,
+        'updatedAt': ServerValue.timestamp,
+      });
+    }
     // Route history per day, for the dashboard (distance, time in the field).
     final day = DateFormat('yyyy-MM-dd').format(now);
     await FirebaseDatabase.instance.ref('location_history/$uid/$day').push().set({
@@ -298,35 +326,35 @@ class LocationTracker {
   }
 
   LocationSettings _settings() => switch (defaultTargetPlatform) {
-        TargetPlatform.android => AndroidSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 0,
-            intervalDuration: _interval,
-          ),
-        TargetPlatform.iOS => AppleSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 0,
-            activityType: ActivityType.otherNavigation,
-            pauseLocationUpdatesAutomatically: false,
-            allowBackgroundLocationUpdates: true,
-            showBackgroundLocationIndicator: true,
-          ),
-        _ => const LocationSettings(accuracy: LocationAccuracy.high),
-      };
+    TargetPlatform.android => AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+      intervalDuration: _interval,
+    ),
+    TargetPlatform.iOS => AppleSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+      activityType: ActivityType.otherNavigation,
+      pauseLocationUpdatesAutomatically: false,
+      allowBackgroundLocationUpdates: true,
+      showBackgroundLocationIndicator: true,
+    ),
+    _ => const LocationSettings(accuracy: LocationAccuracy.high),
+  };
 
   LocationSettings _idleSettings() => switch (defaultTargetPlatform) {
-        TargetPlatform.android => AndroidSettings(
-            accuracy: LocationAccuracy.lowest,
-            distanceFilter: 5000,
-            intervalDuration: const Duration(minutes: 30),
-          ),
-        TargetPlatform.iOS => AppleSettings(
-            accuracy: LocationAccuracy.lowest,
-            distanceFilter: 5000,
-            pauseLocationUpdatesAutomatically: false,
-            allowBackgroundLocationUpdates: true,
-            showBackgroundLocationIndicator: false,
-          ),
-        _ => const LocationSettings(accuracy: LocationAccuracy.lowest, distanceFilter: 5000),
-      };
+    TargetPlatform.android => AndroidSettings(
+      accuracy: LocationAccuracy.lowest,
+      distanceFilter: 5000,
+      intervalDuration: const Duration(minutes: 30),
+    ),
+    TargetPlatform.iOS => AppleSettings(
+      accuracy: LocationAccuracy.lowest,
+      distanceFilter: 5000,
+      pauseLocationUpdatesAutomatically: false,
+      allowBackgroundLocationUpdates: true,
+      showBackgroundLocationIndicator: false,
+    ),
+    _ => const LocationSettings(accuracy: LocationAccuracy.lowest, distanceFilter: 5000),
+  };
 }

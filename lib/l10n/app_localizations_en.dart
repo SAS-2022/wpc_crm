@@ -3650,7 +3650,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get locationDisclosureAttendance =>
-      'WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. Your location is only checked when you enter or leave a work site.';
+      'WPC CRM collects location data to check you in automatically when you arrive at your work site and to record when you leave it, even when the app is closed or not in use. For office staff the app also records your location from 08:00 to 18:00 on your work days, so your arrival and check-in times are correct; it is not shown on any live map.';
 
   @override
   String get locationDisclosureNext =>
