@@ -1,11 +1,12 @@
 import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
+import '../attendance/absence.dart' show smActsAsHr;
+import '../notifications/notifications.dart' show directManagersOf;
 
-/// "My leave" (own balances and new requests) is greyed out for everyone
-/// until the leave module is finished (user request 2026-10-20). Approving
-/// requests (`/leave/:id`) and the HR area still work.
-const myLeaveEnabled = false;
+/// "My leave" (own balances and new requests). Greyed out 2026-10-20 until
+/// the module was finished; open to every employee since 2026-10-30.
+const myLeaveEnabled = true;
 
 /// One kind of leave (or a non-leave request such as a salary certificate),
 /// set by HR in Firestore `settings/leaveTypes` {types: [...]}. Until HR
@@ -175,8 +176,8 @@ double leaveDays({
 
 enum LeaveStatus { pending, approved, rejected, cancelled }
 
-/// One approval in a request's chain. [uid] is set for the requester's own
-/// KAM; other steps can be taken by any active user with [role].
+/// One approval in a request's chain. [uid] is set for the requester's
+/// direct manager; other steps can be taken by any active user with [role].
 class ApprovalStep {
   const ApprovalStep({
     required this.role,
@@ -211,40 +212,47 @@ class ApprovalStep {
       );
 }
 
-/// Who approves [requester]'s requests, strictly in this order (user
-/// decision 2026-10-17): sales exec → their KAM → sales manager → GM → HR;
-/// KAM → sales manager → GM → HR; sales manager → GM → HR. Assumed until the
-/// user says otherwise: accounting / procurement → GM → HR; HR → GM; GM → HR.
-/// A step nobody can take (no active user with that role besides the
-/// requester, or no active KAM) is left out. Empty = nobody can approve yet.
+/// Who approves [requester]'s requests (user decision 2026-10-30, replaces
+/// the long role chain): their direct manager ([directManagersOf]: the one
+/// chosen on the user form, else the automatic one), then HR. Both must
+/// approve, in that order. No direct manager (the GM) → HR only. One
+/// direct manager = a step for that person; several (e.g. two sales
+/// managers) = any of them. While nobody has the HR role, the sales manager
+/// stands in ([smActsAsHr]), else the GM. A manager who would also take
+/// the HR step isn't asked twice. Empty = nobody can approve yet.
 List<ApprovalStep> approvalChain(AppUser requester, List<AppUser> users) {
-  final roles = switch (requester.role) {
-    UserRole.salesExec => [UserRole.kam, UserRole.salesManager, UserRole.gm, UserRole.hr],
-    UserRole.kam => [UserRole.salesManager, UserRole.gm, UserRole.hr],
-    UserRole.salesManager => [UserRole.gm, UserRole.hr],
-    UserRole.gm => [UserRole.hr],
-    UserRole.hr => [UserRole.gm],
-    UserRole.accounting ||
-    UserRole.procurement ||
-    UserRole.worker ||
-    UserRole.engineer ||
-    UserRole.driver ||
-    UserRole.logisticsManager ||
-    UserRole.warehouseSupervisor ||
-    UserRole.unknown =>
-      [UserRole.gm, UserRole.hr],
-  };
   bool anyone(UserRole role) => users.any((u) => u.active && u.role == role && u.id != requester.id);
-  final steps = <ApprovalStep>[];
-  for (final role in roles) {
-    if (role == UserRole.kam) {
-      final kam = users.where((u) => u.id == requester.kamId && u.active && u.role == UserRole.kam).firstOrNull;
-      if (kam != null) steps.add(ApprovalStep(role: role, uid: kam.id));
-    } else if (anyone(role)) {
-      steps.add(ApprovalStep(role: role));
-    }
-  }
-  return steps;
+  final hasHr = users.any((u) => u.active && u.role == UserRole.hr);
+  final hrRole = hasHr
+      ? (anyone(UserRole.hr) ? UserRole.hr : null)
+      : [if (smActsAsHr) UserRole.salesManager, UserRole.gm].where(anyone).firstOrNull;
+  final managers = [
+    for (final id in directManagersOf(requester, users)) ...users.where((u) => u.id == id),
+  ];
+  final manager = switch (managers) {
+    [final m] => ApprovalStep(role: m.role, uid: m.id),
+    [final m, ...] => ApprovalStep(role: m.role),
+    _ => null,
+  };
+  return [
+    if (manager != null && manager.role != hrRole) manager,
+    if (hrRole != null) ApprovalStep(role: hrRole),
+  ];
+}
+
+/// Who is only informed of [requester]'s request at every step (user
+/// decision 2026-10-30): every GM, and for a sales executive also the sales
+/// managers — never the requester or anyone who takes a step of [chain].
+List<String> leaveWatchers(AppUser requester, List<ApprovalStep> chain, List<AppUser> users) {
+  bool approves(AppUser u) => chain.any((s) => s.uid == u.id || (s.uid == null && s.role == u.role));
+  return [
+    for (final u in users)
+      if (u.active &&
+          u.id != requester.id &&
+          (u.role == UserRole.gm || (requester.role == UserRole.salesExec && u.role == UserRole.salesManager)) &&
+          !approves(u))
+        u.id,
+  ];
 }
 
 /// Whether [me] is the one to act on a request now: it's pending, not their

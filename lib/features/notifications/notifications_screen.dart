@@ -119,6 +119,15 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.leaveRequested => l10n.notifLeaveRequested(owner),
         NotificationType.leaveApproved => l10n.notifLeaveApproved(from),
         NotificationType.leaveRejected => l10n.notifLeaveRejected(from),
+        NotificationType.leaveStepApproved => l10n.notifLeaveStepApproved(from),
+        NotificationType.leaveReminder => l10n.notifLeaveReminder(owner, n.count),
+        NotificationType.leaveUpdate => switch (LeaveUpdate.values.asNameMap()[n.issue]) {
+            LeaveUpdate.stepApproved => l10n.notifLeaveUpdateStepApproved(from, owner),
+            LeaveUpdate.approved => l10n.notifLeaveUpdateApproved(from, owner),
+            LeaveUpdate.rejected => l10n.notifLeaveUpdateRejected(from, owner),
+            LeaveUpdate.cancelled => l10n.notifLeaveUpdateCancelled(owner),
+            _ => l10n.notifLeaveUpdateSent(owner),
+          },
         NotificationType.clientStatusRequested =>
           l10n.notifClientStatusRequested(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
         NotificationType.clientStatusApproved =>
@@ -174,6 +183,9 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.leaveRequested => Icons.beach_access,
                     NotificationType.leaveApproved => Icons.event_available,
                     NotificationType.leaveRejected => Icons.event_busy,
+                    NotificationType.leaveStepApproved => Icons.task_alt,
+                    NotificationType.leaveReminder => Icons.alarm,
+                    NotificationType.leaveUpdate => Icons.info_outline,
                     NotificationType.clientStatusRequested => Icons.store_mall_directory_outlined,
                     NotificationType.clientStatusApproved => Icons.check_circle,
                     NotificationType.clientStatusRejected => Icons.cancel,
@@ -211,7 +223,10 @@ class NotificationsScreen extends ConsumerWidget {
                         context.push('/live');
                       case NotificationType.leaveRequested ||
                             NotificationType.leaveApproved ||
-                            NotificationType.leaveRejected:
+                            NotificationType.leaveRejected ||
+                            NotificationType.leaveStepApproved ||
+                            NotificationType.leaveReminder ||
+                            NotificationType.leaveUpdate:
                         context.push('/leave/${n.ref}');
                       case NotificationType.clientStatusRequested ||
                             NotificationType.clientStatusApproved ||

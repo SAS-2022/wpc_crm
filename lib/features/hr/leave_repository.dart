@@ -29,6 +29,7 @@ class LeaveRequest {
     required this.stepIndex,
     required this.awaitingKey,
     required this.createdAt,
+    this.watcherIds = const [],
   });
 
   final String id;
@@ -54,6 +55,9 @@ class LeaveRequest {
   /// Who may act now ('uid:…' / 'role:…'); null once decided or cancelled.
   final String? awaitingKey;
   final DateTime? createdAt;
+
+  /// Told of every step without approving ([leaveWatchers], 2026-10-30).
+  final List<String> watcherIds;
 
   String typeName(String lang) => lang == 'ar' && typeAr.isNotEmpty ? typeAr : typeEn;
 
@@ -92,6 +96,7 @@ class LeaveRequest {
       stepIndex: (d['stepIndex'] as num?)?.toInt() ?? 0,
       awaitingKey: d['awaitingKey'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      watcherIds: [for (final id in d['watcherIds'] as List<dynamic>? ?? const []) if (id is String) id],
     );
   }
 }
@@ -155,8 +160,8 @@ final allLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
 final leaveRequestProvider = StreamProvider.family<LeaveRequest?, String>(
     (ref, id) => _requests.doc(id).snapshots().map((s) => s.exists ? LeaveRequest.fromDoc(s) : null));
 
-/// Requests whose current step is the signed-in user's. A KAM may only read
-/// their team's requests (by `kamId`), so theirs are filtered here.
+/// Requests whose current step is the signed-in user's. Outside the HR area
+/// only the direct manager's step (by uid) can be theirs.
 final leaveAwaitingMeProvider = StreamProvider<List<LeaveRequest>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
@@ -164,10 +169,8 @@ final leaveAwaitingMeProvider = StreamProvider<List<LeaveRequest>>((ref) {
   final Query<Map<String, dynamic>> query;
   if (me.role.canSeeHr) {
     query = _requests.where('awaitingKey', whereIn: keys);
-  } else if (me.role == UserRole.kam) {
-    query = _requests.where('kamId', isEqualTo: me.id);
   } else {
-    return Stream.value(const []);
+    query = _requests.where('awaitingKey', isEqualTo: 'uid:${me.id}');
   }
   return query.snapshots().map((s) => _newestFirst(s)
       .where((r) => canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey))
@@ -243,9 +246,13 @@ class LeaveRepository {
     required List<AppUser> users,
   }) => saving(() async {
     final doc = _requests.doc();
+    final watchers = leaveWatchers(me, chain, users);
     await doc.set({
       'uid': me.id,
       'kamId': chain.where((s) => s.role == UserRole.kam).firstOrNull?.uid,
+      // The direct manager's step (rules: they may read the request).
+      'managerId': chain.where((s) => s.uid != null).firstOrNull?.uid,
+      'watcherIds': watchers,
       'typeId': type.id,
       'typeEn': type.en,
       'typeAr': type.ar,
@@ -270,6 +277,7 @@ class LeaveRepository {
       await attachments.upload((parent: AttachmentParent.leaveRequests, id: doc.id), f, me.id);
     }
     await _notifyStep(chain.first, fromId: me.id, ownerId: me.id, requestId: doc.id, users: users);
+    await _notifyWatchers(watchers, LeaveUpdate.sent, fromId: me.id, ownerId: me.id, requestId: doc.id);
     return doc.id;
   });
 
@@ -317,11 +325,14 @@ class LeaveRepository {
   });
 
   /// The owner withdraws a request that is still waiting.
-  Future<void> cancel(String id) => saving(() => _requests.doc(id).update({
-        'status': LeaveStatus.cancelled.name,
-        'awaitingKey': null,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }));
+  Future<void> cancel(LeaveRequest r) => saving(() async {
+        await _requests.doc(r.id).update({
+          'status': LeaveStatus.cancelled.name,
+          'awaitingKey': null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        await _notifyWatchers(r.watcherIds, LeaveUpdate.cancelled, fromId: r.uid, ownerId: r.uid, requestId: r.id);
+      });
 
   /// The current approver approves (the request moves to the next step, or is
   /// approved after the last) or rejects (it ends). In a transaction, so two
@@ -354,8 +365,25 @@ class LeaveRepository {
     });
     if (next == null) throw StateError('already decided');
     final (r, nextStep) = next;
+    await _notifyWatchers(
+      r.watcherIds,
+      nextStep != null ? LeaveUpdate.stepApproved : (approve ? LeaveUpdate.approved : LeaveUpdate.rejected),
+      fromId: me.id,
+      ownerId: r.uid,
+      requestId: id,
+    );
     if (nextStep != null) {
       await _notifyStep(nextStep, fromId: me.id, ownerId: r.uid, requestId: id, users: users);
+      // The person hears that their manager approved and HR is next.
+      await sendNotifications(
+        toIds: [r.uid],
+        type: NotificationType.leaveStepApproved,
+        fromId: me.id,
+        ownerId: r.uid,
+        date: '',
+        count: 0,
+        ref: id,
+      );
     } else {
       await sendNotifications(
         toIds: [r.uid],
@@ -384,6 +412,25 @@ class LeaveRepository {
       }
     }
   });
+
+  /// `leaveUpdate` to the people only informed ([LeaveRequest.watcherIds]).
+  Future<void> _notifyWatchers(
+    List<String> watcherIds,
+    LeaveUpdate update, {
+    required String fromId,
+    required String ownerId,
+    required String requestId,
+  }) =>
+      sendNotifications(
+        toIds: watcherIds,
+        type: NotificationType.leaveUpdate,
+        fromId: fromId,
+        ownerId: ownerId,
+        date: '',
+        count: 0,
+        ref: requestId,
+        issue: update.name,
+      );
 
   Future<void> _notifyStep(
     ApprovalStep step, {

@@ -4,7 +4,7 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists()) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' && newData.val() === 'driver' && (!data.exists() || data.val() === 'driver'))",
-        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor)$/)"
+        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/)"
       }
     },
     "live_locations": {

@@ -4130,6 +4130,48 @@ abstract class AppLocalizations {
   /// **'{name} approved your request'**
   String notifLeaveApproved(String name);
 
+  /// No description provided for @notifLeaveStepApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved your request – now waiting for the final approval'**
+  String notifLeaveStepApproved(String name);
+
+  /// No description provided for @notifLeaveReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder: {owner}\'s request has been waiting {days, plural, =1{1 day} other{{days} days}} for your approval'**
+  String notifLeaveReminder(String owner, int days);
+
+  /// No description provided for @notifLeaveUpdateSent.
+  ///
+  /// In en, this message translates to:
+  /// **'{owner} sent a leave request – for your information'**
+  String notifLeaveUpdateSent(String owner);
+
+  /// No description provided for @notifLeaveUpdateStepApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved {owner}\'s request – now waiting for the final approval'**
+  String notifLeaveUpdateStepApproved(String name, String owner);
+
+  /// No description provided for @notifLeaveUpdateApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} gave the final approval to {owner}\'s request'**
+  String notifLeaveUpdateApproved(String name, String owner);
+
+  /// No description provided for @notifLeaveUpdateRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} rejected {owner}\'s request'**
+  String notifLeaveUpdateRejected(String name, String owner);
+
+  /// No description provided for @notifLeaveUpdateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'{owner} cancelled their request'**
+  String notifLeaveUpdateCancelled(String owner);
+
   /// No description provided for @notifLeaveRejected.
   ///
   /// In en, this message translates to:
@@ -5803,6 +5845,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Warehouse supervisor'**
   String get roleWarehouseSupervisor;
+
+  /// No description provided for @roleFactoryManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory manager'**
+  String get roleFactoryManager;
+
+  /// No description provided for @roleOperator.
+  ///
+  /// In en, this message translates to:
+  /// **'Operator'**
+  String get roleOperator;
 
   /// No description provided for @driversPage.
   ///

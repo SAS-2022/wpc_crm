@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../hr/leave_rules.dart' show myLeaveEnabled;
 import '../settings/page_access.dart';
 import '../../core/login_name.dart';
 import '../../core/providers.dart';
@@ -45,6 +46,7 @@ class MoreScreen extends ConsumerWidget {
         ],
       ]),
       (l10n.moreSectionPeople, [
+        if (myLeaveEnabled) item(Icons.beach_access, l10n.myLeave, '/leave'),
         if (role.seesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
         if (role.managesDrivers) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
         if (me.seesTeamAttendance && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),

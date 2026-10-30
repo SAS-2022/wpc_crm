@@ -3,13 +3,14 @@ import 'package:wpc_crm/core/app_user.dart';
 import 'package:wpc_crm/features/hr/leave_rules.dart';
 import 'package:wpc_crm/features/tracking/work_hours.dart';
 
-AppUser _u(String id, UserRole role, {String? kamId, bool active = true}) => AppUser(
+AppUser _u(String id, UserRole role, {String? kamId, String? managerId, bool active = true}) => AppUser(
       id: id,
       name: id,
       email: '',
       phone: '',
       role: role,
       kamId: kamId,
+      managerId: managerId,
       active: active,
     );
 
@@ -76,23 +77,50 @@ void main() {
       return [for (final s in approvalChain(all.firstWhere((u) => u.id == id), all)) s.awaitingKey];
     }
 
-    test('in order per the user\'s rule', () {
-      expect(chain('exec'), ['uid:kam', 'role:sales_manager', 'role:gm', 'role:hr']);
-      expect(chain('kam'), ['role:sales_manager', 'role:gm', 'role:hr']);
-      expect(chain('sm'), ['role:gm', 'role:hr']);
-      expect(chain('acc'), ['role:gm', 'role:hr']);
-      expect(chain('hr'), ['role:gm']);
+    test('direct manager, then HR', () {
+      expect(chain('exec'), ['uid:kam', 'role:hr']);
+      expect(chain('kam'), ['uid:sm', 'role:hr']);
+      expect(chain('sm'), ['uid:gm', 'role:hr']);
+      expect(chain('acc'), ['uid:gm', 'role:hr']);
+      // No direct manager: HR only. HR's own request: their manager only.
       expect(chain('gm'), ['role:hr']);
+      expect(chain('hr'), ['uid:gm']);
+      // The manager chosen on the user form comes first.
+      final chosen = [...users.where((u) => u.id != 'acc'), _u('acc', UserRole.accounting, managerId: 'sm')];
+      expect(chain('acc', chosen), ['uid:sm', 'role:hr']);
+      // Several automatic managers: any of them.
+      final twoSm = [...users, _u('sm2', UserRole.salesManager)];
+      expect(chain('kam', twoSm), ['role:sales_manager', 'role:hr']);
+      // An HR person as direct manager approves once.
+      final hrBoss = [...users.where((u) => u.id != 'acc'), _u('acc', UserRole.accounting, managerId: 'hr')];
+      expect(chain('acc', hrBoss), ['role:hr']);
     });
 
-    test('steps nobody can take are left out', () {
+    test('without an HR account the sales manager stands in, else the GM', () {
       final noHr = users.where((u) => u.role != UserRole.hr).toList();
-      expect(chain('exec', noHr), ['uid:kam', 'role:sales_manager', 'role:gm']);
-      expect(chain('gm', noHr), isEmpty);
+      expect(chain('exec', noHr), ['uid:kam', 'role:sales_manager']);
+      // The SM's manager is the GM, who also stands in for HR: asked once.
+      expect(chain('sm', noHr), ['role:gm']);
+      expect(chain('gm', noHr), ['role:sales_manager']);
       final kamGone = [for (final u in users) u.id == 'kam' ? _u('kam', UserRole.kam, active: false) : u];
-      expect(chain('exec', kamGone), ['role:sales_manager', 'role:gm', 'role:hr']);
-      // No sales manager: a KAM's request goes straight to the GM.
-      expect(chain('kam', [...users.where((u) => u.id != 'sm')]), ['role:gm', 'role:hr']);
+      expect(chain('exec', kamGone), ['uid:sm', 'role:hr']);
+      final alone = [_u('gm', UserRole.gm)];
+      expect(chain('gm', alone), isEmpty);
+    });
+
+    test('informed: the GM always, the sales managers too for sales executives, never an approver', () {
+      List<String> watchers(String id, [List<AppUser>? list]) {
+        final all = list ?? users;
+        final me = all.firstWhere((u) => u.id == id);
+        return leaveWatchers(me, approvalChain(me, all), all);
+      }
+      expect(watchers('exec'), unorderedEquals(['sm', 'gm']));
+      expect(watchers('kam'), ['gm']); // the SM approves
+      expect(watchers('acc'), isEmpty); // the GM approves
+      expect(watchers('gm'), isEmpty);
+      final logistics = [...users, _u('lm', UserRole.logisticsManager), _u('drv', UserRole.driver)];
+      expect(chain('drv', logistics), ['uid:lm', 'role:hr']);
+      expect(watchers('drv', logistics), ['gm']);
     });
 
     test('only the current step\'s person decides, never the requester', () {

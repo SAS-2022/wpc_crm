@@ -195,7 +195,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: OutlinedButton.icon(
-                onPressed: _busy ? null : () => _run(() => ref.read(leaveRepositoryProvider).cancel(r.id)),
+                onPressed: _busy ? null : () => _run(() => ref.read(leaveRepositoryProvider).cancel(r)),
                 icon: const Icon(Icons.block),
                 label: Text(l10n.cancelRequest),
               ),

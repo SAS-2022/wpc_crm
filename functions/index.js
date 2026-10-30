@@ -137,6 +137,13 @@ const TEXTS = {
     leaveRequested: (n, c, d, o) => `Leave request from ${o} – waiting for your approval`,
     leaveApproved: (n) => `${n} approved your request`,
     leaveRejected: (n) => `${n} rejected your request`,
+    leaveStepApproved: (n) => `${n} approved your request – now waiting for the final approval`,
+    leaveReminder: (n, c, d, o) => `Reminder: ${o}'s request has been waiting ${c} day(s) for your approval`,
+    leaveUpdate_sent: (n, c, d, o) => `${o} sent a leave request – for your information`,
+    leaveUpdate_stepApproved: (n, c, d, o) => `${n} approved ${o}'s request – now waiting for the final approval`,
+    leaveUpdate_approved: (n, c, d, o) => `${n} gave the final approval to ${o}'s request`,
+    leaveUpdate_rejected: (n, c, d, o) => `${n} rejected ${o}'s request`,
+    leaveUpdate_cancelled: (n, c, d, o) => `${o} cancelled their request`,
     clientStatusRequested: (n, c, d, o, x) => `${n} asked to mark ${x.client} as ${x.status} – waiting for your approval`,
     clientStatusApproved: (n, c, d, o, x) => `${n} approved: ${x.client} is now ${x.status}`,
     clientStatusRejected: (n, c, d, o, x) => `${n} rejected marking ${x.client} as ${x.status}`,
@@ -188,6 +195,13 @@ const TEXTS = {
     leaveRequested: (n, c, d, o) => `طلب من ${o} – بانتظار موافقتك`,
     leaveApproved: (n) => `وافق ${n} على طلبك`,
     leaveRejected: (n) => `رفض ${n} طلبك`,
+    leaveStepApproved: (n) => `وافق ${n} على طلبك – بانتظار الموافقة النهائية`,
+    leaveReminder: (n, c, d, o) => `تذكير: طلب ${o} بانتظار موافقتك منذ ${c} يوم`,
+    leaveUpdate_sent: (n, c, d, o) => `طلب إجازة جديد من ${o} – للعلم`,
+    leaveUpdate_stepApproved: (n, c, d, o) => `وافق ${n} على طلب ${o} – بانتظار الموافقة النهائية`,
+    leaveUpdate_approved: (n, c, d, o) => `أعطى ${n} الموافقة النهائية على طلب ${o}`,
+    leaveUpdate_rejected: (n, c, d, o) => `رفض ${n} طلب ${o}`,
+    leaveUpdate_cancelled: (n, c, d, o) => `أُلغي طلب ${o}`,
     clientStatusRequested: (n, c, d, o, x) => `طلب ${n} تحويل ${x.client} إلى ${x.status} – بانتظار موافقتك`,
     clientStatusApproved: (n, c, d, o, x) => `وافق ${n}: ${x.client} أصبح ${x.status}`,
     clientStatusRejected: (n, c, d, o, x) => `رفض ${n} تحويل ${x.client} إلى ${x.status}`,
@@ -262,7 +276,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const db = admin.firestore();
   // For client transfers ownerId is the other sales executive (empty = unassigned);
   // for leave requests it is the person who asked.
-  const other = ['clientsTransferredOut', 'leaveRequested', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
+  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -283,7 +297,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const stale = [];
   await Promise.all(Object.entries(byLang).map(async ([lang, tokens]) => {
     const t = TEXTS[lang];
-    const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type;
+    const key = n.type === 'trackingIssue' ? `tracking_${n.issue}` : n.type === 'leaveUpdate' ? `leaveUpdate_${n.issue}` : n.type;
     const extra = {
       client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
       site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId, driving: n.issue === 'driving',
@@ -1207,9 +1221,12 @@ async function driverOvertime(hours, now) {
 }
 
 /**
- * A person's direct manager(s) (user decision 2026-10-22): a sales exec's
- * KAM, else the sales managers; a KAM's sales managers; everyone else's GMs
- * (also when no one fits). Same as `directManagersOf` in notifications.dart.
+ * A person's direct manager(s) (user decision 2026-10-22, teams 2026-10-30):
+ * a sales exec's KAM, else the sales managers; a KAM's sales managers;
+ * drivers, warehouse supervisors and workers the logistics manager;
+ * engineers, operators and Production workers the factory manager;
+ * everyone else's GMs (also when no one fits). Same as `directManagersOf`
+ * in notifications.dart.
  */
 function directManagers(person, uid, users) {
   // Chosen on the user form (2026-10-23).
@@ -1223,7 +1240,10 @@ function directManagers(person, uid, users) {
     if (found.length === 0) found = withRole('sales_manager');
   } else if (person.role === 'kam') {
     found = withRole('sales_manager');
-  } else if (person.role === 'driver' || person.role === 'warehouse_supervisor') {
+  } else if (person.role === 'engineer' || person.role === 'operator'
+    || (person.role === 'worker' && person.department === 'production')) {
+    found = withRole('factory_manager');
+  } else if (person.role === 'driver' || person.role === 'warehouse_supervisor' || person.role === 'worker') {
     found = withRole('logistics_manager');
   } else {
     found = withRole('gm');
@@ -1261,6 +1281,40 @@ exports.absenceReported = onDocumentCreated('absences/{id}', async (event) => {
   }
   await batch.commit();
 });
+
+const { leaveReminderDue, awaitingUids } = require('./leaveReminders');
+
+/**
+ * Leave approval reminders (user request 2026-10-30): every hour from 08:00
+ * to 20:00 Riyadh, each pending request whose current step has waited 24 h
+ * since it started (or since the last reminder) sends `leaveReminder`
+ * (count = days waiting, ownerId = the requester) to that step's people
+ * and stores `reminded` {step, at} on the request (logic leaveReminders.js).
+ */
+exports.leaveReminders = onSchedule(
+  { schedule: '0 8-20 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const now = Date.now();
+    const db = admin.firestore();
+    const pending = (await db.collection('leave_requests').where('status', '==', 'pending').get()).docs;
+    const due = pending.map((d) => ({ d, ...leaveReminderDue(d.data(), now) })).filter((x) => x.due);
+    if (due.length === 0) return;
+    const users = (await db.collection('users').where('active', '==', true).get()).docs
+      .map((d) => ({ id: d.id, ...d.data() }));
+    const batch = db.batch();
+    for (const { d, days } of due) {
+      const r = d.data();
+      for (const toId of awaitingUids(r.awaitingKey, r.uid, users)) {
+        batch.set(db.collection('notifications').doc(), {
+          toId, fromId: r.uid, ownerId: r.uid, type: 'leaveReminder', date: '', count: Math.max(days, 1),
+          ref: d.id, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      batch.update(d.ref, { reminded: { step: r.stepIndex || 0, at: admin.firestore.Timestamp.fromMillis(now) } });
+    }
+    await batch.commit();
+  },
+);
 
 /** Reminder this long after the start of the work day (user request 2026-10-20). */
 const LATE_REMINDER_MIN = 15;
@@ -1333,7 +1387,7 @@ exports.attendanceReminders = onSchedule(
 );
 
 /** Office staff whose GPS is recorded 08:00–18:00, not shared live (2026-10-28; `UserRole.recordsGps`). */
-const GPS_RECORDED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'logistics_manager', 'warehouse_supervisor'];
+const GPS_RECORDED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
 
 /**
  * Every 5 minutes (2026-10-28, after Driver Number Two's 27 Oct: at the

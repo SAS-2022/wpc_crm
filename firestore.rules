@@ -19,7 +19,7 @@ service cloud.firestore {
     // warehouse supervisors. They read attendance and reported absences;
     // the app shows only the people under them.
     function isManagerUser() {
-      return active() && (me().role in ['kam', 'sales_manager', 'gm', 'logistics_manager', 'warehouse_supervisor']
+      return active() && (me().role in ['kam', 'sales_manager', 'gm', 'logistics_manager', 'warehouse_supervisor', 'factory_manager']
         || me().get('isManager', false) == true);
     }
     function ownsClient(clientId) {
@@ -306,13 +306,19 @@ service cloud.firestore {
       // Managers too (2026-10-23): their people's leave on the Attendance
       // page and report; the app shows only the people under them. KAMs
       // keep to their own team (`kamId`).
+      // The direct manager approving (by uid) reads it from then on (2026-10-30).
       allow read: if ownsRequest() || isHrArea() || (isManagerUser() && me().role != 'kam')
-        || (active() && resource.data.kamId == request.auth.uid);
+        || (active() && resource.data.kamId == request.auth.uid)
+        || (active() && (resource.data.get('managerId', null) == request.auth.uid
+            || request.auth.uid in resource.data.get('watcherIds', [])
+            || resource.data.awaitingKey == 'uid:' + request.auth.uid));
       allow create: if active() && request.resource.data.uid == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.stepIndex == 0
         && request.resource.data.steps.size() > 0
-        && request.resource.data.steps[request.resource.data.steps.size() - 1].role in ['hr', 'gm']
+        // Ends with HR (direct manager → HR, 2026-10-30); the GM or, while
+        // no HR account exists, the sales manager stand in (smActsAsHr).
+        && request.resource.data.steps[request.resource.data.steps.size() - 1].role in ['hr', 'gm', 'sales_manager']
         // HR / GM accepting someone's reported absence as leave: approved at once.
         || (active() && me().role in ['hr', 'gm', 'sales_manager'] && request.resource.data.uid != request.auth.uid
             && request.resource.data.status == 'approved'
@@ -333,7 +339,8 @@ service cloud.firestore {
       // Documents (e.g. a hospital report): the owner adds them, HR may too.
       match /attachments/{attachmentId} {
         function parent() { return get(/databases/$(database)/documents/leave_requests/$(requestId)).data; }
-        allow read: if isHrArea() || (active() && (parent().uid == request.auth.uid || parent().kamId == request.auth.uid));
+        allow read: if isHrArea() || (active() && (parent().uid == request.auth.uid || parent().kamId == request.auth.uid
+          || parent().get('managerId', null) == request.auth.uid));
         allow create: if managesHr() || (active() && parent().uid == request.auth.uid);
         allow delete: if managesHr();
       }

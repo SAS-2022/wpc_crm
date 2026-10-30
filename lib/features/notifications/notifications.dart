@@ -42,6 +42,18 @@ enum NotificationType {
   leaveApproved,
   leaveRejected,
 
+  /// The recipient's leave request passed a step (their direct manager) and
+  /// now waits for the next one (HR).
+  leaveStepApproved,
+
+  /// Written by the `leaveReminders` Cloud Function every 24 h while
+  /// `ownerId`'s request waits at the recipient's step ([AppNotification.count] = days).
+  leaveReminder,
+
+  /// For the people only informed of `ownerId`'s request (GM; SM for sales
+  /// executives): [AppNotification.issue] = a [LeaveUpdate] name.
+  leaveUpdate,
+
   /// `ownerId` asked to mark client [AppNotification.ref] as
   /// [AppNotification.issue] ('closed' / 'notWorking' / 'active').
   clientStatusRequested,
@@ -216,10 +228,13 @@ final unreadCountProvider = Provider<int>(
 );
 
 /// [person]'s direct manager(s) (user decision 2026-10-22, who should know
-/// who is on leave; also who approves leaving early, 2026-10-23): the one
-/// chosen on the user form (`managerId`, when active); else a sales exec's
-/// KAM, else the sales managers; a KAM's sales managers; everyone else's
-/// GMs (also when no one fits). Same as `directManagers` in functions/index.js.
+/// who is on leave; also who approves leaving early, 2026-10-23, and the
+/// first leave approval, 2026-10-30): the one chosen on the user form
+/// (`managerId`, when active); else a sales exec's KAM, else the sales
+/// managers; a KAM's sales managers; drivers, warehouse supervisors and
+/// workers the logistics manager; engineers, operators and workers of the
+/// Production department the factory manager; everyone else's GMs (also
+/// when no one fits). Same as `directManagers` in functions/index.js.
 List<String> directManagersOf(AppUser person, List<AppUser> users) {
   final chosen = [for (final u in users) if (u.id == person.managerId && u.active && u.id != person.id) u.id];
   if (chosen.isNotEmpty) return chosen;
@@ -230,7 +245,9 @@ List<String> directManagersOf(AppUser person, List<AppUser> users) {
       ].ifEmpty(() => withRole(UserRole.salesManager)),
     UserRole.kam => withRole(UserRole.salesManager),
     // Drivers and warehouse supervisors: the logistics manager (2026-10-23).
-    UserRole.driver || UserRole.warehouseSupervisor => withRole(UserRole.logisticsManager),
+    UserRole.engineer || UserRole.operator => withRole(UserRole.factoryManager),
+    UserRole.worker when person.department == 'production' => withRole(UserRole.factoryManager),
+    UserRole.driver || UserRole.warehouseSupervisor || UserRole.worker => withRole(UserRole.logisticsManager),
     UserRole.gm => const <String>[],
     _ => withRole(UserRole.gm),
   };
@@ -255,6 +272,9 @@ List<AppUser> driversOf(AppUser me, List<AppUser> users) => [
 extension on List<String> {
   List<String> ifEmpty(List<String> Function() other) => isEmpty ? other() : this;
 }
+
+/// What happened to a request, for [NotificationType.leaveUpdate].
+enum LeaveUpdate { sent, stepApproved, approved, rejected, cancelled }
 
 /// Who reviews [owner]'s plan: their KAM, or the sales manager / GM when they
 /// have no active KAM.

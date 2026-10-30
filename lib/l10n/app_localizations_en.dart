@@ -2360,6 +2360,47 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String notifLeaveStepApproved(String name) {
+    return '$name approved your request – now waiting for the final approval';
+  }
+
+  @override
+  String notifLeaveReminder(String owner, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Reminder: $owner\'s request has been waiting $_temp0 for your approval';
+  }
+
+  @override
+  String notifLeaveUpdateSent(String owner) {
+    return '$owner sent a leave request – for your information';
+  }
+
+  @override
+  String notifLeaveUpdateStepApproved(String name, String owner) {
+    return '$name approved $owner\'s request – now waiting for the final approval';
+  }
+
+  @override
+  String notifLeaveUpdateApproved(String name, String owner) {
+    return '$name gave the final approval to $owner\'s request';
+  }
+
+  @override
+  String notifLeaveUpdateRejected(String name, String owner) {
+    return '$name rejected $owner\'s request';
+  }
+
+  @override
+  String notifLeaveUpdateCancelled(String owner) {
+    return '$owner cancelled their request';
+  }
+
+  @override
   String notifLeaveRejected(String name) {
     return '$name rejected your request';
   }
@@ -3440,6 +3481,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleWarehouseSupervisor => 'Warehouse supervisor';
+
+  @override
+  String get roleFactoryManager => 'Factory manager';
+
+  @override
+  String get roleOperator => 'Operator';
 
   @override
   String get driversPage => 'Drivers';

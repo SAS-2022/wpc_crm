@@ -27,6 +27,12 @@ enum UserRole {
   /// Attendance only for now (user decision 2026-10-20).
   warehouseSupervisor('warehouse_supervisor'),
 
+  /// Production (user decision 2026-10-30): the factory manager approves
+  /// the production staff's leave first (engineers, operators, workers of
+  /// the Production department), then HR. Operators: attendance only.
+  factoryManager('factory_manager'),
+  operator('operator'),
+
   /// A role this app version doesn't know (added in a later version): no
   /// access until the app is updated. Never stored.
   unknown('');
@@ -39,13 +45,14 @@ enum UserRole {
   /// Roles that can be given to a user (the user form's list).
   static const assignable = [
     salesExec, kam, salesManager, gm, hr, accounting, procurement, worker, engineer, driver,
-    logisticsManager, warehouseSupervisor,
+    logisticsManager, warehouseSupervisor, factoryManager, operator,
   ];
 
   /// What a person may ask for when registering (2026-10-21: the role is
   /// the job; the old Positions list repeated it). Managers are made by an admin.
   static const registrable = [
     salesExec, kam, hr, accounting, procurement, worker, engineer, driver, logisticsManager, warehouseSupervisor,
+    factoryManager, operator,
   ];
 
   /// Unknown or missing values become [unknown], never a sales role: an old
@@ -85,7 +92,8 @@ enum UserRole {
 
   /// Manager roles: always a manager, can be someone's direct manager
   /// (2026-10-23). Anyone else becomes one with [AppUser.markedManager].
-  bool get isManagerRole => this == gm || this == salesManager || this == kam || this == logisticsManager;
+  bool get isManagerRole =>
+      this == gm || this == salesManager || this == kam || this == logisticsManager || this == factoryManager;
 
   /// Opens the Users page: sales manager and GM for everyone, the logistics
   /// manager for drivers only (user decision 2026-10-23).
@@ -111,7 +119,9 @@ enum UserRole {
       this == engineer ||
       this == driver ||
       this == logisticsManager ||
-      this == warehouseSupervisor;
+      this == warehouseSupervisor ||
+      this == factoryManager ||
+      this == operator;
 
   /// Attendance: people who leave the work site during the day (sales team,
   /// drivers) aren't checked out when they leave before the end of the day;
@@ -143,6 +153,8 @@ enum UserRole {
         driver => l10n.roleDriver,
         logisticsManager => l10n.roleLogisticsManager,
         warehouseSupervisor => l10n.roleWarehouseSupervisor,
+        factoryManager => l10n.roleFactoryManager,
+        operator => l10n.roleOperator,
         unknown => l10n.roleUnknown,
       };
 }
@@ -308,11 +320,13 @@ class AppUser {
   String? get departmentId => department ?? defaultDepartmentOf(role);
 
   /// The department a role belongs to until one is chosen (ids of
-  /// `defaultDepartments`); workers and engineers: none.
+  /// `defaultDepartments`); workers: none (logistics or production, chosen
+  /// per person — it decides who approves their leave).
   static String? defaultDepartmentOf(UserRole role) => switch (role) {
         UserRole.salesExec || UserRole.kam || UserRole.salesManager => 'sales',
         UserRole.driver || UserRole.logisticsManager => 'logistics',
         UserRole.warehouseSupervisor => 'warehouse',
+        UserRole.factoryManager || UserRole.operator || UserRole.engineer => 'production',
         UserRole.gm => 'admin',
         UserRole.hr => 'hr',
         UserRole.accounting => 'accounting',

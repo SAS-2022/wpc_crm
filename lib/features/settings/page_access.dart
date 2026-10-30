@@ -25,7 +25,7 @@ enum AppPage {
   routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws}),
   drivers(['/drivers'], {_sm, _gm, _lm, _ws}),
   vehicles(['/vehicles'], {_sm, _gm, _lm}),
-  attendance(['/attendance'], {_hr, _gm, _sm, _kam, _lm, _ws}),
+  attendance(['/attendance'], {_hr, _gm, _sm, _kam, _lm, _ws, _fm}),
   hrArea(['/hr'], {_hr, _gm, _sm}),
   users(['/users'], {_sm, _gm, _lm}),
   importClients(['/import'], {_sm, _gm}),
@@ -62,6 +62,7 @@ const _sm = UserRole.salesManager;
 const _gm = UserRole.gm;
 const _hr = UserRole.hr;
 const _lm = UserRole.logisticsManager;
+const _fm = UserRole.factoryManager;
 const _ws = UserRole.warehouseSupervisor;
 
 class PageAccess {

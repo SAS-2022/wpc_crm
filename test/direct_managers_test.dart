@@ -22,7 +22,7 @@ void main() {
     expect(of('kam'), ['sm']);
     expect(of('sm'), ['gm']);
     expect(of('hr'), ['gm']);
-    expect(of('worker'), ['gm']);
+    expect(of('worker'), ['gm']); // no logistics manager
     expect(of('gm'), isEmpty);
   });
 
@@ -41,6 +41,23 @@ void main() {
     expect(of('acc', hrGone), ['gm']);
   });
 
+  test('production: engineers, operators and Production workers → the factory manager', () {
+    final list = [
+      ...users,
+      u('lm', UserRole.logisticsManager),
+      u('fm', UserRole.factoryManager),
+      u('eng', UserRole.engineer),
+      u('op', UserRole.operator),
+      AppUser(id: 'pw', name: 'pw', email: '', phone: '', role: UserRole.worker, kamId: null, active: true, department: 'production'),
+    ];
+    expect(of('eng', list), ['fm']);
+    expect(of('op', list), ['fm']);
+    expect(of('pw', list), ['fm']);
+    expect(of('worker', list), ['lm']); // no department: logistics
+    expect(of('fm', list), ['gm']);
+    expect(of('op', users.followedBy([u('op', UserRole.operator)]).toList()), ['gm']); // no factory manager
+  });
+
   test('drivers and warehouse supervisors → the logistics manager; who is under whom', () {
     final list = [
       ...users,
@@ -53,7 +70,7 @@ void main() {
     expect(of('ws', list), ['lm']);
     expect(of('d2', [...users, u('d2', UserRole.driver)]), ['gm']); // no logistics manager
     AppUser by(String id) => list.firstWhere((x) => x.id == id);
-    expect(peopleUnder(by('lm'), list).map((x) => x.id), ['ws', 'd1', 'd2']);
+    expect(peopleUnder(by('lm'), list).map((x) => x.id), ['worker', 'ws', 'd1', 'd2']);
     expect(peopleUnder(by('ws'), list).map((x) => x.id), ['d1']);
     expect(peopleUnder(by('kam'), list).map((x) => x.id), ['exec']);
     expect(driversOf(by('lm'), list).map((x) => x.id), ['d1', 'd2']);

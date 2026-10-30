@@ -2356,6 +2356,49 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String notifLeaveStepApproved(String name) {
+    return 'وافق $name على طلبك – بانتظار الموافقة النهائية';
+  }
+
+  @override
+  String notifLeaveReminder(String owner, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days يوم',
+      few: '$days أيام',
+      two: 'يومين',
+      one: 'يوم واحد',
+    );
+    return 'تذكير: طلب $owner بانتظار موافقتك منذ $_temp0';
+  }
+
+  @override
+  String notifLeaveUpdateSent(String owner) {
+    return 'طلب إجازة جديد من $owner – للعلم';
+  }
+
+  @override
+  String notifLeaveUpdateStepApproved(String name, String owner) {
+    return 'وافق $name على طلب $owner – بانتظار الموافقة النهائية';
+  }
+
+  @override
+  String notifLeaveUpdateApproved(String name, String owner) {
+    return 'أعطى $name الموافقة النهائية على طلب $owner';
+  }
+
+  @override
+  String notifLeaveUpdateRejected(String name, String owner) {
+    return 'رفض $name طلب $owner';
+  }
+
+  @override
+  String notifLeaveUpdateCancelled(String owner) {
+    return 'أُلغي طلب $owner';
+  }
+
+  @override
   String notifLeaveRejected(String name) {
     return 'رفض $name طلبك';
   }
@@ -3442,6 +3485,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get roleWarehouseSupervisor => 'مشرف المستودع';
+
+  @override
+  String get roleFactoryManager => 'مدير المصنع';
+
+  @override
+  String get roleOperator => 'مشغل';
 
   @override
   String get driversPage => 'السائقون';

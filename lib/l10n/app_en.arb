@@ -1693,6 +1693,74 @@
       }
     }
   },
+  "notifLeaveStepApproved": "{name} approved your request – now waiting for the final approval",
+  "@notifLeaveStepApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveReminder": "Reminder: {owner}'s request has been waiting {days, plural, =1{1 day} other{{days} days}} for your approval",
+  "@notifLeaveReminder": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notifLeaveUpdateSent": "{owner} sent a leave request – for your information",
+  "@notifLeaveUpdateSent": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveUpdateStepApproved": "{name} approved {owner}'s request – now waiting for the final approval",
+  "@notifLeaveUpdateStepApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveUpdateApproved": "{name} gave the final approval to {owner}'s request",
+  "@notifLeaveUpdateApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveUpdateRejected": "{name} rejected {owner}'s request",
+  "@notifLeaveUpdateRejected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLeaveUpdateCancelled": "{owner} cancelled their request",
+  "@notifLeaveUpdateCancelled": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
   "notifLeaveRejected": "{name} rejected your request",
   "@notifLeaveRejected": {
     "placeholders": {
@@ -2104,6 +2172,8 @@
   "@efficiencyDetailNoGps": {"placeholders": {"needed": {"type": "String"}, "took": {"type": "String"}}},
   "roleLogisticsManager": "Logistics manager",
   "roleWarehouseSupervisor": "Warehouse supervisor",
+  "roleFactoryManager": "Factory manager",
+  "roleOperator": "Operator",
   "driversPage": "Drivers",
   "routeHistoryToday": "Route history",
   "checkInNeedsLocation": "To check in, turn on:",
