@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/login_name.dart';
+import '../../core/saudi_phone.dart';
 import '../../core/password_field.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
@@ -52,7 +53,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await FirebaseFirestore.instance.collection('users').doc(me.id).update({
         'name': _name.text.trim(),
-        'phone': _phone.text.trim(),
+        'phone': saudiMobile(_phone.text) ?? '',
       });
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
     } catch (e) {
@@ -120,7 +121,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_loadedFor != me.id) {
       _loadedFor = me.id;
       _name.text = me.name;
-      _phone.text = me.phone;
+      _phone.text = saudiMobileFieldText(me.phone);
     }
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
     final kam = users.where((u) => u.id == me.kamId).firstOrNull;
@@ -158,11 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           validator: required,
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _phone,
-                          decoration: InputDecoration(labelText: l10n.phone),
-                          keyboardType: TextInputType.phone,
-                        ),
+                        SaudiPhoneField(controller: _phone),
                         const SizedBox(height: 12),
                         ListTile(
                           contentPadding: EdgeInsets.zero,

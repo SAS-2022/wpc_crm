@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/login_name.dart';
+import '../../core/saudi_phone.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/companies.dart';
@@ -57,7 +58,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'name': _name.text.trim(),
           'email': _email.text.trim(),
-          'phone': _phone.text.trim(),
+          'phone': saudiMobile(_phone.text) ?? '',
           'position': _role?.value,
           'companyId': _companyId,
           'role': '',
@@ -110,12 +111,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   decoration: InputDecoration(labelText: l10n.name),
                   validator: required,
                 ),
-                TextFormField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(labelText: l10n.phone),
-                  validator: required,
-                ),
+                SaudiPhoneField(controller: _phone, required: true),
                 DropdownButtonFormField<UserRole>(
                   initialValue: _role,
                   decoration: InputDecoration(labelText: l10n.position),

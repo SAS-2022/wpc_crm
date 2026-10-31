@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_user.dart';
 import '../../core/login_name.dart';
+import '../../core/saudi_phone.dart';
 import '../../core/text_input_dialog.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -148,7 +149,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _email.text = u.email;
     _username.text = usernameOf(u.email) ?? '';
     _useUsername = _username.text.isNotEmpty;
-    _phone.text = u.phone;
+    _phone.text = saudiMobileFieldText(u.phone);
     // An unknown role (from a newer app) is shown as sales exec; saving sets it.
     _role = u.role == UserRole.unknown ? UserRole.salesExec : u.role;
     _kamId = u.kamId;
@@ -190,7 +191,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       id: widget.userId ?? '',
       name: _name.text.trim(),
       email: _useUsername ? loginEmailFor(_username.text) : _email.text.trim(),
-      phone: _phone.text.trim(),
+      phone: saudiMobile(_phone.text) ?? '',
       role: _role!,
       kamId: _kamId,
       active: _active,
@@ -414,11 +415,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 decoration: InputDecoration(labelText: l10n.password),
                 validator: (v) => (v == null || v.length < 6) ? l10n.passwordTooShort : null,
               ),
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(labelText: l10n.phone),
-            ),
+            SaudiPhoneField(controller: _phone),
             DropdownButtonFormField<String>(
               initialValue: companies.any((c) => c.id == _companyId) ? _companyId : '',
               decoration: InputDecoration(labelText: l10n.company),

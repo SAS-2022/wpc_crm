@@ -724,6 +724,7 @@
   "@addPhoneMessageCall": {"placeholders": {"client": {"type": "String"}}},
   "pickFromContacts": "Choose from phone contacts",
   "phoneNumberInvalid": "Enter a phone number (7 to 15 digits)",
+  "saudiPhoneInvalid": "Enter a Saudi mobile number: 5X XXX XXXX (9 digits after +966)",
   "phoneNumberSaved": "Contact number saved",
   "saveAndContinue": "Save and continue",
   "contactPerson": "Contact person",

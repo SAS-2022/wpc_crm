@@ -1030,6 +1030,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneNumberInvalid => 'Enter a phone number (7 to 15 digits)';
 
   @override
+  String get saudiPhoneInvalid =>
+      'Enter a Saudi mobile number: 5X XXX XXXX (9 digits after +966)';
+
+  @override
   String get phoneNumberSaved => 'Contact number saved';
 
   @override

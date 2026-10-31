@@ -1026,6 +1026,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phoneNumberInvalid => 'أدخل رقم هاتف (من 7 إلى 15 رقماً)';
 
   @override
+  String get saudiPhoneInvalid =>
+      'أدخل رقم جوال سعودي: 5X XXX XXXX (9 أرقام بعد ‎+966)';
+
+  @override
   String get phoneNumberSaved => 'تم حفظ رقم التواصل';
 
   @override
