@@ -358,6 +358,55 @@ function siteArrival(points, site, atMs) {
   return arrival;
 }
 
+/** GPS presence uses fixes this fresh (2026-10-31). */
+const PRESENCE_FRESH_MS = 15 * MINUTE;
+
+/**
+ * Where the phone's GPS puts someone now (user report 2026-10-31: Azat showed
+ * "On site" on the Attendance page while the live map had him elsewhere —
+ * the phone never sent the geofence exit). [points] = the day's (or the
+ * latest) location_history fixes, [sites] = their sites {id, lat, lng,
+ * radius}. The last two good fixes (accuracy ≤ 100 m, not mocked, the last
+ * within 15 min) must agree:
+ * - both clearly outside every site (radius + accuracy + 50 m) →
+ *   {inside: false, at: the first fix outside since the last one at a site};
+ * - both at the same site (radius + accuracy) → {inside: true, siteId, at:
+ *   the first fix of that stay};
+ * - else null (can't tell). [fromStart] = the stay runs back to the first
+ *   point given (the caller may look further back).
+ */
+function gpsPresence(points, sites, now) {
+  const pts = points
+    .filter((p) => typeof p?.t === 'number' && typeof p.lat === 'number' && typeof p.lng === 'number'
+      && (p.accuracy ?? 0) <= 100 && p.mocked !== true)
+    .sort((a, b) => a.t - b.t);
+  if (pts.length < 2 || now - pts[pts.length - 1].t > PRESENCE_FRESH_MS) return null;
+  // 'out' | site id | null (unsure, near the edge).
+  const where = (p) => {
+    const margin = Math.min(Math.max(p.accuracy || 0, 0), 100);
+    let near = false;
+    for (const s of sites) {
+      const d = meters(p, s);
+      if (d <= (s.radius || 100) + margin) return s.id;
+      if (d <= (s.radius || 100) + margin + 50) near = true;
+    }
+    return near ? null : 'out';
+  };
+  const marks = pts.map(where);
+  const a = marks[marks.length - 2], b = marks[marks.length - 1];
+  if (a === null || a !== b) return null;
+  // Back to where the current state began.
+  let i = pts.length - 1;
+  if (b === 'out') {
+    while (i > 0 && marks[i - 1] !== null && marks[i - 1] === 'out') i--;
+    // Unsure fixes between the site and outside: the move started at the first one.
+    while (i > 0 && marks[i - 1] === null) i--;
+    return { inside: false, siteId: null, at: pts[i].t, fromStart: i === 0 };
+  }
+  while (i > 0 && marks[i - 1] === b) i--;
+  return { inside: true, siteId: b, at: pts[i].t, fromStart: i === 0 };
+}
+
 /** At-site reminder (not checked in) at most this often, twice a day (2026-10-28). */
 const AT_SITE_REMIND_MS = 30 * MINUTE;
 
@@ -402,6 +451,6 @@ function driveEnd({ points, startAt, now, capMs, places }) {
 }
 
 module.exports = {
-  siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
+  gpsPresence, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
   deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN,
 };

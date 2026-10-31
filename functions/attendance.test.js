@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
+  gpsPresence,
   deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap,
 } = require('./attendance');
 
@@ -358,4 +359,36 @@ test('at-site reminder: once, again 30 min later, then no more that day', () => 
   assert.equal(atSiteReminderDue({ date: day, count: 1, at: t(9) }, day, t(9, 20)), null);
   assert.equal(atSiteReminderDue({ date: day, count: 1, at: t(9) }, day, t(9, 30)), 'remind');
   assert.equal(atSiteReminderDue({ date: day, count: 2, at: t(9) }, day, t(11)), null);
+});
+
+// gpsPresence (2026-10-31): the phone's GPS vs the geofence's "inside".
+const office = { id: 'office', lat: 24.786, lng: 46.796, radius: 100 };
+// ≈ 111 m per 0.001° latitude.
+const fix = (min, dLat, extra = {}) => ({ t: t(9, min), lat: office.lat + dLat, lng: office.lng, accuracy: 10, ...extra });
+
+test('gpsPresence: left the site — out since the first fix outside', () => {
+  const pts = [fix(0, 0), fix(1, 0.0005), fix(2, 0.003), fix(3, 0.006), fix(4, 0.01)];
+  assert.deepStrictEqual(gpsPresence(pts, [office], t(9, 5)), { inside: false, siteId: null, at: t(9, 2), fromStart: false });
+});
+
+test('gpsPresence: at the site — since the stay began', () => {
+  const pts = [fix(0, 0.01), fix(1, 0.003), fix(2, 0.0002), fix(3, 0)];
+  assert.deepStrictEqual(gpsPresence(pts, [office], t(9, 4)), { inside: true, siteId: 'office', at: t(9, 2), fromStart: false });
+});
+
+test('gpsPresence: one stray fix, the edge, old or rough fixes tell nothing', () => {
+  // Last fix outside, one before at the site: not yet.
+  assert.strictEqual(gpsPresence([fix(0, 0), fix(1, 0), fix(2, 0.01)], [office], t(9, 3)), null);
+  // Just past the radius (within accuracy + 50 m).
+  assert.strictEqual(gpsPresence([fix(0, 0.0013), fix(1, 0.0013)], [office], t(9, 2)), null);
+  // Older than 15 min.
+  assert.strictEqual(gpsPresence([fix(0, 0.01), fix(1, 0.01)], [office], t(9, 20)), null);
+  // Rough or mocked fixes are left out.
+  assert.strictEqual(gpsPresence([fix(0, 0.01, { accuracy: 300 }), fix(1, 0.01, { mocked: true })], [office], t(9, 2)), null);
+});
+
+test('gpsPresence: out the whole time given = fromStart', () => {
+  const r = gpsPresence([fix(0, 0.01), fix(1, 0.02)], [office], t(9, 2));
+  assert.strictEqual(r.inside, false);
+  assert.strictEqual(r.fromStart, true);
 });

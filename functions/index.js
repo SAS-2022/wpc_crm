@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
-  deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
+  gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
   LATE_GRACE_MIN, AWAY_GRACE_MIN,
 } = require('./attendance');
 
@@ -991,6 +991,31 @@ async function gpsArrival(data, events) {
 }
 
 /**
+ * A missed geofence exit / return from the phone's GPS (2026-10-31; tracked
+ * people and office staff whose GPS is recorded): while the day is open,
+ * the latest fixes (`gpsPresence`) vs `inside`. Returns the event to add
+ * {type 'out' | 'in', at, siteId, source 'gps'} or null. Placed after the
+ * day's latest event, and only when it really changes "inside" ([check]),
+ * so it can't repeat.
+ */
+async function gpsSiteEvent(data, d, user, events, now, check) {
+  if (d.closed || d.checkInAt === null) return null;
+  const ids = Array.isArray(user.workSiteIds) ? user.workSiteIds : [];
+  const sites = (await Promise.all(ids.map(siteOf))).map((x, k) => x && { ...x, id: ids[k] }).filter(Boolean);
+  if (!sites.length) return null;
+  const ref = admin.database().ref(`location_history/${data.uid}/${data.date}`);
+  const latest = Object.values((await ref.orderByKey().limitToLast(60).get()).val() || {});
+  let p = gpsPresence(latest, sites, now);
+  // Left (or came back) before these fixes: the whole day tells when.
+  if (p?.fromStart && latest.length >= 60) p = gpsPresence(Object.values((await ref.get()).val() || {}), sites, now);
+  if (!p || p.inside === d.inside) return null;
+  const lastEvent = Math.max(d.checkInAt, ...events.map((e) => e.at).filter((t) => typeof t === 'number'));
+  const at = Math.max(p.at, lastEvent + 1000);
+  const event = { type: p.inside ? 'in' : 'out', at, siteId: p.inside ? p.siteId : d.siteId ?? null, source: 'gps' };
+  return check(event) ? event : null;
+}
+
+/**
  * Overtime started (2026-10-25): site staff confirmed it (issue 'site') →
  * their direct manager(s), who approve it later on the Attendance page; a
  * driver still on the road at end + 10 min (issue 'driving') → the driver
@@ -1055,6 +1080,14 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
   const arrival = await gpsArrival(data, events);
   options.arrivedAt = arrival.arrivedAt;
   let d = deriveDay(events, options);
+  // The phone missed leaving / coming back: the GPS says so (2026-10-31).
+  // Saved as an event; this trigger runs again with it.
+  const gps = await gpsSiteEvent(data, d, user, events, now, (e) => deriveDay([...events, e], options).inside === (e.type === 'in'))
+    .catch((e) => { console.warn('gps site event', data.uid, e.message); return null; });
+  if (gps) {
+    await ref.update({ events: admin.firestore.FieldValue.arrayUnion({ ...gps, at: admin.firestore.Timestamp.fromMillis(gps.at) }) });
+    return;
+  }
   // Closed with no exit seen: with overtime, the last GPS fix at the site
   // tells how long they stayed.
   if (d.checkOutType === 'auto' && options.overtimeAllowed) {
