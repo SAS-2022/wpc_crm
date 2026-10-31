@@ -1403,8 +1403,11 @@
   "leaveDocumentLater": "{document} – أرفقها الآن أو لاحقاً",
   "leaveTicketMissingMine": "أرفق {document} عندما تتوفر لديك.",
   "leaveTicketMissing": "لم تُرفق {document} بعد.",
-  "travelAfterWork": "السفر بعد الدوام يوم {day}",
-  "travelAfterWorkHint": "{day} يوم عمل ستعمل فيه؛ تُحسب الإجازة من {start}.",
-  "travelAfterWorkOn": "السفر بعد الدوام يوم {day}",
-  "documentCanComeLater": "يمكن إرفاقه لاحقاً (غير مطلوب للإرسال أو الموافقة)"
+  "documentCanComeLater": "يمكن إرفاقه لاحقاً (غير مطلوب للإرسال أو الموافقة)",
+  "departureTimeOn": "وقت المغادرة يوم {day}",
+  "setTime": "حدد الوقت",
+  "departureHelp": "ستغادر بعد الدوام ({end}) يوم {day}؟ لا يُحسب ذلك اليوم.",
+  "departureAfterWork": "بعد ساعات العمل – تُحسب الإجازة من {start}",
+  "departureDuringWork": "خلال ساعات العمل – يُحسب {day} يوم إجازة",
+  "travelAfterWorkOn": "المغادرة {day} الساعة {time}"
 }

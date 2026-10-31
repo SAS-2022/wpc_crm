@@ -5180,21 +5180,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String travelAfterWork(String day) {
-    return 'Travelling after work on $day';
-  }
-
-  @override
-  String travelAfterWorkHint(String day, String start) {
-    return '$day is a work day you still work; the leave counts from $start.';
-  }
-
-  @override
-  String travelAfterWorkOn(String day) {
-    return 'Travels after work on $day';
-  }
-
-  @override
   String get documentCanComeLater =>
       'Can be attached later (not needed to send or approve)';
+
+  @override
+  String departureTimeOn(String day) {
+    return 'Departure time on $day';
+  }
+
+  @override
+  String get setTime => 'Set time';
+
+  @override
+  String departureHelp(String end, String day) {
+    return 'Leaving after work ($end) on $day? That day isn\'t counted.';
+  }
+
+  @override
+  String departureAfterWork(String start) {
+    return 'After working hours – the leave counts from $start';
+  }
+
+  @override
+  String departureDuringWork(String day) {
+    return 'During working hours – $day counts as a leave day';
+  }
+
+  @override
+  String travelAfterWorkOn(String day, String time) {
+    return 'Departs $day at $time';
+  }
 }

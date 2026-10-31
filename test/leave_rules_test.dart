@@ -232,4 +232,19 @@ void main() {
     expect(off.needsDocument, isFalse);
     expect(LeaveType.fromMap(annual.toMap()).documentLater, isTrue);
   });
+
+  test('departure time on the first day: after work = counted from the next work day', () {
+    const satToThu = {1, 2, 3, 4, 6, 7};
+    DateTime start(int? minute) => leaveCountStart(
+          first: DateTime(2026, 11, 5), // Thursday
+          departureMinute: minute,
+          workEndMinute: 17 * 60,
+          workDays: satToThu,
+          holidays: const {},
+        );
+    expect(start(null), DateTime(2026, 11, 5));
+    expect(start(14 * 60), DateTime(2026, 11, 5)); // during work: Thursday counts
+    expect(start(17 * 60), DateTime(2026, 11, 7)); // at the end: from Saturday
+    expect(start(21 * 60 + 30), DateTime(2026, 11, 7));
+  });
 }

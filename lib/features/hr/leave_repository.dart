@@ -22,6 +22,7 @@ class LeaveRequest {
     required this.to,
     required this.halfDay,
     this.travelDay,
+    this.departureTime,
     required this.days,
     required this.year,
     required this.reason,
@@ -47,9 +48,11 @@ class LeaveRequest {
   final String? to;
   final bool halfDay;
 
-  /// 'yyyy-MM-dd': travels after work that day (a day they still work);
-  /// [from] is the next work day (2026-10-31).
+  /// 'yyyy-MM-dd' + 'HH:mm': the departure the person gave for the first
+  /// day picked (2026-10-31). At or after the end of their work day, [from]
+  /// is the next work day; otherwise [from] is this day.
   final String? travelDay;
+  final String? departureTime;
   final double days;
   final int year;
   final String reason;
@@ -83,6 +86,7 @@ class LeaveRequest {
       to: d['to'] as String?,
       halfDay: d['halfDay'] as bool? ?? false,
       travelDay: d['travelDay'] as String?,
+      departureTime: d['departureTime'] as String?,
       days: (d['days'] as num?)?.toDouble() ?? 0,
       year: (d['year'] as num?)?.toInt() ?? 0,
       reason: d['reason'] as String? ?? '',
@@ -246,6 +250,7 @@ class LeaveRepository {
     required String? to,
     required bool halfDay,
     String? travelDay,
+    String? departureTime,
     required double days,
     required String reason,
     required List<ApprovalStep> chain,
@@ -268,8 +273,9 @@ class LeaveRepository {
       'from': from,
       'to': to,
       'halfDay': halfDay,
-      // Travels after work that day; [from] is then the next work day.
+      // Departure on the first day picked; after work, [from] is the next work day.
       'travelDay': ?travelDay,
+      'departureTime': ?departureTime,
       'days': days,
       // The leave year (from their joining date) it uses days of.
       'year': leaveYearOf(me.joiningDate, from == null ? DateTime.now() : DateTime.parse(from)),

@@ -8533,29 +8533,47 @@ abstract class AppLocalizations {
   /// **'{document} not attached yet.'**
   String leaveTicketMissing(String document);
 
-  /// No description provided for @travelAfterWork.
-  ///
-  /// In en, this message translates to:
-  /// **'Travelling after work on {day}'**
-  String travelAfterWork(String day);
-
-  /// No description provided for @travelAfterWorkHint.
-  ///
-  /// In en, this message translates to:
-  /// **'{day} is a work day you still work; the leave counts from {start}.'**
-  String travelAfterWorkHint(String day, String start);
-
-  /// No description provided for @travelAfterWorkOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Travels after work on {day}'**
-  String travelAfterWorkOn(String day);
-
   /// No description provided for @documentCanComeLater.
   ///
   /// In en, this message translates to:
   /// **'Can be attached later (not needed to send or approve)'**
   String get documentCanComeLater;
+
+  /// No description provided for @departureTimeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Departure time on {day}'**
+  String departureTimeOn(String day);
+
+  /// No description provided for @setTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Set time'**
+  String get setTime;
+
+  /// No description provided for @departureHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving after work ({end}) on {day}? That day isn\'t counted.'**
+  String departureHelp(String end, String day);
+
+  /// No description provided for @departureAfterWork.
+  ///
+  /// In en, this message translates to:
+  /// **'After working hours – the leave counts from {start}'**
+  String departureAfterWork(String start);
+
+  /// No description provided for @departureDuringWork.
+  ///
+  /// In en, this message translates to:
+  /// **'During working hours – {day} counts as a leave day'**
+  String departureDuringWork(String day);
+
+  /// No description provided for @travelAfterWorkOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Departs {day} at {time}'**
+  String travelAfterWorkOn(String day, String time);
 }
 
 class _AppLocalizationsDelegate

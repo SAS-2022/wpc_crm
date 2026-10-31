@@ -210,6 +210,18 @@ DateTime nextWorkDay(DateTime day, Set<int> workDays, Set<String> holidays) {
   return d;
 }
 
+/// The first day a leave counts: [first], unless they depart that day at
+/// or after the end of their work day ([departureMinute] ≥ [workEndMinute],
+/// minutes after midnight) — then the next work day (user 2026-10-31).
+DateTime leaveCountStart({
+  required DateTime first,
+  int? departureMinute,
+  required int workEndMinute,
+  required Set<int> workDays,
+  required Set<String> holidays,
+}) =>
+    departureMinute != null && departureMinute >= workEndMinute ? nextWorkDay(first, workDays, holidays) : first;
+
 enum LeaveStatus { pending, approved, rejected, cancelled }
 
 /// One approval in a request's chain. [uid] is set for the requester's

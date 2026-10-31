@@ -137,7 +137,8 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                   ? Text(l10n.halfDay)
                   : r.travelDay == null
                       ? null
-                      : Text(l10n.travelAfterWorkOn(DateFormat.MMMEd(locale).format(DateTime.parse(r.travelDay!)))),
+                      : Text(l10n.travelAfterWorkOn(
+                          DateFormat.MMMEd(locale).format(DateTime.parse(r.travelDay!)), r.departureTime ?? '')),
             ),
           if (r.reason.isNotEmpty)
             ListTile(leading: const Icon(Icons.notes), title: SelectableText(r.reason)),

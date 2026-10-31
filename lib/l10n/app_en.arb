@@ -2749,11 +2749,16 @@
   "@leaveTicketMissingMine": {"placeholders": {"document": {"type": "String"}}},
   "leaveTicketMissing": "{document} not attached yet.",
   "@leaveTicketMissing": {"placeholders": {"document": {"type": "String"}}},
-  "travelAfterWork": "Travelling after work on {day}",
-  "@travelAfterWork": {"placeholders": {"day": {"type": "String"}}},
-  "travelAfterWorkHint": "{day} is a work day you still work; the leave counts from {start}.",
-  "@travelAfterWorkHint": {"placeholders": {"day": {"type": "String"}, "start": {"type": "String"}}},
-  "travelAfterWorkOn": "Travels after work on {day}",
-  "@travelAfterWorkOn": {"placeholders": {"day": {"type": "String"}}},
-  "documentCanComeLater": "Can be attached later (not needed to send or approve)"
+  "documentCanComeLater": "Can be attached later (not needed to send or approve)",
+  "departureTimeOn": "Departure time on {day}",
+  "@departureTimeOn": {"placeholders": {"day": {"type": "String"}}},
+  "setTime": "Set time",
+  "departureHelp": "Leaving after work ({end}) on {day}? That day isn't counted.",
+  "@departureHelp": {"placeholders": {"end": {"type": "String"}, "day": {"type": "String"}}},
+  "departureAfterWork": "After working hours – the leave counts from {start}",
+  "@departureAfterWork": {"placeholders": {"start": {"type": "String"}}},
+  "departureDuringWork": "During working hours – {day} counts as a leave day",
+  "@departureDuringWork": {"placeholders": {"day": {"type": "String"}}},
+  "travelAfterWorkOn": "Departs {day} at {time}",
+  "@travelAfterWorkOn": {"placeholders": {"day": {"type": "String"}, "time": {"type": "String"}}}
 }

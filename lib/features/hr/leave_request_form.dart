@@ -32,8 +32,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
   DateTimeRange? _dates;
   bool _halfDay = false;
 
-  /// Travelling after work on the first day: the leave counts from the next work day.
-  bool _afterWork = false;
+  /// Departure time on the first day; at or after the end of their work day
+  /// the leave counts from the next work day.
+  TimeOfDay? _departure;
   bool _busy = false;
 
   @override
@@ -54,7 +55,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
       setState(() {
         _dates = picked;
         if (picked.start != picked.end) _halfDay = false;
-        _afterWork = false;
+        _departure = null;
       });
     }
   }
@@ -95,7 +96,10 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
             from: type.isLeave ? leaveDayKey(countFrom!) : null,
             to: type.isLeave ? leaveDayKey(_dates!.end) : null,
             halfDay: type.isLeave && _halfDay,
-            travelDay: type.isLeave && _afterWork ? leaveDayKey(_dates!.start) : null,
+            travelDay: type.isLeave && _departure != null ? leaveDayKey(_dates!.start) : null,
+            departureTime: type.isLeave && _departure != null
+                ? '${_departure!.hour.toString().padLeft(2, '0')}:${_departure!.minute.toString().padLeft(2, '0')}'
+                : null,
             days: type.isLeave ? days : 0,
             reason: _reason.text.trim(),
             chain: chain,
@@ -124,7 +128,8 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     final usersById = {for (final u in users) u.id: u};
     final type = types.where((t) => t.id == _typeId).firstOrNull ?? types.first;
     // The person's own work days (own schedule, else company hours).
-    final workDays = me.scheduleOr(ref.watch(workHoursProvider).value ?? WorkHours.defaults).days;
+    final schedule = me.scheduleOr(ref.watch(workHoursProvider).value ?? WorkHours.defaults);
+    final workDays = schedule.days;
     final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
     // Travelling after work is offered when the first day is one they work.
     final canTravelAfterWork = type.isLeave &&
@@ -133,8 +138,19 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
         !_halfDay &&
         workDays.contains(_dates!.start.weekday) &&
         !holidays.contains(leaveDayKey(_dates!.start));
-    final afterWork = canTravelAfterWork && _afterWork;
-    final countFrom = _dates == null ? null : (afterWork ? nextWorkDay(_dates!.start, workDays, holidays) : _dates!.start);
+    final departure = canTravelAfterWork ? _departure : null;
+    final countFrom = _dates == null
+        ? null
+        : leaveCountStart(
+            first: _dates!.start,
+            departureMinute: departure == null ? null : departure.hour * 60 + departure.minute,
+            workEndMinute: schedule.endMinute,
+            workDays: workDays,
+            holidays: holidays,
+          );
+    final afterWork = countFrom != null && _dates != null && countFrom != _dates!.start;
+    String hm(int minutes) => MaterialLocalizations.of(context)
+        .formatTimeOfDay(TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60));
     final days = type.isLeave && _dates != null
         ? countFrom!.isAfter(_dates!.end)
             ? 0.0
@@ -199,16 +215,39 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
                 title: Text(l10n.halfDay),
               ),
             if (canTravelAfterWork)
-              SwitchListTile(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
-                value: _afterWork,
-                onChanged: (v) => setState(() => _afterWork = v),
-                secondary: const Icon(Icons.flight_takeoff),
-                title: Text(l10n.travelAfterWork(DateFormat.MMMEd(locale).format(_dates!.start))),
-                subtitle: _afterWork
-                    ? Text(l10n.travelAfterWorkHint(
-                        DateFormat.EEEE(locale).format(_dates!.start), DateFormat.MMMEd(locale).format(countFrom!)))
-                    : null,
+                leading: const Icon(Icons.flight_takeoff),
+                title: Text(l10n.departureTimeOn(DateFormat.MMMEd(locale).format(_dates!.start))),
+                subtitle: Text(
+                  departure == null
+                      ? l10n.departureHelp(hm(schedule.endMinute), DateFormat.EEEE(locale).format(_dates!.start))
+                      : afterWork
+                          ? l10n.departureAfterWork(DateFormat.MMMEd(locale).format(countFrom))
+                          : l10n.departureDuringWork(DateFormat.EEEE(locale).format(_dates!.start)),
+                  style: departure == null ? null : TextStyle(color: afterWork ? Colors.green.shade700 : Colors.orange.shade800),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: _departure ?? TimeOfDay(hour: schedule.endMinute ~/ 60 + 2, minute: 0),
+                        );
+                        if (t != null) setState(() => _departure = t);
+                      },
+                      child: Text(departure == null ? l10n.setTime : departure.format(context)),
+                    ),
+                    if (departure != null)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: l10n.clear,
+                        onPressed: () => setState(() => _departure = null),
+                      ),
+                  ],
+                ),
               ),
             if (_dates != null)
               ListTile(

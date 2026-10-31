@@ -5187,21 +5187,34 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String travelAfterWork(String day) {
-    return 'السفر بعد الدوام يوم $day';
-  }
-
-  @override
-  String travelAfterWorkHint(String day, String start) {
-    return '$day يوم عمل ستعمل فيه؛ تُحسب الإجازة من $start.';
-  }
-
-  @override
-  String travelAfterWorkOn(String day) {
-    return 'السفر بعد الدوام يوم $day';
-  }
-
-  @override
   String get documentCanComeLater =>
       'يمكن إرفاقه لاحقاً (غير مطلوب للإرسال أو الموافقة)';
+
+  @override
+  String departureTimeOn(String day) {
+    return 'وقت المغادرة يوم $day';
+  }
+
+  @override
+  String get setTime => 'حدد الوقت';
+
+  @override
+  String departureHelp(String end, String day) {
+    return 'ستغادر بعد الدوام ($end) يوم $day؟ لا يُحسب ذلك اليوم.';
+  }
+
+  @override
+  String departureAfterWork(String start) {
+    return 'بعد ساعات العمل – تُحسب الإجازة من $start';
+  }
+
+  @override
+  String departureDuringWork(String day) {
+    return 'خلال ساعات العمل – يُحسب $day يوم إجازة';
+  }
+
+  @override
+  String travelAfterWorkOn(String day, String time) {
+    return 'المغادرة $day الساعة $time';
+  }
 }
