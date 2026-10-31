@@ -37,7 +37,10 @@ const WALK_GAP_MS = 10 * 60000;
  * distance. Walking isn't the car's either (user request 2026-10-31): moves
  * in a row at walking pace (≤ 9 km/h, fixes ≤ 10 min apart) with 2 min
  * or more of slow moving go to [walkKm]; shorter slow stretches are traffic
- * and count.
+ * and count. The phone's motion sensing beats speed when the points carry it
+ * (`a`, drivers' phones from 2026-10-31, activity_sense.dart): a leg with
+ * either end 'v' (in a vehicle) is the car's, even crawling in traffic; else
+ * a leg with an end 'f' (on foot) is walking; others go by speed.
  * Returns {km, walkKm}.
  */
 function dayDistances(points) {
@@ -46,14 +49,21 @@ function dayDistances(points) {
     const a = points[i], b = points[i + 1];
     const d = metersBetween(a, b);
     const ms = b.t - a.t;
+    const sensed = a.a === 'v' || b.a === 'v' ? 'car' : a.a === 'f' || b.a === 'f' ? 'walk' : null;
     legs.push({
       m: d > Math.max(30, (a.accuracy || 0) + (b.accuracy || 0)) ? d : 0,
       ms,
-      slow: ms > 0 && ms <= WALK_GAP_MS && d / (ms / 1000) <= WALK_MAX_MPS,
+      sensed,
+      slow: !sensed && ms > 0 && ms <= WALK_GAP_MS && d / (ms / 1000) <= WALK_MAX_MPS,
     });
   }
   let km = 0, walk = 0;
   for (let i = 0; i < legs.length;) {
+    if (legs[i].sensed === 'walk') {
+      walk += legs[i].m;
+      i++;
+      continue;
+    }
     if (!legs[i].slow) {
       km += legs[i].m;
       i++;

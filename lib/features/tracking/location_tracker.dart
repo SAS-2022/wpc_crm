@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'activity_sense.dart';
 import 'tracking_device.dart';
 import 'work_hours.dart';
 import 'motion.dart';
@@ -67,6 +68,10 @@ class LocationTracker {
 
   /// Still / walking / driving and since when in one place, sent with each fix.
   final _motion = MotionTracker();
+
+  /// Drivers: the phone's motion sensing (walking / in a vehicle), sent with
+  /// each point as `a` so walking isn't counted as the vehicle's km.
+  final _activity = ActivitySense();
   bool _connected = false;
   WorkHours _hours = WorkHours.defaults;
   Duration _interval = trackingInterval;
@@ -201,6 +206,11 @@ class LocationTracker {
     // (so sharing resumes on its own when work starts); its fixes are dropped.
     _positions = Geolocator.getPositionStream(locationSettings: on ? _settings() : _idleSettings())
         .listen(on ? _send : (_) {}, onError: (_) => _beat());
+    if (on && _driver) {
+      await _activity.start();
+    } else {
+      await _activity.stop();
+    }
     if (!on) {
       _lastSent = null;
       _motion.reset();
@@ -248,6 +258,7 @@ class LocationTracker {
     _loaded.clear();
     _heartbeat?.cancel();
     _dutyCheck?.cancel();
+    await _activity.stop();
     if (!recordOnly) await _presence.onDisconnect().cancel();
   }
 
@@ -255,6 +266,8 @@ class LocationTracker {
   /// connection itself (online / offline) is kept by the server then.
   Future<void> _beat() async {
     if (_onDuty != true || !_active || recordOnly) return;
+    // The motion permission may have been given since.
+    if (_driver) await _activity.start();
     var gpsOn = false;
     var permission = LocationPermission.denied;
     bool? batteryOptimized;
@@ -301,7 +314,14 @@ class LocationTracker {
     // The OS may deliver fixes more often than asked for; keep one per interval.
     if (_lastSent != null && now.difference(_lastSent!) < _interval * 0.75) return;
     _lastSent = now;
-    final point = {'lat': p.latitude, 'lng': p.longitude, 'accuracy': p.accuracy, 'mocked': p.isMocked};
+    final point = {
+      'lat': p.latitude,
+      'lng': p.longitude,
+      'accuracy': p.accuracy,
+      'mocked': p.isMocked,
+      // Drivers: walking / in a vehicle / still from the motion sensors.
+      'a': ?(_driver ? _activity.code : null),
+    };
     // Office staff: recorded only, never on the live map (user request 2026-10-28).
     if (!recordOnly) {
       await FirebaseDatabase.instance.ref('live_locations/$uid').set({

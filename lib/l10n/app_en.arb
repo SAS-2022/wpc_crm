@@ -325,6 +325,7 @@
   "issueNotAlways": "Set location to \"Allow all the time\"",
   "issueNotifications": "Allow notifications (keeps sharing running)",
   "issueBattery": "Turn off battery optimization for this app",
+  "issueMotion": "Allow motion detection (\"Physical activity\" / \"Motion & Fitness\") so walking isn't counted as vehicle km",
   "fix": "Fix",
   "xiaomiHint": "On Xiaomi, Huawei or Oppo phones also open App settings → turn on Autostart and set Battery saver to \"No restrictions\".",
   "appSettings": "App settings",

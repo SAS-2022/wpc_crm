@@ -47,6 +47,8 @@
 	<string>Sales staff: your location is shared with your managers during work hours so visits and routes can be followed live. Everyone assigned to a work site: the phone notices when you arrive at or leave the site so you're checked in and out automatically; nothing is tracked anywhere else.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used to check in at client visits and show nearby clients on the map.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Drivers: the phone's motion sensors tell walking from driving, so walking isn't counted as the company vehicle's kilometres.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Attach photos to clients and visits.</string>
 	<key>UIApplicationSceneManifest</key>

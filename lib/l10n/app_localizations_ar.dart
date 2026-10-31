@@ -554,6 +554,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get issueBattery => 'أوقف تحسين البطارية لهذا التطبيق';
 
   @override
+  String get issueMotion =>
+      'اسمح باكتشاف الحركة (\"النشاط البدني\" / \"الحركة واللياقة\") حتى لا يُحسب المشي ضمن كيلومترات السيارة';
+
+  @override
   String get fix => 'إصلاح';
 
   @override

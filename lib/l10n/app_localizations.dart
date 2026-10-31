@@ -1064,6 +1064,12 @@ abstract class AppLocalizations {
   /// **'Turn off battery optimization for this app'**
   String get issueBattery;
 
+  /// No description provided for @issueMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow motion detection (\"Physical activity\" / \"Motion & Fitness\") so walking isn\'t counted as vehicle km'**
+  String get issueMotion;
+
   /// No description provided for @fix.
   ///
   /// In en, this message translates to:

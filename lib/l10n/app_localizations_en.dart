@@ -559,6 +559,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get issueBattery => 'Turn off battery optimization for this app';
 
   @override
+  String get issueMotion =>
+      'Allow motion detection (\"Physical activity\" / \"Motion & Fitness\") so walking isn\'t counted as vehicle km';
+
+  @override
   String get fix => 'Fix';
 
   @override

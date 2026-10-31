@@ -44,6 +44,20 @@ test('waiting at a red light does not make a slow crawl walking', () => {
   assert.deepStrictEqual(dayDistances(pts), { km: 2.3, walkKm: 0 });
 });
 
+test('the phone\'s motion sensing wins over speed', () => {
+  const at = (pt, a) => ({ ...pt, a });
+  // 4 min crawling in traffic, sensed in a vehicle: the car's.
+  const crawl = walk(0, 0, 9).map((pt) => at(pt, 'v'));
+  assert.deepStrictEqual(dayDistances(crawl), { km: 0.4, walkKm: 0 });
+  // A fast-looking leg sensed on foot (GPS jump while walking): walking.
+  const pts = [at(p(0, 24.7), 'f'), at(p(30000, 24.701), 'f')];
+  assert.deepStrictEqual(dayDistances(pts), { km: 0, walkKm: 0.1 });
+  // From walking into the car: the leg is the car's.
+  assert.deepStrictEqual(dayDistances([at(p(0, 24.7), 'f'), at(p(60000, 24.71), 'v')]), { km: 1.1, walkKm: 0 });
+  // Still / unknown: speed decides (2 min+ at walking pace = walking).
+  assert.deepStrictEqual(dayDistances(walk(0, 0, 9).map((pt) => at(pt, 's'))), { km: 0, walkKm: 0.4 });
+});
+
 test('dayKm of no or one fix is 0', () => {
   assert.strictEqual(dayKm([]), 0);
   assert.strictEqual(dayKm([p(0, 24.7)]), 0);

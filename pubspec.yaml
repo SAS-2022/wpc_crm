@@ -72,6 +72,10 @@ dependencies:
   local_auth: ^3.0.2
   flutter_native_contact_picker: 0.0.12
   firebase_crashlytics: 5.4.0
+  # Drivers: walking vs driving (2026-10-31). Local copy of 6.1.0 with a
+  # podspec added (it ships iOS only as a Swift package); see WPC_README.md there.
+  activity_recognition_flutter:
+    path: third_party/activity_recognition_flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter

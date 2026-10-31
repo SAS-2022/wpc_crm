@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/app_user.dart';
 import '../../core/providers.dart';
+import 'activity_sense.dart';
 import 'tracking_service.dart';
 
 /// Things that stop tracking from being complete, in the order to fix them.
-enum TrackingIssue { gpsOff, locationDenied, notAlways, notifications, battery }
+/// [motion]: drivers only, the motion sensing that tells walking from driving.
+enum TrackingIssue { gpsOff, locationDenied, notAlways, notifications, battery, motion }
 
 class TrackingStatus {
   const TrackingStatus({required this.running, required this.issues});
@@ -29,13 +32,13 @@ final trackingStatusProvider = FutureProvider<TrackingStatus?>((ref) async {
     await Tracking.stop();
     return null;
   }
-  final issues = await checkTrackingIssues();
+  final issues = await checkTrackingIssues(driver: me.role == UserRole.driver);
   final canRun = !issues.contains(TrackingIssue.locationDenied);
   if (canRun) await Tracking.start(me.id, recordOnly: recordOnly, recordDays: me.workSchedule?.days);
   return TrackingStatus(running: canRun, issues: issues);
 });
 
-Future<List<TrackingIssue>> checkTrackingIssues() async {
+Future<List<TrackingIssue>> checkTrackingIssues({bool driver = false}) async {
   final issues = <TrackingIssue>[];
   if (!await Geolocator.isLocationServiceEnabled()) issues.add(TrackingIssue.gpsOff);
   if (!await Permission.locationWhenInUse.isGranted) {
@@ -47,6 +50,7 @@ Future<List<TrackingIssue>> checkTrackingIssues() async {
     if (!await Permission.notification.isGranted) issues.add(TrackingIssue.notifications);
     if (!await Permission.ignoreBatteryOptimizations.isGranted) issues.add(TrackingIssue.battery);
   }
+  if (driver && !await activityPermission.isGranted) issues.add(TrackingIssue.motion);
   return issues;
 }
 
@@ -66,5 +70,8 @@ Future<void> fixTrackingIssue(TrackingIssue issue) async {
       if (status.isPermanentlyDenied) await openAppSettings();
     case TrackingIssue.battery:
       await Permission.ignoreBatteryOptimizations.request();
+    case TrackingIssue.motion:
+      final status = await activityPermission.request();
+      if (status.isPermanentlyDenied) await openAppSettings();
   }
 }
