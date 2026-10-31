@@ -5163,4 +5163,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personMonthEmpty => 'No attendance for this person in this month.';
+
+  @override
+  String leaveDocumentLater(String document) {
+    return '$document – attach it now or later';
+  }
+
+  @override
+  String leaveTicketMissingMine(String document) {
+    return 'Attach your $document when you have it.';
+  }
+
+  @override
+  String leaveTicketMissing(String document) {
+    return '$document not attached yet.';
+  }
+
+  @override
+  String travelAfterWork(String day) {
+    return 'Travelling after work on $day';
+  }
+
+  @override
+  String travelAfterWorkHint(String day, String start) {
+    return '$day is a work day you still work; the leave counts from $start.';
+  }
+
+  @override
+  String travelAfterWorkOn(String day) {
+    return 'Travels after work on $day';
+  }
+
+  @override
+  String get documentCanComeLater =>
+      'Can be attached later (not needed to send or approve)';
 }

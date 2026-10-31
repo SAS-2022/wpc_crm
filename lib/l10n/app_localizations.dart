@@ -8514,6 +8514,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No attendance for this person in this month.'**
   String get personMonthEmpty;
+
+  /// No description provided for @leaveDocumentLater.
+  ///
+  /// In en, this message translates to:
+  /// **'{document} – attach it now or later'**
+  String leaveDocumentLater(String document);
+
+  /// No description provided for @leaveTicketMissingMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach your {document} when you have it.'**
+  String leaveTicketMissingMine(String document);
+
+  /// No description provided for @leaveTicketMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'{document} not attached yet.'**
+  String leaveTicketMissing(String document);
+
+  /// No description provided for @travelAfterWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Travelling after work on {day}'**
+  String travelAfterWork(String day);
+
+  /// No description provided for @travelAfterWorkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} is a work day you still work; the leave counts from {start}.'**
+  String travelAfterWorkHint(String day, String start);
+
+  /// No description provided for @travelAfterWorkOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Travels after work on {day}'**
+  String travelAfterWorkOn(String day);
+
+  /// No description provided for @documentCanComeLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Can be attached later (not needed to send or approve)'**
+  String get documentCanComeLater;
 }
 
 class _AppLocalizationsDelegate

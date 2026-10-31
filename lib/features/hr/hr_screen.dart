@@ -413,6 +413,7 @@ class _TypeDialogState extends State<_TypeDialog> {
   late bool _calendar = widget.type?.calendarDays ?? false;
   late bool _paid = widget.type?.paid ?? true;
   late bool _needsDoc = widget.type?.needsDocument ?? false;
+  late bool _docLater = widget.type?.documentLater ?? false;
 
   @override
   void dispose() {
@@ -468,6 +469,12 @@ class _TypeDialogState extends State<_TypeDialog> {
                 title: Text(l10n.needsDocument),
               ),
               if (_needsDoc) ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _docLater,
+                  onChanged: (v) => setState(() => _docLater = v),
+                  title: Text(l10n.documentCanComeLater),
+                ),
                 TextField(controller: _docEn, decoration: InputDecoration(labelText: l10n.documentNameEnglish)),
                 TextField(controller: _docAr, decoration: InputDecoration(labelText: l10n.documentNameArabic)),
               ],
@@ -492,6 +499,7 @@ class _TypeDialogState extends State<_TypeDialog> {
                 calendarDays: _calendar,
                 paid: _paid,
                 needsDocument: _needsDoc,
+                documentLater: _docLater,
                 documentEn: _docEn.text.trim(),
                 documentAr: _docAr.text.trim(),
               ),

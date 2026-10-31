@@ -31,6 +31,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
   String? _typeId;
   DateTimeRange? _dates;
   bool _halfDay = false;
+
+  /// Travelling after work on the first day: the leave counts from the next work day.
+  bool _afterWork = false;
   bool _busy = false;
 
   @override
@@ -51,6 +54,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
       setState(() {
         _dates = picked;
         if (picked.start != picked.end) _halfDay = false;
+        _afterWork = false;
       });
     }
   }
@@ -59,6 +63,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     required AppUser me,
     required LeaveType type,
     required double days,
+    required DateTime? countFrom,
     required List<ApprovalStep> chain,
     required List<AppUser> users,
   }) async {
@@ -73,7 +78,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
       problem = l10n.leaveAcrossYears;
     } else if (type.isLeave && days <= 0) {
       problem = l10n.leaveNoWorkDays;
-    } else if (type.needsDocument && _files.isEmpty) {
+    } else if (type.needsDocument && !type.documentLater && _files.isEmpty) {
       problem = l10n.leaveDocumentRequired(type.document(Localizations.localeOf(context).languageCode));
     } else if (!type.isLeave && _reason.text.trim().isEmpty) {
       problem = l10n.leaveReasonRequired;
@@ -87,9 +92,10 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
       final id = await ref.read(leaveRepositoryProvider).submit(
             me: me,
             type: type,
-            from: type.isLeave ? leaveDayKey(_dates!.start) : null,
+            from: type.isLeave ? leaveDayKey(countFrom!) : null,
             to: type.isLeave ? leaveDayKey(_dates!.end) : null,
             halfDay: type.isLeave && _halfDay,
+            travelDay: type.isLeave && _afterWork ? leaveDayKey(_dates!.start) : null,
             days: type.isLeave ? days : 0,
             reason: _reason.text.trim(),
             chain: chain,
@@ -117,11 +123,23 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     if (me == null) return const SizedBox.shrink();
     final usersById = {for (final u in users) u.id: u};
     final type = types.where((t) => t.id == _typeId).firstOrNull ?? types.first;
-    final workDays = (ref.watch(workHoursProvider).value ?? WorkHours.defaults).days;
+    // The person's own work days (own schedule, else company hours).
+    final workDays = me.scheduleOr(ref.watch(workHoursProvider).value ?? WorkHours.defaults).days;
     final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
+    // Travelling after work is offered when the first day is one they work.
+    final canTravelAfterWork = type.isLeave &&
+        !type.calendarDays &&
+        _dates != null &&
+        !_halfDay &&
+        workDays.contains(_dates!.start.weekday) &&
+        !holidays.contains(leaveDayKey(_dates!.start));
+    final afterWork = canTravelAfterWork && _afterWork;
+    final countFrom = _dates == null ? null : (afterWork ? nextWorkDay(_dates!.start, workDays, holidays) : _dates!.start);
     final days = type.isLeave && _dates != null
-        ? leaveDays(
-            from: _dates!.start,
+        ? countFrom!.isAfter(_dates!.end)
+            ? 0.0
+            : leaveDays(
+            from: countFrom,
             to: _dates!.end,
             calendarDays: type.calendarDays,
             workDays: workDays,
@@ -180,6 +198,18 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
                 onChanged: (v) => setState(() => _halfDay = v),
                 title: Text(l10n.halfDay),
               ),
+            if (canTravelAfterWork)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _afterWork,
+                onChanged: (v) => setState(() => _afterWork = v),
+                secondary: const Icon(Icons.flight_takeoff),
+                title: Text(l10n.travelAfterWork(DateFormat.MMMEd(locale).format(_dates!.start))),
+                subtitle: _afterWork
+                    ? Text(l10n.travelAfterWorkHint(
+                        DateFormat.EEEE(locale).format(_dates!.start), DateFormat.MMMEd(locale).format(countFrom!)))
+                    : null,
+              ),
             if (_dates != null)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -211,9 +241,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                l10n.leaveDocumentRequired(type.document(lang)),
+                type.documentLater ? l10n.leaveDocumentLater(type.document(lang)) : l10n.leaveDocumentRequired(type.document(lang)),
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: _files.isEmpty ? theme.colorScheme.error : null,
+                  color: _files.isEmpty && !type.documentLater ? theme.colorScheme.error : null,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -255,7 +285,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _busy ? null : () => _submit(me: me, type: type, days: days, chain: chain, users: users),
+            onPressed: _busy
+                ? null
+                : () => _submit(me: me, type: type, days: days, countFrom: countFrom, chain: chain, users: users),
             icon: _busy
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.send),

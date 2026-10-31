@@ -101,7 +101,17 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
     // card are sent without it (2026-10-22).
     final type = (ref.watch(leaveTypesProvider).value ?? LeaveType.defaults).where((t) => t.id == r.typeId).firstOrNull;
     final files = ref.watch(attachmentsProvider((parent: AttachmentParent.leaveRequests, id: r.id))).value;
-    final documentMissing = r.status == LeaveStatus.pending && (type?.needsDocument ?? false) && files != null && files.isEmpty;
+    final documentMissing = r.status == LeaveStatus.pending &&
+        (type?.needsDocument ?? false) &&
+        !(type?.documentLater ?? false) &&
+        files != null &&
+        files.isEmpty;
+    // A document that may come later (flight ticket): a reminder, never a block.
+    final documentLater = (r.status == LeaveStatus.pending || r.status == LeaveStatus.approved) &&
+        (type?.needsDocument ?? false) &&
+        (type?.documentLater ?? false) &&
+        files != null &&
+        files.isEmpty;
 
     return Scaffold(
       appBar: AppBar(title: Text(r.typeName(lang))),
@@ -120,7 +130,15 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             child: Align(alignment: AlignmentDirectional.centerStart, child: LeaveStatusChip(request: r)),
           ),
           if (dates.isNotEmpty)
-            ListTile(leading: const Icon(Icons.event), title: Text(dates), subtitle: r.halfDay ? Text(l10n.halfDay) : null),
+            ListTile(
+              leading: const Icon(Icons.event),
+              title: Text(dates),
+              subtitle: r.halfDay
+                  ? Text(l10n.halfDay)
+                  : r.travelDay == null
+                      ? null
+                      : Text(l10n.travelAfterWorkOn(DateFormat.MMMEd(locale).format(DateTime.parse(r.travelDay!)))),
+            ),
           if (r.reason.isNotEmpty)
             ListTile(leading: const Icon(Icons.notes), title: SelectableText(r.reason)),
           // HR area: the person's balance for the request's year.
@@ -137,9 +155,21 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ),
+          if (documentLater)
+            ListTile(
+              leading: Icon(Icons.flight_takeoff, color: Colors.orange.shade800),
+              title: Text(
+                mine ? l10n.leaveTicketMissingMine(type!.document(lang)) : l10n.leaveTicketMissing(type!.document(lang)),
+                style: TextStyle(color: Colors.orange.shade800),
+              ),
+            ),
           AttachmentsSection(
             owner: (parent: AttachmentParent.leaveRequests, id: r.id),
-            canAdd: (mine && r.status == LeaveStatus.pending) || me.role.canManageHr,
+            // A later document (ticket) can still be added after approval.
+            canAdd: (mine &&
+                    (r.status == LeaveStatus.pending ||
+                        (r.status == LeaveStatus.approved && (type?.documentLater ?? false)))) ||
+                me.role.canManageHr,
             canDelete: me.role.canManageHr,
             canDeleteOwn: mine && r.status == LeaveStatus.pending,
           ),

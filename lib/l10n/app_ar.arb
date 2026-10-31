@@ -1399,5 +1399,12 @@
   "calMore": "+{n} أخرى",
   "calOvertimeWaiting": "بانتظار الموافقة",
   "calOvertimeApproved": "تمت الموافقة {time}",
-  "personMonthEmpty": "لا يوجد حضور لهذا الشخص في هذا الشهر."
+  "personMonthEmpty": "لا يوجد حضور لهذا الشخص في هذا الشهر.",
+  "leaveDocumentLater": "{document} – أرفقها الآن أو لاحقاً",
+  "leaveTicketMissingMine": "أرفق {document} عندما تتوفر لديك.",
+  "leaveTicketMissing": "لم تُرفق {document} بعد.",
+  "travelAfterWork": "السفر بعد الدوام يوم {day}",
+  "travelAfterWorkHint": "{day} يوم عمل ستعمل فيه؛ تُحسب الإجازة من {start}.",
+  "travelAfterWorkOn": "السفر بعد الدوام يوم {day}",
+  "documentCanComeLater": "يمكن إرفاقه لاحقاً (غير مطلوب للإرسال أو الموافقة)"
 }

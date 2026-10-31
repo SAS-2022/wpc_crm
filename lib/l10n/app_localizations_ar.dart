@@ -5170,4 +5170,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get personMonthEmpty => 'لا يوجد حضور لهذا الشخص في هذا الشهر.';
+
+  @override
+  String leaveDocumentLater(String document) {
+    return '$document – أرفقها الآن أو لاحقاً';
+  }
+
+  @override
+  String leaveTicketMissingMine(String document) {
+    return 'أرفق $document عندما تتوفر لديك.';
+  }
+
+  @override
+  String leaveTicketMissing(String document) {
+    return 'لم تُرفق $document بعد.';
+  }
+
+  @override
+  String travelAfterWork(String day) {
+    return 'السفر بعد الدوام يوم $day';
+  }
+
+  @override
+  String travelAfterWorkHint(String day, String start) {
+    return '$day يوم عمل ستعمل فيه؛ تُحسب الإجازة من $start.';
+  }
+
+  @override
+  String travelAfterWorkOn(String day) {
+    return 'السفر بعد الدوام يوم $day';
+  }
+
+  @override
+  String get documentCanComeLater =>
+      'يمكن إرفاقه لاحقاً (غير مطلوب للإرسال أو الموافقة)';
 }

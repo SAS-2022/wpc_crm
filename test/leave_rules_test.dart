@@ -208,4 +208,28 @@ void main() {
       expect(annualCarry(6, carryOver: true), 6);
     });
   });
+
+  test('travelling after work: counted from the next work day', () {
+    const satToThu = {1, 2, 3, 4, 6, 7};
+    // Thu 2026-11-05 → Sat 2026-11-07 (Friday off).
+    expect(nextWorkDay(DateTime(2026, 11, 5), satToThu, const {}), DateTime(2026, 11, 7));
+    // A holiday on Saturday moves it to Sunday.
+    expect(nextWorkDay(DateTime(2026, 11, 5), satToThu, const {'2026-11-07'}), DateTime(2026, 11, 8));
+    // Thu → next Thu: Sat–Thu counted, 6 days instead of 7.
+    double count(DateTime from) =>
+        leaveDays(from: from, to: DateTime(2026, 11, 12), calendarDays: false, workDays: satToThu, holidays: const {});
+    expect(count(DateTime(2026, 11, 5)), 7);
+    expect(count(DateTime(2026, 11, 7)), 6);
+  });
+
+  test('annual leave asks for the flight ticket, attachable later', () {
+    final annual = LeaveType.defaults.first;
+    expect(annual.needsDocument && annual.documentLater, isTrue);
+    // A list saved before the ticket existed gets it; one saved after keeps HR's choice.
+    final old = LeaveType.fromMap({'id': 'annual', 'en': 'Annual leave', 'needsDocument': false});
+    expect(old.documentLater && old.needsDocument, isTrue);
+    final off = LeaveType.fromMap({'id': 'annual', 'en': 'Annual leave', 'needsDocument': false, 'documentLater': false});
+    expect(off.needsDocument, isFalse);
+    expect(LeaveType.fromMap(annual.toMap()).documentLater, isTrue);
+  });
 }

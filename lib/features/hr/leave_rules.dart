@@ -21,6 +21,7 @@ class LeaveType {
     this.calendarDays = false,
     this.paid = true,
     this.needsDocument = false,
+    this.documentLater = false,
     this.documentEn = '',
     this.documentAr = '',
   });
@@ -41,8 +42,13 @@ class LeaveType {
   final bool calendarDays;
   final bool paid;
 
-  /// The request can't be sent without a file, e.g. a hospital report.
+  /// The request asks for a file, e.g. a hospital report; it can't be sent
+  /// without it unless [documentLater].
   final bool needsDocument;
+
+  /// The file may come after sending, even after approval (e.g. the flight
+  /// ticket for annual leave, user 2026-10-31).
+  final bool documentLater;
   final String documentEn;
   final String documentAr;
 
@@ -51,7 +57,16 @@ class LeaveType {
 
   /// Saudi labour law as a starting point; HR checks and edits the numbers.
   static const defaults = [
-    LeaveType(id: 'annual', en: 'Annual leave', ar: 'إجازة سنوية', yearlyDays: 21),
+    LeaveType(
+      id: 'annual',
+      en: 'Annual leave',
+      ar: 'إجازة سنوية',
+      yearlyDays: 21,
+      needsDocument: true,
+      documentLater: true,
+      documentEn: 'Flight ticket',
+      documentAr: 'تذكرة الطيران',
+    ),
     LeaveType(
       id: 'sick',
       en: 'Sick leave',
@@ -124,7 +139,14 @@ class LeaveType {
     LeaveType(id: 'salaryAdvance', en: 'Salary advance', ar: 'سلفة على الراتب', isLeave: false),
   ];
 
-  factory LeaveType.fromMap(Map<String, dynamic> m) => LeaveType(
+  factory LeaveType.fromMap(Map<String, dynamic> m) {
+    // Lists HR saved before the ticket existed (no `documentLater` key): annual
+    // leave asks for the flight ticket as the defaults do.
+    if (m['id'] == 'annual' && !m.containsKey('documentLater') && m['needsDocument'] != true) {
+      final d = defaults.first;
+      m = {...m, 'needsDocument': true, 'documentLater': true, 'documentEn': d.documentEn, 'documentAr': d.documentAr};
+    }
+    return LeaveType(
         id: m['id'] as String? ?? '',
         en: m['en'] as String? ?? '',
         ar: m['ar'] as String? ?? '',
@@ -133,9 +155,11 @@ class LeaveType {
         calendarDays: m['calendarDays'] as bool? ?? false,
         paid: m['paid'] as bool? ?? true,
         needsDocument: m['needsDocument'] as bool? ?? false,
+        documentLater: m['documentLater'] as bool? ?? false,
         documentEn: m['documentEn'] as String? ?? '',
         documentAr: m['documentAr'] as String? ?? '',
       );
+  }
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -146,6 +170,7 @@ class LeaveType {
         'calendarDays': calendarDays,
         'paid': paid,
         'needsDocument': needsDocument,
+        'documentLater': needsDocument && documentLater,
         'documentEn': needsDocument ? documentEn : '',
         'documentAr': needsDocument ? documentAr : '',
       };
@@ -172,6 +197,17 @@ double leaveDays({
     if (calendarDays || (workDays.contains(d.weekday) && !holidays.contains(leaveDayKey(d)))) days++;
   }
   return halfDay && start == end && days == 1 ? 0.5 : days.toDouble();
+}
+
+/// The first counted day when someone travels after work on [day] (user
+/// 2026-10-31: Thursday evening → the leave starts on Saturday): the next
+/// work day that isn't a public holiday.
+DateTime nextWorkDay(DateTime day, Set<int> workDays, Set<String> holidays) {
+  var d = DateTime(day.year, day.month, day.day + 1);
+  for (var i = 0; i < 60 && !(workDays.contains(d.weekday) && !holidays.contains(leaveDayKey(d))); i++) {
+    d = DateTime(d.year, d.month, d.day + 1);
+  }
+  return d;
 }
 
 enum LeaveStatus { pending, approved, rejected, cancelled }
