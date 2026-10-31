@@ -17,6 +17,8 @@ const users = {
   acc: { role: 'accounting' },
   proc: { role: 'procurement' },
   lm: { role: 'logistics_manager' },
+  fm: { role: 'factory_manager' },
+  op: { role: 'operator' },
   driver: { role: 'driver', supervisorId: 'ws' },
   ws: { role: 'warehouse_supervisor' },
   ws2: { role: 'warehouse_supervisor' },
@@ -219,6 +221,33 @@ describe('logistics manager manages drivers only (2026-10-23)', () => {
     await assertFails(setDoc(doc(fs('lm'), 'users/new'), { ...driver, role: 'engineer' }));
     await assertFails(updateDoc(doc(fs('lm'), 'users/ws'), { role: 'logistics_manager' }));
     await assertFails(set(ref(rtdb('lm'), 'roles/acc'), 'worker'));
+  });
+});
+
+describe('factory manager manages workers, engineers and operators (2026-10-31)', () => {
+  const person = (role) => ({ name: 'P', email: 'p@staff.wpc-crm-a9247.web.app', role, active: true });
+
+  test('adds them, with their RTDB role', async () => {
+    for (const role of ['worker', 'engineer', 'operator']) {
+      await assertSucceeds(setDoc(doc(fs('fm'), `users/new_${role}`), person(role)));
+      await assertSucceeds(set(ref(rtdb('fm'), `roles/new_${role}`), role));
+    }
+  });
+
+  test('edits them within those roles only', async () => {
+    await assertSucceeds(updateDoc(doc(fs('fm'), 'users/op'), { name: 'Op 2' }));
+    await assertSucceeds(updateDoc(doc(fs('fm'), 'users/op'), { role: 'engineer' }));
+    await assertFails(updateDoc(doc(fs('fm'), 'users/op'), { role: 'factory_manager' }));
+    await assertFails(set(ref(rtdb('fm'), 'roles/op'), 'gm'));
+  });
+
+  test("can't add or edit anyone else", async () => {
+    await assertFails(setDoc(doc(fs('fm'), 'users/new'), person('driver')));
+    await assertFails(updateDoc(doc(fs('fm'), 'users/driver'), { name: 'x' }));
+    await assertFails(set(ref(rtdb('fm'), 'roles/driver'), 'worker'));
+    await assertFails(set(ref(rtdb('fm'), 'roles/new'), 'driver'));
+    // The logistics manager can't make engineers or operators.
+    await assertFails(setDoc(doc(fs('lm'), 'users/new'), person('engineer')));
   });
 });
 

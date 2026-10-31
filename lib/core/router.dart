@@ -89,8 +89,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           !loc.startsWith('/hr') &&
           !loc.startsWith('/attendance') &&
           !(me.role.canManageHr && loc == '/departments') &&
-          // Logistics manager: the drivers' live map and route history, and
-          // the Users page for drivers.
+          // Logistics manager: the drivers' live map and route history; logistics
+          // and factory managers: the Users page for their people.
           !(me.role.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
           !(me.role.managesDrivers && loc.startsWith('/vehicles')) &&
           !(me.role.managesUsers && loc.startsWith('/users'))) {

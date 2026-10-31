@@ -7052,6 +7052,48 @@ abstract class AppLocalizations {
   /// **'Not accepted – counts as an absence day'**
   String get absenceRejectedText;
 
+  /// No description provided for @absenceWaitingManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the manager\'s approval'**
+  String get absenceWaitingManager;
+
+  /// No description provided for @absenceRejectedByManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Not accepted by the manager – counts as an absence day (HR can still change it)'**
+  String get absenceRejectedByManager;
+
+  /// No description provided for @absenceManagerDecide.
+  ///
+  /// In en, this message translates to:
+  /// **'Your approval'**
+  String get absenceManagerDecide;
+
+  /// No description provided for @absenceManagerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve to send it on to HR, who decide whether it counts as sick or annual leave. Rejected, it counts as an absence day; HR can still change that.'**
+  String get absenceManagerHelp;
+
+  /// No description provided for @absenceHrMayChange.
+  ///
+  /// In en, this message translates to:
+  /// **'The manager didn\'t accept it. You can still accept it as leave, or confirm the rejection.'**
+  String get absenceHrMayChange;
+
+  /// No description provided for @absenceApproveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this absence?'**
+  String get absenceApproveTitle;
+
+  /// No description provided for @absenceRejectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this absence?'**
+  String get absenceRejectTitle;
+
   /// No description provided for @attachDocument.
   ///
   /// In en, this message translates to:

@@ -31,14 +31,18 @@ service cloud.firestore {
 
     // GM / sales manager create and edit users; deleting is done by the deleteUser function.
     // The logistics manager creates and edits drivers (2026-10-23), workers
-    // and warehouse supervisors (2026-10-31) only.
-    function logisticsRoles() { return ['worker', 'driver', 'warehouse_supervisor']; }
+    // and warehouse supervisors; the factory manager workers, engineers and
+    // operators (2026-10-31). The app shows each only the people under them.
+    function managedRoles() {
+      return me().role == 'logistics_manager' ? ['worker', 'driver', 'warehouse_supervisor']
+        : me().role == 'factory_manager' ? ['worker', 'engineer', 'operator'] : [];
+    }
     match /users/{uid} {
       allow read: if request.auth.uid == uid || active();
       allow create, update: if isAdmin();
-      allow create: if active() && me().role == 'logistics_manager' && request.resource.data.role in logisticsRoles();
-      allow update: if active() && me().role == 'logistics_manager'
-        && resource.data.role in logisticsRoles() && request.resource.data.role in logisticsRoles()
+      allow create: if active() && request.resource.data.role in managedRoles();
+      allow update: if active()
+        && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
       // Self-registration: a new account creates its own profile, inactive
       // and pending, with no role; the sales manager / GM approve it.
@@ -235,19 +239,34 @@ service cloud.firestore {
     match /absences/{absenceId} {
       // sales_manager: acts as HR until HR has an account (user request 2026-10-22, testing).
       function decidesAbsences() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+      // `managerIds` is written by the absenceReported function (2026-10-31);
+      // the person may keep it but never change it.
       function validReport() {
         return active() && request.resource.data.uid == request.auth.uid
           && absenceId == request.auth.uid + '_' + request.resource.data.date
           && request.resource.data.reason in ['sick', 'tired', 'cantCome']
           && request.resource.data.note is string && request.resource.data.note.size() <= 1000
           && request.resource.data.status == 'pending'
-          && request.resource.data.keys().hasOnly(['uid', 'date', 'month', 'reason', 'note', 'status', 'createdAt']);
+          && request.resource.data.keys().hasOnly(['uid', 'date', 'month', 'reason', 'note', 'status', 'createdAt', 'managerIds'])
+          && request.resource.data.get('managerIds', null) == (resource == null ? null : resource.data.get('managerIds', null));
+      }
+      // The direct manager approves first (2026-10-31): approved = still
+      // pending (for HR), rejected = rejected (HR may still change it).
+      function managerDecides() {
+        return active() && request.auth.uid in resource.data.get('managerIds', [])
+          && resource.data.uid != request.auth.uid
+          && resource.data.status == 'pending' && !('managerStep' in resource.data)
+          && request.resource.data.managerStep.byId == request.auth.uid
+          && request.resource.data.managerStep.status in ['approved', 'rejected']
+          && request.resource.data.status == (request.resource.data.managerStep.status == 'approved' ? 'pending' : 'rejected')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['managerStep', 'status']);
       }
       // By id too, so the owner may watch a day's report before it exists (2026-10-27).
       allow read: if isHrArea() || isManagerUser()
         || (active() && (absenceId.split('_')[0] == request.auth.uid || resource.data.uid == request.auth.uid));
       allow create: if validReport();
-      allow update: if (validReport() && resource.data.status == 'pending')
+      allow update: if (validReport() && resource.data.status == 'pending' && !('managerStep' in resource.data))
+        || managerDecides()
         || (decidesAbsences() && resource.data.uid != request.auth.uid
             && request.resource.data.status in ['accepted', 'rejected']
             && request.resource.data.decidedBy == request.auth.uid
@@ -258,7 +277,8 @@ service cloud.firestore {
       // Documents (e.g. a medical report): the person adds them while it waits, the HR area too.
       match /attachments/{attachmentId} {
         function parent() { return get(/databases/$(database)/documents/absences/$(absenceId)).data; }
-        allow read: if isHrArea() || isSupervisor() || (active() && parent().uid == request.auth.uid);
+        allow read: if isHrArea() || isSupervisor() || (active() && parent().uid == request.auth.uid)
+          || (active() && request.auth.uid in parent().get('managerIds', []));
         allow create: if managesHr() || (active() && parent().uid == request.auth.uid && parent().status == 'pending');
         // The person removes what they attached while it waits.
         allow delete: if managesHr() || (active() && parent().uid == request.auth.uid && parent().status == 'pending'

@@ -27,7 +27,7 @@ enum AppPage {
   vehicles(['/vehicles'], {_sm, _gm, _lm}),
   attendance(['/attendance'], {_hr, _gm, _sm, _kam, _lm, _ws, _fm}),
   hrArea(['/hr'], {_hr, _gm, _sm}),
-  users(['/users'], {_sm, _gm, _lm}),
+  users(['/users'], {_sm, _gm, _lm, _fm}),
   importClients(['/import'], {_sm, _gm}),
 
   /// Never turned off for SM / GM ([locked]): nobody can lock themselves out.

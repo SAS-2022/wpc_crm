@@ -4234,6 +4234,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get absenceRejectedText => 'غير مقبول – يُحتسب يوم غياب';
 
   @override
+  String get absenceWaitingManager => 'بانتظار موافقة المدير';
+
+  @override
+  String get absenceRejectedByManager =>
+      'لم يقبله المدير – يُحسب يوم غياب (ويمكن للموارد البشرية تغيير ذلك)';
+
+  @override
+  String get absenceManagerDecide => 'موافقتك';
+
+  @override
+  String get absenceManagerHelp =>
+      'عند الموافقة يُرسل إلى الموارد البشرية لتقرر هل يُحسب إجازة مرضية أم سنوية. وعند الرفض يُحسب يوم غياب، ويمكن للموارد البشرية تغيير ذلك.';
+
+  @override
+  String get absenceHrMayChange =>
+      'لم يقبله المدير. يمكنك قبوله كإجازة، أو تأكيد الرفض.';
+
+  @override
+  String get absenceApproveTitle => 'الموافقة على هذا الغياب؟';
+
+  @override
+  String get absenceRejectTitle => 'رفض هذا الغياب؟';
+
+  @override
   String get attachDocument => 'إرفاق مستند';
 
   @override

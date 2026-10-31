@@ -3,7 +3,7 @@
     "roles": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists()) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' && newData.isString() && newData.val().matches(/^(worker|driver|warehouse_supervisor)$/) && (!data.exists() || data.val().matches(/^(worker|driver|warehouse_supervisor)$/)))",
+        ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && newData.exists()) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' && newData.isString() && newData.val().matches(/^(worker|driver|warehouse_supervisor)$/) && (!data.exists() || data.val().matches(/^(worker|driver|warehouse_supervisor)$/))) || (root.child('roles').child(auth.uid).val() === 'factory_manager' && newData.isString() && newData.val().matches(/^(worker|engineer|operator)$/) && (!data.exists() || data.val().matches(/^(worker|engineer|operator)$/)))",
         ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/)"
       }
     },

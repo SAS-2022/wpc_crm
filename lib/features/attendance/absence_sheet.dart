@@ -24,8 +24,10 @@ String absenceLeaveLabel(AppLocalizations l10n, AbsenceLeave? l) => switch (l) {
 
 /// "Waiting for HR" / "Accepted as sick leave" / "Not accepted – absence day".
 String absenceStatusText(AppLocalizations l10n, Absence a) => switch (a.status) {
+      AbsenceStatus.pending when a.waitingForManager => l10n.absenceWaitingManager,
       AbsenceStatus.pending => l10n.absenceWaiting,
       AbsenceStatus.accepted => l10n.absenceAcceptedAs(absenceLeaveLabel(l10n, a.countAs)),
+      AbsenceStatus.rejected when a.rejectedByManager => l10n.absenceRejectedByManager,
       AbsenceStatus.rejected => l10n.absenceRejectedText,
     };
 

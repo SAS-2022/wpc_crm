@@ -20,7 +20,8 @@ import 'absence_sheet.dart';
 
 /// One reported absence (`/absence/:id`): who, which day, reason and text,
 /// documents (the person adds them while it waits, e.g. a medical report),
-/// the decision, and for HR / the GM: Reject (absence day), Accept as sick
+/// the decision; for the direct manager (2026-10-31): Approve (on to HR) /
+/// Reject; for HR / the GM after that: Reject (absence day), Accept as sick
 /// leave (only with a document) or Accept as annual leave (shows what's left).
 class AbsenceScreen extends ConsumerStatefulWidget {
   const AbsenceScreen({super.key, required this.id});
@@ -89,6 +90,57 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
     }
   }
 
+  Future<void> _managerDecide(Absence a, AppUser me, bool approved) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final comment = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(approved ? l10n.absenceApproveTitle : l10n.absenceRejectTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.absenceManagerHelp),
+            const SizedBox(height: 12),
+            TextField(
+              controller: comment,
+              minLines: 1,
+              maxLines: 4,
+              decoration: InputDecoration(labelText: approved ? l10n.commentOptional : l10n.rejectReason),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+          FilledButton(
+            style: approved ? null : FilledButton.styleFrom(backgroundColor: Theme.of(dialog).colorScheme.error),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(approved ? l10n.approve : l10n.reject),
+          ),
+        ],
+      ),
+    );
+    final text = comment.text.trim();
+    comment.dispose();
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await managerDecideAbsence(
+        absence: a,
+        me: me,
+        approved: approved,
+        comment: text,
+        users: ref.read(usersProvider).value ?? const [],
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -107,6 +159,9 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
     final person = users[a.uid];
     final mine = a.uid == me.id;
     final decides = decidesAbsences(me.role) && !mine;
+    final managerDecides = !mine && a.waitingForManager && a.managerIds.contains(me.id);
+    final step = a.managerStep;
+    String names(Iterable<String> ids) => [for (final id in ids) users[id]?.name ?? l10n.deletedUser].join(', ');
     final owner = (parent: AttachmentParent.absences, id: a.id);
     final files = ref.watch(attachmentsProvider(owner)).value ?? const <Attachment>[];
     final color = absenceStatusColor(a, theme.colorScheme);
@@ -145,7 +200,7 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
           ListTile(
             leading: Icon(Icons.circle, size: 14, color: color),
             title: Text(absenceStatusText(l10n, a), style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-            subtitle: a.pending
+            subtitle: a.pending || a.decidedBy == null
                 ? null
                 : Text([
                     users[a.decidedBy]?.name ?? '',
@@ -156,6 +211,22 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
                 ? null
                 : TextButton(onPressed: () => context.push('/leave/${a.leaveRequestId}'), child: Text(l10n.openRequest)),
           ),
+          // The direct manager's step (2026-10-31).
+          if (step != null)
+            ListTile(
+              leading: Icon(step.approved ? Icons.check_circle_outline : Icons.cancel_outlined,
+                  color: step.approved ? Colors.green.shade700 : theme.colorScheme.error),
+              title: Text(step.approved ? l10n.approvedByName(names([step.byId])) : l10n.rejectedByName(names([step.byId]))),
+              subtitle: Text([
+                if (step.at != null) DateFormat.MMMd(locale).add_jm().format(step.at!),
+                if (step.comment.isNotEmpty) '“${step.comment}”',
+              ].join(' · ')),
+            )
+          else if (a.waitingForManager)
+            ListTile(
+              leading: Icon(Icons.hourglass_empty, color: Colors.orange.shade800),
+              title: Text(l10n.waitingFor(names(a.managerIds))),
+            ),
           if (a.pending && a.reason == AbsenceReason.sick && files.isEmpty)
             ListTile(
               leading: Icon(Icons.attach_file, color: theme.colorScheme.error),
@@ -173,11 +244,46 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: LeaveBalanceTable(uid: a.uid, day: a.date, highlightTypeId: absenceLeaveTypeOf(a)),
             ),
-          if (decides && a.pending && person != null) ...[
+          if (managerDecides) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(l10n.absenceManagerDecide, style: theme.textTheme.titleMedium),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _managerDecide(a, me, true),
+                    icon: busyIcon(_busy, const Icon(Icons.check)),
+                    label: Text(l10n.approve),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                    onPressed: _busy ? null : () => _managerDecide(a, me, false),
+                    icon: busyIcon(_busy, const Icon(Icons.close)),
+                    label: Text(l10n.reject),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(l10n.absenceManagerHelp, style: theme.textTheme.bodySmall),
+            ),
+          ],
+          if (decides && a.hrMayDecide && person != null) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Text(l10n.decideAbsence, style: theme.textTheme.titleMedium),
             ),
+            if (a.rejectedByManager)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(l10n.absenceHrMayChange, style: theme.textTheme.bodyMedium),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Wrap(
@@ -235,14 +341,22 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
   }
 }
 
-/// Home, for HR and the GM: absences waiting for a decision.
+/// Home: absences waiting for the signed-in person — as the direct manager
+/// (first step), or as HR / the GM once the manager approved.
 class PendingAbsencesCard extends ConsumerWidget {
   const PendingAbsencesCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final list = ref.watch(pendingAbsencesProvider).value ?? const <Absence>[];
+    final list = {
+      for (final a in [
+        ...ref.watch(absencesAwaitingMeProvider).value ?? const <Absence>[],
+        ...ref.watch(pendingAbsencesProvider).value ?? const <Absence>[],
+      ])
+        a.id: a,
+    }.values.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
     if (list.isEmpty) return const SizedBox.shrink();
     final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
     final day = DateFormat.MMMEd(Localizations.localeOf(context).toString());

@@ -18,6 +18,13 @@ import '../notifications/notifications.dart';
 // absence day (counted as missed); accepted = sick leave (only with a
 // document attached) or annual leave, saved as an approved leave request
 // so it uses their balance.
+//
+// Direct manager first (user decision 2026-10-31, like leave requests): the
+// `absenceReported` function stamps `managerIds` = the person's direct
+// managers who don't decide absences themselves (factory manager, logistics
+// manager, KAM, …); one of them approves or rejects (`managerStep`) before
+// HR decides. Rejected by the manager = rejected (an absence day), but HR can
+// still accept it. No such manager (or reports from before) = HR right away.
 
 enum AbsenceReason {
   sick,
@@ -70,6 +77,8 @@ class Absence {
     this.decidedAt,
     this.leaveRequestId,
     this.createdAt,
+    this.managerIds = const [],
+    this.managerStep,
   });
 
   final String uid;
@@ -92,8 +101,22 @@ class Absence {
   final String? leaveRequestId;
   final DateTime? createdAt;
 
+  /// Direct managers who approve first (set by the server); empty = HR only.
+  final List<String> managerIds;
+  final AbsenceManagerStep? managerStep;
+
   String get id => '${uid}_$date';
   bool get pending => status == AbsenceStatus.pending;
+
+  /// Waiting for one of [managerIds].
+  bool get waitingForManager => pending && managerIds.isNotEmpty && managerStep == null;
+
+  /// The manager rejected it and HR hasn't decided: rejected, HR may change it.
+  bool get rejectedByManager => status == AbsenceStatus.rejected && managerStep?.approved == false && decidedBy == null;
+
+  /// HR / the GM may decide now: after the manager (or without one), or to
+  /// change a manager's rejection.
+  bool get hrMayDecide => (pending && !waitingForManager) || rejectedByManager;
 
   factory Absence.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -109,6 +132,28 @@ class Absence {
       decidedAt: (d['decidedAt'] as Timestamp?)?.toDate(),
       leaveRequestId: d['leaveRequestId'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      managerIds: [for (final id in d['managerIds'] as List? ?? const []) if (id is String) id],
+      managerStep: AbsenceManagerStep.fromMap(d['managerStep']),
+    );
+  }
+}
+
+/// The direct manager's decision on an absence.
+class AbsenceManagerStep {
+  const AbsenceManagerStep({required this.approved, required this.byId, this.at, this.comment = ''});
+
+  final bool approved;
+  final String byId;
+  final DateTime? at;
+  final String comment;
+
+  static AbsenceManagerStep? fromMap(Object? m) {
+    if (m is! Map || m['byId'] is! String) return null;
+    return AbsenceManagerStep(
+      approved: m['status'] == 'approved',
+      byId: m['byId'] as String,
+      at: (m['at'] as Timestamp?)?.toDate(),
+      comment: m['comment'] as String? ?? '',
     );
   }
 }
@@ -142,12 +187,25 @@ final monthAbsencesProvider = StreamProvider.family<List<Absence>, String>((ref,
     .snapshots()
     .map((s) => [for (final d in s.docs) Absence.fromDoc(d)]));
 
-/// Absences waiting for a decision (HR / GM Home), oldest day first.
+/// Absences waiting for HR / the GM (Home), oldest day first; those still
+/// with the direct manager are left out.
 final pendingAbsencesProvider = StreamProvider<List<Absence>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null || !decidesAbsences(me.role)) return Stream.value(const []);
   return _absences.where('status', isEqualTo: AbsenceStatus.pending.name).snapshots().map((s) {
-    final list = [for (final d in s.docs) Absence.fromDoc(d)];
+    final list = [for (final d in s.docs) if (Absence.fromDoc(d) case final a when !a.waitingForManager) a];
+    list.sort((a, b) => a.date.compareTo(b.date));
+    return list;
+  });
+});
+
+/// Absences waiting for the signed-in person as the direct manager (Home),
+/// oldest day first.
+final absencesAwaitingMeProvider = StreamProvider<List<Absence>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.isManager) return Stream.value(const []);
+  return _absences.where('managerIds', arrayContains: me.id).snapshots().map((s) {
+    final list = [for (final d in s.docs) if (Absence.fromDoc(d) case final a when a.waitingForManager) a];
     list.sort((a, b) => a.date.compareTo(b.date));
     return list;
   });
@@ -161,7 +219,8 @@ final allAbsencesProvider = StreamProvider<List<Absence>>((ref) {
   return _absences.orderBy('date', descending: true).limit(500).snapshots().map((s) => [for (final d in s.docs) Absence.fromDoc(d)]);
 });
 
-/// Saves [me]'s absence on [date], waiting for HR / the GM.
+/// Saves [me]'s absence on [date], waiting for their direct manager / HR.
+/// Merged, so a report changed while waiting keeps its `managerIds`.
 Future<void> reportAbsence({
   required AppUser me,
   required String date,
@@ -175,10 +234,43 @@ Future<void> reportAbsence({
       'note': note,
       'status': AbsenceStatus.pending.name,
       'createdAt': FieldValue.serverTimestamp(),
-    }));
+    }, SetOptions(merge: true)));
 
 /// Takes back an absence still waiting (e.g. they came after all).
 Future<void> withdrawAbsence(Absence a) => saving(() => absenceDoc(a.uid, a.date).delete());
+
+/// The direct manager approves (on to HR, who are told) or rejects (the
+/// person is told; HR can still change it).
+Future<void> managerDecideAbsence({
+  required Absence absence,
+  required AppUser me,
+  required bool approved,
+  required String comment,
+  required List<AppUser> users,
+}) => saving(() async {
+  await absenceDoc(absence.uid, absence.date).update({
+    'managerStep': {
+      'status': approved ? 'approved' : 'rejected',
+      'byId': me.id,
+      'at': FieldValue.serverTimestamp(),
+      'comment': comment,
+    },
+    'status': (approved ? AbsenceStatus.pending : AbsenceStatus.rejected).name,
+  });
+  await sendNotifications(
+    toIds: approved
+        ? [for (final u in users) if (u.active && decidesAbsences(u.role) && u.id != absence.uid) u.id]
+        : [absence.uid],
+    type: approved ? NotificationType.absenceReported : NotificationType.absenceRejected,
+    fromId: me.id,
+    ownerId: absence.uid,
+    date: absence.date,
+    count: 0,
+    ref: absence.id,
+    issue: approved ? absence.reason.name : null,
+    note: approved ? absence.note : null,
+  );
+});
 
 /// HR / the GM decide: accepted as [countAs] leave (an approved leave
 /// request for that day) or rejected (an absence day). Tells the person, and

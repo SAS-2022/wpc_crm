@@ -14,6 +14,8 @@ const users = {
   hr: { role: 'hr' },
   gm: { role: 'gm' },
   sm: { role: 'sales_manager' },
+  fm: { role: 'factory_manager' },
+  op: { role: 'operator' },
 };
 
 before(async () => {
@@ -128,3 +130,47 @@ describe('absence documents', () => {
     await assertSucceeds(deleteDoc(file('hr')));
   });
 });
+
+describe('direct manager first (2026-10-31)', () => {
+  const id = 'absences/op_2026-10-22';
+  const stamped = () => env.withSecurityRulesDisabled((ctx) =>
+    setDoc(doc(ctx.firestore(), id), absence('op', { managerIds: ['fm'] })));
+  const step = (by, status) => ({ managerStep: { status, byId: by, comment: '' }, status: status === 'approved' ? 'pending' : 'rejected' });
+
+  test('the manager approves: still pending, for HR', async () => {
+    await stamped();
+    await assertSucceeds(updateDoc(doc(fs('fm'), id), step('fm', 'approved')));
+    // Once only.
+    await assertFails(updateDoc(doc(fs('fm'), id), step('fm', 'rejected')));
+  });
+
+  test('the manager rejects; HR can still accept it', async () => {
+    await stamped();
+    await assertSucceeds(updateDoc(doc(fs('fm'), id), step('fm', 'rejected')));
+    await assertSucceeds(updateDoc(doc(fs('hr'), id), { status: 'accepted', countAs: 'annual', comment: '', decidedBy: 'hr', leaveRequestId: 'r1' }));
+  });
+
+  test('nobody else takes the manager step, and it must match', async () => {
+    await stamped();
+    await assertFails(updateDoc(doc(fs('kam'), id), step('kam', 'approved')));
+    await assertFails(updateDoc(doc(fs('op'), id), step('op', 'approved')));
+    await assertFails(updateDoc(doc(fs('fm'), id), step('hr', 'approved')));
+    await assertFails(updateDoc(doc(fs('fm'), id), { ...step('fm', 'approved'), status: 'accepted' }));
+    await assertFails(updateDoc(doc(fs('fm'), id), { ...step('fm', 'rejected'), status: 'pending' }));
+  });
+
+  test('the person keeps but can\'t change the managers', async () => {
+    await stamped();
+    await assertSucceeds(setDoc(doc(fs('op'), id), absence('op', { note: 'changed' }), { merge: true }));
+    await assertFails(updateDoc(doc(fs('op'), id), { managerIds: ['op'] }));
+    await assertFails(setDoc(doc(fs('op'), id), absence('op')));
+    await assertFails(setDoc(doc(fs('op'), 'absences/op_2026-10-23'), absence('op', { date: '2026-10-23', managerIds: ['kam'] })));
+  });
+
+  test('after the manager\'s step the person can\'t edit it', async () => {
+    await stamped();
+    await assertSucceeds(updateDoc(doc(fs('fm'), id), step('fm', 'approved')));
+    await assertFails(setDoc(doc(fs('op'), id), absence('op', { note: 'x' }), { merge: true }));
+  });
+});
+

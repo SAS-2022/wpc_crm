@@ -4227,6 +4227,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get absenceRejectedText => 'Not accepted – counts as an absence day';
 
   @override
+  String get absenceWaitingManager => 'Waiting for the manager\'s approval';
+
+  @override
+  String get absenceRejectedByManager =>
+      'Not accepted by the manager – counts as an absence day (HR can still change it)';
+
+  @override
+  String get absenceManagerDecide => 'Your approval';
+
+  @override
+  String get absenceManagerHelp =>
+      'Approve to send it on to HR, who decide whether it counts as sick or annual leave. Rejected, it counts as an absence day; HR can still change that.';
+
+  @override
+  String get absenceHrMayChange =>
+      'The manager didn\'t accept it. You can still accept it as leave, or confirm the rejection.';
+
+  @override
+  String get absenceApproveTitle => 'Approve this absence?';
+
+  @override
+  String get absenceRejectTitle => 'Reject this absence?';
+
+  @override
   String get attachDocument => 'Attach document';
 
   @override

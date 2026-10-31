@@ -1253,8 +1253,11 @@ function directManagers(person, uid, users) {
 
 /**
  * "Not coming to work" reported on the attendance card (2026-10-22,
- * `absences/{uid}_{date}`): tells HR and every GM (who decide it) and the
- * person's direct manager. `ref` = the absence id.
+ * `absences/{uid}_{date}`). Since 2026-10-31 the person's direct managers
+ * who don't decide absences (factory / logistics manager, KAM, …) approve
+ * first: saved as `managerIds` and only they are told; the app tells HR
+ * after one approves. Without such a manager: HR and every GM (who decide
+ * it) are told at once. `ref` = the absence id.
  */
 /** The sales manager acts as HR until HR has an account (user request 2026-10-22, testing; `smActsAsHr` in absence.dart). */
 const SM_ACTS_AS_HR = true;
@@ -1266,10 +1269,12 @@ exports.absenceReported = onDocumentCreated('absences/{id}', async (event) => {
   const users = (await db.collection('users').where('active', '==', true).get()).docs
     .map((d) => ({ id: d.id, ...d.data() }));
   const person = users.find((u) => u.id === a.uid) || {};
-  const to = new Set([
-    ...users.filter((u) => u.role === 'hr' || u.role === 'gm' || (SM_ACTS_AS_HR && u.role === 'sales_manager')).map((u) => u.id),
-    ...directManagers(person, a.uid, users),
-  ]);
+  const deciders = users.filter((u) => u.role === 'hr' || u.role === 'gm' || (SM_ACTS_AS_HR && u.role === 'sales_manager')).map((u) => u.id);
+  // The direct manager approves first (2026-10-31): those who don't decide
+  // absences themselves; HR is told once one of them approves (app side).
+  const managers = directManagers(person, a.uid, users).filter((id) => !deciders.includes(id));
+  if (managers.length) await event.data.ref.update({ managerIds: managers });
+  const to = new Set(managers.length ? managers : deciders);
   to.delete(a.uid);
   const batch = db.batch();
   for (const toId of to) {
@@ -1678,7 +1683,8 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const allowed = caller?.active === true && (
     caller.role === 'gm' ||
     (caller.role === 'sales_manager' && !['gm', 'sales_manager'].includes(target?.role)) ||
-    (caller.role === 'logistics_manager' && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)));
+    (caller.role === 'logistics_manager' && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)) ||
+    (caller.role === 'factory_manager' && ['worker', 'engineer', 'operator'].includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
   return { ok: true };

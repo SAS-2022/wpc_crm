@@ -15,6 +15,7 @@ import 'users_repository.dart';
 import '../attendance/work_sites.dart';
 import 'companies.dart';
 import 'user_filters.dart';
+import '../notifications/notifications.dart' show peopleUnder;
 
 class UsersScreen extends ConsumerStatefulWidget {
   const UsersScreen({super.key});
@@ -88,7 +89,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final positions = ref.watch(positionsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
     final me = ref.watch(currentUserProvider).value;
-    // Sales manager / GM: everyone; logistics manager: approved workers, drivers and warehouse supervisors ([UserRole.editableRoles]).
+    // Sales manager / GM: everyone; logistics / factory manager: their approved
+    // people ([peopleUnder]) with the roles they manage ([UserRole.editableRoles]).
     final admin = me?.role.isAdmin == true;
     final editable = me?.role.editableRoles ?? const <UserRole>[];
 
@@ -103,7 +105,12 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
         data: (all) {
-          var list = admin ? all : [for (final u in all) if (!u.isPendingApproval && editable.contains(u.role)) u];
+          var list = admin
+              ? all
+              : [
+                  for (final u in peopleUnder(me!, all))
+                    if (!u.isPendingApproval && editable.contains(u.role)) u,
+                ];
           if (list.isEmpty) return Center(child: Text(l10n.noUsers));
           // Registrations waiting for approval first.
           list = [...list.where((u) => u.isPendingApproval), ...list.where((u) => !u.isPendingApproval)];

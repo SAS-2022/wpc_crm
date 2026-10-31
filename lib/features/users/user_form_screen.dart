@@ -11,7 +11,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'home_location_field.dart';
 import 'users_repository.dart';
-import '../notifications/notifications.dart' show directManagersOf;
+import '../notifications/notifications.dart' show directManagersOf, peopleUnder;
 import '../../core/saving.dart';
 import '../attendance/attendance_rules.dart' show defaultOvertimeMaxMin;
 import '../attendance/work_sites.dart';
@@ -24,7 +24,8 @@ import '../settings/app_settings.dart';
 import '../hr/hr_people.dart';
 
 /// Create (userId == null) or edit a user. Sales manager / GM: anyone;
-/// logistics manager: workers, drivers and warehouse supervisors ([UserRole.editableRoles]).
+/// logistics manager: workers, drivers and warehouse supervisors; factory
+/// manager: workers, engineers and operators ([UserRole.editableRoles]).
 class UserFormScreen extends ConsumerStatefulWidget {
   const UserFormScreen({super.key, required this.userId});
 
@@ -300,6 +301,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     if (_isNew && _role != null && !roles.contains(_role)) _role = null;
     // Only one role to choose from: already picked.
     if (_isNew && roles.length == 1) _role ??= roles.first;
+    // The factory manager's people are production staff, so they report to them.
+    if (_isNew && me?.role == UserRole.factoryManager) _department ??= 'production';
     if (!_isNew && !_loaded) {
       final existing = users.where((u) => u.id == widget.userId).firstOrNull;
       if (existing == null) {
@@ -307,8 +310,11 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       }
       _fill(existing);
     }
-    // Logistics manager: workers, drivers, warehouse supervisors (also enforced by the rules).
-    if (!_isNew && me != null && !me.role.isAdmin && !roles.contains(_savedRole)) {
+    // Logistics / factory manager: only the roles they manage (also enforced by the rules).
+    if (!_isNew &&
+        me != null &&
+        !me.role.isAdmin &&
+        (!roles.contains(_savedRole) || !peopleUnder(me, users).any((u) => u.id == widget.userId))) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
