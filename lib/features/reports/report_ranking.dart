@@ -62,6 +62,7 @@ class RankedPerson {
     required this.newClients,
     required this.scoreParts,
     required this.rank,
+    this.distance,
   });
 
   /// Visits, calls, target, coverage, plan … for the period.
@@ -100,11 +101,23 @@ class RankedPerson {
   double? get efficiency => routing?.averageRate;
   AverageDay? get averageDay => routing == null ? null : averageDayOf(routing!.timelines);
 
-  /// Days of the period with a GPS timeline, and the km travelled on them
-  /// (straight lines between the phone's fixes in work hours, so a little
-  /// under the road distance); null without a timeline.
-  int get gpsDays => routing?.timelines.length ?? 0;
-  double? get distanceKm => gpsDays == 0 ? null : routing!.timelines.fold<double>(0, (s, t) => s + t.drivingKm);
+  /// Km travelled on their working days with a GPS timeline (off days left
+  /// out); null without such a day. See [fieldDistance].
+  final FieldDistance? distance;
+  double? get distanceKm => distance?.km;
+  int get gpsDays => distance?.days ?? 0;
+}
+
+typedef FieldDistance = ({double km, int days});
+
+/// Km travelled on the days of [timelines] that aren't off days (user
+/// request 2026-10-31: weekly days off, holidays and leave don't count):
+/// straight lines between the phone's fixes in work hours, so a little under
+/// the road distance. Null when no working day has a timeline.
+FieldDistance? fieldDistance(List<DayTimeline> timelines, bool Function(String day) isOffDay) {
+  final days = [for (final t in timelines) if (!isOffDay(t.day)) t];
+  if (days.isEmpty) return null;
+  return (km: days.fold(0.0, (s, t) => s + t.drivingKm), days: days.length);
 }
 
 /// Ranks [reports] (the whole team, so a person's rank doesn't depend on
@@ -120,6 +133,8 @@ List<RankedPerson> rankPeople({
   required Map<String, Client> clients,
   required List<Client> newClientsFrom,
   required RoutingReport routing,
+  // ('uid', 'yyyy-MM-dd') → a day off for them: not counted in the distance.
+  bool Function(String uid, String day)? isOffDay,
 }) {
   final inRange = visits.where((v) => !v.isCall && v.checkedInAt != null && range.contains(v.checkedInAt!)).toList()
     ..sort((a, b) => a.checkedInAt!.compareTo(b.checkedInAt!));
@@ -217,6 +232,9 @@ List<RankedPerson> rankPeople({
         newClients: s.c.newClients,
         scoreParts: s.parts,
         rank: ranks[i],
+        distance: s.c.routing == null
+            ? null
+            : fieldDistance(s.c.routing!.timelines, (day) => isOffDay?.call(s.c.report.user.id, day) ?? false),
       ),
   ];
 }

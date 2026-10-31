@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../attendance/attendance_calendar.dart' show daysBetween;
 import '../clients/client.dart';
 import '../clients/client_tags.dart';
 import '../clients/clients_repository.dart';
@@ -15,6 +16,9 @@ import '../clients/visit_rules.dart';
 import '../home/dashboard_cards.dart';
 import '../home/stats.dart';
 import '../home/stats_widgets.dart';
+import '../hr/leave_repository.dart';
+import '../hr/leave_rules.dart';
+import '../tracking/work_hours.dart';
 import '../plan/plan_task.dart';
 import '../users/users_repository.dart';
 import '../visits/visit.dart';
@@ -155,6 +159,25 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }.toList()
       ..sort());
     final before = ref.watch(visitedBeforeProvider((DateFormat('yyyy-MM-dd').format(_range.start), visitedIds.join(','))));
+    // Days off don't count in the distance (user 2026-10-31): the person's
+    // weekly days off (own schedule, else company hours), holidays and
+    // approved full-day leave.
+    final workHours = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+    final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
+    final leaveDays = <String, Set<String>>{};
+    for (final r in ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[]) {
+      if (r.isLeave && r.status == LeaveStatus.approved && !r.halfDay && r.from != null && r.to != null) {
+        (leaveDays[r.uid] ??= {}).addAll(daysBetween(r.from!, r.to!));
+      }
+    }
+    final teamById = {for (final u in team) u.id: u};
+    bool isOffDay(String uid, String day) {
+      final date = DateTime.tryParse(day);
+      if (date == null) return false;
+      final days = (teamById[uid]?.scheduleOr(workHours) ?? workHours).days;
+      return !days.contains(date.weekday) || holidays.contains(day) || (leaveDays[uid]?.contains(day) ?? false);
+    }
+
     final ranked = before.value == null
         ? null
         : rankPeople(
@@ -165,6 +188,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             clients: clientsById,
             newClientsFrom: clients,
             routing: teamRouting,
+            isOffDay: isOffDay,
           );
     final shown = ranked?.where((p) => ids.contains(p.report.user.id)).toList();
     final lang = Localizations.localeOf(context).languageCode;

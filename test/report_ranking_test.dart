@@ -210,4 +210,16 @@ void main() {
     expect(String.fromCharCodes(ar.take(5)), '%PDF-');
     expect(reportPdfFileName(of(rows, 'sami'), 'Oct/2026'), 'sami - Oct2026.pdf');
   });
+
+  test('fieldDistance leaves off days out', () {
+    DayTimeline day(String d, double km) =>
+        DayTimeline(uid: 'a', day: d, minutes: const {}, drivingKm: km, clientStays: const [], stops: const []);
+    final days = [day('2026-10-29', 80), day('2026-10-30', 40), day('2026-10-31', 55.5)];
+    // 30 Oct is a Friday.
+    final d = fieldDistance(days, (d) => d == '2026-10-30');
+    expect(d?.km, 135.5);
+    expect(d?.days, 2);
+    expect(fieldDistance(days, (_) => true), isNull);
+    expect(fieldDistance(const [], (_) => false), isNull);
+  });
 }
