@@ -96,14 +96,15 @@ enum UserRole {
       this == gm || this == salesManager || this == kam || this == logisticsManager || this == factoryManager;
 
   /// Opens the Users page: sales manager and GM for everyone, the logistics
-  /// manager for drivers only (user decision 2026-10-23).
+  /// manager for workers, drivers and warehouse supervisors (user decisions
+  /// 2026-10-23, 2026-10-31).
   bool get managesUsers => isAdmin || this == logisticsManager;
 
   /// The roles this person may give to and edit on the user form.
   List<UserRole> get editableRoles => isAdmin
       ? assignable
       : this == logisticsManager
-      ? const [driver]
+      ? const [worker, driver, warehouseSupervisor]
       : const [];
 
   /// The sales team: uses clients, visits and plans.

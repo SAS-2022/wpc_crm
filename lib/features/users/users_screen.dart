@@ -88,7 +88,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final positions = ref.watch(positionsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
     final me = ref.watch(currentUserProvider).value;
-    // Sales manager / GM: everyone; logistics manager: approved drivers only.
+    // Sales manager / GM: everyone; logistics manager: approved workers, drivers and warehouse supervisors ([UserRole.editableRoles]).
     final admin = me?.role.isAdmin == true;
     final editable = me?.role.editableRoles ?? const <UserRole>[];
 

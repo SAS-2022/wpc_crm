@@ -207,6 +207,19 @@ describe('logistics manager manages drivers only (2026-10-23)', () => {
     await assertFails(set(ref(rtdb('lm'), 'roles/exec'), 'driver'));
     await assertFails(set(ref(rtdb('lm'), 'roles/new'), 'sales_manager'));
   });
+
+  test('also workers and warehouse supervisors (2026-10-31)', async () => {
+    for (const role of ['worker', 'warehouse_supervisor']) {
+      await assertSucceeds(setDoc(doc(fs('lm'), `users/new_${role}`), { ...driver, role }));
+      await assertSucceeds(set(ref(rtdb('lm'), `roles/new_${role}`), role));
+    }
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/ws'), { name: 'WS 2' }));
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/driver'), { role: 'worker' }));
+    await assertSucceeds(set(ref(rtdb('lm'), 'roles/ws'), 'worker'));
+    await assertFails(setDoc(doc(fs('lm'), 'users/new'), { ...driver, role: 'engineer' }));
+    await assertFails(updateDoc(doc(fs('lm'), 'users/ws'), { role: 'logistics_manager' }));
+    await assertFails(set(ref(rtdb('lm'), 'roles/acc'), 'worker'));
+  });
 });
 
 describe('managers and warehouse supervisors (2026-10-23)', () => {

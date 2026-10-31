@@ -23,7 +23,7 @@ import '../settings/app_settings.dart';
 import '../hr/hr_people.dart';
 
 /// Create (userId == null) or edit a user. Sales manager / GM: anyone;
-/// logistics manager: drivers only ([UserRole.editableRoles]).
+/// logistics manager: workers, drivers and warehouse supervisors ([UserRole.editableRoles]).
 class UserFormScreen extends ConsumerStatefulWidget {
   const UserFormScreen({super.key, required this.userId});
 
@@ -108,7 +108,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       widget.userId != me.id &&
       (me.role == UserRole.gm ||
           (me.role == UserRole.salesManager && _savedRole?.isAdmin != true) ||
-          (me.role == UserRole.logisticsManager && _savedRole == UserRole.driver));
+          (me.role == UserRole.logisticsManager && me.role.editableRoles.contains(_savedRole)));
 
   Future<void> _setPassword() async {
     final l10n = AppLocalizations.of(context);
@@ -297,7 +297,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     final me = ref.watch(currentUserProvider).value;
     final roles = me?.role.editableRoles ?? const <UserRole>[];
     if (_isNew && _role != null && !roles.contains(_role)) _role = null;
-    // Logistics manager: drivers only, so already picked.
+    // Only one role to choose from: already picked.
     if (_isNew && roles.length == 1) _role ??= roles.first;
     if (!_isNew && !_loaded) {
       final existing = users.where((u) => u.id == widget.userId).firstOrNull;
@@ -306,7 +306,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       }
       _fill(existing);
     }
-    // Logistics manager: drivers only (also enforced by the rules).
+    // Logistics manager: workers, drivers, warehouse supervisors (also enforced by the rules).
     if (!_isNew && me != null && !me.role.isAdmin && !roles.contains(_savedRole)) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }

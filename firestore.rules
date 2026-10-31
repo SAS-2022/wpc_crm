@@ -30,13 +30,15 @@ service cloud.firestore {
     }
 
     // GM / sales manager create and edit users; deleting is done by the deleteUser function.
-    // The logistics manager creates and edits drivers only (2026-10-23).
+    // The logistics manager creates and edits drivers (2026-10-23), workers
+    // and warehouse supervisors (2026-10-31) only.
+    function logisticsRoles() { return ['worker', 'driver', 'warehouse_supervisor']; }
     match /users/{uid} {
       allow read: if request.auth.uid == uid || active();
       allow create, update: if isAdmin();
-      allow create: if active() && me().role == 'logistics_manager' && request.resource.data.role == 'driver';
+      allow create: if active() && me().role == 'logistics_manager' && request.resource.data.role in logisticsRoles();
       allow update: if active() && me().role == 'logistics_manager'
-        && resource.data.role == 'driver' && request.resource.data.role == 'driver'
+        && resource.data.role in logisticsRoles() && request.resource.data.role in logisticsRoles()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
       // Self-registration: a new account creates its own profile, inactive
       // and pending, with no role; the sales manager / GM approve it.

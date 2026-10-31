@@ -1678,7 +1678,7 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const allowed = caller?.active === true && (
     caller.role === 'gm' ||
     (caller.role === 'sales_manager' && !['gm', 'sales_manager'].includes(target?.role)) ||
-    (caller.role === 'logistics_manager' && target?.role === 'driver'));
+    (caller.role === 'logistics_manager' && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
   return { ok: true };
