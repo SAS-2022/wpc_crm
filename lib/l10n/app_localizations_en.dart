@@ -5126,4 +5126,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yourTurn => 'Your turn';
+
+  @override
+  String get calIn => 'In';
+
+  @override
+  String get calOut => 'Out';
+
+  @override
+  String get calWorked => 'Worked';
+
+  @override
+  String get calAway => 'Away';
+
+  @override
+  String get calLate => 'Late';
+
+  @override
+  String get calOvertime => 'Overtime';
+
+  @override
+  String get calAfterHours => 'After hours';
+
+  @override
+  String calMore(int n) {
+    return '+$n more';
+  }
+
+  @override
+  String get calOvertimeWaiting => 'waiting';
+
+  @override
+  String calOvertimeApproved(String time) {
+    return 'approved $time';
+  }
+
+  @override
+  String get personMonthEmpty => 'No attendance for this person in this month.';
 }

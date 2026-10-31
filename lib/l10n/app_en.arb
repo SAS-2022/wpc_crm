@@ -2729,5 +2729,18 @@
   "@approvedByName": {"placeholders": {"name": {"type": "String"}}},
   "rejectedByName": "Rejected by {name}",
   "@rejectedByName": {"placeholders": {"name": {"type": "String"}}},
-  "yourTurn": "Your turn"
+  "yourTurn": "Your turn",
+  "calIn": "In",
+  "calOut": "Out",
+  "calWorked": "Worked",
+  "calAway": "Away",
+  "calLate": "Late",
+  "calOvertime": "Overtime",
+  "calAfterHours": "After hours",
+  "calMore": "+{n} more",
+  "@calMore": {"placeholders": {"n": {"type": "int"}}},
+  "calOvertimeWaiting": "waiting",
+  "calOvertimeApproved": "approved {time}",
+  "@calOvertimeApproved": {"placeholders": {"time": {"type": "String"}}},
+  "personMonthEmpty": "No attendance for this person in this month."
 }

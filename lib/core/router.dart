@@ -44,6 +44,7 @@ import 'providers.dart';
 import '../features/clients/transfers_screen.dart';
 import '../features/plan/team_plan_map_screen.dart';
 import '../features/auth/register_screen.dart';
+import '../features/attendance/attendance_person_month_screen.dart';
 import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
@@ -290,6 +291,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, state) => AttendanceScreen(initialDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? '')),
             ),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
+            GoRoute(
+              path: '/attendance/report/:uid',
+              builder: (_, state) =>
+                  AttendancePersonMonthScreen(uid: state.pathParameters['uid']!, month: state.uri.queryParameters['month']),
+            ),
             GoRoute(
               path: '/import',
               builder: (_, _) => const ImportScreen(),

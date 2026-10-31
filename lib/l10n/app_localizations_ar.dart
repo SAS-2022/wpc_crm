@@ -5133,4 +5133,41 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get yourTurn => 'دورك';
+
+  @override
+  String get calIn => 'دخول';
+
+  @override
+  String get calOut => 'خروج';
+
+  @override
+  String get calWorked => 'العمل';
+
+  @override
+  String get calAway => 'خارج الموقع';
+
+  @override
+  String get calLate => 'تأخير';
+
+  @override
+  String get calOvertime => 'إضافي';
+
+  @override
+  String get calAfterHours => 'بعد الدوام';
+
+  @override
+  String calMore(int n) {
+    return '+$n أخرى';
+  }
+
+  @override
+  String get calOvertimeWaiting => 'بانتظار الموافقة';
+
+  @override
+  String calOvertimeApproved(String time) {
+    return 'تمت الموافقة $time';
+  }
+
+  @override
+  String get personMonthEmpty => 'لا يوجد حضور لهذا الشخص في هذا الشهر.';
 }

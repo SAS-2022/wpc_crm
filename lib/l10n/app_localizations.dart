@@ -8448,6 +8448,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your turn'**
   String get yourTurn;
+
+  /// No description provided for @calIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In'**
+  String get calIn;
+
+  /// No description provided for @calOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Out'**
+  String get calOut;
+
+  /// No description provided for @calWorked.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked'**
+  String get calWorked;
+
+  /// No description provided for @calAway.
+  ///
+  /// In en, this message translates to:
+  /// **'Away'**
+  String get calAway;
+
+  /// No description provided for @calLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Late'**
+  String get calLate;
+
+  /// No description provided for @calOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime'**
+  String get calOvertime;
+
+  /// No description provided for @calAfterHours.
+  ///
+  /// In en, this message translates to:
+  /// **'After hours'**
+  String get calAfterHours;
+
+  /// No description provided for @calMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{n} more'**
+  String calMore(int n);
+
+  /// No description provided for @calOvertimeWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting'**
+  String get calOvertimeWaiting;
+
+  /// No description provided for @calOvertimeApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'approved {time}'**
+  String calOvertimeApproved(String time);
+
+  /// No description provided for @personMonthEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance for this person in this month.'**
+  String get personMonthEmpty;
 }
 
 class _AppLocalizationsDelegate

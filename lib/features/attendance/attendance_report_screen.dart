@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -107,54 +108,12 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
     final lang = Localizations.localeOf(context).languageCode;
-    final monthKey = DateFormat('yyyy-MM').format(_month);
-    final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
-    final records = ref.watch(monthAttendanceProvider(monthKey));
-    final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
-    final requests = ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[];
+    final report = watchAttendanceReport(ref, _month);
+    final rows = report.rows;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final siteNames = {for (final s in sites) s.id: s.name};
     final companies = {for (final c in ref.watch(companiesProvider).value ?? const <Company>[]) c.id: c.name};
-    final me = ref.watch(currentUserProvider).value;
-    final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
-    // HR area: everyone; other managers: the people under them (2026-10-23).
-    final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
-    final people = [
-      for (final u in visible)
-        if (u.active && u.checksAttendance) u,
-    ]..sort((a, b) => a.name.compareTo(b.name));
-
-    final byUser = <String, Map<String, DayResult>>{};
-    final approved = <String, Map<String, int>>{};
-    final users = {for (final u in people) u.id: u};
-    for (final r in records.value ?? const <AttendanceRecord>[]) {
-      final u = users[r.uid];
-      if (u != null) (byUser[r.uid] ??= {})[r.date] = r.best(u, company);
-      if (u != null && r.review != null) (approved[r.uid] ??= {})[r.date] = r.review!.minutes;
-    }
-    final absences = <String, Map<String, Absence>>{};
-    for (final a in ref.watch(monthAbsencesProvider(monthKey)).value ?? const <Absence>[]) {
-      (absences[a.uid] ??= {})[a.date] = a;
-    }
     final now = DateTime.now();
-    final rows = [
-      for (final u in people)
-        reportRow(
-          user: u,
-          schedule: u.scheduleOr(company),
-          month: _month,
-          results: byUser[u.id] ?? const {},
-          holidays: holidays,
-          leaveDays: {
-            for (final r in requests)
-              if (r.uid == u.id && r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null)
-                ...daysBetween(r.from!, r.to!),
-          },
-          absences: absences[u.id] ?? const {},
-          approvedOvertime: approved[u.id] ?? const {},
-          today: now,
-        ),
-    ];
     final x = AttendanceReportContext(
       l10n: l10n,
       languageCode: lang,
@@ -173,7 +132,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
           IconButton(
             icon: const Icon(Icons.download),
             tooltip: l10n.exportClients,
-            onPressed: rows.isEmpty || records.isLoading ? null : () => _export(rows, x),
+            onPressed: rows.isEmpty || report.loading ? null : () => _export(rows, x),
           ),
         ],
       ),
@@ -195,7 +154,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
             ],
           ),
           Expanded(
-            child: records.isLoading
+            child: report.loading
                 ? const Center(child: CircularProgressIndicator())
                 : rows.isEmpty
                     ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l10n.attendanceReportEmpty, textAlign: TextAlign.center)))
@@ -218,7 +177,10 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                               ].join(' · '),
                             ].where((s) => s.isNotEmpty).join('\n')),
                             trailing: Text(formatMinutes(r.workedMin), style: theme.textTheme.titleSmall),
-                            onTap: () => _showPerson(r, siteNames),
+                            // Web: a page with the month as a calendar (user 2026-10-31); phones: the sheet.
+                            onTap: kIsWeb
+                                ? () => context.push('/attendance/report/${r.user.id}?month=${DateFormat('yyyy-MM').format(_month)}')
+                                : () => _showPerson(r, siteNames),
                           );
                         },
                       ),
@@ -227,4 +189,56 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
       ),
     );
   }
+}
+
+/// The month's report rows for the people the signed-in user may see (HR
+/// area: everyone who needs attendance; other managers: the people under
+/// them). Shared by the report and the person's calendar page.
+({List<AttendanceReportRow> rows, bool loading}) watchAttendanceReport(WidgetRef ref, DateTime month) {
+  final monthKey = DateFormat('yyyy-MM').format(month);
+  final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+  final records = ref.watch(monthAttendanceProvider(monthKey));
+  final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
+  final requests = ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[];
+  final me = ref.watch(currentUserProvider).value;
+  final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
+  // HR area: everyone; other managers: the people under them (2026-10-23).
+  final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
+  final people = [
+    for (final u in visible)
+      if (u.active && u.checksAttendance) u,
+  ]..sort((a, b) => a.name.compareTo(b.name));
+
+  final byUser = <String, Map<String, DayResult>>{};
+  final approved = <String, Map<String, int>>{};
+  final users = {for (final u in people) u.id: u};
+  for (final r in records.value ?? const <AttendanceRecord>[]) {
+    final u = users[r.uid];
+    if (u != null) (byUser[r.uid] ??= {})[r.date] = r.best(u, company);
+    if (u != null && r.review != null) (approved[r.uid] ??= {})[r.date] = r.review!.minutes;
+  }
+  final absences = <String, Map<String, Absence>>{};
+  for (final a in ref.watch(monthAbsencesProvider(monthKey)).value ?? const <Absence>[]) {
+    (absences[a.uid] ??= {})[a.date] = a;
+  }
+  final now = DateTime.now();
+  final rows = [
+    for (final u in people)
+      reportRow(
+        user: u,
+        schedule: u.scheduleOr(company),
+        month: month,
+        results: byUser[u.id] ?? const {},
+        holidays: holidays,
+        leaveDays: {
+          for (final r in requests)
+            if (r.uid == u.id && r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null)
+              ...daysBetween(r.from!, r.to!),
+        },
+        absences: absences[u.id] ?? const {},
+        approvedOvertime: approved[u.id] ?? const {},
+        today: now,
+      ),
+  ];
+  return (rows: rows, loading: records.isLoading);
 }

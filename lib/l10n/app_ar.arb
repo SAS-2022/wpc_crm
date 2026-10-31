@@ -1388,5 +1388,16 @@
   "noEarlyCheckouts": "لا توجد طلبات خروج مبكر",
   "approvedByName": "وافق عليه {name}",
   "rejectedByName": "رفضه {name}",
-  "yourTurn": "دورك"
+  "yourTurn": "دورك",
+  "calIn": "دخول",
+  "calOut": "خروج",
+  "calWorked": "العمل",
+  "calAway": "خارج الموقع",
+  "calLate": "تأخير",
+  "calOvertime": "إضافي",
+  "calAfterHours": "بعد الدوام",
+  "calMore": "+{n} أخرى",
+  "calOvertimeWaiting": "بانتظار الموافقة",
+  "calOvertimeApproved": "تمت الموافقة {time}",
+  "personMonthEmpty": "لا يوجد حضور لهذا الشخص في هذا الشهر."
 }
