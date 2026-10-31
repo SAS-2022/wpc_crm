@@ -15,8 +15,17 @@ void main() {
   });
 
   test('field text: 9 digits for a Saudi mobile, old value otherwise', () {
-    expect(saudiMobileFieldText('+966501234567'), '501234567');
+    expect(saudiMobileFieldText('+966501234567'), '0501234567');
     expect(saudiMobileFieldText('+971501234567'), '+971501234567');
     expect(saudiMobileFieldText(''), '');
+  });
+
+  test('typing: digits only, at most 10, pasted country code becomes 0', () {
+    expect(saudiMobileInput('05012345678901'), '0501234567');
+    expect(saudiMobileInput('+966 50 123 4567'), '0501234567');
+    expect(saudiMobileInput('00966501234567'), '0501234567');
+    expect(saudiMobileInput('501234567'), '0501234567');
+    expect(saudiMobileInput('٠٥٠ ١٢٣'), '050123');
+    expect(saudiMobileInput('05a-1'), '051');
   });
 }

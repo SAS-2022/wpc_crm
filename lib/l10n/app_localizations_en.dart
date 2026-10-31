@@ -1031,7 +1031,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saudiPhoneInvalid =>
-      'Enter a Saudi mobile number: 5X XXX XXXX (9 digits after +966)';
+      'Enter a Saudi mobile number: 05X XXX XXXX (10 digits)';
 
   @override
   String get phoneNumberSaved => 'Contact number saved';

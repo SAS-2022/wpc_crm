@@ -294,7 +294,7 @@
   "addPhoneMessageCall": "لا يوجد رقم هاتف لـ {client}. أضف رقماً لحفظ هذه المكالمة.",
   "pickFromContacts": "اختر من جهات اتصال الهاتف",
   "phoneNumberInvalid": "أدخل رقم هاتف (من 7 إلى 15 رقماً)",
-  "saudiPhoneInvalid": "أدخل رقم جوال سعودي: 5X XXX XXXX (9 أرقام بعد ‎+966)",
+  "saudiPhoneInvalid": "أدخل رقم جوال سعودي: 05X XXX XXXX (10 أرقام)",
   "phoneNumberSaved": "تم حفظ رقم التواصل",
   "saveAndContinue": "حفظ ومتابعة",
   "contactPerson": "الشخص المسؤول",

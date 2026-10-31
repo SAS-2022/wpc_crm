@@ -1865,7 +1865,7 @@ abstract class AppLocalizations {
   /// No description provided for @saudiPhoneInvalid.
   ///
   /// In en, this message translates to:
-  /// **'Enter a Saudi mobile number: 5X XXX XXXX (9 digits after +966)'**
+  /// **'Enter a Saudi mobile number: 05X XXX XXXX (10 digits)'**
   String get saudiPhoneInvalid;
 
   /// No description provided for @phoneNumberSaved.
