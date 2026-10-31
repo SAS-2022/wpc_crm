@@ -105,3 +105,26 @@ describe('absences', () => {
     await assertFails(updateDoc(doc(fs('hr'), 'attendance/worker_2026-10-25'), { ...review, overtimeMin: 200 }));
   });
 });
+
+describe('absence documents', () => {
+  const put = (status, uploadedBy) => env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'absences/worker_2026-10-22'), absence('worker', { status }));
+    await setDoc(doc(ctx.firestore(), 'absences/worker_2026-10-22/attachments/a1'), { uploadedBy, fileName: 'r.pdf' });
+  });
+  const file = (uid) => doc(fs(uid), 'absences/worker_2026-10-22/attachments/a1');
+
+  test('the person removes their own document while it waits', async () => {
+    await put('pending', 'worker');
+    await assertSucceeds(deleteDoc(file('worker')));
+  });
+
+  test('not once decided, not one HR added, not someone else', async () => {
+    await put('accepted', 'worker');
+    await assertFails(deleteDoc(file('worker')));
+    await put('pending', 'hr');
+    await assertFails(deleteDoc(file('worker')));
+    await put('pending', 'worker');
+    await assertFails(deleteDoc(file('other')));
+    await assertSucceeds(deleteDoc(file('hr')));
+  });
+});

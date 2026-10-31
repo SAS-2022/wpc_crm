@@ -70,13 +70,25 @@ Future<List<PendingFile>> pickAttachments(BuildContext context) async {
 }
 
 /// Photos and files of a client or visit: thumbnails for photos, a row per
-/// other file. Tap opens the file; long-press deletes it when allowed.
+/// other file. Tap opens the file; the × on a photo / bin on a file (or long-press) deletes it when allowed.
 class AttachmentsSection extends ConsumerStatefulWidget {
-  const AttachmentsSection({super.key, required this.owner, required this.canAdd, required this.canDelete});
+  const AttachmentsSection({
+    super.key,
+    required this.owner,
+    required this.canAdd,
+    required this.canDelete,
+    this.canDeleteOwn = false,
+  });
 
   final AttachmentOwner owner;
   final bool canAdd;
+
+  /// Any file may be deleted.
   final bool canDelete;
+
+  /// Files the signed-in user uploaded may be deleted (e.g. the owner of a
+  /// pending leave request or absence).
+  final bool canDeleteOwn;
 
   @override
   ConsumerState<AttachmentsSection> createState() => _AttachmentsSectionState();
@@ -138,7 +150,8 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
     // Client documents (CR, VAT, …) are listed by name even when they are photos.
     final photos = list.where((a) => a.isImage && a.docType.isEmpty).toList();
     final files = list.where((a) => !photos.contains(a)).toList();
-    final onLongPress = widget.canDelete ? _delete : null;
+    final myId = ref.watch(currentUserProvider).value?.id;
+    bool deletable(Attachment a) => widget.canDelete || (widget.canDeleteOwn && myId != null && a.uploadedBy == myId);
 
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -181,18 +194,43 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
                   runSpacing: 8,
                   children: [
                     for (final a in photos)
-                      InkWell(
-                        onTap: () => _open(a),
-                        onLongPress: onLongPress == null ? null : () => onLongPress(a),
-                        borderRadius: BorderRadius.circular(8),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          // HEIC (iPhone) photos: only Safari can show them, so other
-                          // browsers get a labelled tile; tapping opens the file.
-                          child: a.contentType == 'image/heic' && kIsWeb
-                              ? _FileTile(label: 'HEIC', icon: Icons.photo, tooltip: a.fileName)
-                              : AttachmentThumb(attachment: a),
-                        ),
+                      Stack(
+                        children: [
+                          InkWell(
+                            onTap: () => _open(a),
+                            onLongPress: deletable(a) ? () => _delete(a) : null,
+                            borderRadius: BorderRadius.circular(8),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              // HEIC (iPhone) photos: only Safari can show them, so other
+                              // browsers get a labelled tile; tapping opens the file.
+                              child: a.contentType == 'image/heic' && kIsWeb
+                                  ? _FileTile(label: 'HEIC', icon: Icons.photo, tooltip: a.fileName)
+                                  : AttachmentThumb(attachment: a),
+                            ),
+                          ),
+                          // Visible delete button (long-press alone was hard to find).
+                          if (deletable(a))
+                            PositionedDirectional(
+                              top: 2,
+                              end: 2,
+                              child: Material(
+                                color: Colors.black54,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: () => _delete(a),
+                                  child: Tooltip(
+                                    message: l10n.delete,
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.close, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                   ],
                 ),
@@ -215,7 +253,7 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
                   if (a.docType.isNotEmpty) a.fileName,
                   if (a.createdAt != null) DateFormat.yMMMd(locale).format(a.createdAt!),
                 ].join(' · ')),
-                trailing: widget.canDelete
+                trailing: deletable(a)
                     ? IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: () => _delete(a))
                     : null,
                 onTap: () => _open(a),

@@ -165,6 +165,7 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
             owner: owner,
             canAdd: (mine && a.pending) || decides,
             canDelete: decides,
+            canDeleteOwn: mine && a.pending,
           ),
           // HR area: the person's leave balance, to decide what it counts as.
           if (me.role.canSeeHr)

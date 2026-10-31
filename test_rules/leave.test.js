@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 let env;
 
@@ -129,5 +129,28 @@ describe('balances and settings', () => {
     await assertSucceeds(setDoc(doc(fs('gm'), 'settings/holidays'), { dates: ['2026-09-23'] }));
     await assertFails(setDoc(doc(fs('exec'), 'settings/leaveTypes'), { types: [] }));
     await assertSucceeds(getDoc(doc(fs('exec'), 'settings/leaveTypes')));
+  });
+});
+
+describe('request documents', () => {
+  const put = (status, uploadedBy) => env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'leave_requests/r1'), request('exec', { status }));
+    await setDoc(doc(ctx.firestore(), 'leave_requests/r1/attachments/a1'), { uploadedBy, fileName: 'r.pdf' });
+  });
+  const file = (uid) => doc(fs(uid), 'leave_requests/r1/attachments/a1');
+
+  test('the owner removes their own document while it waits', async () => {
+    await put('pending', 'exec');
+    await assertSucceeds(deleteDoc(file('exec')));
+  });
+
+  test('not once decided, not one HR added, not the approver', async () => {
+    await put('approved', 'exec');
+    await assertFails(deleteDoc(file('exec')));
+    await put('pending', 'hr');
+    await assertFails(deleteDoc(file('exec')));
+    await put('pending', 'exec');
+    await assertFails(deleteDoc(file('kam')));
+    await assertSucceeds(deleteDoc(file('hr')));
   });
 });

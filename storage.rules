@@ -28,7 +28,8 @@ service firebase.storage {
       allow create: if request.resource.size < 20 * 1024 * 1024
         && (req().uid == request.auth.uid
             || (request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']));
-      allow delete: if request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager'];
+      allow delete: if (request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager'])
+        || (request.auth != null && req().uid == request.auth.uid && req().status == 'pending');
     }
 
     // Reported absence documents (medical report): the person and the HR area
@@ -39,7 +40,7 @@ service firebase.storage {
       allow read: if hrArea() || supervisor() || (request.auth != null && absence().uid == request.auth.uid);
       allow create: if request.resource.size < 20 * 1024 * 1024
         && (hrArea() || (request.auth != null && absence().uid == request.auth.uid));
-      allow delete: if hrArea();
+      allow delete: if hrArea() || (request.auth != null && absence().uid == request.auth.uid && absence().status == 'pending');
     }
 
     // Client and visit attachments, max 20 MB each.

@@ -258,7 +258,9 @@ service cloud.firestore {
         function parent() { return get(/databases/$(database)/documents/absences/$(absenceId)).data; }
         allow read: if isHrArea() || isSupervisor() || (active() && parent().uid == request.auth.uid);
         allow create: if managesHr() || (active() && parent().uid == request.auth.uid && parent().status == 'pending');
-        allow delete: if managesHr();
+        // The person removes what they attached while it waits.
+        allow delete: if managesHr() || (active() && parent().uid == request.auth.uid && parent().status == 'pending'
+          && resource.data.uploadedBy == request.auth.uid);
       }
     }
 
@@ -342,7 +344,9 @@ service cloud.firestore {
         allow read: if isHrArea() || (active() && (parent().uid == request.auth.uid || parent().kamId == request.auth.uid
           || parent().get('managerId', null) == request.auth.uid));
         allow create: if managesHr() || (active() && parent().uid == request.auth.uid);
-        allow delete: if managesHr();
+        // The owner removes what they attached while it waits.
+        allow delete: if managesHr() || (active() && parent().uid == request.auth.uid && parent().status == 'pending'
+          && resource.data.uploadedBy == request.auth.uid);
       }
     }
 

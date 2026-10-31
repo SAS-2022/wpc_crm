@@ -141,6 +141,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             owner: (parent: AttachmentParent.leaveRequests, id: r.id),
             canAdd: (mine && r.status == LeaveStatus.pending) || me.role.canManageHr,
             canDelete: me.role.canManageHr,
+            canDeleteOwn: mine && r.status == LeaveStatus.pending,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
