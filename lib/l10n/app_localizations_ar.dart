@@ -3922,6 +3922,41 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get mrDistance => 'المسافة المقطوعة';
+
+  @override
+  String mrGpsDays(int days) {
+    return '$days أيام بنظام GPS';
+  }
+
+  @override
+  String get transfersShowMap => 'عرض على الخريطة';
+
+  @override
+  String get transfersShowList => 'عرض كقائمة';
+
+  @override
+  String transfersNoLocation(int count) {
+    return '$count من هؤلاء العملاء بلا موقع ولا يظهرون على الخريطة';
+  }
+
+  @override
+  String get transferLegendVisited => 'تمت زيارته';
+
+  @override
+  String get transferLegendCalled => 'تم الاتصال';
+
+  @override
+  String get transferLegendWaiting => 'لم تتم زيارته بعد';
+
+  @override
+  String get transferLegendLate => 'لم تتم زيارته منذ 14 يومًا أو أكثر';
+
+  @override
+  String get transferPinHelp =>
+      'الدبابيس: لون المندوب الجديد وأحرفه الأولى؛ والحلقة تبين هل زاره.';
+
+  @override
   String mrFirstVisitList(int count) {
     return 'زيارة لأول مرة ($count)';
   }

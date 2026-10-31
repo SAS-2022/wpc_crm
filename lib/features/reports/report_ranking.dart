@@ -99,6 +99,12 @@ class RankedPerson {
   bool get targetAchieved => report.target > 0 && report.contacts >= report.target.round();
   double? get efficiency => routing?.averageRate;
   AverageDay? get averageDay => routing == null ? null : averageDayOf(routing!.timelines);
+
+  /// Days of the period with a GPS timeline, and the km travelled on them
+  /// (straight lines between the phone's fixes in work hours, so a little
+  /// under the road distance); null without a timeline.
+  int get gpsDays => routing?.timelines.length ?? 0;
+  double? get distanceKm => gpsDays == 0 ? null : routing!.timelines.fold<double>(0, (s, t) => s + t.drivingKm);
 }
 
 /// Ranks [reports] (the whole team, so a person's rank doesn't depend on

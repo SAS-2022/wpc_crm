@@ -290,6 +290,7 @@ Future<Uint8List> buildPersonPdf(RankedPerson p, ReportPdfContext x) async {
         tile(l10n.mrFirstVisits, '${p.firstClients.length}', color: _good),
         tile(l10n.mrRevisited, '${p.revisitedClients.length}'),
         tile(l10n.mrNewClients, '${p.newClients}'),
+        tile(l10n.mrDistance, p.distanceKm == null ? '–' : l10n.mrKm(p.distanceKm!.round().toString())),
         tile(l10n.ownClientsVisited, ratio(r.assignedVisited, r.assigned)),
         tile(l10n.onSchedule, ratio(r.onSchedule, r.assigned)),
         tile(l10n.planCompletion, ratio(r.tasksDone, r.tasksApproved)),

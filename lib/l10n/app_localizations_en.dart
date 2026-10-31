@@ -3915,6 +3915,41 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mrDistance => 'Distance travelled';
+
+  @override
+  String mrGpsDays(int days) {
+    return '$days days with GPS';
+  }
+
+  @override
+  String get transfersShowMap => 'Show on a map';
+
+  @override
+  String get transfersShowList => 'Show as a list';
+
+  @override
+  String transfersNoLocation(int count) {
+    return '$count of these clients have no location and are not on the map';
+  }
+
+  @override
+  String get transferLegendVisited => 'Visited';
+
+  @override
+  String get transferLegendCalled => 'Called';
+
+  @override
+  String get transferLegendWaiting => 'Not visited yet';
+
+  @override
+  String get transferLegendLate => 'Not visited, 14+ days';
+
+  @override
+  String get transferPinHelp =>
+      'Pins: the new salesperson\'s colour and initials; the ring shows whether they visited.';
+
+  @override
   String mrFirstVisitList(int count) {
     return 'Visited for the first time ($count)';
   }

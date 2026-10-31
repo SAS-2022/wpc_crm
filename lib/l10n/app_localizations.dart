@@ -6542,6 +6542,66 @@ abstract class AppLocalizations {
   /// **'{km} km'**
   String mrKm(String km);
 
+  /// No description provided for @mrDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance travelled'**
+  String get mrDistance;
+
+  /// No description provided for @mrGpsDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days with GPS'**
+  String mrGpsDays(int days);
+
+  /// No description provided for @transfersShowMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on a map'**
+  String get transfersShowMap;
+
+  /// No description provided for @transfersShowList.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as a list'**
+  String get transfersShowList;
+
+  /// No description provided for @transfersNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of these clients have no location and are not on the map'**
+  String transfersNoLocation(int count);
+
+  /// No description provided for @transferLegendVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Visited'**
+  String get transferLegendVisited;
+
+  /// No description provided for @transferLegendCalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Called'**
+  String get transferLegendCalled;
+
+  /// No description provided for @transferLegendWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited yet'**
+  String get transferLegendWaiting;
+
+  /// No description provided for @transferLegendLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visited, 14+ days'**
+  String get transferLegendLate;
+
+  /// No description provided for @transferPinHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Pins: the new salesperson\'s colour and initials; the ring shows whether they visited.'**
+  String get transferPinHelp;
+
   /// No description provided for @mrFirstVisitList.
   ///
   /// In en, this message translates to:

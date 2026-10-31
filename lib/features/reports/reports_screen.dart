@@ -406,6 +406,9 @@ Widget _twoLines(BuildContext context, Widget main, String? detail) {
   ]);
 }
 
+/// Whole km with thousands separators.
+String _km(double km) => NumberFormat.decimalPattern().format(km.round());
+
 /// A column heading that wraps onto two lines instead of widening the table.
 DataColumn _column(String label, double width, void Function(int, bool)? onSort, {bool numeric = true}) => DataColumn(
       label: SizedBox(width: width, child: Text(label, maxLines: 2, softWrap: true, textAlign: numeric ? TextAlign.end : null)),
@@ -438,6 +441,7 @@ class _TeamTableState extends State<_TeamTable> {
     (p) => p.workDays,
     (p) => p.report.clientsVisited,
     (p) => p.newClients,
+    (p) => p.distanceKm ?? -1,
     (p) => p.report.coverage ?? -1,
     (p) => p.report.planCompletion ?? -1,
     (p) => p.report.withKam,
@@ -514,6 +518,7 @@ class _TeamTableState extends State<_TeamTable> {
               _column(l10n.mrWorkDays, 56, sort),
               _column(l10n.clientsVisitedColumn, 120, sort),
               _column(l10n.mrNewClients, 52, sort),
+              _column(l10n.mrDistance, 76, sort),
               _column(l10n.ownClientsVisited, 104, sort),
               _column(l10n.planCompletion, 84, sort),
               _column(l10n.rideAlongs, 60, sort),
@@ -553,6 +558,11 @@ class _TeamTableState extends State<_TeamTable> {
                       l10n.firstAndRevisitedShort(p.firstClients.length, p.revisitedClients.length),
                     )),
                     DataCell(Text('${p.newClients}')),
+                    DataCell(_twoLines(
+                      context,
+                      Text(p.distanceKm == null ? '–' : l10n.mrKm(_km(p.distanceKm!))),
+                      p.gpsDays == 0 ? null : l10n.mrGpsDays(p.gpsDays),
+                    )),
                     DataCell(_twoLines(
                       context,
                       Text(_ratio(p.report.assignedVisited, p.report.assigned)),
@@ -598,6 +608,7 @@ class _TeamTableState extends State<_TeamTable> {
                     l10n.firstAndRevisitedShort(sum((p) => p.firstClients.length), sum((p) => p.revisitedClients.length)),
                   )),
                   DataCell(Text('${sum((p) => p.newClients)}', style: bold)),
+                  DataCell(Text(l10n.mrKm(_km(rows.fold(0.0, (s, r) => s + (r.distanceKm ?? 0)))), style: bold)),
                   DataCell(Text(_ratio(sum((p) => p.report.assignedVisited), sum((p) => p.report.assigned)), style: bold)),
                   DataCell(Text(_ratio(sum((p) => p.report.tasksDone), sum((p) => p.report.tasksApproved)), style: bold)),
                   DataCell(Text('${sum((p) => p.report.withKam)}', style: bold)),
