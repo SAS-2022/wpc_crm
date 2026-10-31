@@ -10,15 +10,19 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../attendance/absence.dart';
 import '../attendance/absence_screen.dart' show HrAbsencesTab;
+import '../attendance/attendance_repository.dart' show attendanceDay;
+import '../attendance/early_checkout.dart';
 import '../users/users_repository.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
 import 'leave_widgets.dart';
 
-enum _Filter { waitingForMe, pending, approved, rejected, all }
+enum _Filter { pending, waitingForMe, approved, rejected, all }
 
-/// HR area (HR, GM, sales manager): every leave / other request, each
-/// employee's balances, and the leave types and public holidays. Only HR and
+/// HR area (HR, GM, sales manager): every leave / other request, absence and
+/// request to leave early — also those waiting for someone else, with whose
+/// approval each waits for (user 2026-10-31) — each employee's balances, and
+/// the leave types and public holidays. Only HR and
 /// the GM change balances, types and holidays.
 class HrScreen extends ConsumerWidget {
   const HrScreen({super.key});
@@ -27,7 +31,7 @@ class HrScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.hrArea),
@@ -35,17 +39,61 @@ class HrScreen extends ConsumerWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: l10n.leaveRequests),
+              Tab(child: _RequestsTabLabel()),
               // Reported "not coming to work" days (2026-10-22), with the waiting count.
               Tab(child: _AbsencesTabLabel()),
+              Tab(child: _EarlyCheckoutsTabLabel()),
               Tab(text: l10n.leaveBalances),
               Tab(text: l10n.leaveTypesAndHolidays),
             ],
           ),
         ),
-        body: const TabBarView(children: [_RequestsTab(), HrAbsencesTab(), _BalancesTab(), _TypesTab()]),
+        body: const TabBarView(
+          children: [_RequestsTab(), HrAbsencesTab(), _EarlyCheckoutsTab(), _BalancesTab(), _TypesTab()],
+        ),
       ),
     );
+  }
+}
+
+/// Tab label with a waiting count.
+class _CountLabel extends StatelessWidget {
+  const _CountLabel(this.text, this.count);
+
+  final String text;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Badge(
+        isLabelVisible: count > 0,
+        label: Text('$count'),
+        offset: const Offset(14, -6),
+        child: Text(text),
+      );
+}
+
+class _RequestsTabLabel extends ConsumerWidget {
+  const _RequestsTabLabel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final waiting = (ref.watch(allLeaveRequestsProvider).value ?? const <LeaveRequest>[])
+        .where((r) => r.status == LeaveStatus.pending)
+        .length;
+    return _CountLabel(AppLocalizations.of(context).leaveRequests, waiting);
+  }
+}
+
+class _EarlyCheckoutsTabLabel extends ConsumerWidget {
+  const _EarlyCheckoutsTabLabel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = attendanceDay(DateTime.now());
+    final waiting = (ref.watch(allEarlyCheckoutsProvider).value ?? const <EarlyCheckout>[])
+        .where((r) => r.pending && r.date == today)
+        .length;
+    return _CountLabel(AppLocalizations.of(context).earlyCheckoutsTab, waiting);
   }
 }
 
@@ -72,7 +120,8 @@ class _RequestsTab extends ConsumerStatefulWidget {
 }
 
 class _RequestsTabState extends ConsumerState<_RequestsTab> {
-  _Filter _filter = _Filter.waitingForMe;
+  // Everything waiting by default, not only HR's own turn (user 2026-10-31).
+  _Filter _filter = _Filter.pending;
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +130,8 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
     if (me == null) return const SizedBox.shrink();
     final all = ref.watch(allLeaveRequestsProvider);
     final labels = {
-      _Filter.waitingForMe: l10n.waitingForMe,
       _Filter.pending: l10n.pendingStatus,
+      _Filter.waitingForMe: l10n.waitingForMe,
       _Filter.approved: l10n.leaveApprovedStatus,
       _Filter.rejected: l10n.rejected,
       _Filter.all: l10n.allTime,
@@ -91,8 +140,13 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
       data: (requests) {
+        bool mine(LeaveRequest r) => canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey);
+        final counts = {
+          _Filter.pending: requests.where((r) => r.status == LeaveStatus.pending).length,
+          _Filter.waitingForMe: requests.where(mine).length,
+        };
         final list = requests.where((r) => switch (_filter) {
-              _Filter.waitingForMe => canDecide(me: me, requesterId: r.uid, awaitingKey: r.awaitingKey),
+              _Filter.waitingForMe => mine(r),
               _Filter.pending => r.status == LeaveStatus.pending,
               _Filter.approved => r.status == LeaveStatus.approved,
               _Filter.rejected => r.status == LeaveStatus.rejected,
@@ -108,7 +162,7 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
                   Padding(
                     padding: const EdgeInsetsDirectional.only(end: 8),
                     child: ChoiceChip(
-                      label: Text(labels[f]!),
+                      label: Text(counts[f] == null ? labels[f]! : '${labels[f]!} (${counts[f]})'),
                       selected: _filter == f,
                       onSelected: (_) => setState(() => _filter = f),
                     ),
@@ -117,7 +171,7 @@ class _RequestsTabState extends ConsumerState<_RequestsTab> {
             ),
             if (list.isEmpty) ListTile(title: Text(l10n.noLeaveRequests)),
             for (final r in list) ...[
-              LeaveRequestTile(request: r, showPerson: true),
+              LeaveRequestTile(request: r, showPerson: true, yourTurn: mine(r)),
               // Waiting requests: the person's balance right under it.
               if (r.isLeave && r.status == LeaveStatus.pending)
                 Padding(
@@ -447,5 +501,109 @@ class _TypeDialogState extends State<_TypeDialog> {
         ),
       ],
     );
+  }
+}
+
+enum _EarlyFilter { waiting, approved, rejected, all }
+
+/// Requests to leave early (decided by the person's direct managers on
+/// their Home card); HR sees them all here with whose approval each waits
+/// for. Waiting = today's open requests; older open ones lapsed with the day.
+class _EarlyCheckoutsTab extends ConsumerStatefulWidget {
+  const _EarlyCheckoutsTab();
+
+  @override
+  ConsumerState<_EarlyCheckoutsTab> createState() => _EarlyCheckoutsTabState();
+}
+
+class _EarlyCheckoutsTabState extends ConsumerState<_EarlyCheckoutsTab> {
+  _EarlyFilter _filter = _EarlyFilter.waiting;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    final day = DateFormat.yMMMEd(locale);
+    final time = DateFormat.jm(locale);
+    final me = ref.watch(currentUserProvider).value;
+    final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
+    String name(String? id) => users[id]?.name ?? '?';
+    final today = attendanceDay(DateTime.now());
+    final labels = {
+      _EarlyFilter.waiting: l10n.pendingStatus,
+      _EarlyFilter.approved: l10n.leaveApprovedStatus,
+      _EarlyFilter.rejected: l10n.rejected,
+      _EarlyFilter.all: l10n.allTime,
+    };
+    return ref.watch(allEarlyCheckoutsProvider).when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
+          data: (requests) {
+            bool waiting(EarlyCheckout r) => r.pending && r.date == today;
+            final count = requests.where(waiting).length;
+            final list = [
+              for (final r in requests)
+                if (switch (_filter) {
+                  _EarlyFilter.waiting => waiting(r),
+                  _EarlyFilter.approved => r.status == EarlyCheckoutStatus.approved,
+                  _EarlyFilter.rejected => r.status == EarlyCheckoutStatus.rejected,
+                  _EarlyFilter.all => true,
+                })
+                  r,
+            ];
+            return ListView(
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Row(children: [
+                    for (final f in _EarlyFilter.values)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 8),
+                        child: ChoiceChip(
+                          label: Text(f == _EarlyFilter.waiting ? '${labels[f]!} ($count)' : labels[f]!),
+                          selected: _filter == f,
+                          onSelected: (_) => setState(() => _filter = f),
+                        ),
+                      ),
+                  ]),
+                ),
+                if (list.isEmpty) ListTile(title: Text(l10n.noEarlyCheckouts)),
+                for (final r in list)
+                  Builder(builder: (context) {
+                    final (status, color) = switch (r.status) {
+                      EarlyCheckoutStatus.pending => (
+                          l10n.waitingFor(r.approverIds.map(name).join(' / ')),
+                          Colors.orange.shade800,
+                        ),
+                      EarlyCheckoutStatus.approved => (l10n.approvedByName(name(r.decidedBy)), Colors.green.shade700),
+                      EarlyCheckoutStatus.rejected => (l10n.rejectedByName(name(r.decidedBy)), theme.colorScheme.error),
+                    };
+                    final yourTurn = waiting(r) && me != null && r.approverIds.contains(me.id);
+                    return ListTile(
+                      leading: Icon(Icons.directions_walk, color: color),
+                      title: Text(name(r.uid)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text([
+                            day.format(DateTime.parse(r.date)),
+                            if (r.createdAt != null) time.format(r.createdAt!),
+                          ].join(' · ')),
+                          Text(r.reason),
+                          Text(
+                            [status, if (yourTurn) l10n.yourTurn].join(' · '),
+                            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                          ),
+                          if (r.comment.isNotEmpty) Text('“${r.comment}”'),
+                        ],
+                      ),
+                    );
+                  }),
+              ],
+            );
+          },
+        );
   }
 }

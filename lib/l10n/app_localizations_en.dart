@@ -5107,4 +5107,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifAtSite(String site, String time) {
     return 'You\'re at $site since $time but not checked in – check in';
   }
+
+  @override
+  String get earlyCheckoutsTab => 'Leaving early';
+
+  @override
+  String get noEarlyCheckouts => 'No requests to leave early';
+
+  @override
+  String approvedByName(String name) {
+    return 'Approved by $name';
+  }
+
+  @override
+  String rejectedByName(String name) {
+    return 'Rejected by $name';
+  }
+
+  @override
+  String get yourTurn => 'Your turn';
 }

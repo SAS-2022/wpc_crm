@@ -70,10 +70,13 @@ class LeaveStatusChip extends ConsumerWidget {
 
 /// One request in a list; [showPerson] for lists of several people's requests.
 class LeaveRequestTile extends ConsumerWidget {
-  const LeaveRequestTile({super.key, required this.request, this.showPerson = false});
+  const LeaveRequestTile({super.key, required this.request, this.showPerson = false, this.yourTurn = false});
 
   final LeaveRequest request;
   final bool showPerson;
+
+  /// The signed-in user decides the current step (HR list shows every request).
+  final bool yourTurn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,7 +96,16 @@ class LeaveRequestTile extends ConsumerWidget {
         children: [
           if (dates.isNotEmpty) Text(dates),
           const SizedBox(height: 4),
-          LeaveStatusChip(request: request),
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              LeaveStatusChip(request: request),
+              if (yourTurn)
+                Text(l10n.yourTurn,
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ],
       ),
       trailing: const Icon(Icons.chevron_right),

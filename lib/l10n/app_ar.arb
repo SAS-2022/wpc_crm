@@ -1383,5 +1383,10 @@
   "arrivedByGps": "محسوب من وقت الوصول إلى الموقع (GPS) · تم الضغط على تسجيل الحضور الساعة {time}",
   "atSiteNotCheckedInTitle": "أنت في موقع العمل",
   "atSiteNotCheckedIn": "أنت في {site} ولم تسجّل حضورك. سجّل حضورك الآن.",
-  "notifAtSite": "أنت في {site} منذ الساعة {time} ولم تسجّل حضورك – سجّل الحضور"
+  "notifAtSite": "أنت في {site} منذ الساعة {time} ولم تسجّل حضورك – سجّل الحضور",
+  "earlyCheckoutsTab": "الخروج المبكر",
+  "noEarlyCheckouts": "لا توجد طلبات خروج مبكر",
+  "approvedByName": "وافق عليه {name}",
+  "rejectedByName": "رفضه {name}",
+  "yourTurn": "دورك"
 }

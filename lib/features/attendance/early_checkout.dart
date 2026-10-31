@@ -111,6 +111,18 @@ final earlyCheckoutsToDecideProvider = StreamProvider<List<EarlyCheckout>>((ref)
   });
 });
 
+/// HR area (2026-10-31, user: HR sees every HR / attendance request, also
+/// when it isn't theirs to approve): the latest 500 requests, newest day first.
+final allEarlyCheckoutsProvider = StreamProvider<List<EarlyCheckout>>((ref) {
+  final me = ref.watch(currentUserProvider).value;
+  if (me == null || !me.active || !me.role.canSeeHr) return Stream.value(const []);
+  return _requests
+      .orderBy('date', descending: true)
+      .limit(500)
+      .snapshots()
+      .map((s) => [for (final d in s.docs) EarlyCheckout.fromDoc(d)]);
+});
+
 /// [me] asks [approverIds] to leave early today; asking again after a
 /// rejection replaces the old request.
 Future<void> askEarlyCheckout({

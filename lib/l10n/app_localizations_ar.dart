@@ -5114,4 +5114,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifAtSite(String site, String time) {
     return 'أنت في $site منذ الساعة $time ولم تسجّل حضورك – سجّل الحضور';
   }
+
+  @override
+  String get earlyCheckoutsTab => 'الخروج المبكر';
+
+  @override
+  String get noEarlyCheckouts => 'لا توجد طلبات خروج مبكر';
+
+  @override
+  String approvedByName(String name) {
+    return 'وافق عليه $name';
+  }
+
+  @override
+  String rejectedByName(String name) {
+    return 'رفضه $name';
+  }
+
+  @override
+  String get yourTurn => 'دورك';
 }

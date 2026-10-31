@@ -2722,5 +2722,12 @@
   "atSiteNotCheckedIn": "You're at {site} but not checked in. Check in now.",
   "@atSiteNotCheckedIn": {"placeholders": {"site": {"type": "String"}}},
   "notifAtSite": "You're at {site} since {time} but not checked in – check in",
-  "@notifAtSite": {"placeholders": {"site": {"type": "String"}, "time": {"type": "String"}}}
+  "@notifAtSite": {"placeholders": {"site": {"type": "String"}, "time": {"type": "String"}}},
+  "earlyCheckoutsTab": "Leaving early",
+  "noEarlyCheckouts": "No requests to leave early",
+  "approvedByName": "Approved by {name}",
+  "@approvedByName": {"placeholders": {"name": {"type": "String"}}},
+  "rejectedByName": "Rejected by {name}",
+  "@rejectedByName": {"placeholders": {"name": {"type": "String"}}},
+  "yourTurn": "Your turn"
 }

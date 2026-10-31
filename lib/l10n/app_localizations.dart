@@ -8418,6 +8418,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re at {site} since {time} but not checked in – check in'**
   String notifAtSite(String site, String time);
+
+  /// No description provided for @earlyCheckoutsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaving early'**
+  String get earlyCheckoutsTab;
+
+  /// No description provided for @noEarlyCheckouts.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests to leave early'**
+  String get noEarlyCheckouts;
+
+  /// No description provided for @approvedByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by {name}'**
+  String approvedByName(String name);
+
+  /// No description provided for @rejectedByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by {name}'**
+  String rejectedByName(String name);
+
+  /// No description provided for @yourTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your turn'**
+  String get yourTurn;
 }
 
 class _AppLocalizationsDelegate
