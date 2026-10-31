@@ -1728,10 +1728,13 @@ exports.tickPlanOnPlanned = onDocumentCreated({ document: 'tasks/{id}', maxInsta
 // Kilometres per driver per day from their GPS points, for the vehicles'
 // odometer estimate: Firestore `driver_km/{uid}_{day}` {uid, day, km, points,
 // final}. Renewal reminders for registration / insurance / inspection.
-const { dayKm, renewalAlerts, lastReading, vehicleEstimate, oilAlerts, DUE_SOON_DAYS, OIL_DUE_SOON_KM } = require('./vehicles');
+const { dayDistances, renewalAlerts, lastReading, vehicleEstimate, oilAlerts, DUE_SOON_DAYS, OIL_DUE_SOON_KM } = require('./vehicles');
 
 /** Days back that location history still has (cleanRouteHistory keeps 90). */
 const DRIVER_KM_DAYS = 89;
+
+/** Days built by an older rule are built again (2 = walking left out, 2026-10-31). */
+const DRIVER_KM_VERSION = 2;
 
 async function saveDriverKm(uid, day, today) {
   const history = await admin.database().ref(`location_history/${uid}/${day}`).get();
@@ -1740,7 +1743,8 @@ async function saveDriverKm(uid, day, today) {
     .filter((p) => (p.accuracy || 0) <= ROUTE_MAX_ACCURACY)
     .sort((a, b) => a.t - b.t));
   const spikes = spikeTimes(points);
-  const doc = { uid, day, km: dayKm(points.filter((p) => !spikes.has(p.t))), points: points.length, final: day < today, builtAt: Date.now() };
+  const { km, walkKm } = dayDistances(points.filter((p) => !spikes.has(p.t)));
+  const doc = { uid, day, km, walkKm, points: points.length, final: day < today, v: DRIVER_KM_VERSION, builtAt: Date.now() };
   await admin.firestore().doc(`driver_km/${uid}_${day}`).set(doc);
   return doc;
 }
@@ -1757,7 +1761,7 @@ async function fillDriverKm(uids, from, limit) {
   const refs = uids.flatMap((uid) => days.map((day) => db.doc(`driver_km/${uid}_${day}`)));
   const done = new Set();
   for (let i = 0; i < refs.length; i += 300) {
-    for (const s of await db.getAll(...refs.slice(i, i + 300))) if (s.exists && s.get('final') === true) done.add(s.id);
+    for (const s of await db.getAll(...refs.slice(i, i + 300))) if (s.exists && s.get('final') === true && s.get('v') === DRIVER_KM_VERSION) done.add(s.id);
   }
   let built = 0;
   for (const uid of uids) {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_user.dart';
 import '../../core/login_name.dart';
+import '../../core/password_field.dart';
 import '../../core/saudi_phone.dart';
 import '../../core/text_input_dialog.dart';
 import '../../core/providers.dart';
@@ -118,7 +119,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       title: l10n.setPasswordFor(_name.text),
       label: l10n.newPassword,
       confirmLabel: l10n.setPassword,
-      maxLines: 1,
+      password: true,
     );
     if (password == null || !mounted) return;
     if (password.length < 6) {
@@ -409,10 +410,10 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                     : null,
               ),
             if (_isNew)
-              TextFormField(
+              PasswordField(
                 controller: _password,
-                obscureText: true,
-                decoration: InputDecoration(labelText: l10n.password),
+                label: l10n.password,
+                autofillHints: const [AutofillHints.newPassword],
                 validator: (v) => (v == null || v.length < 6) ? l10n.passwordTooShort : null,
               ),
             SaudiPhoneField(controller: _phone),

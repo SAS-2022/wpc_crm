@@ -20,21 +20,63 @@ function metersBetween(a, b) {
   return 2 * 6371000 * Math.asin(Math.sqrt(h));
 }
 
+/** Moving at most this fast (m/s, 9 km/h) between two fixes = walking pace. */
+const WALK_MAX_MPS = 2.5;
+
+/** A walking-pace stretch counts as walking from this long (shorter = traffic). */
+const WALK_MIN_MS = 2 * 60000;
+
+/** Fixes further apart than this are a gap, not a walking-pace move. */
+const WALK_GAP_MS = 10 * 60000;
+
 /**
  * Kilometres between a day's fixes (sorted, one phone, rough fixes removed):
  * straight lines from fix to fix, also across gaps without fixes (the car
  * still went there), so it reads a little under the odometer. Jitter while
  * standing still (a move within both fixes' accuracy, or under 30 m) isn't
- * distance.
+ * distance. Walking isn't the car's either (user request 2026-10-31): moves
+ * in a row at walking pace (≤ 9 km/h, fixes ≤ 10 min apart) with 2 min
+ * or more of slow moving go to [walkKm]; shorter slow stretches are traffic
+ * and count.
+ * Returns {km, walkKm}.
  */
-function dayKm(points) {
-  let m = 0;
+function dayDistances(points) {
+  const legs = [];
   for (let i = 0; i + 1 < points.length; i++) {
     const a = points[i], b = points[i + 1];
     const d = metersBetween(a, b);
-    if (d > Math.max(30, (a.accuracy || 0) + (b.accuracy || 0))) m += d;
+    const ms = b.t - a.t;
+    legs.push({
+      m: d > Math.max(30, (a.accuracy || 0) + (b.accuracy || 0)) ? d : 0,
+      ms,
+      slow: ms > 0 && ms <= WALK_GAP_MS && d / (ms / 1000) <= WALK_MAX_MPS,
+    });
   }
-  return Math.round(m / 100) / 10;
+  let km = 0, walk = 0;
+  for (let i = 0; i < legs.length;) {
+    if (!legs[i].slow) {
+      km += legs[i].m;
+      i++;
+      continue;
+    }
+    // A run of slow legs (standing still included): walking when it spent
+    // long enough moving slowly (waiting at a red light doesn't count).
+    let j = i, ms = 0, m = 0;
+    while (j < legs.length && legs[j].slow) {
+      if (legs[j].m > 0) ms += legs[j].ms;
+      m += legs[j].m;
+      j++;
+    }
+    if (ms >= WALK_MIN_MS) walk += m;
+    else km += m;
+    i = j;
+  }
+  return { km: Math.round(km / 100) / 10, walkKm: Math.round(walk / 100) / 10 };
+}
+
+/** The car's km of a day (see [dayDistances]). */
+function dayKm(points) {
+  return dayDistances(points).km;
 }
 
 /** Whole days from [today] to [expiry] ('yyyy-MM-dd'); negative once past. */
@@ -112,5 +154,5 @@ function oilAlerts(vehicle, estimate, notified = [], dueSoonKm = OIL_DUE_SOON_KM
 }
 
 module.exports = {
-  dayKm, daysLeft, renewalAlerts, lastReading, vehicleEstimate, oilAlerts, RENEWALS, DUE_SOON_DAYS, OIL_DUE_SOON_KM,
+  dayKm, dayDistances, daysLeft, renewalAlerts, lastReading, vehicleEstimate, oilAlerts, RENEWALS, DUE_SOON_DAYS, OIL_DUE_SOON_KM,
 };

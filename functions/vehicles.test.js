@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { dayKm, daysLeft, renewalAlerts } = require('./vehicles');
+const { dayKm, dayDistances, daysLeft, renewalAlerts } = require('./vehicles');
 
 // About 111 m per 0.001° of latitude.
 const p = (t, lat, accuracy = 10) => ({ t, lat, lng: 46.7, accuracy });
@@ -16,6 +16,32 @@ test('dayKm ignores jitter while standing still', () => {
 
 test('dayKm counts across gaps without fixes', () => {
   assert.strictEqual(dayKm([p(0, 24.7), p(7200000, 24.8)]), 11.1);
+});
+
+// 0.0004° ≈ 44 m every 30 s = 1.5 m/s: walking pace.
+const walk = (from, t0, n, lat0 = 24.7) => Array.from({ length: n }, (_, k) => p(t0 + k * 30000, lat0 + k * 0.0004));
+
+test('walking (2+ min at walking pace) is not the car\'s km', () => {
+  // Drive 2.2 km in 2 min, then walk 8 legs (4 min, ≈ 356 m).
+  const pts = [p(0, 24.68), p(60000, 24.69), ...walk(0, 120000, 9)];
+  pts[2].lat = 24.7;
+  const d = dayDistances(pts);
+  assert.strictEqual(d.km, 2.2);
+  assert.strictEqual(d.walkKm, 0.4);
+  assert.strictEqual(dayKm(pts), 2.2);
+});
+
+test('a short slow stretch (traffic) still counts', () => {
+  // 1 min at walking pace between fast moves.
+  const pts = [p(0, 24.68), p(60000, 24.69), p(90000, 24.6904), p(120000, 24.6908), p(180000, 24.7008)];
+  assert.deepStrictEqual(dayDistances(pts), { km: 2.3, walkKm: 0 });
+});
+
+test('waiting at a red light does not make a slow crawl walking', () => {
+  // Fast, 3 min standing, 1 min crawling, fast.
+  const pts = [p(0, 24.68), p(60000, 24.69), p(120000, 24.69), p(180000, 24.69), p(240000, 24.69),
+    p(270000, 24.6904), p(300000, 24.6908), p(360000, 24.7008)];
+  assert.deepStrictEqual(dayDistances(pts), { km: 2.3, walkKm: 0 });
 });
 
 test('dayKm of no or one fix is 0', () => {
