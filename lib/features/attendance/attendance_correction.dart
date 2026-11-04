@@ -67,6 +67,16 @@ Future<void> showAttendanceDaySheet(
                     Text('${l10n.checkedOutAt(time.format(d.checkOutAt!))} · ${checkOutTypeLabel(l10n, d.checkOutType)}'),
                   if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
                   if ((d.awayMin ?? 0) > 0) Text(l10n.awayTime(formatMinutes(d.awayMin!))),
+                  if (record?.trips case final trips? when trips.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.siteTripsTitle, style: Theme.of(sheet).textTheme.titleSmall),
+                    for (final t in trips)
+                      Text(l10n.siteTripLine(
+                        time.format(t.leftAt),
+                        time.format(t.backAt),
+                        formatMinutes(t.backAt.difference(t.leftAt).inMinutes),
+                      )),
+                  ],
                   if (d.overtimeEndUnknown && d.lastSeenAt != null && c == null) ...[
                     const SizedBox(height: 8),
                     Text(

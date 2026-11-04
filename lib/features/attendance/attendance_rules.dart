@@ -427,3 +427,42 @@ bool geofenceEventConfirmed({required bool enter, required double distance, requ
   final margin = accuracy.clamp(0, 100);
   return enter ? distance <= radius + margin + 50 : distance + margin >= radius;
 }
+
+/// One trip away from the site and back on a day (2026-11-04, user: the
+/// Attendance page should show that someone left and came back).
+typedef SiteTrip = ({DateTime leftAt, DateTime backAt});
+
+/// Trips shorter than this are taken as geofence jitter at the edge.
+const minSiteTripMin = 3;
+
+/// The day's trips out of the site and back, from the (corrected) [events]:
+/// an exit after the person was in, followed by an arrival (geofence, button,
+/// GPS, HR or a site check finding them there). A check-out ends the stay
+/// (the time after it is no trip), and the exit they are still away on now
+/// is left out (the page already says "Left the site at …"). Display only:
+/// the counted hours come from [deriveDay].
+List<SiteTrip> siteTrips(List<AttendanceEvent> events) {
+  final sorted = [...events]..sort((a, b) => a.at.compareTo(b.at));
+  final trips = <SiteTrip>[];
+  var inside = false;
+  DateTime? leftAt;
+  for (final e in sorted) {
+    switch (e.type) {
+      case AttendanceEventType.in_ || AttendanceEventType.checkIn || AttendanceEventType.hrIn || AttendanceEventType.seen:
+        if (!inside && leftAt != null && e.at.difference(leftAt).inMinutes >= minSiteTripMin) {
+          trips.add((leftAt: leftAt, backAt: e.at));
+        }
+        inside = true;
+        leftAt = null;
+      case AttendanceEventType.out:
+        if (inside) leftAt = e.at;
+        inside = false;
+      case AttendanceEventType.checkOut || AttendanceEventType.hrOut:
+        inside = false;
+        leftAt = null;
+      case AttendanceEventType.otStart || AttendanceEventType.otDecline:
+        break;
+    }
+  }
+  return trips;
+}

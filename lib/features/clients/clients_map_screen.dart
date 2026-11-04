@@ -218,22 +218,29 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
         : planned.contains(c.id)
         ? plannedColor
         : clientColor(c, rules, now);
+    // Region (2026-11-04, user: Central shows only Central): only the pins
+    // inside it, and the counts / legend of the clients there.
+    final city = _city;
+    bool inRegion(double lat, double lng) => city == null || city.contains(lat, lng);
+    final regional = [for (final c in located) if (c.locations.any((l) => inRegion(l.lat, l.lng))) c];
     // Salesperson legend: everyone with clients on the map, most clients first.
     final perPerson = <String?, int>{};
-    for (final c in located) {
+    for (final c in regional) {
       perPerson[c.assignedTo] = (perPerson[c.assignedTo] ?? 0) + 1;
     }
     final legend = perPerson.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    int count(_Status s) => s == _Status.all ? located.length : located.where((c) => statusOf(c) == s).length;
-    final city = _city;
+    int count(_Status s) => s == _Status.all ? regional.length : regional.where((c) => statusOf(c) == s).length;
     final clients = [
-      for (final c in located)
-        if ((_status == _Status.all || statusOf(c) == _status) &&
-            (city == null || c.locations.any((l) => city.contains(l.lat, l.lng))))
-          c,
+      for (final c in regional)
+        if (_status == _Status.all || statusOf(c) == _status) c,
     ];
-    // One pin per location (main, factory, showroom, …), all in the client's colour.
-    final points = [for (final c in clients) for (final l in c.locations) LatLng(l.lat, l.lng)];
+    // One pin per location (main, factory, showroom, …), all in the client's
+    // colour; with a region only the pins inside it.
+    final points = [
+      for (final c in clients)
+        for (final l in c.locations)
+          if (inRegion(l.lat, l.lng)) LatLng(l.lat, l.lng),
+    ];
     final types = ref.watch(locationTypesByIdProvider);
     // Moving clients from the map: web dashboard, KAM / managers.
     final canSelect = kIsWeb && (me?.role.isSupervisor ?? false);
@@ -266,6 +273,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             u.active &&
             u.role.isTracked &&
             live.containsKey(u.id) &&
+            inRegion(live[u.id]!.lat, live[u.id]!.lng) &&
             inCompany(u) &&
             (me!.role != UserRole.kam || u.id == me.id || u.kamId == me.id) &&
             (filter.isEmpty || filter.contains(u.id)))
@@ -273,7 +281,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     ];
     final drivers = [
       for (final u in users.values)
-        if (showDrivers && u.active && u.role.isDriver && live.containsKey(u.id) && inCompany(u)) u,
+        if (showDrivers &&
+            u.active &&
+            u.role.isDriver &&
+            live.containsKey(u.id) &&
+            inRegion(live[u.id]!.lat, live[u.id]!.lng) &&
+            inCompany(u))
+          u,
     ];
     final staffIds = showStaff ? (users.values.where((u) => u.recordsGps && inCompany(u)).map((u) => u.id).toList()..sort()) : const <String>[];
     final recorded = staffIds.isEmpty
@@ -326,50 +340,51 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             markers: {
               for (final c in clients)
                 for (final (i, loc) in c.locations.indexed)
-                  Marker(
-                    markerId: MarkerId('${c.id}/${loc.id}'),
-                    position: LatLng(loc.lat, loc.lng),
-                    anchor: const Offset(0.5, 0.5),
-                    icon: _icons.circle(
-                      context: context,
-                      fill: colorOf(c),
-                      // Picked for moving: thick dark ring, slightly bigger.
-                      ring: _isPicked(c, loc) ? Colors.black : Colors.white,
-                      ringWidth: _isPicked(c, loc) ? 5 : 2,
-                      size: _isPicked(c, loc) ? 38 : 30,
-                      // Salesperson mode: their initials; otherwise the category letter.
-                      text: byPerson ? styleOf(c).initials : c.category,
-                      // Dark letter on yellow, white on the darker colours.
-                      textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                  if (inRegion(loc.lat, loc.lng))
+                    Marker(
+                      markerId: MarkerId('${c.id}/${loc.id}'),
+                      position: LatLng(loc.lat, loc.lng),
+                      anchor: const Offset(0.5, 0.5),
+                      icon: _icons.circle(
+                        context: context,
+                        fill: colorOf(c),
+                        // Picked for moving: thick dark ring, slightly bigger.
+                        ring: _isPicked(c, loc) ? Colors.black : Colors.white,
+                        ringWidth: _isPicked(c, loc) ? 5 : 2,
+                        size: _isPicked(c, loc) ? 38 : 30,
+                        // Salesperson mode: their initials; otherwise the category letter.
+                        text: byPerson ? styleOf(c).initials : c.category,
+                        // Dark letter on yellow, white on the darker colours.
+                        textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                      ),
+                      onTap: () => _selecting
+                          ? setState(() {
+                              if (_isPicked(c, loc)) {
+                                _selected.remove(c.id);
+                                _selectedAt.remove(c.id);
+                              } else {
+                                // The pin tapped: that location goes on the plan
+                                // (another pin of a picked client switches to it).
+                                _selected.add(c.id);
+                                if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+                              }
+                            })
+                          : showClientSheet(
+                              context,
+                              ref,
+                              c,
+                              c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
+                              null,
+                              canSelect
+                                  ? () => setState(() {
+                                        _selecting = true;
+                                        _selected.add(c.id);
+                                        if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+                                      })
+                                  : null,
+                              c.locations.length > 1 ? loc : null,
+                            ),
                     ),
-                    onTap: () => _selecting
-                        ? setState(() {
-                            if (_isPicked(c, loc)) {
-                              _selected.remove(c.id);
-                              _selectedAt.remove(c.id);
-                            } else {
-                              // The pin tapped: that location goes on the plan
-                              // (another pin of a picked client switches to it).
-                              _selected.add(c.id);
-                              if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
-                            }
-                          })
-                        : showClientSheet(
-                            context,
-                            ref,
-                            c,
-                            c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
-                            null,
-                            canSelect
-                                ? () => setState(() {
-                                      _selecting = true;
-                                      _selected.add(c.id);
-                                      if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
-                                    })
-                                : null,
-                            c.locations.length > 1 ? loc : null,
-                          ),
-                  ),
               // Salespeople: all purple with their initials (user request
               // 2026-10-23, apart from the client colours); paler when the
               // position is old or they're offline / off duty.
@@ -414,7 +429,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     ),
                   ),
               for (final MapEntry(key: uid, value: loc) in recorded.entries)
-                if (users[uid] case final u?)
+                if (users[uid] case final u? when inRegion(loc.lat, loc.lng))
                   Marker(
                     markerId: MarkerId('person/$uid'),
                     position: LatLng(loc.lat, loc.lng),

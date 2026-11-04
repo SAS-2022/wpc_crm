@@ -10008,6 +10008,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”.'**
   String get phoneSetupTranssion;
+
+  /// No description provided for @siteTripsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Left and came back {count, plural, =1{once} other{{count} times}} ({time})'**
+  String siteTripsSummary(int count, String time);
+
+  /// No description provided for @siteTripsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the site and came back'**
+  String get siteTripsTitle;
+
+  /// No description provided for @siteTripLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Out {left} – back {back} · {time}'**
+  String siteTripLine(String left, String back, String time);
 }
 
 class _AppLocalizationsDelegate

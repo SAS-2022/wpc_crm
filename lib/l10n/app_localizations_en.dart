@@ -6089,4 +6089,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get phoneSetupTranssion =>
       'Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”.';
+
+  @override
+  String siteTripsSummary(int count, String time) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count times',
+      one: 'once',
+    );
+    return 'Left and came back $_temp0 ($time)';
+  }
+
+  @override
+  String get siteTripsTitle => 'Left the site and came back';
+
+  @override
+  String siteTripLine(String left, String back, String time) {
+    return 'Out $left – back $back · $time';
+  }
 }

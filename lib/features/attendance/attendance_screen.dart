@@ -208,6 +208,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     Widget statusRow(AppUser u) {
       final d = results[u.id];
       final p = days[u.id]!;
+      // Out of the site and back today (2026-11-04, user request).
+      final trips = records[u.id]?.trips ?? const <SiteTrip>[];
+      final tripsLine = trips.isEmpty
+          ? null
+          : l10n.siteTripsSummary(
+              trips.length,
+              formatMinutes(trips.fold(0, (sum, t) => sum + t.backAt.difference(t.leftAt).inMinutes)),
+            );
       final (IconData icon, Color color, String line) = switch (p.status) {
         DayStatus.notIn => (
             Icons.person_off_outlined,
@@ -235,6 +243,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               l10n.inSince(time.format(d!.checkInAt!)),
               if (p.lateMin > 0) l10n.lateBy(formatMinutes(p.lateMin)),
               if (p.status == DayStatus.away && d.lastExitAt != null) l10n.leftSiteAt(time.format(d.lastExitAt!)),
+              ?tripsLine,
             ].join(' · '),
           ),
         DayStatus.checkedOut => (
@@ -244,6 +253,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               '${time.format(d!.checkInAt!)} – ${time.format(d.checkOutAt!)}',
               checkOutTypeLabel(l10n, d.checkOutType),
               if (p.lateMin > 0) l10n.lateBy(formatMinutes(p.lateMin)),
+              ?tripsLine,
             ].where((s) => s.isNotEmpty).join(' · '),
           ),
       };

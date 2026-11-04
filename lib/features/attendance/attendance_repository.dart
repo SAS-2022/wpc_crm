@@ -162,6 +162,9 @@ class AttendanceRecord {
     );
   }
 
+  /// Trips out of the site and back today (display only, [siteTrips]).
+  List<SiteTrip> get trips => siteTrips(correctedEvents(events, correction));
+
   /// The day as it stands now: worked out from the events on the phone (so
   /// a new event shows at once), the same way the server does. [hours]: the
   /// person's schedule ([AppUser.scheduleOr]).

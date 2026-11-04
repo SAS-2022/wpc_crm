@@ -3043,5 +3043,10 @@
   "openAppInfo": "App settings",
   "phoneSetupShowSteps": "Setup steps",
   "phoneSetupMotorola": "Motorola stops apps in the background. Set WPC CRM's battery usage to “Unrestricted” and lock it in recent apps.",
-  "phoneSetupTranssion": "Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”."
+  "phoneSetupTranssion": "Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”.",
+  "siteTripsSummary": "Left and came back {count, plural, =1{once} other{{count} times}} ({time})",
+  "@siteTripsSummary": {"placeholders": {"count": {"type": "int"}, "time": {"type": "String"}}},
+  "siteTripsTitle": "Left the site and came back",
+  "siteTripLine": "Out {left} – back {back} · {time}",
+  "@siteTripLine": {"placeholders": {"left": {"type": "String"}, "back": {"type": "String"}, "time": {"type": "String"}}}
 }

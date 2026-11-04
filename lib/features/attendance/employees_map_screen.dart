@@ -286,11 +286,21 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final everyone = _people(ref, now);
-    final sites = [for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) if (s.active) s];
+    final region = _region;
+    // A region (2026-11-04, user): its work sites only, and the companies of
+    // the people there. A person is in it by their position, else (no
+    // position yet) by a work site of theirs inside it.
+    final activeSites = [for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) if (s.active) s];
+    bool personIn(SaudiRegion? r, _Person p) =>
+        r == null ||
+        (p.loc != null
+            ? r.contains(p.loc!.lat, p.loc!.lng)
+            : activeSites.any((s) => p.user.workSiteIds.contains(s.id) && r.contains(s.lat, s.lng)));
+    bool inRegion(_Person p) => personIn(region, p);
+    final sites = [for (final s in activeSites) if (region == null || region.contains(s.lat, s.lng)) s];
     final site = sites.where((s) => s.id == _siteId).firstOrNull;
     final companyId = ref.watch(peopleCompanyProvider);
     final q = foldSearch(_query);
-    final region = _region;
 
     // Company, site, region and search narrow everyone; the status chips
     // count those, then narrow further.
@@ -298,7 +308,7 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
       for (final p in everyone)
         if ((companyId == null || p.user.companyId == companyId) &&
             (site == null || p.user.workSiteIds.contains(site.id)) &&
-            (region == null || (p.loc != null && region.contains(p.loc!.lat, p.loc!.lng))) &&
+            inRegion(p) &&
             searchHas(p.user.name, q))
           p,
     ];
@@ -449,7 +459,12 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
 
     // Over the map, top left (user 2026-11-04): regions, then companies,
     // then work sites, each row under a separator.
-    final companies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final allCompanies = ref.watch(companiesProvider).value ?? const <Company>[];
+    final regionCompanyIds = {for (final p in everyone) if (inRegion(p)) p.user.companyId};
+    final companies = [
+      for (final c in allCompanies)
+        if (region == null || regionCompanyIds.contains(c.id) || c.id == companyId) c,
+    ];
     void pickSite(WorkSite? s) => setState(() {
           _siteId = s?.id;
           if (s == null) {
@@ -498,12 +513,24 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
                   children: [
                     chipRow(Icons.explore_outlined, [
                       for (final r in SaudiRegion.values)
-                        choice(r.label(l10n), region == r, () => setState(() {
-                              _region = region == r ? null : r;
-                              _refit();
-                            })),
+                        choice(r.label(l10n), region == r, () {
+                          final next = region == r ? null : r;
+                          // A site or company with nothing in the new region
+                          // would leave the map empty: drop it.
+                          final siteNow = activeSites.where((s) => s.id == _siteId).firstOrNull;
+                          if (next != null && siteNow != null && !next.contains(siteNow.lat, siteNow.lng)) _siteId = null;
+                          if (next != null &&
+                              companyId != null &&
+                              !everyone.any((p) => p.user.companyId == companyId && personIn(next, p))) {
+                            ref.read(peopleCompanyProvider.notifier).set(null);
+                          }
+                          setState(() {
+                            _region = next;
+                            _refit();
+                          });
+                        }),
                     ]),
-                    if (companies.length > 1) ...[
+                    if (allCompanies.length > 1 && companies.isNotEmpty) ...[
                       const Divider(height: 10),
                       chipRow(Icons.business, [
                         choice(l10n.allCompanies, companyId == null, () {
@@ -699,6 +726,12 @@ class _PersonDetails extends ConsumerWidget {
               ? line(l10n.lateByLong(formatMinutes(day.lateMin)), color: error, bold: true)
               : line(l10n.onTime, color: green, bold: true),
           if (day.status == DayStatus.away && d.lastExitAt != null) line(l10n.leftSiteAt(time.format(d.lastExitAt!))),
+          for (final t in p.record?.trips ?? const <SiteTrip>[])
+            line(l10n.siteTripLine(
+              time.format(t.leftAt),
+              time.format(t.backAt),
+              formatMinutes(t.backAt.difference(t.leftAt).inMinutes),
+            )),
           if (d.checkOutAt != null && d.closed)
             line([l10n.checkedOutAt(time.format(d.checkOutAt!)), checkOutTypeLabel(l10n, d.checkOutType)]
                 .where((s) => s.isNotEmpty)

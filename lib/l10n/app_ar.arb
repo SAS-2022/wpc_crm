@@ -1648,5 +1648,8 @@
   "openAppInfo": "إعدادات التطبيق",
   "phoneSetupShowSteps": "خطوات الإعداد",
   "phoneSetupMotorola": "توقف أجهزة Motorola التطبيقات في الخلفية. اضبط استخدام البطارية لتطبيق WPC CRM على «غير مقيد» واقفله في التطبيقات الأخيرة.",
-  "phoneSetupTranssion": "توقف أجهزة Tecno / Infinix / itel التطبيقات في الخلفية. فعّل التشغيل التلقائي لتطبيق WPC CRM واضبط استخدام البطارية على «غير مقيد»."
+  "phoneSetupTranssion": "توقف أجهزة Tecno / Infinix / itel التطبيقات في الخلفية. فعّل التشغيل التلقائي لتطبيق WPC CRM واضبط استخدام البطارية على «غير مقيد».",
+  "siteTripsSummary": "خرج وعاد {count, plural, =1{مرة واحدة} =2{مرتين} few{{count} مرات} other{{count} مرة}} ({time})",
+  "siteTripsTitle": "خرج من الموقع وعاد",
+  "siteTripLine": "خرج {left} – عاد {back} · {time}"
 }
