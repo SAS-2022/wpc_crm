@@ -13,7 +13,10 @@ void main() {
     expect(a.allows(UserRole.warehouseSupervisor, AppPage.drivers), isTrue);
     // Not possible: the data rules don't allow it.
     expect(a.allows(UserRole.driver, AppPage.clients), isFalse);
-    expect(a.allows(UserRole.hr, AppPage.users), isFalse);
+    expect(a.allows(UserRole.accounting, AppPage.users), isFalse);
+    // HR adds users and keeps vehicles (2026-11-02).
+    expect(a.allows(UserRole.hr, AppPage.users), isTrue);
+    expect(a.allows(UserRole.hr, AppPage.vehicles), isTrue);
   });
 
   test('turning off and on, saved and read back', () {

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../vehicles/vehicle_widgets.dart';
+import '../documents/company_docs_widgets.dart' show CompanyDocRenewalsCard;
+import '../hr/employee_record_widgets.dart' show IdRenewalsCard;
 import '../../core/app_user.dart';
 import '../../core/skeleton.dart';
 import '../../core/providers.dart';
@@ -162,6 +164,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           OvertimeApprovalsCard(me: me),
           // Vehicle renewals expired or due within 30 days (hidden when none).
           const VehicleRenewalsCard(),
+          // Company documents expired or due soon (GM / SM / HR, hidden when none).
+          const CompanyDocRenewalsCard(),
+          // HR / GM / SM: Iqamas / IDs expired or due soon (hidden when none).
+          const IdRenewalsCard(),
           // Filters: period and person, in one row above the numbers.
           Wrap(
             spacing: 8,
@@ -419,6 +425,13 @@ class _BackOfficeHome extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Managers / HR: what waits for their decision comes first, above
+          // their own check-in and calendar (2026-11-03: the factory and
+          // logistics managers never scrolled down to it). Hidden when none.
+          const LeaveApprovalsCard(),
+          const PendingAbsencesCard(),
+          const EarlyCheckoutRequestsCard(),
+          OvertimeApprovalsCard(me: me),
           // Drivers without a home location: asked to set it (decides their overtime).
           SetHomeLocationCard(me: me),
           // Drivers share their location like the sales team: permissions / phone health.
@@ -426,12 +439,10 @@ class _BackOfficeHome extends ConsumerWidget {
           // Today's check-in (big Check in / Check out button) and the month calendar.
           AttendanceCard(me: me, prominent: true),
           if (me.checksAttendance) MyAttendanceCalendar(me: me),
-          // HR: requests waiting for them first.
-          const LeaveApprovalsCard(),
-          const PendingAbsencesCard(),
-          const EarlyCheckoutRequestsCard(),
-          OvertimeApprovalsCard(me: me),
           const VehicleRenewalsCard(),
+          const CompanyDocRenewalsCard(),
+          // HR / GM / SM: Iqamas / IDs expired or due soon (hidden when none).
+          const IdRenewalsCard(),
           Card(
             margin: EdgeInsets.zero,
             child: ListTile(
@@ -457,7 +468,7 @@ class _BackOfficeHome extends ConsumerWidget {
               ),
             ),
           ],
-          if (me.role.managesDrivers &&
+          if (me.role.managesVehicles &&
               (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.vehicles)) ...[
             const SizedBox(height: 12),
             Card(
@@ -479,6 +490,20 @@ class _BackOfficeHome extends ConsumerWidget {
                 title: Text(l10n.hrArea),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/hr'),
+              ),
+            ),
+          ],
+          // HR: company documents (renewals of the expiring ones).
+          if (me.role.seesCompanyDocs &&
+              (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.companyDocs)) ...[
+            const SizedBox(height: 12),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.folder_copy_outlined),
+                title: Text(l10n.companyDocs),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/documents'),
               ),
             ),
           ],

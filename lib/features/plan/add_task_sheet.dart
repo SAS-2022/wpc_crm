@@ -18,6 +18,7 @@ import 'checklist.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
 import '../../core/saving.dart';
+import '../../core/search_text.dart';
 
 /// Puts [client] on [me]'s plan for today in one tap (clients map). Same
 /// approval and notifications as the add sheet; returns whether it was
@@ -188,7 +189,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     final candidates = all
         .where((c) => widget.owner.role != UserRole.salesExec || c.assignedTo == widget.owner.id)
         .where((c) => !widget.alreadyPlanned.contains(c.id))
-        .where((c) => _query.isEmpty || c.nameKey.contains(_query) || c.city.toLowerCase().contains(_query))
+        .where((c) => _query.isEmpty || searchHas(c.name, _query) || c.aliases.any((a) => searchHas(a, _query)) || searchHas(c.city, _query))
         .toList()
       // Most overdue first: those are the ones to plan.
       ..sort((a, b) => visitStatus(b, rules, now).index.compareTo(visitStatus(a, rules, now).index));
@@ -221,7 +222,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                       decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l10n.search),
                       onChanged: (v) => setState(() {
                         _typed = v;
-                        _query = Client.normalizeName(v);
+                        _query = foldSearch(v);
                       }),
                     ),
                   TextField(

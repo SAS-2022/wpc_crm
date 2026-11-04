@@ -35,6 +35,18 @@ void main() {
     expect(find('050 987')!.other!.text, '0509876543');
   });
 
+  test('Arabic typed with other letter forms / digits still matches', () {
+    const c = Client(
+      id: 'c2', vat: '300123456700003', nameKey: '', name: 'مؤسسة الأمل للتجارة', aliases: [], phone: '',
+      mobile: '0551234567', address: '', city: '', tags: '', odooSalesperson: '', googlePin: '', lat: null, lng: null,
+      assignedTo: null, category: 'B', lastVisitAt: null,
+    );
+    final m = searchClient(c, ClientQuery('موسسه الامل'))!;
+    expect(m.name!.text.substring(m.name!.ranges.single.$1, m.name!.ranges.single.$2), 'مؤسسة الأمل');
+    expect(searchClient(c, ClientQuery('٠٥٥١٢٣'))!.other!.field, SearchField.phone);
+    expect(searchClient(c, ClientQuery('٣٠٠١٢٣'))!.other!.field, SearchField.vat);
+  });
+
   test('no match', () {
     expect(find('zzz'), isNull);
     expect(find(''), isNotNull);

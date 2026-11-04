@@ -115,8 +115,15 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
     // Drivers (sales manager / GM / logistics manager; a warehouse
     // supervisor's own), listed apart in the picker.
     final drivers = driversOf(me, users)..sort((a, b) => a.name.compareTo(b.name));
-    final person =
-        [...team, ...drivers].where((u) => u.id == widget.userId).firstOrNull ?? team.firstOrNull ?? drivers.firstOrNull;
+    // Production & logistics staff's recorded GPS (sales manager / GM, 2026-11-01).
+    final staff = me.role.isAdmin
+        ? (users.where((u) => u.role.isProductionOrLogistics && u.recordsGps).toList()
+            ..sort((a, b) => a.name.compareTo(b.name)))
+        : <AppUser>[];
+    final person = [...team, ...drivers, ...staff].where((u) => u.id == widget.userId).firstOrNull ??
+        team.firstOrNull ??
+        drivers.firstOrNull ??
+        staff.firstOrNull;
     final day = DateTime.tryParse(widget.date ?? '') ?? today;
     final dayStr = dayKey(day);
 
@@ -220,6 +227,16 @@ class _RouteHistoryScreenState extends ConsumerState<RouteHistoryScreen> {
                   value: u.id,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.local_shipping_outlined, size: 18),
+                    const SizedBox(width: 6),
+                    Text(u.name),
+                  ]),
+                ),
+              if (staff.isNotEmpty) _groupHeader(context, l10n.productionLogistics),
+              for (final u in staff)
+                DropdownMenuItem(
+                  value: u.id,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.factory_outlined, size: 18),
                     const SizedBox(width: 6),
                     Text(u.name),
                   ]),

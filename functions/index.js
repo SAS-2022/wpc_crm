@@ -175,6 +175,12 @@ const TEXTS = {
     vehicleOilDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: oil change due in ${c} km (at ${x.km} km)`
       : `${x.vehicle}: oil change is due (was due at ${x.km} km)`),
+    companyDocExpiry: (n, c, d, o, x) => (c > 0
+      ? `${x.note} expires in ${c} days (${d})`
+      : `${x.note} has expired (${d})`),
+    idExpiry: (n, c, d, o, x) => (c > 0
+      ? `${x.note}'s ${x.idType} expires in ${c} days (${d})`
+      : `${x.note}'s ${x.idType} has expired (${d})`),
   },
   ar: {
     title: 'WPC CRM',
@@ -233,6 +239,12 @@ const TEXTS = {
     vehicleOilDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: تغيير الزيت بعد ${c} كم (عند ${x.km} كم)`
       : `${x.vehicle}: حان موعد تغيير الزيت (كان عند ${x.km} كم)`),
+    companyDocExpiry: (n, c, d, o, x) => (c > 0
+      ? `ينتهي ${x.note} بعد ${c} يوماً (${d})`
+      : `انتهى ${x.note} (${d})`),
+    idExpiry: (n, c, d, o, x) => (c > 0
+      ? `${x.note}: تنتهي ${x.idType} بعد ${c} يوماً (${d})`
+      : `${x.note}: انتهت ${x.idType} (${d})`),
   },
 };
 
@@ -303,6 +315,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId, driving: n.issue === 'driving',
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
       vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '', km: String(n.note || ''),
+      idType: lang === 'ar' ? (n.issue === 'nationalId' ? 'الهوية الوطنية' : 'الإقامة') : (n.issue === 'nationalId' ? 'national ID' : 'Iqama'),
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
@@ -314,12 +327,15 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type.startsWith('absence') && n.ref ? `/absence/${n.ref}`
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
           : n.type.startsWith('earlyCheckout') ? '/'
-          : n.type === 'overtimeStarted' ? (n.toId === n.ownerId ? '/' : '/attendance')
+          // Managers too: Home has their "Overtime to approve" card on top (2026-11-03).
+          : n.type === 'overtimeStarted' ? '/'
           : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
           : (n.type === 'vehicleRenewalDue' || n.type === 'vehicleOilDue') ? `/vehicles/${n.ref}`
+          : n.type === 'companyDocExpiry' ? `/documents/file/${n.ref}`
+          : n.type === 'idExpiry' ? `/hr/employee/${n.ref}`
           : '/notifications',
         notificationId: event.params.id,
       },
@@ -1026,7 +1042,8 @@ async function announceOvertime(data, siteId, user, endMs, issue) {
   const users = (await db.collection('users').where('active', '==', true).get()).docs
     .map((x) => ({ id: x.id, ...x.data() }));
   const site = siteId ? (await db.doc(`work_sites/${siteId}`).get()).get('name') || '' : '';
-  const to = new Set([...(issue === 'driving' ? [data.uid] : []), ...directManagers(user, data.uid, users)]);
+  const to = new Set([...(issue === 'driving' ? [data.uid] : []), ...directManagers(user, data.uid, users),
+    ...departmentHeads(user, data.uid, users)]);
   await Promise.all([...to].map((toId) => db.doc(`notifications/overtime_${data.uid}_${data.date}_${toId}`).create({
     toId, fromId: data.uid, ownerId: data.uid, type: 'overtimeStarted', issue, date: data.date,
     siteName: site, time: saudiClock(endMs), count: 0, read: false,
@@ -1283,6 +1300,60 @@ function directManagers(person, uid, users) {
   }
   return found.length > 0 ? found : withRole('gm');
 }
+
+const MANAGER_ROLES = ['gm', 'sales_manager', 'kam', 'logistics_manager', 'factory_manager'];
+/** `AppUser.departmentId`: the chosen department, else the role's default. */
+function departmentOf(u) {
+  if (u.department) return u.department;
+  return {
+    sales_exec: 'sales', kam: 'sales', sales_manager: 'sales', driver: 'logistics', logistics_manager: 'logistics',
+    warehouse_supervisor: 'warehouse', factory_manager: 'production', operator: 'production', engineer: 'production',
+    gm: 'admin', hr: 'hr', accounting: 'accounting', procurement: 'procurement',
+  }[u.role] || null;
+}
+
+/**
+ * Head(s) of a person's department (2026-11-02): active managers of that
+ * department whose own direct manager isn't another of them. They approve
+ * the department's overtime. Same as `departmentHeadsOf` in notifications.dart.
+ */
+function departmentHeads(person, uid, users) {
+  const dept = departmentOf(person);
+  if (!dept) return [];
+  const managers = new Set(users.filter((u) => u.active === true && departmentOf(u) === dept
+    && (MANAGER_ROLES.includes(u.role) || u.isManager === true)).map((u) => u.id));
+  return users.filter((u) => managers.has(u.id) && u.id !== uid
+    && !directManagers(u, u.id, users).some((id) => managers.has(id))).map((u) => u.id);
+}
+
+/**
+ * Who may read each person's location data besides the roles that read
+ * everyone (KAM, SM, GM, logistics manager): RTDB `location_viewers/{uid}`
+ * {viewerUid: true} (2026-11-04, employee map for department heads and
+ * warehouse supervisors) = the app's `peopleUnder`: their warehouse
+ * supervisor (`supervisorId`), direct managers and department heads. Read by
+ * the RTDB rules of live_locations, presence, location_history and
+ * device_status. Rebuilt for everyone on every users write (a change to one
+ * person can change who heads a department).
+ */
+function locationViewers(users) {
+  const active = users.filter((u) => u.active === true);
+  const out = {};
+  for (const u of active) {
+    const viewers = new Set();
+    if (u.supervisorId && u.supervisorId !== u.id && active.some((s) => s.id === u.supervisorId)) viewers.add(u.supervisorId);
+    for (const id of directManagers(u, u.id, active)) viewers.add(id);
+    for (const id of departmentHeads(u, u.id, active)) viewers.add(id);
+    viewers.delete(u.id);
+    if (viewers.size > 0) out[u.id] = Object.fromEntries([...viewers].sort().map((id) => [id, true]));
+  }
+  return out;
+}
+
+exports.syncLocationViewers = onDocumentWritten('users/{uid}', async () => {
+  const users = (await admin.firestore().collection('users').get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+  await admin.database().ref('location_viewers').set(locationViewers(users));
+});
 
 /**
  * "Not coming to work" reported on the attendance card (2026-10-22,
@@ -1685,7 +1756,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
   await userRef.delete();
   await admin.database().ref().update(Object.fromEntries([
     'roles', 'live_locations', 'presence', 'tracking_device', 'settings/trackingSchedules', 'location_history',
-    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site',
+    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site', 'device_status',
   ].map((path) => [`${path}/${uid}`, null])));
   try {
     await admin.auth().deleteUser(uid);
@@ -1699,9 +1770,12 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
  * Sets another user's password (2026-10-23), mainly for username accounts:
  * their email is a hidden `<username>@staff.wpc-crm-a9247.web.app` with no
  * mailbox, so no reset email reaches them. GM: anyone; sales manager: not
- * GMs or sales managers; logistics manager: drivers. Never oneself (Profile
- * page does that with the current password).
+ * GMs or sales managers; logistics manager: drivers; HR: the back-office
+ * roles (UserRole.hrManagedRoles). Never oneself (Profile page does that
+ * with the current password).
  */
+const HR_MANAGED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'driver',
+  'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
 exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const callerId = req.auth?.uid;
   if (!callerId) throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -1717,7 +1791,8 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
     caller.role === 'gm' ||
     (caller.role === 'sales_manager' && !['gm', 'sales_manager'].includes(target?.role)) ||
     (caller.role === 'logistics_manager' && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)) ||
-    (caller.role === 'factory_manager' && ['worker', 'engineer', 'operator'].includes(target?.role)));
+    (caller.role === 'factory_manager' && ['worker', 'engineer', 'operator'].includes(target?.role)) ||
+    (caller.role === 'hr' && HR_MANAGED_ROLES.includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
   return { ok: true };
@@ -1833,11 +1908,11 @@ exports.driverKm = onSchedule(
   },
 );
 
-/** Vehicles page: today's km and missing days of these drivers, now. SM / GM / logistics manager. */
+/** Vehicles page: today's km and missing days of these drivers, now. SM / GM / logistics manager / HR. */
 exports.refreshDriverKm = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
   const me = await admin.firestore().doc(`users/${req.auth.uid}`).get();
-  if (me.get('active') !== true || !['sales_manager', 'gm', 'logistics_manager'].includes(me.get('role'))) {
+  if (me.get('active') !== true || !['sales_manager', 'gm', 'logistics_manager', 'hr'].includes(me.get('role'))) {
     throw new HttpsError('permission-denied', 'Not allowed');
   }
   const { uids, from } = req.data || {};
@@ -1902,6 +1977,69 @@ exports.vehicleRenewals = onSchedule(
         }
       }
       batch.update(v.ref, { renewalNotified: admin.firestore.FieldValue.arrayUnion(...[...alerts, ...oil].map((a) => a.key)) });
+      await batch.commit();
+    }
+  },
+);
+
+// --- Company documents (2026-11-01) ---------------------------------------
+const { expiryAlerts, docExpiryAlerts, keptNotified, DOC_DUE_SOON_DAYS, EXPIRING_SECTIONS } = require('./companyDocs');
+
+/**
+ * Every morning: reminds HR, the sales managers and the GMs when a service
+ * that expires (health insurance, Moqeem …) or a subscription is App
+ * settings `docRenewalDays` (default 30) days from its expiry, again 15 days
+ * before, and every day once it has expired until it's renewed
+ * (`companyDocExpiry`; count = days left, date = the expiry, note = the
+ * item's name with the employee's). Same for employees' Iqamas / national
+ * IDs in `employee_records` (`idExpiry`; ref = the person, issue = id type,
+ * note = their name; active people only) — user decisions 2026-11-03. They
+ * stay on their Home until renewed. Sent keys are kept in `expiryNotified`
+ * (documents) / `idNotified` (records).
+ */
+exports.companyDocReminders = onSchedule(
+  { schedule: '0 8 * * *', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const today = saudiDay(Date.now());
+    const [docs, records, people, dueSoonDays] = await Promise.all([
+      db.collection('company_docs').where('section', 'in', EXPIRING_SECTIONS).get(),
+      db.collection('employee_records').get(),
+      db.collection('users').where('active', '==', true).get(),
+      appSetting('docRenewalDays', DOC_DUE_SOON_DAYS, 1, 120),
+    ]);
+    const recipients = people.docs.filter((u) => ['hr', 'sales_manager', 'gm'].includes(u.get('role')));
+    if (!recipients.length) return;
+    const names = Object.fromEntries(people.docs.map((u) => [u.id, u.get('name') || '']));
+    const notify = (batch, fields) => {
+      for (const m of recipients) {
+        batch.set(db.collection('notifications').doc(), {
+          toId: m.id, fromId: m.id, ownerId: '', read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(), ...fields,
+        });
+      }
+    };
+    for (const d of docs.docs) {
+      const notified = d.get('expiryNotified') || [];
+      const alerts = docExpiryAlerts(d.data(), today, notified, dueSoonDays);
+      if (!alerts.length) continue;
+      const person = names[d.get('personId')] || '';
+      const label = person ? `${d.get('name') || ''} – ${person}` : d.get('name') || '';
+      const batch = db.batch();
+      for (const a of alerts) notify(batch, { type: 'companyDocExpiry', date: a.expiry, count: a.days, ref: d.id, note: label });
+      batch.update(d.ref, { expiryNotified: [...keptNotified(notified, today), ...alerts.map((a) => a.key)] });
+      await batch.commit();
+    }
+    for (const r of records.docs) {
+      if (!(r.id in names)) continue; // inactive or deleted
+      const notified = r.get('idNotified') || [];
+      const alerts = expiryAlerts(r.get('idExpiry'), today, notified, dueSoonDays);
+      if (!alerts.length) continue;
+      const batch = db.batch();
+      for (const a of alerts) {
+        notify(batch, { type: 'idExpiry', date: a.expiry, count: a.days, ref: r.id, issue: r.get('idType') || 'iqama', note: names[r.id] });
+      }
+      batch.update(r.ref, { idNotified: [...keptNotified(notified, today), ...alerts.map((a) => a.key)] });
       await batch.commit();
     }
   },

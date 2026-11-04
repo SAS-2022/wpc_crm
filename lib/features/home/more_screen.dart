@@ -8,14 +8,12 @@ import '../../core/login_name.dart';
 import '../../core/providers.dart';
 import '../../core/sign_out.dart';
 import '../../l10n/app_localizations.dart';
-import 'app_shell.dart';
 
 /// One tile of the More grid.
 typedef _Item = ({IconData icon, String label, String path, VoidCallback onTap});
 
 /// More tab: the role's tools as a grid in sections (user request
 /// 2026-10-19: stays tidy as items are added), then language and sign out.
-/// Pages already in the side menu on wide screens are left out there.
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
@@ -26,33 +24,42 @@ class MoreScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
     final locale = ref.watch(localeProvider) ?? Localizations.localeOf(context);
-    // On wide screens these pages are in the side menu already.
-    final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
     final role = me.role;
     final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     _Item item(IconData icon, String label, String path, {bool go = false}) =>
         (icon: icon, label: label, path: path, onTap: () => go ? context.go(path) : context.push(path));
 
+    // Every page the person may open, on phones and on the web alike (user
+    // request 2026-11-01: the sales manager sees all options here, also
+    // those in the web side menu).
     final sections = <(String, List<_Item>)>[
       (l10n.moreSectionSales, [
         if (role.isTracked) item(Icons.today, l10n.myPlan, '/plan/${me.id}'),
-        if (!wide && role.isSales) item(Icons.map, l10n.map, '/map', go: true),
-        if (role.isSupervisor && !wide) ...[
+        if (role.isSales) item(Icons.map, l10n.clientMap, '/map', go: true),
+        if (role.isSupervisor) ...[
           item(Icons.groups, l10n.teamPlans, '/team-plans'),
           item(Icons.my_location, l10n.liveTracking, '/live'),
           item(Icons.table_chart, l10n.reports, '/reports'),
           item(Icons.swap_horiz, l10n.transferredClients, '/transfers'),
+          item(Icons.style, l10n.catalogsPage, '/catalogs'),
           item(Icons.route, l10n.routeHistory, '/history'),
         ],
       ]),
       (l10n.moreSectionPeople, [
         if (myLeaveEnabled) item(Icons.beach_access, l10n.myLeave, '/leave'),
-        if (role.seesDrivers) item(Icons.local_shipping_outlined, l10n.driversPage, '/drivers'),
-        if (role.managesDrivers) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
-        if (me.seesTeamAttendance && !wide) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
-        // On the web again since 2026-10-22 (absences to decide).
-        if (role.canSeeHr && !wide) item(Icons.badge, l10n.hrArea, '/hr'),
+        // No Drivers tile (user request 2026-11-01): the live map has a
+        // Drivers switch; the logistics manager / warehouse supervisor open
+        // it from their Home card.
+        if (role.seesPhoneStatus) item(Icons.phonelink_setup, l10n.phoneStatus, '/phone-status'),
+        if (role.managesVehicles) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
+        if (me.seesTeamAttendance) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
+        if (me.seesEmployeesMap) item(Icons.person_pin_circle, l10n.employeesMap, '/attendance/map'),
+        if (role.canSeeHr) item(Icons.badge, l10n.hrArea, '/hr'),
         if (role.managesUsers) item(Icons.people, l10n.users, '/users'),
+      ]),
+      // Company documents (2026-11-01): the sales team, GM, SM and HR.
+      (l10n.moreSectionCompany, [
+        if (role.seesCompanyDocs) item(Icons.folder_copy_outlined, l10n.companyDocs, '/documents'),
       ]),
       (l10n.moreSectionSettings, [
         // Work hours, visit frequency, tags, work sites … are all in App

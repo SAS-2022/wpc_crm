@@ -33,9 +33,15 @@ service cloud.firestore {
     // The logistics manager creates and edits drivers (2026-10-23), workers
     // and warehouse supervisors; the factory manager workers, engineers and
     // operators (2026-10-31). The app shows each only the people under them.
+    // HR every non-sales, non-admin role (2026-11-02, UserRole.hrManagedRoles).
+    function hrRoles() {
+      return ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'driver',
+        'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
+    }
     function managedRoles() {
       return me().role == 'logistics_manager' ? ['worker', 'driver', 'warehouse_supervisor']
-        : me().role == 'factory_manager' ? ['worker', 'engineer', 'operator'] : [];
+        : me().role == 'factory_manager' ? ['worker', 'engineer', 'operator']
+        : me().role == 'hr' ? hrRoles() : [];
     }
     match /users/{uid} {
       allow read: if request.auth.uid == uid || active();
@@ -158,16 +164,47 @@ service cloud.firestore {
     }
 
     // Work sites for attendance (sales manager / GM).
-    // Vehicles (2026-10-24): the sales manager, GM and logistics manager
-    // keep them (details, drivers, renewals, odometer readings). Drivers'
-    // GPS km per day are written by Cloud Functions only.
-    function managesVehicles() { return active() && me().role in ['sales_manager', 'gm', 'logistics_manager']; }
+    // Vehicles (2026-10-24): the sales manager, GM, logistics manager and
+    // (2026-11-02) HR keep them (details, drivers, renewals, odometer
+    // readings). Drivers' GPS km per day are written by Cloud Functions only.
+    function managesVehicles() { return active() && me().role in ['sales_manager', 'gm', 'logistics_manager', 'hr']; }
     match /vehicles/{vehicleId} {
       allow read, write: if managesVehicles();
     }
     match /driver_km/{id} {
       allow read: if managesVehicles();
       allow write: if false;
+    }
+
+    // Company documents (2026-11-01): folders and files of the tree. The GM /
+    // sales manager read and edit all; HR reads all and edits the Expiring
+    // section; the sales team reads Official and Product items that aren't
+    // management only (`restricted`, kept true in Expiring).
+    // Services that expire ('expiring') and subscriptions (2026-11-03) are
+    // management only (GM / SM / HR) and HR edits them.
+    function companyDocWriter(section) {
+      return isAdmin() || (active() && me().role == 'hr' && section in ['expiring', 'subscription']);
+    }
+    match /company_docs/{docId} {
+      allow read: if isAdmin() || (active() && me().role == 'hr')
+        || (isSales() && resource.data.restricted == false && resource.data.section in ['official', 'product']);
+      allow create: if companyDocWriter(request.resource.data.section)
+        && request.resource.data.section in ['official', 'expiring', 'subscription', 'product']
+        && (request.resource.data.section in ['official', 'product'] || request.resource.data.restricted == true);
+      allow update: if companyDocWriter(resource.data.section)
+        && request.resource.data.section == resource.data.section
+        && (request.resource.data.section in ['official', 'product'] || request.resource.data.restricted == true);
+      allow delete: if companyDocWriter(resource.data.section);
+    }
+
+    // Employee records (2026-11-03): Iqama / national ID, nationality, health
+    // insurance class. Not on users docs, which every active user reads: the
+    // HR area (HR, GM, SM) reads and writes them, the person reads their own.
+    // `idNotified` is written by the companyDocReminders function.
+    match /employee_records/{uid} {
+      allow read: if isHrArea() || (active() && request.auth.uid == uid);
+      allow create, update: if managesHr() && request.resource.data.uid == uid;
+      allow delete: if managesHr();
     }
 
     match /work_sites/{siteId} {

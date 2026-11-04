@@ -7,9 +7,9 @@ import '../notifications/notifications.dart' show peopleUnder;
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
-import '../clients/client.dart';
 import '../plan/plan_screen.dart' show DayBar;
 import '../tracking/work_hours.dart';
+import '../settings/page_access.dart';
 import '../users/companies.dart';
 import '../users/users_repository.dart';
 import 'absence.dart';
@@ -22,6 +22,7 @@ import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
 import 'work_sites.dart';
+import '../../core/search_text.dart';
 
 /// Which people the summary tiles narrow the list to.
 enum _Show { all, onSite, notOnSite, checkedOut }
@@ -170,10 +171,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     };
 
     // Search and filters (site, role, company); the tiles count these people.
-    final q = Client.normalizeName(_query);
+    final q = foldSearch(_query);
     final filtered = [
       for (final u in everyone)
-        if ((q.isEmpty || Client.normalizeName(u.name).contains(q)) &&
+        if (searchHas(u.name, q) &&
             (_sites.isEmpty || u.workSiteIds.any(_sites.contains)) &&
             (_roles.isEmpty || _roles.contains(u.role)) &&
             (_companies.isEmpty || _companies.contains(u.companyId)))
@@ -397,6 +398,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       appBar: AppBar(
         title: Text(l10n.attendance),
         actions: [
+          // Where everyone is now (user request 2026-11-04).
+          if (me != null &&
+              me.seesEmployeesMap &&
+              (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.employeesMap))
+            IconButton(
+              icon: const Icon(Icons.map_outlined),
+              tooltip: l10n.employeesMap,
+              onPressed: () => context.push('/attendance/map'),
+            ),
           TextButton.icon(
             icon: const Icon(Icons.table_chart_outlined),
             label: Text(l10n.attendanceReport),

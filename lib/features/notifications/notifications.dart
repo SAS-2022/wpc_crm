@@ -131,6 +131,15 @@ enum NotificationType {
   /// (≤ 0: due), [AppNotification.note] = the odometer km it's due at; same
   /// people and fields as [vehicleRenewalDue].
   vehicleOilDue,
+
+  /// A company document (2026-11-01, `companyDocReminders`): [AppNotification.count]
+  /// days left (≤ 0: expired), [AppNotification.date] = the expiry,
+  /// [AppNotification.ref] = the document id, [AppNotification.note] = its
+  /// name (with the employee's). To active HR, sales managers and GMs.
+  companyDocExpiry,
+  // Iqama / national ID expiring (2026-11-03): count = days left, date =
+  // expiry, ref = the person's uid, issue = iqama | nationalId, note = name.
+  idExpiry,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -254,12 +263,35 @@ List<String> directManagersOf(AppUser person, List<AppUser> users) {
   return person.role == UserRole.gm ? found : found.ifEmpty(() => withRole(UserRole.gm));
 }
 
+/// The head(s) of [person]'s department (user decision 2026-11-02: each
+/// department head approves the overtime of their department): active
+/// managers of the same department ([AppUser.departmentId]) whose own
+/// direct manager is not another manager of it — the factory manager for
+/// Production, the logistics manager for Logistics, the sales manager (not
+/// a KAM) for Sales, an "Is a manager" accounting user for Accounting.
+/// Same as `departmentHeads` in functions/index.js.
+List<String> departmentHeadsOf(AppUser person, List<AppUser> users) {
+  final dept = person.departmentId;
+  if (dept == null) return const [];
+  final managers = {for (final u in users) if (u.active && u.isManager && u.departmentId == dept) u.id};
+  return [
+    for (final u in users)
+      if (managers.contains(u.id) && u.id != person.id && !directManagersOf(u, users).any(managers.contains)) u.id,
+  ];
+}
+
 /// The people under [me] (2026-10-23): those whose direct manager is
-/// [me] ([directManagersOf]), plus a warehouse supervisor's drivers. HR /
-/// SM / GM see everyone in the HR area, this is for the other managers.
+/// [me] ([directManagersOf]) or whose department [me] heads
+/// ([departmentHeadsOf], 2026-11-02), plus a warehouse supervisor's
+/// drivers. HR / SM / GM see everyone in the HR area, this is for the
+/// other managers.
 List<AppUser> peopleUnder(AppUser me, List<AppUser> users) => [
       for (final u in users)
-        if (u.id != me.id && (u.supervisorId == me.id || directManagersOf(u, users).contains(me.id))) u,
+        if (u.id != me.id &&
+            (u.supervisorId == me.id ||
+                directManagersOf(u, users).contains(me.id) ||
+                (me.isManager && departmentHeadsOf(u, users).contains(me.id))))
+          u,
     ];
 
 /// The drivers [me] follows: every one for the logistics manager / SM /

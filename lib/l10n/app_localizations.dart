@@ -1064,12 +1064,6 @@ abstract class AppLocalizations {
   /// **'Turn off battery optimization for this app'**
   String get issueBattery;
 
-  /// No description provided for @issueMotion.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow motion detection (\"Physical activity\" / \"Motion & Fitness\") so walking isn\'t counted as vehicle km'**
-  String get issueMotion;
-
   /// No description provided for @fix.
   ///
   /// In en, this message translates to:
@@ -7442,6 +7436,12 @@ abstract class AppLocalizations {
   /// **'Can be chosen as someone\'s direct manager, e.g. the accounting manager.'**
   String get isManagerHelp;
 
+  /// No description provided for @isManagerByRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Already a manager by the role ({role}): approves their team\'s leave and overtime.'**
+  String isManagerByRole(String role);
+
   /// No description provided for @directManager.
   ///
   /// In en, this message translates to:
@@ -8682,6 +8682,1236 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Departs {day} at {time}'**
   String travelAfterWorkOn(String day, String time);
+
+  /// No description provided for @companyDocs.
+  ///
+  /// In en, this message translates to:
+  /// **'Company documents'**
+  String get companyDocs;
+
+  /// No description provided for @moreSectionCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get moreSectionCompany;
+
+  /// No description provided for @moreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptions;
+
+  /// No description provided for @docSectionOfficial.
+  ///
+  /// In en, this message translates to:
+  /// **'Official documents'**
+  String get docSectionOfficial;
+
+  /// No description provided for @docSectionOfficialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'CR, VAT, National Address … of each company'**
+  String get docSectionOfficialHint;
+
+  /// No description provided for @docSectionExpiring.
+  ///
+  /// In en, this message translates to:
+  /// **'Services that expire'**
+  String get docSectionExpiring;
+
+  /// No description provided for @docSectionExpiringHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Health insurance, Moqeem … with renewal reminders (management only)'**
+  String get docSectionExpiringHint;
+
+  /// No description provided for @docSectionProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Product documents'**
+  String get docSectionProduct;
+
+  /// No description provided for @docSectionProductHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Company profile, datasheets, certificates'**
+  String get docSectionProductHint;
+
+  /// No description provided for @docFileCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No files} =1{1 file} other{{count} files}}'**
+  String docFileCount(int count);
+
+  /// No description provided for @docEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet.'**
+  String get docEmpty;
+
+  /// No description provided for @docEmptyEditable.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Tap + to add files or a folder.'**
+  String get docEmptyEditable;
+
+  /// No description provided for @docNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No document matches.'**
+  String get docNoResults;
+
+  /// No description provided for @docNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This document doesn\'t exist or you can\'t open it.'**
+  String get docNotFound;
+
+  /// No description provided for @docSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search documents'**
+  String get docSearchHint;
+
+  /// No description provided for @docUploadFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload files'**
+  String get docUploadFiles;
+
+  /// No description provided for @docNewFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get docNewFolder;
+
+  /// No description provided for @docEditFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit folder'**
+  String get docEditFolder;
+
+  /// No description provided for @docFolderName.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder name'**
+  String get docFolderName;
+
+  /// No description provided for @docAddFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add document'**
+  String get docAddFile;
+
+  /// No description provided for @docEditDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit details'**
+  String get docEditDetails;
+
+  /// No description provided for @docName.
+  ///
+  /// In en, this message translates to:
+  /// **'Document name'**
+  String get docName;
+
+  /// No description provided for @docNoCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'No company'**
+  String get docNoCompany;
+
+  /// No description provided for @docEmployee.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee'**
+  String get docEmployee;
+
+  /// No description provided for @docForCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'The company (no employee)'**
+  String get docForCompany;
+
+  /// No description provided for @docNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Document number'**
+  String get docNumber;
+
+  /// No description provided for @docIssueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue date'**
+  String get docIssueDate;
+
+  /// No description provided for @docExpiryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry date'**
+  String get docExpiryDate;
+
+  /// No description provided for @docExpiryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the expiry date'**
+  String get docExpiryRequired;
+
+  /// No description provided for @docUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get docUpload;
+
+  /// No description provided for @docManagementOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Management only'**
+  String get docManagementOnly;
+
+  /// No description provided for @docManagementOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden from the sales team'**
+  String get docManagementOnlyHint;
+
+  /// No description provided for @docSalesCanSee.
+  ///
+  /// In en, this message translates to:
+  /// **'The sales team can see and share it'**
+  String get docSalesCanSee;
+
+  /// No description provided for @docNoExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'No expiry date'**
+  String get docNoExpiry;
+
+  /// No description provided for @docValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until {date}'**
+  String docValidUntil(String date);
+
+  /// No description provided for @docExpiresIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Expires tomorrow} other{Expires in {days} days}}'**
+  String docExpiresIn(int days);
+
+  /// No description provided for @docExpiresToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires today'**
+  String get docExpiresToday;
+
+  /// No description provided for @docExpiredAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{Expired yesterday} other{Expired {days} days ago}}'**
+  String docExpiredAgo(int days);
+
+  /// No description provided for @docShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get docShare;
+
+  /// No description provided for @docSelectToShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Select files to share'**
+  String get docSelectToShare;
+
+  /// No description provided for @docOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get docOpen;
+
+  /// No description provided for @docRenewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew {name}'**
+  String docRenewTitle(String name);
+
+  /// No description provided for @docNewExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'New expiry date'**
+  String get docNewExpiry;
+
+  /// No description provided for @docNewFileOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'New document file (optional)'**
+  String get docNewFileOptional;
+
+  /// No description provided for @docOldFileKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The current file is kept in the history'**
+  String get docOldFileKept;
+
+  /// No description provided for @docReplaceFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace file'**
+  String get docReplaceFile;
+
+  /// No description provided for @docFileReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'File replaced – the old one is in the history'**
+  String get docFileReplaced;
+
+  /// No description provided for @docMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get docMove;
+
+  /// No description provided for @docMoveTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Move {name} to'**
+  String docMoveTo(String name);
+
+  /// No description provided for @docDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String docDeleteTitle(String name);
+
+  /// No description provided for @docDeleteFileText.
+  ///
+  /// In en, this message translates to:
+  /// **'The file and its earlier versions are deleted for everyone.'**
+  String get docDeleteFileText;
+
+  /// No description provided for @docDeleteFolderText.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{The folder is deleted for everyone.} =1{The folder and the 1 file in it are deleted for everyone.} other{The folder and the {count} files in it are deleted for everyone.}}'**
+  String docDeleteFolderText(int count);
+
+  /// No description provided for @docLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder'**
+  String get docLocation;
+
+  /// No description provided for @docLastChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Last change'**
+  String get docLastChange;
+
+  /// No description provided for @docHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get docHistory;
+
+  /// No description provided for @docRenewedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewed – valid until {date}'**
+  String docRenewedTo(String date);
+
+  /// No description provided for @docWasUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'was until {date}'**
+  String docWasUntil(String date);
+
+  /// No description provided for @docReplacedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced {date}'**
+  String docReplacedOn(String date);
+
+  /// No description provided for @docRenewalsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents to renew ({count})'**
+  String docRenewalsDue(int count);
+
+  /// No description provided for @notifCompanyDocDue.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} expires in {days} days ({date})'**
+  String notifCompanyDocDue(String name, int days, String date);
+
+  /// No description provided for @notifCompanyDocExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has expired ({date})'**
+  String notifCompanyDocExpired(String name, String date);
+
+  /// No description provided for @settingDocRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Document renewal reminder'**
+  String get settingDocRenewal;
+
+  /// No description provided for @settingDocRenewalHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'HR, the GM and the sales manager are reminded this many days before a service or subscription expires, again 15 days before and every day after it has expired; it stays on their Home until it\'s renewed.'**
+  String get settingDocRenewalHelp;
+
+  /// No description provided for @docShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t prepare the file to share. Check the connection and try again.'**
+  String get docShareFailed;
+
+  /// No description provided for @productionLogisticsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Production & logistics ({n})'**
+  String productionLogisticsCount(int n);
+
+  /// No description provided for @productionLogisticsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Position recorded for attendance, 08:00–18:00 on work days, every 30 seconds.'**
+  String get productionLogisticsNote;
+
+  /// No description provided for @noProductionLogisticsStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'No production or logistics staff with a work site yet. They appear here once they record attendance at a work site.'**
+  String get noProductionLogisticsStaff;
+
+  /// No description provided for @noPositionRecordedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No position recorded today'**
+  String get noPositionRecordedToday;
+
+  /// No description provided for @lastPositionRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Last position {ago}'**
+  String lastPositionRecorded(String ago);
+
+  /// No description provided for @productionLogistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Production & logistics'**
+  String get productionLogistics;
+
+  /// No description provided for @catalogsPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogs & stands'**
+  String get catalogsPage;
+
+  /// No description provided for @catalogsGivenInPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Given in a period'**
+  String get catalogsGivenInPeriod;
+
+  /// No description provided for @catalogsClientsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One row per client who got a catalogue, stand or samples. Item columns: how many in all and the last date (red = a new one is due). Tap a column title to sort, a row to open the client.'**
+  String get catalogsClientsHelp;
+
+  /// No description provided for @catalogsUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to date'**
+  String get catalogsUpToDate;
+
+  /// No description provided for @catalogsClientsShown.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 client} other{{n} clients}}'**
+  String catalogsClientsShown(int n);
+
+  /// No description provided for @catalogsNoClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients to show.'**
+  String get catalogsNoClients;
+
+  /// No description provided for @catalogsNeverVisited.
+  ///
+  /// In en, this message translates to:
+  /// **'Never visited'**
+  String get catalogsNeverVisited;
+
+  /// No description provided for @catalogsPeriodHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Every catalog, stand and sample handed over in the period, at visits and recorded on client pages, counted for the person who gave it. Tap a salesperson to see only theirs.'**
+  String get catalogsPeriodHelp;
+
+  /// No description provided for @catalogsBySalesperson.
+  ///
+  /// In en, this message translates to:
+  /// **'By salesperson'**
+  String get catalogsBySalesperson;
+
+  /// No description provided for @catalogsHandovers.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand-overs ({n})'**
+  String catalogsHandovers(int n);
+
+  /// No description provided for @catalogsShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all ({n})'**
+  String catalogsShowAll(int n);
+
+  /// No description provided for @catalogsType.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogue type'**
+  String get catalogsType;
+
+  /// No description provided for @catalogsAllTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get catalogsAllTypes;
+
+  /// No description provided for @catalogsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get catalogsStatus;
+
+  /// No description provided for @catalogsAnyStatusShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Any status'**
+  String get catalogsAnyStatusShort;
+
+  /// No description provided for @catalogsAllCities.
+  ///
+  /// In en, this message translates to:
+  /// **'All cities'**
+  String get catalogsAllCities;
+
+  /// No description provided for @catalogsItemColumnHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How many in all, and the last date given. Red = a new one is due.'**
+  String get catalogsItemColumnHelp;
+
+  /// No description provided for @catalogsCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls'**
+  String get catalogsCalls;
+
+  /// No description provided for @catalogsDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get catalogsDate;
+
+  /// No description provided for @catalogsHow.
+  ///
+  /// In en, this message translates to:
+  /// **'How'**
+  String get catalogsHow;
+
+  /// No description provided for @allCompanies.
+  ///
+  /// In en, this message translates to:
+  /// **'All companies'**
+  String get allCompanies;
+
+  /// No description provided for @otherEmployeesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Other employees ({n})'**
+  String otherEmployeesCount(int n);
+
+  /// No description provided for @noOtherEmployees.
+  ///
+  /// In en, this message translates to:
+  /// **'No other employees with a work site yet. They appear here once they record attendance at a work site.'**
+  String get noOtherEmployees;
+
+  /// No description provided for @mapPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'People on the map'**
+  String get mapPeople;
+
+  /// No description provided for @mapPeopleSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Salespeople'**
+  String get mapPeopleSales;
+
+  /// No description provided for @mapPeopleDrivers.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers'**
+  String get mapPeopleDrivers;
+
+  /// No description provided for @mapPeopleStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Other employees'**
+  String get mapPeopleStaff;
+
+  /// No description provided for @phoneStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone status'**
+  String get phoneStatus;
+
+  /// No description provided for @phoneStatusShowMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on the map'**
+  String get phoneStatusShowMap;
+
+  /// No description provided for @phoneStatusProblemsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Problems only'**
+  String get phoneStatusProblemsOnly;
+
+  /// No description provided for @phoneStatusNoReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone settings not reported – needs the latest app version'**
+  String get phoneStatusNoReport;
+
+  /// No description provided for @phoneStatusUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String phoneStatusUpdated(String time);
+
+  /// No description provided for @phoneStatusStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Last report {time}'**
+  String phoneStatusStale(String time);
+
+  /// No description provided for @phoneStatusAllGood.
+  ///
+  /// In en, this message translates to:
+  /// **'All good'**
+  String get phoneStatusAllGood;
+
+  /// No description provided for @phoneStatusProblems.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} to fix'**
+  String phoneStatusProblems(int n);
+
+  /// No description provided for @phoneStatusSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name'**
+  String get phoneStatusSearch;
+
+  /// No description provided for @phoneStatusNoPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody to show'**
+  String get phoneStatusNoPeople;
+
+  /// No description provided for @phoneStatusNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Phones report when the app is opened, every 5 minutes while it is open, and every 2 minutes while sharing the location. “Stopped reporting” = a phone that should share its location now has sent nothing for 15 minutes. On Wi-Fi a phone can\'t tell whether mobile data is also switched on.'**
+  String get phoneStatusNote;
+
+  /// No description provided for @phoneStatusApp.
+  ///
+  /// In en, this message translates to:
+  /// **'App {version}'**
+  String phoneStatusApp(String version);
+
+  /// No description provided for @checkGps.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS'**
+  String get checkGps;
+
+  /// No description provided for @checkLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission'**
+  String get checkLocation;
+
+  /// No description provided for @checkPrecise.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise location'**
+  String get checkPrecise;
+
+  /// No description provided for @checkNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet'**
+  String get checkNetwork;
+
+  /// No description provided for @checkNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get checkNotifications;
+
+  /// No description provided for @checkBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization'**
+  String get checkBattery;
+
+  /// No description provided for @checkBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background use'**
+  String get checkBackground;
+
+  /// No description provided for @checkCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get checkCamera;
+
+  /// No description provided for @valueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get valueOn;
+
+  /// No description provided for @valueOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get valueOff;
+
+  /// No description provided for @valueAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get valueAllowed;
+
+  /// No description provided for @valueNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get valueNotAllowed;
+
+  /// No description provided for @valueNotReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reported'**
+  String get valueNotReported;
+
+  /// No description provided for @locationAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Always'**
+  String get locationAlways;
+
+  /// No description provided for @locationWhileInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Only while using the app'**
+  String get locationWhileInUse;
+
+  /// No description provided for @locationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Denied'**
+  String get locationDenied;
+
+  /// No description provided for @precisePrecise.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise'**
+  String get precisePrecise;
+
+  /// No description provided for @preciseApproximate.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate'**
+  String get preciseApproximate;
+
+  /// No description provided for @networkWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi'**
+  String get networkWifi;
+
+  /// No description provided for @networkMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile data'**
+  String get networkMobile;
+
+  /// No description provided for @networkNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet'**
+  String get networkNone;
+
+  /// No description provided for @networkOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get networkOther;
+
+  /// No description provided for @batteryOptimizedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'On – may pause the app'**
+  String get batteryOptimizedValue;
+
+  /// No description provided for @batteryUnrestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Off (unrestricted)'**
+  String get batteryUnrestricted;
+
+  /// No description provided for @backgroundRestrictedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Restricted'**
+  String get backgroundRestrictedValue;
+
+  /// No description provided for @backgroundSleeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Put to sleep by Android'**
+  String get backgroundSleeping;
+
+  /// No description provided for @phoneStatusNoPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Never signed in on a phone'**
+  String get phoneStatusNoPhone;
+
+  /// No description provided for @phoneStatusLastHeard.
+  ///
+  /// In en, this message translates to:
+  /// **'Last heard from the phone {time}'**
+  String phoneStatusLastHeard(String time);
+
+  /// No description provided for @phoneStatusStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped reporting · last heard {time}'**
+  String phoneStatusStopped(String time);
+
+  /// No description provided for @phoneStatusStoppedNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped reporting · nothing received'**
+  String get phoneStatusStoppedNever;
+
+  /// No description provided for @phoneStatusStoppedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} stopped reporting'**
+  String phoneStatusStoppedCount(int n);
+
+  /// No description provided for @phoneStatusOldApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Older app version: only GPS, location permission, notifications and battery are known'**
+  String get phoneStatusOldApp;
+
+  /// No description provided for @fromPhoneStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'From Phone status ({n})'**
+  String fromPhoneStatus(int n);
+
+  /// No description provided for @filterGpsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS off'**
+  String get filterGpsOff;
+
+  /// No description provided for @filterNoInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet'**
+  String get filterNoInternet;
+
+  /// No description provided for @filterBatteryOptimized.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization on'**
+  String get filterBatteryOptimized;
+
+  /// No description provided for @docSectionSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get docSectionSubscription;
+
+  /// No description provided for @docSectionSubscriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Website logins with renewal reminders (management only)'**
+  String get docSectionSubscriptionHint;
+
+  /// No description provided for @docAddSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add subscription'**
+  String get docAddSubscription;
+
+  /// No description provided for @docAddService.
+  ///
+  /// In en, this message translates to:
+  /// **'Add service'**
+  String get docAddService;
+
+  /// No description provided for @docHealthInsurance.
+  ///
+  /// In en, this message translates to:
+  /// **'Health insurance'**
+  String get docHealthInsurance;
+
+  /// No description provided for @docHealthInsuranceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Covers every employee; each person\'s class can be changed'**
+  String get docHealthInsuranceHint;
+
+  /// No description provided for @docUsualClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Usual class'**
+  String get docUsualClass;
+
+  /// No description provided for @docUsualClassHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The class most employees have'**
+  String get docUsualClassHint;
+
+  /// No description provided for @docLoginUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Login page (URL)'**
+  String get docLoginUrl;
+
+  /// No description provided for @docLoginSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'How to log in'**
+  String get docLoginSteps;
+
+  /// No description provided for @docUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'User name'**
+  String get docUsername;
+
+  /// No description provided for @docPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get docPassword;
+
+  /// No description provided for @docPolicyNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Policy number'**
+  String get docPolicyNumber;
+
+  /// No description provided for @docClassValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Class {cls}'**
+  String docClassValue(String cls);
+
+  /// No description provided for @docNoFile.
+  ///
+  /// In en, this message translates to:
+  /// **'No file attached'**
+  String get docNoFile;
+
+  /// No description provided for @docAttachFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach file'**
+  String get docAttachFile;
+
+  /// No description provided for @docInsuredEmployees.
+  ///
+  /// In en, this message translates to:
+  /// **'Employees covered ({count})'**
+  String docInsuredEmployees(int count);
+
+  /// No description provided for @docInsuredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Every active employee is covered unless their HR record says otherwise.'**
+  String get docInsuredHint;
+
+  /// No description provided for @docInsuredHintEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Every active employee is covered unless their HR record says otherwise. Tap a person to change their class (bold = their own class).'**
+  String get docInsuredHintEdit;
+
+  /// No description provided for @docClassOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Insurance class – {name}'**
+  String docClassOf(String name);
+
+  /// No description provided for @docInsuranceClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Insurance class'**
+  String get docInsuranceClass;
+
+  /// No description provided for @docClassEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty = the usual class ({cls})'**
+  String docClassEmptyHint(String cls);
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get copied;
+
+  /// No description provided for @optional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get optional;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @idTypeIqama.
+  ///
+  /// In en, this message translates to:
+  /// **'Iqama'**
+  String get idTypeIqama;
+
+  /// No description provided for @idTypeNationalId.
+  ///
+  /// In en, this message translates to:
+  /// **'National ID'**
+  String get idTypeNationalId;
+
+  /// No description provided for @idNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'ID number'**
+  String get idNumber;
+
+  /// No description provided for @idExpiryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'ID expiry date'**
+  String get idExpiryDate;
+
+  /// No description provided for @idExpiryNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No expiry date'**
+  String get idExpiryNotSet;
+
+  /// No description provided for @idNotEntered.
+  ///
+  /// In en, this message translates to:
+  /// **'Not entered'**
+  String get idNotEntered;
+
+  /// No description provided for @idReminderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'HR, the GM and the sales manager are reminded 30 and 15 days before it expires, and every day after it has expired.'**
+  String get idReminderHint;
+
+  /// No description provided for @employeeRecordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ID, nationality and insurance'**
+  String get employeeRecordTitle;
+
+  /// No description provided for @nationality.
+  ///
+  /// In en, this message translates to:
+  /// **'Nationality'**
+  String get nationality;
+
+  /// No description provided for @insuranceNotCovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Not covered'**
+  String get insuranceNotCovered;
+
+  /// No description provided for @insuranceNoPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'No health insurance entered (Company documents → Services that expire)'**
+  String get insuranceNoPolicy;
+
+  /// No description provided for @insuranceUsual.
+  ///
+  /// In en, this message translates to:
+  /// **'Company policy ({name})'**
+  String insuranceUsual(String name);
+
+  /// No description provided for @idRenewalsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Iqamas / IDs to renew ({count})'**
+  String idRenewalsDue(int count);
+
+  /// No description provided for @notifIdDue.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s {idType} expires in {days} days ({date})'**
+  String notifIdDue(String name, String idType, int days, String date);
+
+  /// No description provided for @notifIdExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s {idType} has expired ({date})'**
+  String notifIdExpired(String name, String idType, String date);
+
+  /// No description provided for @regionEastern.
+  ///
+  /// In en, this message translates to:
+  /// **'Eastern'**
+  String get regionEastern;
+
+  /// No description provided for @regionCentral.
+  ///
+  /// In en, this message translates to:
+  /// **'Central'**
+  String get regionCentral;
+
+  /// No description provided for @regionWestern.
+  ///
+  /// In en, this message translates to:
+  /// **'Western'**
+  String get regionWestern;
+
+  /// No description provided for @employeesMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee Map'**
+  String get employeesMap;
+
+  /// No description provided for @allSites.
+  ///
+  /// In en, this message translates to:
+  /// **'All sites'**
+  String get allSites;
+
+  /// No description provided for @onTime.
+  ///
+  /// In en, this message translates to:
+  /// **'On time'**
+  String get onTime;
+
+  /// No description provided for @lateByLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Late by {time}'**
+  String lateByLong(String time);
+
+  /// No description provided for @notOnAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance not recorded'**
+  String get notOnAttendance;
+
+  /// No description provided for @locationNotShared.
+  ///
+  /// In en, this message translates to:
+  /// **'Location not shared'**
+  String get locationNotShared;
+
+  /// No description provided for @attendanceToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance today'**
+  String get attendanceToday;
+
+  /// No description provided for @locationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get locationTitle;
+
+  /// No description provided for @siteName.
+  ///
+  /// In en, this message translates to:
+  /// **'Site: {name}'**
+  String siteName(String name);
+
+  /// No description provided for @employeesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 employee} other{{n} employees}}'**
+  String employeesCount(int n);
+
+  /// No description provided for @employeesMapNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Positions of everyone on the attendance page whose phone shares or records its location. Tap a person for their phone and attendance.'**
+  String get employeesMapNote;
+
+  /// No description provided for @clientMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Client Map'**
+  String get clientMap;
+
+  /// No description provided for @supervisesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supervises'**
+  String get supervisesTitle;
+
+  /// No description provided for @supervisesNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody yet'**
+  String get supervisesNone;
+
+  /// No description provided for @supervisesChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose people'**
+  String get supervisesChoose;
+
+  /// No description provided for @supervisesNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers and workers this warehouse supervisor follows: they see their attendance, phones and places on the employee map.'**
+  String get supervisesNote;
 }
 
 class _AppLocalizationsDelegate

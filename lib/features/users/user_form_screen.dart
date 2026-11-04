@@ -21,6 +21,7 @@ import 'companies.dart';
 import '../settings/tracking_schedules_screen.dart';
 import '../tracking/tracking_schedule.dart';
 import '../settings/app_settings.dart';
+import '../hr/employee_record_widgets.dart';
 import '../hr/hr_people.dart';
 
 /// Create (userId == null) or edit a user. Sales manager / GM: anyone;
@@ -102,15 +103,15 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       !_isNew && me != null && widget.userId != me.id && userDeleterEmails.contains(me.email.trim().toLowerCase());
 
   /// GM: anyone; sales manager: anyone but GMs and sales managers;
-  /// logistics manager: drivers. Never oneself (same rule as the
-  /// `setUserPassword` Cloud Function).
+  /// logistics manager: drivers; HR: the roles they manage. Never oneself
+  /// (same rule as the `setUserPassword` Cloud Function).
   bool _canSetPassword(AppUser? me) =>
       !_isNew &&
       me != null &&
       widget.userId != me.id &&
       (me.role == UserRole.gm ||
           (me.role == UserRole.salesManager && _savedRole?.isAdmin != true) ||
-          (me.role == UserRole.logisticsManager && me.role.editableRoles.contains(_savedRole)));
+          ((me.role == UserRole.logisticsManager || me.role == UserRole.hr) && me.role.editableRoles.contains(_savedRole)));
 
   Future<void> _setPassword() async {
     final l10n = AppLocalizations.of(context);
@@ -310,11 +311,13 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       }
       _fill(existing);
     }
-    // Logistics / factory manager: only the roles they manage (also enforced by the rules).
+    // HR, logistics / factory manager: only the roles they manage (also
+    // enforced by the rules); the managers only the people under them.
     if (!_isNew &&
         me != null &&
         !me.role.isAdmin &&
-        (!roles.contains(_savedRole) || !peopleUnder(me, users).any((u) => u.id == widget.userId))) {
+        (!roles.contains(_savedRole) ||
+            (me.role != UserRole.hr && !peopleUnder(me, users).any((u) => u.id == widget.userId)))) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }
     final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
@@ -461,13 +464,14 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 onChanged: (id) => setState(() => _kamId = id),
               ),
             // Managers: by role, or marked here (e.g. the accounting manager).
-            if (_role != null && !_role!.isManagerRole && me?.role.isAdmin == true)
+            // Manager roles: shown on and locked, so the switch doesn't look missing.
+            if (_role != null && me?.role.isAdmin == true)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.isManager),
-                subtitle: Text(l10n.isManagerHelp),
-                value: _markedManager,
-                onChanged: (v) => setState(() => _markedManager = v),
+                subtitle: Text(_role!.isManagerRole ? l10n.isManagerByRole(_role!.label(l10n)) : l10n.isManagerHelp),
+                value: _role!.isManagerRole || _markedManager,
+                onChanged: _role!.isManagerRole ? null : (v) => setState(() => _markedManager = v),
               ),
             if (_role != null)
               Builder(builder: (context) {
@@ -493,9 +497,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   onChanged: (id) => setState(() => _managerId = id),
                 );
               }),
-            // Drivers: the warehouse supervisor who follows them (their
-            // direct manager stays the logistics manager).
-            if (_role == UserRole.driver)
+            // Drivers and workers: the warehouse supervisor who follows them
+            // (their direct manager stays the logistics manager).
+            if (_role?.supervisedByWarehouse ?? false)
               Builder(builder: (context) {
                 final supervisors = [for (final u in users) if (u.active && u.role == UserRole.warehouseSupervisor) u];
                 return DropdownButtonFormField<String?>(
@@ -509,6 +513,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   onChanged: (id) => setState(() => _supervisorId = id),
                 );
               }),
+            // A warehouse supervisor: who they supervise (2026-11-04), saved right away.
+            if (!_isNew && _savedRole == UserRole.warehouseSupervisor && _role == UserRole.warehouseSupervisor)
+              _SupervisesField(supervisorId: widget.userId!, users: users),
             // Drivers: home, where their overtime ends (2026-10-25).
             if (_role == UserRole.driver)
               HomeLocationField(value: _home, onChanged: (v) => setState(() => _home = v)),
@@ -631,6 +638,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 value: _active,
                 onChanged: (v) => setState(() => _active = v),
               ),
+            // HR area: Iqama / ID, nationality, health insurance (saved at once).
+            if (!_isNew && _pending == null) EmployeeRecordCard(uid: widget.userId!, margin: const EdgeInsets.only(top: 8)),
             const SizedBox(height: 16),
             if (_pending != null)
               Row(
@@ -670,6 +679,91 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 label: Text(l10n.deleteUser),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The drivers and workers a warehouse supervisor follows (2026-11-04):
+/// their names, and "Choose people" to change the list (saved right away on
+/// each person's `supervisorId`).
+class _SupervisesField extends ConsumerWidget {
+  const _SupervisesField({required this.supervisorId, required this.users});
+
+  final String supervisorId;
+  final List<AppUser> users;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final candidates = [for (final u in users) if (u.active && u.role.supervisedByWarehouse) u]
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final current = [for (final u in candidates) if (u.supervisorId == supervisorId) u];
+
+    Future<void> choose() async {
+      final picked = {for (final u in current) u.id};
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => StatefulBuilder(
+          builder: (dialog, setDialog) => AlertDialog(
+            title: Text(l10n.supervisesTitle),
+            content: SizedBox(
+              width: 400,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final u in candidates)
+                    CheckboxListTile(
+                      value: picked.contains(u.id),
+                      title: Text(u.name),
+                      subtitle: Text([
+                        u.role.label(l10n),
+                        // Someone else's now: shown so moving them is a choice.
+                        if (u.supervisorId != null && u.supervisorId != supervisorId)
+                          ?users.where((s) => s.id == u.supervisorId).firstOrNull?.name,
+                      ].join(' · ')),
+                      onChanged: (v) => setDialog(() => v! ? picked.add(u.id) : picked.remove(u.id)),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+              FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.save)),
+            ],
+          ),
+        ),
+      );
+      if (ok == true) {
+        await ref.read(usersRepositoryProvider).setSupervised(supervisorId, picked, current, candidates);
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: l10n.supervisesTitle, helperText: l10n.supervisesNote, helperMaxLines: 3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (current.isEmpty)
+              Text(l10n.supervisesNone, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline))
+            else
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                for (final u in current)
+                  Chip(visualDensity: VisualDensity.compact, label: Text('${u.name} · ${u.role.label(l10n)}')),
+              ]),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                icon: const Icon(Icons.group_add_outlined, size: 18),
+                label: Text(l10n.supervisesChoose),
+                onPressed: candidates.isEmpty ? null : choose,
+              ),
+            ),
           ],
         ),
       ),

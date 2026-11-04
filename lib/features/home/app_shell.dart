@@ -75,53 +75,74 @@ class AppShell extends ConsumerWidget {
       (path: '/', icon: Icons.dashboard_outlined, selected: Icons.dashboard, label: l10n.home),
       if (!backOffice) ...[
         (path: '/clients', icon: Icons.store_outlined, selected: Icons.store, label: l10n.clients),
-        (path: '/map', icon: Icons.map_outlined, selected: Icons.map, label: l10n.map),
+        (path: '/map', icon: Icons.map_outlined, selected: Icons.map, label: l10n.clientMap),
         (path: '/visits', icon: Icons.event_note_outlined, selected: Icons.event_note, label: l10n.visits),
       ],
       if (supervisor) ...[
         (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),
         (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),
         (path: '/transfers', icon: Icons.swap_horiz_outlined, selected: Icons.swap_horiz, label: l10n.transferredClients),
+        (path: '/catalogs', icon: Icons.style_outlined, selected: Icons.style, label: l10n.catalogsPage),
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],
+      // Employee map (2026-11-04): employees only, apart from the client map.
+      if (me?.seesEmployeesMap ?? false)
+        (path: '/attendance/map', icon: Icons.person_pin_circle_outlined, selected: Icons.person_pin_circle, label: l10n.employeesMap),
       if (ref.watch(currentUserProvider).value?.seesTeamAttendance ?? false)
         (path: '/attendance', icon: Icons.how_to_reg_outlined, selected: Icons.how_to_reg, label: l10n.attendance),
       // Shown again on the web 2026-10-22 (hidden since 2026-10-18): absences to decide live there.
       if (role?.canSeeHr ?? false) (path: '/hr', icon: Icons.badge_outlined, selected: Icons.badge, label: l10n.hrArea),
+      if (role?.seesCompanyDocs ?? false)
+        (path: '/documents', icon: Icons.folder_copy_outlined, selected: Icons.folder_copy, label: l10n.companyDocs),
       (path: '/more', icon: Icons.menu, selected: Icons.menu_open, label: l10n.more),
     ].where((item) => me == null || access.allowsLocation(me, item.path)).toList();
     // The entry whose path is the longest prefix of the location; Home also
     // holds the plan and notification pages.
     var index = 0;
+    var best = -1;
     for (final (i, item) in items.indexed) {
       final matches = item.path == '/'
           ? location == '/' || location.startsWith('/plan') || location.startsWith('/notifications')
           : location == item.path || location.startsWith('${item.path}/');
-      if (matches) index = i;
+      // '/attendance/map' over '/attendance'.
+      if (matches && item.path.length > best) {
+        index = i;
+        best = item.path.length;
+      }
     }
     final extended = MediaQuery.sizeOf(context).width >= 1200;
 
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            extended: extended,
-            labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-            selectedIndex: index,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Image.asset('assets/images/Regular.png', width: extended ? 140 : 56),
-            ),
-            onDestinationSelected: (i) => context.go(items[i].path),
-            destinations: [
-              for (final item in items)
-                NavigationRailDestination(
-                  icon: Icon(item.icon),
-                  selectedIcon: Icon(item.selected),
-                  label: Text(item.label),
+          // Scrolls when the entries don't fit the window's height.
+          LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: NavigationRail(
+                    extended: extended,
+                    labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+                    selectedIndex: index,
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Image.asset('assets/images/Regular.png', width: extended ? 140 : 56),
+                    ),
+                    onDestinationSelected: (i) => context.go(items[i].path),
+                    destinations: [
+                      for (final item in items)
+                        NavigationRailDestination(
+                          icon: Icon(item.icon),
+                          selectedIcon: Icon(item.selected),
+                          label: Text(item.label),
+                        ),
+                    ],
+                  ),
                 ),
-            ],
+              ),
+            ),
           ),
           const VerticalDivider(width: 1),
           Expanded(child: shell),

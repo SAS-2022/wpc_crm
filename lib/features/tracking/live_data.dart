@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
-import '../notifications/notifications.dart' show driversOf;
+import '../notifications/notifications.dart' show peopleUnder;
 import '../users/users_repository.dart';
 
 import 'motion.dart';
@@ -42,7 +42,13 @@ class Presence {
     required this.gpsOn,
     required this.permission,
     this.onDuty = true,
+    this.notifications,
+    this.batteryOptimized,
   });
+
+  /// Reported by the tracker (null on older builds / iPhones for the battery).
+  final bool? notifications;
+  final bool? batteryOptimized;
 
   final bool online;
 
@@ -77,18 +83,24 @@ Map<String, Map<Object?, Object?>> _children(DataSnapshot s) => {
           if (e.value is Map<Object?, Object?>) '${e.key}': e.value as Map<Object?, Object?>,
     };
 
-/// A warehouse supervisor may read only their own drivers' entries (RTDB
-/// rules, `driver_supervisors`), not the whole list: their ids; null =
-/// read the whole list (the rules decide).
-List<String>? _ownDriverIds(Ref ref) {
+/// The roles whose RTDB rules let them read every person's location data.
+const readsAllLocations = {UserRole.kam, UserRole.salesManager, UserRole.gm, UserRole.logisticsManager};
+
+/// Everyone else (warehouse supervisors, department heads, other managers)
+/// may read only the people under them — RTDB `location_viewers/{uid}`
+/// (2026-11-04, kept by the `syncLocationViewers` function; drivers' warehouse
+/// supervisor also via `driver_supervisors`): their ids. Null = read the
+/// whole list. [all]: roles that may read the whole list of this node.
+List<String>? locationReadIds(Ref ref, [Set<UserRole> all = readsAllLocations]) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || me.role != UserRole.warehouseSupervisor) return null;
-  return [for (final u in driversOf(me, ref.watch(usersProvider).value ?? const <AppUser>[])) u.id];
+  if (me == null) return const [];
+  if (all.contains(me.role)) return null;
+  return [for (final u in peopleUnder(me, ref.watch(usersProvider).value ?? const <AppUser>[])) if (u.active) u.id]..sort();
 }
 
 /// The children of RTDB [path] by key: one listener on the whole list, or
-/// one per id in [ids].
-Stream<Map<String, Map<Object?, Object?>>> _nodes(String path, List<String>? ids) {
+/// one per id in [ids] (an id the rules refuse is left out, not an error).
+Stream<Map<String, Map<Object?, Object?>>> rtdbNodes(String path, List<String>? ids) {
   final db = FirebaseDatabase.instance;
   if (ids == null) return db.ref(path).onValue.map((e) => _children(e.snapshot));
   if (ids.isEmpty) return Stream.value(const {});
@@ -103,7 +115,10 @@ Stream<Map<String, Map<Object?, Object?>>> _nodes(String path, List<String>? ids
           latest.remove(id);
         }
         out.add(Map.of(latest));
-      }, onError: out.addError),
+      }, onError: (_) {
+        latest.remove(id);
+        out.add(Map.of(latest));
+      }),
   ];
   out.onCancel = () {
     for (final s in subs) {
@@ -114,7 +129,7 @@ Stream<Map<String, Map<Object?, Object?>>> _nodes(String path, List<String>? ids
 }
 
 final liveLocationsProvider = StreamProvider<Map<String, LiveLocation>>((ref) =>
-    _nodes('live_locations', _ownDriverIds(ref)).map((nodes) => {
+    rtdbNodes('live_locations', locationReadIds(ref)).map((nodes) => {
           for (final MapEntry(:key, value: d) in nodes.entries)
             if (d['lat'] is num && d['lng'] is num)
               key: LiveLocation(
@@ -130,7 +145,7 @@ final liveLocationsProvider = StreamProvider<Map<String, LiveLocation>>((ref) =>
         }));
 
 final presenceProvider = StreamProvider<Map<String, Presence>>((ref) =>
-    _nodes('presence', _ownDriverIds(ref)).map((nodes) => {
+    rtdbNodes('presence', locationReadIds(ref)).map((nodes) => {
           for (final MapEntry(:key, value: d) in nodes.entries)
             key: Presence(
               online: d['online'] == true,
@@ -138,5 +153,50 @@ final presenceProvider = StreamProvider<Map<String, Presence>>((ref) =>
               gpsOn: d['gpsOn'] != false,
               permission: '${d['permission'] ?? ''}',
               onDuty: d['onDuty'] != false,
+              notifications: d['notifications'] is bool ? d['notifications'] as bool : null,
+              batteryOptimized: d['batteryOptimized'] is bool ? d['batteryOptimized'] as bool : null,
             ),
         }));
+
+/// The last point of today's route history of people whose GPS is only
+/// recorded ([AppUser.recordsGps]: no `live_locations`, no presence) — the
+/// live map's "Production & logistics" section. Key = (day, uids joined by ',').
+final recordedLocationsProvider = StreamProvider.family<Map<String, LiveLocation>, (String, String)>((ref, key) {
+  final (day, ids) = key;
+  if (ids.isEmpty) return Stream.value(const {});
+  final latest = <String, LiveLocation>{};
+  final out = StreamController<Map<String, LiveLocation>>();
+  final subs = [
+    for (final id in ids.split(','))
+      FirebaseDatabase.instance.ref('location_history/$id/$day').orderByKey().limitToLast(1).onValue.listen((e) {
+        final d = _children(e.snapshot).values.lastOrNull;
+        if (d != null && d['lat'] is num && d['lng'] is num) {
+          latest[id] = LiveLocation(
+            lat: (d['lat'] as num).toDouble(),
+            lng: (d['lng'] as num).toDouble(),
+            accuracy: (d['accuracy'] as num?)?.toDouble(),
+            mocked: d['mocked'] == true,
+            updatedAt: _time(d['t']),
+          );
+        } else {
+          latest.remove(id);
+        }
+        out.add(Map.of(latest));
+      }, onError: (_) {
+        latest.remove(id);
+        out.add(Map.of(latest));
+      }),
+  ];
+  out.onCancel = () {
+    for (final s in subs) {
+      s.cancel();
+    }
+  };
+  return out.stream;
+});
+
+/// Recorded positions count as live while the last one is this fresh.
+LiveState recordedState(LiveLocation? location, DateTime now) {
+  final updated = location?.updatedAt;
+  return updated != null && now.difference(updated) <= _staleAfter ? LiveState.live : LiveState.offline;
+}

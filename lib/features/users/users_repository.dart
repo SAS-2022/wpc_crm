@@ -77,6 +77,28 @@ class UsersRepository {
   /// Returns how many unassigned clients were given to the user.
   Future<int> update(AppUser user) => saving(() => _save(user.id, user));
 
+  /// The drivers and workers warehouse supervisor [supervisorId] follows
+  /// (2026-11-04, from their user form): sets `supervisorId` on the people
+  /// added, clears it on the people removed. [current]: everyone now under them.
+  Future<void> setSupervised(String supervisorId, Set<String> ids, Iterable<AppUser> current, List<AppUser> users) =>
+      saving(() async {
+        final before = {for (final u in current) u.id};
+        final batch = FirebaseFirestore.instance.batch();
+        final changed = <AppUser, String?>{};
+        for (final u in users) {
+          final to = ids.contains(u.id) ? supervisorId : (before.contains(u.id) ? null : u.supervisorId);
+          if (to == u.supervisorId) continue;
+          batch.update(_users.doc(u.id), {'supervisorId': to});
+          changed[u] = to;
+        }
+        if (changed.isEmpty) return;
+        await batch.commit();
+        // Drivers: the RTDB copy their tracking rules read.
+        for (final MapEntry(key: u, value: to) in changed.entries) {
+          if (u.role == UserRole.driver) await FirebaseDatabase.instance.ref('driver_supervisors/${u.id}').set(to);
+        }
+      });
+
   /// A self-registered account: approved with the role and details chosen on
   /// the form (it becomes active), or turned down.
   Future<int> approveRegistration(AppUser user) => saving(() async {
@@ -120,6 +142,8 @@ class UsersRepository {
     await FirebaseDatabase.instance
         .ref('driver_supervisors/$uid')
         .set(user.role == UserRole.driver ? user.supervisorId : null);
+    // Workers keep `supervisorId` only in Firestore; `location_viewers` is
+    // rebuilt by the `syncLocationViewers` function on every users write.
     return user.role.isTracked && user.active && user.odooName.isNotEmpty
         ? _assignOdooClients(uid, user.odooName)
         : 0;

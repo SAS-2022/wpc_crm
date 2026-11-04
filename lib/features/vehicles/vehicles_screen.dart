@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_user.dart';
+import '../../core/providers.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
@@ -300,6 +301,8 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
     final all = ref.watch(vehiclesProvider).value ?? const <Vehicle>[];
     final userList = ref.watch(usersProvider).value ?? const <AppUser>[];
     final users = {for (final u in userList) u.id: u};
+    // HR keeps vehicles but doesn't see route history.
+    final seesRoutes = ref.watch(currentUserProvider).value?.role.seesDrivers == true;
     final from = firstKmDay([v]);
     final km = from == null ? const <DriverDayKm>[] : ref.watch(driverKmProvider(from)).value ?? const <DriverDayKm>[];
     final mileage = vehicleMileage(v, km);
@@ -529,11 +532,13 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
                     leading: const Icon(Icons.person_outline),
                     title: Text(users[id]?.name ?? '?'),
                     subtitle: users[id]?.active == false ? Text(l10n.inactive) : null,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.route),
-                      tooltip: l10n.routeHistory,
-                      onPressed: () => context.push('/history?uid=$id'),
-                    ),
+                    trailing: seesRoutes
+                        ? IconButton(
+                            icon: const Icon(Icons.route),
+                            tooltip: l10n.routeHistory,
+                            onPressed: () => context.push('/history?uid=$id'),
+                          )
+                        : null,
                   ),
             ],
             action: TextButton.icon(

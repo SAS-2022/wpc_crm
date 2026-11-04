@@ -79,16 +79,45 @@ enum UserRole {
   /// recording hours when they check attendance (2026-10-28, see
   /// [AppUser.recordsGps]): the back office except drivers.
   bool get recordsGps => isBackOffice && !isLocationTracked;
+
+  /// The live map's "Production & logistics" section (user request
+  /// 2026-11-01; drivers have their own): shown from their recorded GPS.
+  bool get isProductionOrLogistics =>
+      this == factoryManager ||
+      this == engineer ||
+      this == operator ||
+      this == worker ||
+      this == logisticsManager ||
+      this == warehouseSupervisor;
   bool get isDriver => this == driver;
 
   /// Sees the drivers' live locations and route history: sales manager, GM
   /// and the logistics manager.
   bool get managesDrivers => isAdmin || this == logisticsManager;
 
+  /// Vehicles page (details, drivers, renewals, readings): [managesDrivers]
+  /// and HR (user request 2026-11-02).
+  bool get managesVehicles => managesDrivers || this == hr;
+
   /// Drivers page and their route history: [managesDrivers] for every
   /// driver, the warehouse supervisor for their own drivers
   /// ([AppUser.supervisorId], user decision 2026-10-23).
   bool get seesDrivers => managesDrivers || this == warehouseSupervisor;
+
+  /// Phone status page (2026-11-01): GPS, internet and permissions of the
+  /// phones of the people they oversee (sales manager / GM everyone).
+  /// The employee map (`/attendance/map`, user request 2026-11-04): KAM,
+  /// SM, GM and logistics manager (read everyone's positions), the
+  /// warehouse supervisor and the factory manager (the people under them);
+  /// "Is a manager" people too ([AppUser.seesEmployeesMap]).
+  bool get seesEmployeesMap =>
+      isSupervisor || this == logisticsManager || this == warehouseSupervisor || this == factoryManager;
+
+  /// Can have a warehouse supervisor (`users.supervisorId`; drivers since
+  /// 2026-10-23, workers since 2026-11-04).
+  bool get supervisedByWarehouse => this == driver || this == worker;
+
+  bool get seesPhoneStatus => isSupervisor || this == logisticsManager || this == factoryManager;
 
   /// Manager roles: always a manager, can be someone's direct manager
   /// (2026-10-23). Anyone else becomes one with [AppUser.markedManager].
@@ -98,8 +127,9 @@ enum UserRole {
   /// Opens the Users page: sales manager and GM for everyone; the logistics
   /// manager for workers, drivers and warehouse supervisors, the factory
   /// manager for workers, engineers and operators (user decisions 2026-10-23,
-  /// 2026-10-31) — the people under them only.
-  bool get managesUsers => isAdmin || this == logisticsManager || this == factoryManager;
+  /// 2026-10-31) — the people under them only; HR for every non-sales,
+  /// non-admin role, everyone with those roles (user request 2026-11-02).
+  bool get managesUsers => isAdmin || this == logisticsManager || this == factoryManager || this == hr;
 
   /// The roles this person may give to and edit on the user form.
   List<UserRole> get editableRoles => isAdmin
@@ -108,7 +138,17 @@ enum UserRole {
       ? const [worker, driver, warehouseSupervisor]
       : this == factoryManager
       ? const [worker, engineer, operator]
+      : this == hr
+      ? hrManagedRoles
       : const [];
+
+  /// The roles HR adds and edits: the back office (incl. HR, logistics and
+  /// factory managers). Sales roles need Odoo names, KAMs and clients — the
+  /// sales manager / GM keep those (same list as `hrRoles()` in the rules).
+  static const hrManagedRoles = [
+    hr, accounting, procurement, worker, engineer, driver,
+    logisticsManager, warehouseSupervisor, factoryManager, operator,
+  ];
 
   /// The sales team: uses clients, visits and plans.
   bool get isSales => isSupervisor || this == salesExec;
@@ -143,6 +183,11 @@ enum UserRole {
   /// area. HR and GM; the sales manager too for now (user asked 2026-10-17
   /// to edit while testing — narrow to [isHr] later).
   bool get canManageHr => isHr || this == salesManager;
+
+  /// Company documents (2026-11-01): the sales team views Official and
+  /// Product, the GM / sales manager / HR everything (`company_docs.dart`).
+  bool get seesCompanyDocs => isSales || this == hr;
+  bool get seesAllCompanyDocs => isAdmin || this == hr;
 
   String label(AppLocalizations l10n) => switch (this) {
         salesExec => l10n.roleSalesExec,
@@ -299,8 +344,9 @@ class AppUser {
   /// Can be chosen as someone's direct manager.
   bool get isManager => role.isManagerRole || markedManager;
 
-  /// A driver's warehouse supervisor (`users.supervisorId`, 2026-10-23):
-  /// sees their tracking and attendance. Their direct manager stays the
+  /// A driver's or worker's warehouse supervisor (`users.supervisorId`,
+  /// drivers 2026-10-23, workers 2026-11-04): sees their tracking,
+  /// attendance and place on the employee map. Their direct manager stays the
   /// logistics manager.
   final String? supervisorId;
 
@@ -311,6 +357,10 @@ class AppUser {
 
   /// Attendance page for the people under them (2026-10-23): managers and
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
+  /// The employee map with the people under them (department heads,
+  /// warehouse supervisors) or everyone (SM / GM).
+  bool get seesEmployeesMap => role.seesEmployeesMap || isManager;
+
   bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
 
   /// Joining date 'yyyy-MM-dd' (HR, 2026-10-24): their leave year starts
@@ -401,7 +451,7 @@ class AppUser {
         'workSchedule': workSchedule?.toMap(),
         'managerId': managerId,
         'isManager': role.isManagerRole ? false : markedManager,
-        'supervisorId': role == UserRole.driver ? supervisorId : null,
+        'supervisorId': role.supervisedByWarehouse ? supervisorId : null,
         'homeLocation': role == UserRole.driver && homeLocation != null
             ? {'lat': homeLocation!.lat, 'lng': homeLocation!.lng}
             : null,

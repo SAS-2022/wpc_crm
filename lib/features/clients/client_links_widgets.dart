@@ -8,6 +8,7 @@ import 'client_links.dart';
 import 'client_widgets.dart';
 import 'clients_repository.dart';
 import 'visit_rules.dart';
+import '../../core/search_text.dart';
 
 /// Client page: the main company this client belongs to and its branches;
 /// KAM / managers link, add and unlink.
@@ -133,10 +134,10 @@ class _ClientPickerState extends ConsumerState<_ClientPicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final q = Client.normalizeName(_query);
+    final q = foldSearch(_query);
     final list = [
       for (final c in ref.watch(clientsProvider).value ?? const <Client>[])
-        if (q.isEmpty || c.nameKey.contains(q) || c.aliases.any((a) => Client.normalizeName(a).contains(q)) || c.vat.contains(q))
+        if (q.isEmpty || searchHas(c.name, q) || c.aliases.any((a) => searchHas(a, q)) || searchHas(c.vat, q))
           c,
     ]..sort((a, b) => a.name.compareTo(b.name));
     return DraggableScrollableSheet(

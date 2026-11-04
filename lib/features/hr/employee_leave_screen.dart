@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import '../clients/client_tags.dart';
+import 'employee_record_widgets.dart';
 import 'hr_people.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
@@ -143,6 +144,7 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
                 ),
               ),
             ),
+          EmployeeRecordCard(uid: uid, margin: const EdgeInsets.fromLTRB(12, 8, 12, 0)),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
             child: Row(children: [

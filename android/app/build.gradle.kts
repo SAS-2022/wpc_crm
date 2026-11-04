@@ -39,7 +39,7 @@ android {
         applicationId = "com.wisora.wpc"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // Android 8.0+: activity_recognition_flutter (drivers walking vs driving, 2026-10-31).
+        // Android 8.0+ (raised 2026-10-31; kept after the motion plugin was removed 2026-11-01).
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION

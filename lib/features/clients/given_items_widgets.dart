@@ -57,7 +57,7 @@ class GivenIcons extends StatelessWidget {
   }
 }
 
-Color? _statusColor(GivenStatus s) => switch (s) {
+Color? givenStatusColor(GivenStatus s) => switch (s) {
       GivenStatus.due => statusOverdueColor,
       GivenStatus.dueSoon => Colors.orange.shade800,
       GivenStatus.ok => statusRecentColor,
@@ -101,7 +101,7 @@ class GivenItemsSection extends ConsumerWidget {
           Builder(builder: (context) {
             final r = client.given[item];
             final status = givenStatus(r, item, rules, now);
-            final color = _statusColor(status);
+            final color = givenStatusColor(status);
             return ListTile(
               dense: true,
               leading: Icon(givenItemIcon(item), color: color),
@@ -275,7 +275,7 @@ class GivenItemsPicker extends ConsumerWidget {
             Builder(builder: (context) {
               final qty = values[item] ?? 0;
               final r = client.given[item];
-              final color = _statusColor(givenStatus(r, item, rules, now));
+              final color = givenStatusColor(givenStatus(r, item, rules, now));
               return ListTile(
                 contentPadding: const EdgeInsetsDirectional.only(start: 16, end: 4),
                 leading: Icon(givenItemIcon(item), color: color),

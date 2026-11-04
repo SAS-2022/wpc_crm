@@ -16,6 +16,7 @@ import '../users/users_repository.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
 import 'leave_widgets.dart';
+import '../../core/search_text.dart';
 
 enum _Filter { pending, waitingForMe, approved, rejected, all }
 
@@ -205,14 +206,14 @@ class _BalancesTabState extends ConsumerState<_BalancesTab> {
     final l10n = AppLocalizations.of(context);
     final lang = Localizations.localeOf(context).languageCode;
     final locale = Localizations.localeOf(context).toString();
-    final q = _query.trim().toLowerCase();
+    final q = foldSearch(_query);
     final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
     final all = (ref.watch(usersProvider).value ?? const <AppUser>[])
         .where((u) => u.active && u.role != UserRole.unknown)
         .toList();
     int count(String id) => all.where((u) => (u.departmentId ?? '') == id).length;
     final people = all
-        .where((u) => q.isEmpty || u.name.toLowerCase().contains(q))
+        .where((u) => searchHas(u.name, q))
         .where((u) => _departments.isEmpty || _departments.contains(u.departmentId ?? ''))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));

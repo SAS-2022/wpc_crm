@@ -6,11 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/city_areas.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
+import '../users/companies.dart';
+import '../users/company_filter.dart';
 import '../users/users_repository.dart';
 import '../../l10n/app_localizations.dart';
 import 'client.dart';
@@ -122,6 +126,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   /// KAM / managers: pins coloured by salesperson instead of visit status.
   bool _byPerson = false;
 
+  /// City button (user request 2026-11-01): only the clients with a
+  /// location inside it, and the map zoomed there.
+  SaudiRegion? _city;
+
   /// Web, KAM / managers: tapping pins picks clients to move or plan together.
   bool _selecting = false;
   final _selected = <String>{};
@@ -217,7 +225,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     }
     final legend = perPerson.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     int count(_Status s) => s == _Status.all ? located.length : located.where((c) => statusOf(c) == s).length;
-    final clients = _status == _Status.all ? located : located.where((c) => statusOf(c) == _status).toList();
+    final city = _city;
+    final clients = [
+      for (final c in located)
+        if ((_status == _Status.all || statusOf(c) == _status) &&
+            (city == null || c.locations.any((l) => city.contains(l.lat, l.lng))))
+          c,
+    ];
     // One pin per location (main, factory, showroom, …), all in the client's colour.
     final points = [for (final c in clients) for (final l in c.locations) LatLng(l.lat, l.lng)];
     final types = ref.watch(locationTypesByIdProvider);
@@ -227,19 +241,45 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     // The sales team's live positions (KAM / managers; RTDB rules): the KAM's
     // own team, the people ticked in the salesperson filter.
     final supervisor = me?.role.isSupervisor ?? false;
-    final showPeople = supervisor && ref.watch(showSalespeopleProvider);
-    final live = showPeople ? ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{} : const <String, LiveLocation>{};
-    final presence = showPeople ? ref.watch(presenceProvider).value ?? const <String, Presence>{} : const <String, Presence>{};
+    // Drivers and the other employees too (sales manager / GM, user request
+    // 2026-11-01); KAMs their team only.
+    final admin = me?.role.isAdmin ?? false;
+    final kinds = supervisor ? ref.watch(mapPeopleProvider) : const <MapPeople>{};
+    final showSales = kinds.contains(MapPeople.sales);
+    final showDrivers = admin && kinds.contains(MapPeople.drivers);
+    final showStaff = admin && kinds.contains(MapPeople.staff);
+    final showPeople = showSales || showDrivers || showStaff;
+    // People pins of one company only (user 2026-11-02; shared with the
+    // live map and Phone status).
+    final companyId = admin ? ref.watch(peopleCompanyProvider) : null;
+    final companies = admin ? ref.watch(companiesProvider).value ?? const <Company>[] : const <Company>[];
+    bool inCompany(AppUser u) => companyId == null || u.companyId == companyId;
+    final live = showSales || showDrivers
+        ? ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{}
+        : const <String, LiveLocation>{};
+    final presence = showSales || showDrivers
+        ? ref.watch(presenceProvider).value ?? const <String, Presence>{}
+        : const <String, Presence>{};
     final salespeople = [
       for (final u in users.values)
-        if (showPeople &&
+        if (showSales &&
             u.active &&
             u.role.isTracked &&
             live.containsKey(u.id) &&
+            inCompany(u) &&
             (me!.role != UserRole.kam || u.id == me.id || u.kamId == me.id) &&
             (filter.isEmpty || filter.contains(u.id)))
           u,
     ];
+    final drivers = [
+      for (final u in users.values)
+        if (showDrivers && u.active && u.role.isDriver && live.containsKey(u.id) && inCompany(u)) u,
+    ];
+    final staffIds = showStaff ? (users.values.where((u) => u.recordsGps && inCompany(u)).map((u) => u.id).toList()..sort()) : const <String>[];
+    final recorded = staffIds.isEmpty
+        ? const <String, LiveLocation>{}
+        : ref.watch(recordedLocationsProvider((DateFormat('yyyy-MM-dd').format(now), staffIds.join(',')))).value ??
+            const <String, LiveLocation>{};
 
     // Re-centre on the visible clients when a filter changes (not on first
     // load, which starts at the user's location, and not when the data
@@ -261,7 +301,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.map),
+        title: Text(l10n.clientMap),
         actions: [
           IconButton(icon: const Icon(Icons.list), tooltip: l10n.clients, onPressed: () => context.go('/clients')),
         ],
@@ -351,6 +391,49 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     ),
                     infoWindow: InfoWindow(title: u.name, snippet: timeAgo(context, loc.updatedAt, now)),
                   ),
+              // Drivers (brown) and other employees (slate), paler when old.
+              for (final u in drivers)
+                if (live[u.id] case final loc?)
+                  Marker(
+                    markerId: MarkerId('person/${u.id}'),
+                    position: LatLng(loc.lat, loc.lng),
+                    anchor: const Offset(0.5, 0.5),
+                    zIndexInt: 10,
+                    icon: _icons.circle(
+                      context: context,
+                      fill: liveState(loc, presence[u.id], now) == LiveState.live
+                          ? driverPinColor
+                          : driverPinColor.withValues(alpha: 0.45),
+                      text: initialsOf(u.name),
+                      ringWidth: 3,
+                      size: 40,
+                    ),
+                    infoWindow: InfoWindow(
+                      title: u.name,
+                      snippet: '${u.role.label(l10n)} · ${timeAgo(context, loc.updatedAt, now)}',
+                    ),
+                  ),
+              for (final MapEntry(key: uid, value: loc) in recorded.entries)
+                if (users[uid] case final u?)
+                  Marker(
+                    markerId: MarkerId('person/$uid'),
+                    position: LatLng(loc.lat, loc.lng),
+                    anchor: const Offset(0.5, 0.5),
+                    zIndexInt: 10,
+                    icon: _icons.circle(
+                      context: context,
+                      fill: recordedState(loc, now) == LiveState.live
+                          ? staffPinColor
+                          : staffPinColor.withValues(alpha: 0.45),
+                      text: initialsOf(u.name),
+                      ringWidth: 3,
+                      size: 40,
+                    ),
+                    infoWindow: InfoWindow(
+                      title: u.name,
+                      snippet: '${u.role.label(l10n)} · ${timeAgo(context, loc.updatedAt, now)}',
+                    ),
+                  ),
             },
           ),
           PositionedDirectional(
@@ -367,9 +450,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     children: [
                       // Clients or an area: an explicit choice, so a place
                       // name isn't taken for a client search (2026-10-23).
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: SegmentedButton<bool>(
+                      // City buttons next to it (user request 2026-11-01).
+                      Row(children: [
+                        SegmentedButton<bool>(
                           style: const ButtonStyle(visualDensity: VisualDensity.compact),
                           showSelectedIcon: false,
                           segments: [
@@ -379,7 +462,25 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                           selected: {_areaMode},
                           onSelectionChanged: (v) => _setAreaMode(v.first),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: RegionChips(
+                            selected: city,
+                            onSelected: (c) {
+                              setState(() => _city = c);
+                              if (c != null) {
+                                c.zoomTo(_map, MediaQuery.sizeOf(context), [
+                                  for (final cl in located)
+                                    for (final l in cl.locations)
+                                      if (c.contains(l.lat, l.lng)) LatLng(l.lat, l.lng),
+                                ]);
+                              } else {
+                                _fit([for (final c in located) for (final l in c.locations) LatLng(l.lat, l.lng)]);
+                              }
+                            },
+                          ),
+                        ),
+                      ]),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _search,
@@ -636,15 +737,60 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // KAM / managers: show or hide the salespeople.
-                if (supervisor)
+                // KAM: show or hide the salespeople. Sales manager / GM: a
+                // menu with salespeople, drivers and other employees.
+                if (supervisor && !admin)
                   PointerInterceptor(
                     child: FloatingActionButton.small(
                       heroTag: null,
                       tooltip: showPeople ? l10n.hideSalespeople : l10n.showSalespeople,
                       backgroundColor: showPeople ? Theme.of(context).colorScheme.primaryContainer : null,
-                      onPressed: () => ref.read(showSalespeopleProvider.notifier).toggle(),
+                      onPressed: () => ref.read(mapPeopleProvider.notifier).toggle(MapPeople.sales),
                       child: Icon(showPeople ? Icons.person_pin_circle : Icons.person_off_outlined),
+                    ),
+                  ),
+                if (admin)
+                  MenuAnchor(
+                    menuChildren: [
+                      for (final (kind, label, color) in [
+                        (MapPeople.sales, l10n.mapPeopleSales, salespersonPinColor),
+                        (MapPeople.drivers, l10n.mapPeopleDrivers, driverPinColor),
+                        (MapPeople.staff, l10n.mapPeopleStaff, staffPinColor),
+                      ])
+                        PointerInterceptor(
+                          child: CheckboxMenuButton(
+                            value: kinds.contains(kind),
+                            closeOnActivate: false,
+                            onChanged: (_) => ref.read(mapPeopleProvider.notifier).toggle(kind),
+                            trailingIcon: Icon(Icons.circle, size: 12, color: color),
+                            child: Text(label),
+                          ),
+                        ),
+                      if (companies.length >= 2) ...[
+                        const Divider(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                          child: Text(l10n.company, style: Theme.of(context).textTheme.labelMedium),
+                        ),
+                        for (final (id, name) in [(null, l10n.allCompanies), for (final c in companies) (c.id, c.name)])
+                          PointerInterceptor(
+                            child: CheckboxMenuButton(
+                              value: companyId == id,
+                              closeOnActivate: false,
+                              onChanged: (_) => ref.read(peopleCompanyProvider.notifier).set(id),
+                              child: Text(name),
+                            ),
+                          ),
+                      ],
+                    ],
+                    builder: (context, menu, _) => PointerInterceptor(
+                      child: FloatingActionButton.small(
+                        heroTag: null,
+                        tooltip: l10n.mapPeople,
+                        backgroundColor: showPeople ? Theme.of(context).colorScheme.primaryContainer : null,
+                        onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                        child: Icon(showPeople ? Icons.person_pin_circle : Icons.person_off_outlined),
+                      ),
                     ),
                   ),
                 // The same gap as between the other map buttons.
@@ -659,33 +805,45 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   }
 }
 
-/// Clients map: the sales team's live locations on top of the clients
-/// (2026-10-23, user request; KAM / managers). On by default, the choice
-/// remembered on this device.
-final showSalespeopleProvider = NotifierProvider<ShowSalespeopleController, bool>(ShowSalespeopleController.new);
+/// People shown on the clients map.
+enum MapPeople { sales, drivers, staff }
 
-class ShowSalespeopleController extends Notifier<bool> {
-  static const _key = 'mapShowSalespeople';
+/// Clients map: the sales team's live locations on top of the clients
+/// (2026-10-23, user request; KAM / managers), drivers and the other
+/// employees too for the sales manager / GM (2026-11-01). Salespeople on by
+/// default, the choice remembered on this device.
+final mapPeopleProvider = NotifierProvider<MapPeopleController, Set<MapPeople>>(MapPeopleController.new);
+
+class MapPeopleController extends Notifier<Set<MapPeople>> {
+  static const _key = 'mapPeople';
+
+  /// Before 2026-11-01: salespeople shown or not.
+  static const _oldKey = 'mapShowSalespeople';
 
   @override
-  bool build() {
+  Set<MapPeople> build() {
     _load();
-    return true;
+    return const {MapPeople.sales};
   }
 
   Future<void> _load() async {
     try {
-      final saved = (await SharedPreferences.getInstance()).getBool(_key);
-      if (saved != null) state = saved;
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_key);
+      if (saved != null) {
+        state = {for (final n in saved) ?MapPeople.values.asNameMap()[n]};
+      } else if (prefs.getBool(_oldKey) == false) {
+        state = const {};
+      }
     } catch (_) {
-      // Default: shown.
+      // Default: salespeople.
     }
   }
 
-  Future<void> toggle() async {
-    state = !state;
+  Future<void> toggle(MapPeople kind) async {
+    state = state.contains(kind) ? ({...state}..remove(kind)) : {...state, kind};
     try {
-      await (await SharedPreferences.getInstance()).setBool(_key, state);
+      await (await SharedPreferences.getInstance()).setStringList(_key, [for (final k in state) k.name]);
     } catch (_) {
       // Kept for this session only.
     }
@@ -695,3 +853,7 @@ class ShowSalespeopleController extends Notifier<bool> {
 /// The sales team's pins on the clients map: one purple for everyone, unlike
 /// any client colour (status or salesperson palette).
 const salespersonPinColor = Color(0xFF6A1B9A);
+
+/// Drivers' and the other employees' pins (2026-11-01).
+const driverPinColor = Color(0xFF5D4037);
+const staffPinColor = Color(0xFF455A64);

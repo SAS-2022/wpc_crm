@@ -11,8 +11,9 @@ import '../../l10n/app_localizations.dart';
 import 'attachments.dart';
 
 /// Asks camera / gallery / file and returns the picked files (empty when
-/// cancelled). Photos are scaled down to keep uploads small.
-Future<List<PendingFile>> pickAttachments(BuildContext context) async {
+/// cancelled). Photos are scaled down to keep uploads small. Files of
+/// [maxBytes] or more are refused.
+Future<List<PendingFile>> pickAttachments(BuildContext context, {int maxBytes = maxAttachmentBytes}) async {
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final canUseCamera = !kIsWeb;
@@ -62,11 +63,11 @@ Future<List<PendingFile>> pickAttachments(BuildContext context) async {
         picked.add(PendingFile(name: f.name, bytes: await f.readAsBytes()));
       }
   }
-  final tooLarge = picked.where((f) => f.bytes.length >= maxAttachmentBytes).toList();
+  final tooLarge = picked.where((f) => f.bytes.length >= maxBytes).toList();
   for (final f in tooLarge) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.fileTooLarge(f.name))));
   }
-  return picked.where((f) => f.bytes.length < maxAttachmentBytes).toList();
+  return picked.where((f) => f.bytes.length < maxBytes).toList();
 }
 
 /// Photos and files of a client or visit: thumbnails for photos, a row per

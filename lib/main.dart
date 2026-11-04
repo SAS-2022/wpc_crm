@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
 import 'core/router.dart';
+import 'features/devices/device_status.dart';
 import 'features/app_update/app_update.dart';
 import 'features/notifications/push.dart';
 import 'features/tracking/tracking_service.dart';
@@ -45,6 +46,8 @@ class WpcCrmApp extends ConsumerWidget {
     // Registers this phone for push notifications while signed in.
     ref.listen(pushProvider, (_, _) {});
     ref.listen(appVersionReporterProvider, (_, _) {});
+    // Phone status page: GPS, permissions, network (2026-11-01).
+    ref.listen(deviceStatusReporterProvider, (_, _) {});
     ref.listen(crashReportUserProvider, (_, _) {});
     ref.listen(attendanceGeofencesProvider, (_, _) {});
     // GM / manager: keeps the RTDB role copies the database rules read in sync.

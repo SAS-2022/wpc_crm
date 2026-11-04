@@ -1188,8 +1188,6 @@ PODS:
     - abseil/meta/type_traits
     - abseil/xcprivacy
   - abseil/xcprivacy (1.20240722.0)
-  - activity_recognition_flutter (6.1.0):
-    - Flutter
   - BoringSSL-GRPC (0.0.37):
     - BoringSSL-GRPC/Implementation (= 0.0.37)
     - BoringSSL-GRPC/Interface (= 0.0.37)
@@ -1203,6 +1201,8 @@ PODS:
   - cloud_functions (6.5.0):
     - Firebase/Functions (= 12.19.0)
     - firebase_core
+    - Flutter
+  - connectivity_plus (0.0.1):
     - Flutter
   - file_picker_darwin (1.0.0):
     - Flutter
@@ -1558,9 +1558,9 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
-  - activity_recognition_flutter (from `.symlinks/plugins/activity_recognition_flutter/ios`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - cloud_functions (from `.symlinks/plugins/cloud_functions/ios`)
+  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - file_picker_darwin (from `.symlinks/plugins/file_picker_darwin/darwin`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -1630,12 +1630,12 @@ SPEC REPOS:
     - RecaptchaInterop
 
 EXTERNAL SOURCES:
-  activity_recognition_flutter:
-    :path: ".symlinks/plugins/activity_recognition_flutter/ios"
   cloud_firestore:
     :path: ".symlinks/plugins/cloud_firestore/ios"
   cloud_functions:
     :path: ".symlinks/plugins/cloud_functions/ios"
+  connectivity_plus:
+    :path: ".symlinks/plugins/connectivity_plus/ios"
   file_picker_darwin:
     :path: ".symlinks/plugins/file_picker_darwin/darwin"
   firebase_auth:
@@ -1687,10 +1687,10 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   abseil: a05cc83bf02079535e17169a73c5be5ba47f714b
-  activity_recognition_flutter: 801a79008fa1b038b1befa5446cd054f6eb82622
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   cloud_firestore: 6b15358b9c83dac187833d1e294b8597c68d3f3b
   cloud_functions: 1743624e495a24ffbe58ce4ef9500fbf0d2ac5f4
+  connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
   file_picker_darwin: 27e043831d68462d54f1c40e724b1f53c9d1e8be
   Firebase: 7ca191e43724142f79fae653547b3382c45413cc
   firebase_auth: 36fa0bc88f7ea4c0ad5c543d117674d05be29799
@@ -1754,6 +1754,6 @@ SPEC CHECKSUMS:
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
 
-PODFILE CHECKSUM: 44c45392748e2df2899179571e366bb8ffdb7e25
+PODFILE CHECKSUM: c4fbfdd8c04b57fc0d94a3a2e0cddc70417abd2b
 
 COCOAPODS: 1.16.2

@@ -43,7 +43,6 @@ class _TrackingCardState extends ConsumerState<TrackingCard> {
         TrackingIssue.notAlways => l10n.issueNotAlways,
         TrackingIssue.notifications => l10n.issueNotifications,
         TrackingIssue.battery => l10n.issueBattery,
-        TrackingIssue.motion => l10n.issueMotion,
       };
 
   Widget _otherPhone(BuildContext context) {

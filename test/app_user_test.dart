@@ -54,4 +54,21 @@ void main() {
     expect(u(UserRole.worker).departmentId, isNull);
     expect(u(UserRole.worker, 'production').departmentId, 'production');
   });
+
+  test('employee map and warehouse supervision (2026-11-04)', () {
+    AppUser u(UserRole role, {bool manager = false}) => AppUser(
+        id: 'x', name: 'x', email: '', phone: '', role: role, kamId: null, active: true, markedManager: manager);
+    for (final r in [UserRole.kam, UserRole.salesManager, UserRole.gm, UserRole.logisticsManager,
+      UserRole.warehouseSupervisor, UserRole.factoryManager]) {
+      expect(u(r).seesEmployeesMap, isTrue, reason: r.name);
+    }
+    expect(u(UserRole.salesExec).seesEmployeesMap, isFalse);
+    expect(u(UserRole.hr).seesEmployeesMap, isFalse);
+    expect(u(UserRole.accounting).seesEmployeesMap, isFalse);
+    // "Is a manager" (e.g. the accounting manager): their department.
+    expect(u(UserRole.accounting, manager: true).seesEmployeesMap, isTrue);
+    expect(UserRole.worker.supervisedByWarehouse, isTrue);
+    expect(UserRole.driver.supervisedByWarehouse, isTrue);
+    expect(UserRole.engineer.supervisedByWarehouse, isFalse);
+  });
 }

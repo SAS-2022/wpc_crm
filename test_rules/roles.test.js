@@ -184,8 +184,9 @@ describe('RTDB role mirror', () => {
     await assertFails(set(ref(rtdb('gm'), 'roles/someone'), ''));
   });
 
-  test('HR can\'t set roles', async () => {
+  test('HR can\'t set sales or admin roles', async () => {
     await assertFails(set(ref(rtdb('hr'), 'roles/hr'), 'gm'));
+    await assertFails(set(ref(rtdb('hr'), 'roles/exec'), 'worker'));
   });
 });
 
@@ -248,6 +249,36 @@ describe('factory manager manages workers, engineers and operators (2026-10-31)'
     await assertFails(set(ref(rtdb('fm'), 'roles/new'), 'driver'));
     // The logistics manager can't make engineers or operators.
     await assertFails(setDoc(doc(fs('lm'), 'users/new'), person('engineer')));
+  });
+});
+
+describe('HR manages the back-office roles (2026-11-02)', () => {
+  const person = (role) => ({ name: 'P', email: 'p@staff.wpc-crm-a9247.web.app', role, active: true });
+
+  test('adds them, with their RTDB role and a driver\'s supervisor', async () => {
+    for (const role of ['accounting', 'worker', 'driver', 'logistics_manager', 'factory_manager', 'hr']) {
+      await assertSucceeds(setDoc(doc(fs('hr'), `users/new_${role}`), person(role)));
+      await assertSucceeds(set(ref(rtdb('hr'), `roles/new_${role}`), role));
+    }
+    await assertSucceeds(set(ref(rtdb('hr'), 'driver_supervisors/driver'), 'ws'));
+  });
+
+  test('edits them within those roles only', async () => {
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'users/op'), { name: 'Op 2', role: 'engineer' }));
+    await assertSucceeds(set(ref(rtdb('hr'), 'roles/op'), 'engineer'));
+    await assertFails(updateDoc(doc(fs('hr'), 'users/op'), { role: 'sales_manager' }));
+    await assertFails(updateDoc(doc(fs('hr'), 'users/acc'), { approval: '' }));
+  });
+
+  test('no sales or admin users', async () => {
+    for (const role of ['sales_exec', 'kam', 'sales_manager', 'gm']) {
+      await assertFails(setDoc(doc(fs('hr'), `users/new_${role}`), person(role)));
+      await assertFails(set(ref(rtdb('hr'), `roles/new_${role}`), role));
+    }
+    await assertFails(updateDoc(doc(fs('hr'), 'users/exec'), { name: 'x' }));
+    await assertFails(updateDoc(doc(fs('hr'), 'users/gm'), { name: 'x' }));
+    await assertFails(set(ref(rtdb('hr'), 'roles/sm'), 'worker'));
+    await assertFails(set(ref(rtdb('hr'), 'driver_supervisors/exec'), 'ws'));
   });
 });
 

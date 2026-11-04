@@ -14,6 +14,7 @@ import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
 import '../attendance/work_sites.dart';
 import 'companies.dart';
+import 'company_filter.dart';
 import 'user_filters.dart';
 import '../notifications/notifications.dart' show peopleUnder;
 
@@ -89,8 +90,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final positions = ref.watch(positionsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
     final me = ref.watch(currentUserProvider).value;
-    // Sales manager / GM: everyone; logistics / factory manager: their approved
-    // people ([peopleUnder]) with the roles they manage ([UserRole.editableRoles]).
+    // Sales manager / GM: everyone; HR: everyone approved with the roles they
+    // manage; logistics / factory manager: their approved people
+    // ([peopleUnder]) with the roles they manage ([UserRole.editableRoles]).
     final admin = me?.role.isAdmin == true;
     final editable = me?.role.editableRoles ?? const <UserRole>[];
 
@@ -108,7 +110,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           var list = admin
               ? all
               : [
-                  for (final u in peopleUnder(me!, all))
+                  for (final u in me!.role == UserRole.hr ? all : peopleUnder(me, all))
                     if (!u.isPendingApproval && editable.contains(u.role)) u,
                 ];
           if (list.isEmpty) return Center(child: Text(l10n.noUsers));
@@ -191,6 +193,14 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: Row(
                   children: [
+                    // Company right on the page (user request 2026-11-01; also in Filters).
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 6),
+                      child: CompanyFilterButton(
+                        value: _filter.companyId,
+                        onChanged: (id) => setState(() => _filter = _filter.copyWith(companyId: () => id)),
+                      ),
+                    ),
                     for (final (s, label) in [
                       (UserStatusFilter.all, l10n.statusAll),
                       (UserStatusFilter.active, l10n.active),

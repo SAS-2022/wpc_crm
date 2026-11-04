@@ -1,5 +1,5 @@
 import '../../core/app_user.dart';
-import '../clients/client.dart';
+import '../../core/search_text.dart';
 
 /// Users page status chips (user request 2026-10-19).
 enum UserStatusFilter { all, active, pending, inactive, olderApp }
@@ -61,12 +61,12 @@ class UserFilter {
     if (companyId != null && u.companyId != companyId) return false;
     if (siteId != null && !u.workSiteIds.contains(siteId)) return false;
     if (departments.isNotEmpty && !departments.contains(u.departmentId ?? '')) return false;
-    final q = Client.normalizeName(search);
+    final q = foldSearch(search);
     if (q.isEmpty) return true;
-    final digits = search.replaceAll(RegExp(r'\D'), '');
-    return Client.normalizeName(u.name).contains(q) ||
-        u.email.toLowerCase().contains(q) ||
-        Client.normalizeName(roleLabel(u.role)).contains(q) ||
-        (digits.length >= 3 && u.phone.replaceAll(RegExp(r'\D'), '').contains(digits));
+    final digits = searchDigits(search);
+    return searchHas(u.name, q) ||
+        searchHas(u.email, q) ||
+        searchHas(roleLabel(u.role), q) ||
+        (digits.length >= 3 && searchDigits(u.phone).contains(digits));
   }
 }

@@ -86,6 +86,15 @@ class MainActivity : FlutterFragmentActivity() {
         }
         return mapOf(
             "manufacturer" to Build.MANUFACTURER.lowercase(),
+            // Phone status (2026-11-02): "23021RAAEG" and the name the owner
+            // sees in Settings ("Redmi Note 12"), when the maker sets one.
+            "model" to Build.MODEL,
+            "deviceName" to try {
+                android.provider.Settings.Global.getString(contentResolver, "device_name")
+            } catch (e: Exception) {
+                null
+            },
+            "os" to "Android ${Build.VERSION.RELEASE}",
             "backgroundRestricted" to restricted,
             "standbyBucket" to bucket,
             "autostart" to xiaomiAutostart(),

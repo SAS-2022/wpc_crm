@@ -8,6 +8,7 @@ let env;
 
 const users = {
   lm: { role: 'logistics_manager' },
+  hr: { role: 'hr' },
   sm: { role: 'sales_manager' },
   gm: { role: 'gm' },
   driver: { role: 'driver' },
@@ -38,8 +39,8 @@ beforeEach(async () => {
 
 const fs = (uid) => env.authenticatedContext(uid).firestore();
 
-test('logistics manager, sales manager and GM keep vehicles', async () => {
-  for (const uid of ['lm', 'sm', 'gm']) {
+test('logistics manager, sales manager, GM and HR keep vehicles', async () => {
+  for (const uid of ['lm', 'sm', 'gm', 'hr']) {
     await assertSucceeds(getDoc(doc(fs(uid), 'vehicles/v1')));
     await assertSucceeds(updateDoc(doc(fs(uid), 'vehicles/v1'), { readings: [{ km: 1000, day: '2026-10-24' }] }));
     await assertSucceeds(setDoc(doc(fs(uid), `vehicles/new_${uid}`), { plate: 'X' }));

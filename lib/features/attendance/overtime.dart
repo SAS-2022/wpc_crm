@@ -72,6 +72,7 @@ Future<StartOvertimeResult> startOvertime(AppUser me, List<WorkSite> sites) asyn
 Future<void> declineOvertime(AppUser me) => recordAttendance(me.id, AttendanceEventType.otDecline);
 
 /// Whether [me] approves [person]'s overtime: the HR area for everyone,
-/// managers for the people under them; never their own.
+/// managers for the people under them (direct reports and, for a
+/// department head, the whole department); never their own.
 bool canApproveOvertime(AppUser me, AppUser person, List<AppUser> users) =>
     me.id != person.id && (me.role.canSeeHr || peopleUnder(me, users).any((u) => u.id == person.id));

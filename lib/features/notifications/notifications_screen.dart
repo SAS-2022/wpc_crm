@@ -15,6 +15,8 @@ import '../attendance/absence_sheet.dart' show absenceLeaveLabel, absenceReasonI
 import '../clients/client_status.dart';
 import '../clients/client_status_widgets.dart';
 import '../../core/app_version.dart';
+import '../hr/employee_record.dart' show IdType;
+import '../hr/employee_record_widgets.dart' show idTypeLabel;
 
 /// Bell with the unread count; opens the notifications list.
 class NotificationsBell extends ConsumerWidget {
@@ -105,6 +107,12 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.vehicleRenewalDue => n.count > 0
             ? l10n.notifVehicleRenewalDue(n.vehicleName, _renewal(l10n, n.issue), n.count, day)
             : l10n.notifVehicleRenewalExpired(n.vehicleName, _renewal(l10n, n.issue), day),
+        NotificationType.companyDocExpiry => n.count > 0
+            ? l10n.notifCompanyDocDue(n.note, n.count, day)
+            : l10n.notifCompanyDocExpired(n.note, day),
+        NotificationType.idExpiry => n.count > 0
+            ? l10n.notifIdDue(n.note, idTypeLabel(l10n, IdType.fromValue(n.issue)), n.count, day)
+            : l10n.notifIdExpired(n.note, idTypeLabel(l10n, IdType.fromValue(n.issue)), day),
         NotificationType.vehicleOilDue => n.count > 0
             ? l10n.notifVehicleOilDueSoon(n.vehicleName, n.count, formatKm(context, int.tryParse(n.note) ?? 0))
             : l10n.notifVehicleOilDue(n.vehicleName, formatKm(context, int.tryParse(n.note) ?? 0)),
@@ -204,6 +212,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.earlyCheckoutRejected => Icons.cancel,
                     NotificationType.vehicleRenewalDue => Icons.directions_car_outlined,
                     NotificationType.vehicleOilDue => Icons.oil_barrel_outlined,
+                    NotificationType.companyDocExpiry => Icons.event_busy_outlined,
+                    NotificationType.idExpiry => Icons.badge_outlined,
                     NotificationType.trackingIssue => switch (n.issue) {
                         'battery' => Icons.battery_alert,
                         'offline' => Icons.signal_wifi_off,
@@ -236,8 +246,6 @@ class NotificationsScreen extends ConsumerWidget {
                         openAppStore();
                       case NotificationType.attendanceCheckedIn when n.fromId != meId:
                         context.push('/attendance');
-                      case NotificationType.overtimeStarted when n.ownerId != meId:
-                        context.push('/attendance');
                       // Home: the manager's requests card / the person's attendance card.
                       case NotificationType.attendanceCheckedIn ||
                             NotificationType.attendanceLate ||
@@ -256,6 +264,10 @@ class NotificationsScreen extends ConsumerWidget {
                         if (n.ref.isNotEmpty) context.push('/leave/${n.ref}');
                       case NotificationType.vehicleRenewalDue || NotificationType.vehicleOilDue:
                         if (n.ref.isNotEmpty) context.push('/vehicles/${n.ref}');
+                      case NotificationType.companyDocExpiry:
+                        if (n.ref.isNotEmpty) context.push('/documents/file/${n.ref}');
+                      case NotificationType.idExpiry:
+                        if (n.ref.isNotEmpty) context.push('/hr/employee/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

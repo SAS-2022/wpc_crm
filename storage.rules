@@ -43,6 +43,19 @@ service firebase.storage {
       allow delete: if hrArea() || (request.auth != null && absence().uid == request.auth.uid && absence().status == 'pending');
     }
 
+    // Company documents (2026-11-01): read as the Firestore item; added and
+    // removed by the GM / sales manager and HR (the Firestore rules decide
+    // which section each may change), max 50 MB.
+    match /company_docs/{docId}/{fileName} {
+      function item() { return firestore.get(/databases/(default)/documents/company_docs/$(docId)).data; }
+      function writer() { return request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']; }
+      allow read: if writer()
+        || (request.auth != null && profile().active == true && profile().role in ['sales_exec', 'kam']
+            && item().restricted == false && item().section in ['official', 'product']);
+      allow create: if writer() && request.resource.size < 50 * 1024 * 1024;
+      allow delete: if writer();
+    }
+
     // Client and visit attachments, max 20 MB each.
     match /{folder}/{parentId}/{fileName} {
       allow read: if folder in ['clients', 'visits'] && canAccess(folder, parentId);

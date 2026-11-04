@@ -554,10 +554,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get issueBattery => 'أوقف تحسين البطارية لهذا التطبيق';
 
   @override
-  String get issueMotion =>
-      'اسمح باكتشاف الحركة (\"النشاط البدني\" / \"الحركة واللياقة\") حتى لا يُحسب المشي ضمن كيلومترات السيارة';
-
-  @override
   String get fix => 'إصلاح';
 
   @override
@@ -4475,6 +4471,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن اختياره مديراً مباشراً لموظفين آخرين، مثل مدير الحسابات.';
 
   @override
+  String isManagerByRole(String role) {
+    return 'مدير بحكم الدور ($role): يعتمد إجازات فريقه وساعاته الإضافية.';
+  }
+
+  @override
   String get directManager => 'المدير المباشر';
 
   @override
@@ -5280,4 +5281,766 @@ class AppLocalizationsAr extends AppLocalizations {
   String travelAfterWorkOn(String day, String time) {
     return 'المغادرة $day الساعة $time';
   }
+
+  @override
+  String get companyDocs => 'مستندات الشركة';
+
+  @override
+  String get moreSectionCompany => 'الشركة';
+
+  @override
+  String get moreOptions => 'خيارات أخرى';
+
+  @override
+  String get docSectionOfficial => 'المستندات الرسمية';
+
+  @override
+  String get docSectionOfficialHint =>
+      'السجل التجاري، شهادة الضريبة، العنوان الوطني … لكل شركة';
+
+  @override
+  String get docSectionExpiring => 'خدمات لها تاريخ انتهاء';
+
+  @override
+  String get docSectionExpiringHint =>
+      'التأمين الصحي، مقيم … مع تذكير بالتجديد (للإدارة فقط)';
+
+  @override
+  String get docSectionProduct => 'مستندات المنتجات';
+
+  @override
+  String get docSectionProductHint => 'ملف الشركة، النشرات الفنية، الشهادات';
+
+  @override
+  String docFileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ملفاً',
+      few: '$count ملفات',
+      two: 'ملفان',
+      one: 'ملف واحد',
+      zero: 'لا ملفات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docEmpty => 'لا يوجد شيء هنا بعد.';
+
+  @override
+  String get docEmptyEditable =>
+      'لا يوجد شيء هنا بعد. اضغط + لإضافة ملفات أو مجلد.';
+
+  @override
+  String get docNoResults => 'لا يوجد مستند مطابق.';
+
+  @override
+  String get docNotFound => 'هذا المستند غير موجود أو لا يمكنك فتحه.';
+
+  @override
+  String get docSearchHint => 'ابحث في المستندات';
+
+  @override
+  String get docUploadFiles => 'رفع ملفات';
+
+  @override
+  String get docNewFolder => 'مجلد جديد';
+
+  @override
+  String get docEditFolder => 'تعديل المجلد';
+
+  @override
+  String get docFolderName => 'اسم المجلد';
+
+  @override
+  String get docAddFile => 'إضافة مستند';
+
+  @override
+  String get docEditDetails => 'تعديل التفاصيل';
+
+  @override
+  String get docName => 'اسم المستند';
+
+  @override
+  String get docNoCompany => 'بدون شركة';
+
+  @override
+  String get docEmployee => 'الموظف';
+
+  @override
+  String get docForCompany => 'الشركة (بدون موظف)';
+
+  @override
+  String get docNumber => 'رقم المستند';
+
+  @override
+  String get docIssueDate => 'تاريخ الإصدار';
+
+  @override
+  String get docExpiryDate => 'تاريخ الانتهاء';
+
+  @override
+  String get docExpiryRequired => 'اختر تاريخ الانتهاء';
+
+  @override
+  String get docUpload => 'رفع';
+
+  @override
+  String get docManagementOnly => 'للإدارة فقط';
+
+  @override
+  String get docManagementOnlyHint => 'مخفي عن فريق المبيعات';
+
+  @override
+  String get docSalesCanSee => 'يمكن لفريق المبيعات رؤيته ومشاركته';
+
+  @override
+  String get docNoExpiry => 'بدون تاريخ انتهاء';
+
+  @override
+  String docValidUntil(String date) {
+    return 'ساري حتى $date';
+  }
+
+  @override
+  String docExpiresIn(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'ينتهي بعد $days يوماً',
+      few: 'ينتهي بعد $days أيام',
+      two: 'ينتهي بعد يومين',
+      one: 'ينتهي غداً',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docExpiresToday => 'ينتهي اليوم';
+
+  @override
+  String docExpiredAgo(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'انتهى منذ $days يوماً',
+      few: 'انتهى منذ $days أيام',
+      two: 'انتهى منذ يومين',
+      one: 'انتهى أمس',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docShare => 'مشاركة';
+
+  @override
+  String get docSelectToShare => 'اختر ملفات للمشاركة';
+
+  @override
+  String get docOpen => 'فتح';
+
+  @override
+  String docRenewTitle(String name) {
+    return 'تجديد $name';
+  }
+
+  @override
+  String get docNewExpiry => 'تاريخ الانتهاء الجديد';
+
+  @override
+  String get docNewFileOptional => 'ملف المستند الجديد (اختياري)';
+
+  @override
+  String get docOldFileKept => 'يُحفظ الملف الحالي في السجل';
+
+  @override
+  String get docReplaceFile => 'استبدال الملف';
+
+  @override
+  String get docFileReplaced => 'تم استبدال الملف – القديم في السجل';
+
+  @override
+  String get docMove => 'نقل';
+
+  @override
+  String docMoveTo(String name) {
+    return 'نقل $name إلى';
+  }
+
+  @override
+  String docDeleteTitle(String name) {
+    return 'حذف $name؟';
+  }
+
+  @override
+  String get docDeleteFileText => 'سيُحذف الملف ونسخه السابقة للجميع.';
+
+  @override
+  String docDeleteFolderText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'سيُحذف المجلد و$count ملفات فيه للجميع.',
+      one: 'سيُحذف المجلد والملف الذي فيه للجميع.',
+      zero: 'سيُحذف المجلد للجميع.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docLocation => 'المجلد';
+
+  @override
+  String get docLastChange => 'آخر تعديل';
+
+  @override
+  String get docHistory => 'السجل';
+
+  @override
+  String docRenewedTo(String date) {
+    return 'تم التجديد – ساري حتى $date';
+  }
+
+  @override
+  String docWasUntil(String date) {
+    return 'كان حتى $date';
+  }
+
+  @override
+  String docReplacedOn(String date) {
+    return 'استُبدل $date';
+  }
+
+  @override
+  String docRenewalsDue(int count) {
+    return 'مستندات تحتاج تجديد ($count)';
+  }
+
+  @override
+  String notifCompanyDocDue(String name, int days, String date) {
+    return 'ينتهي $name بعد $days يوماً ($date)';
+  }
+
+  @override
+  String notifCompanyDocExpired(String name, String date) {
+    return 'انتهى $name ($date)';
+  }
+
+  @override
+  String get settingDocRenewal => 'تذكير تجديد المستندات';
+
+  @override
+  String get settingDocRenewalHelp =>
+      'يُذكَّر الموارد البشرية والمدير العام ومدير المبيعات قبل انتهاء الخدمة أو الاشتراك بهذا العدد من الأيام، ثم قبل 15 يوماً، ثم كل يوم بعد انتهائه، ويبقى في صفحتهم الرئيسية حتى يُجدَّد.';
+
+  @override
+  String get docShareFailed =>
+      'تعذّر تجهيز الملف للمشاركة. تحقق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String productionLogisticsCount(int n) {
+    return 'الإنتاج واللوجستيات ($n)';
+  }
+
+  @override
+  String get productionLogisticsNote =>
+      'الموقع المسجّل للحضور، من 08:00 إلى 18:00 في أيام العمل، كل 30 ثانية.';
+
+  @override
+  String get noProductionLogisticsStaff =>
+      'لا يوجد موظفو إنتاج أو لوجستيات لهم موقع عمل بعد. يظهرون هنا عند تسجيل حضورهم في موقع عمل.';
+
+  @override
+  String get noPositionRecordedToday => 'لم يُسجَّل أي موقع اليوم';
+
+  @override
+  String lastPositionRecorded(String ago) {
+    return 'آخر موقع $ago';
+  }
+
+  @override
+  String get productionLogistics => 'الإنتاج واللوجستيات';
+
+  @override
+  String get catalogsPage => 'الكتالوجات والستاندات';
+
+  @override
+  String get catalogsGivenInPeriod => 'المُسلَّم خلال فترة';
+
+  @override
+  String get catalogsClientsHelp =>
+      'صف لكل عميل حصل على كتالوج أو ستاند أو عينات. أعمدة الأصناف: العدد الإجمالي وتاريخ آخر تسليم (الأحمر = حان موعد واحد جديد). اضغط على عنوان العمود للترتيب، وعلى الصف لفتح العميل.';
+
+  @override
+  String get catalogsUpToDate => 'محدّث';
+
+  @override
+  String catalogsClientsShown(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عميل',
+      one: 'عميل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catalogsNoClients => 'لا يوجد عملاء لعرضهم.';
+
+  @override
+  String get catalogsNeverVisited => 'لم تتم زيارته';
+
+  @override
+  String get catalogsPeriodHelp =>
+      'كل الكتالوجات والستاندات والعينات المسلّمة خلال الفترة، في الزيارات أو المسجّلة في صفحات العملاء، محسوبة لمن سلّمها. اضغط على مندوب لعرض ما سلّمه فقط.';
+
+  @override
+  String get catalogsBySalesperson => 'حسب المندوب';
+
+  @override
+  String catalogsHandovers(int n) {
+    return 'عمليات التسليم ($n)';
+  }
+
+  @override
+  String catalogsShowAll(int n) {
+    return 'عرض الكل ($n)';
+  }
+
+  @override
+  String get catalogsType => 'نوع الكتالوج';
+
+  @override
+  String get catalogsAllTypes => 'كل الأنواع';
+
+  @override
+  String get catalogsStatus => 'الحالة';
+
+  @override
+  String get catalogsAnyStatusShort => 'أي حالة';
+
+  @override
+  String get catalogsAllCities => 'كل المدن';
+
+  @override
+  String get catalogsItemColumnHelp =>
+      'العدد الإجمالي وتاريخ آخر تسليم. الأحمر = حان موعد واحد جديد.';
+
+  @override
+  String get catalogsCalls => 'المكالمات';
+
+  @override
+  String get catalogsDate => 'التاريخ';
+
+  @override
+  String get catalogsHow => 'الطريقة';
+
+  @override
+  String get allCompanies => 'كل الشركات';
+
+  @override
+  String otherEmployeesCount(int n) {
+    return 'موظفون آخرون ($n)';
+  }
+
+  @override
+  String get noOtherEmployees =>
+      'لا يوجد موظفون آخرون لديهم موقع عمل بعد. يظهرون هنا بعد تسجيل حضورهم في موقع العمل.';
+
+  @override
+  String get mapPeople => 'الأشخاص على الخريطة';
+
+  @override
+  String get mapPeopleSales => 'المندوبون';
+
+  @override
+  String get mapPeopleDrivers => 'السائقون';
+
+  @override
+  String get mapPeopleStaff => 'موظفون آخرون';
+
+  @override
+  String get phoneStatus => 'حالة الهواتف';
+
+  @override
+  String get phoneStatusShowMap => 'عرض على الخريطة';
+
+  @override
+  String get phoneStatusProblemsOnly => 'المشاكل فقط';
+
+  @override
+  String get phoneStatusNoReport =>
+      'إعدادات الهاتف غير مُبلغ عنها – يلزم أحدث إصدار من التطبيق';
+
+  @override
+  String phoneStatusUpdated(String time) {
+    return 'تم التحديث $time';
+  }
+
+  @override
+  String phoneStatusStale(String time) {
+    return 'آخر تقرير $time';
+  }
+
+  @override
+  String get phoneStatusAllGood => 'كل شيء جيد';
+
+  @override
+  String phoneStatusProblems(int n) {
+    return '$n بحاجة إلى إصلاح';
+  }
+
+  @override
+  String get phoneStatusSearch => 'ابحث بالاسم';
+
+  @override
+  String get phoneStatusNoPeople => 'لا يوجد أحد لعرضه';
+
+  @override
+  String get phoneStatusNote =>
+      'ترسل الهواتف حالتها عند فتح التطبيق، وكل 5 دقائق أثناء فتحه، وكل دقيقتين أثناء مشاركة الموقع. «توقف عن الإرسال» = هاتف يجب أن يشارك موقعه الآن ولم يرسل شيئًا منذ 15 دقيقة. على شبكة Wi-Fi لا يمكن للهاتف معرفة ما إذا كانت بيانات الجوال مفعّلة أيضًا.';
+
+  @override
+  String phoneStatusApp(String version) {
+    return 'التطبيق $version';
+  }
+
+  @override
+  String get checkGps => 'GPS';
+
+  @override
+  String get checkLocation => 'إذن الموقع';
+
+  @override
+  String get checkPrecise => 'الموقع الدقيق';
+
+  @override
+  String get checkNetwork => 'الإنترنت';
+
+  @override
+  String get checkNotifications => 'الإشعارات';
+
+  @override
+  String get checkBattery => 'تحسين البطارية';
+
+  @override
+  String get checkBackground => 'العمل في الخلفية';
+
+  @override
+  String get checkCamera => 'الكاميرا';
+
+  @override
+  String get valueOn => 'مفعّل';
+
+  @override
+  String get valueOff => 'متوقف';
+
+  @override
+  String get valueAllowed => 'مسموح';
+
+  @override
+  String get valueNotAllowed => 'غير مسموح';
+
+  @override
+  String get valueNotReported => 'غير معروف';
+
+  @override
+  String get locationAlways => 'دائمًا';
+
+  @override
+  String get locationWhileInUse => 'أثناء استخدام التطبيق فقط';
+
+  @override
+  String get locationDenied => 'مرفوض';
+
+  @override
+  String get precisePrecise => 'دقيق';
+
+  @override
+  String get preciseApproximate => 'تقريبي';
+
+  @override
+  String get networkWifi => 'Wi-Fi';
+
+  @override
+  String get networkMobile => 'بيانات الجوال';
+
+  @override
+  String get networkNone => 'لا يوجد إنترنت';
+
+  @override
+  String get networkOther => 'أخرى';
+
+  @override
+  String get batteryOptimizedValue => 'مفعّل – قد يوقف التطبيق';
+
+  @override
+  String get batteryUnrestricted => 'متوقف (بدون قيود)';
+
+  @override
+  String get backgroundRestrictedValue => 'مقيّد';
+
+  @override
+  String get backgroundSleeping => 'وضعه أندرويد في السكون';
+
+  @override
+  String get phoneStatusNoPhone => 'لم يسجّل الدخول على هاتف بعد';
+
+  @override
+  String phoneStatusLastHeard(String time) {
+    return 'آخر إشارة من الهاتف $time';
+  }
+
+  @override
+  String phoneStatusStopped(String time) {
+    return 'توقف عن الإرسال · آخر إشارة $time';
+  }
+
+  @override
+  String get phoneStatusStoppedNever => 'توقف عن الإرسال · لم يصل شيء';
+
+  @override
+  String phoneStatusStoppedCount(int n) {
+    return '$n توقفوا عن الإرسال';
+  }
+
+  @override
+  String get phoneStatusOldApp =>
+      'إصدار أقدم من التطبيق: المعروف فقط GPS وإذن الموقع والإشعارات والبطارية';
+
+  @override
+  String fromPhoneStatus(int n) {
+    return 'من حالة الهواتف ($n)';
+  }
+
+  @override
+  String get filterGpsOff => 'GPS مغلق';
+
+  @override
+  String get filterNoInternet => 'بدون إنترنت';
+
+  @override
+  String get filterBatteryOptimized => 'تحسين البطارية مفعّل';
+
+  @override
+  String get docSectionSubscription => 'الاشتراكات';
+
+  @override
+  String get docSectionSubscriptionHint =>
+      'حسابات المواقع مع تذكير بالتجديد (للإدارة فقط)';
+
+  @override
+  String get docAddSubscription => 'إضافة اشتراك';
+
+  @override
+  String get docAddService => 'إضافة خدمة';
+
+  @override
+  String get docHealthInsurance => 'التأمين الصحي';
+
+  @override
+  String get docHealthInsuranceHint =>
+      'يشمل جميع الموظفين؛ يمكن تغيير فئة كل موظف';
+
+  @override
+  String get docUsualClass => 'الفئة المعتادة';
+
+  @override
+  String get docUsualClassHint => 'فئة معظم الموظفين';
+
+  @override
+  String get docLoginUrl => 'صفحة الدخول (الرابط)';
+
+  @override
+  String get docLoginSteps => 'طريقة الدخول';
+
+  @override
+  String get docUsername => 'اسم المستخدم';
+
+  @override
+  String get docPassword => 'كلمة المرور';
+
+  @override
+  String get docPolicyNumber => 'رقم الوثيقة';
+
+  @override
+  String docClassValue(String cls) {
+    return 'الفئة $cls';
+  }
+
+  @override
+  String get docNoFile => 'لا يوجد ملف مرفق';
+
+  @override
+  String get docAttachFile => 'إرفاق ملف';
+
+  @override
+  String docInsuredEmployees(int count) {
+    return 'الموظفون المشمولون ($count)';
+  }
+
+  @override
+  String get docInsuredHint =>
+      'يشمل التأمين كل موظف نشط ما لم يذكر سجله في الموارد البشرية غير ذلك.';
+
+  @override
+  String get docInsuredHintEdit =>
+      'يشمل التأمين كل موظف نشط ما لم يذكر سجله في الموارد البشرية غير ذلك. اضغط على الموظف لتغيير فئته (الخط العريض = فئة خاصة به).';
+
+  @override
+  String docClassOf(String name) {
+    return 'فئة التأمين – $name';
+  }
+
+  @override
+  String get docInsuranceClass => 'فئة التأمين';
+
+  @override
+  String docClassEmptyHint(String cls) {
+    return 'فارغ = الفئة المعتادة ($cls)';
+  }
+
+  @override
+  String get copy => 'نسخ';
+
+  @override
+  String get copied => 'تم النسخ';
+
+  @override
+  String get optional => 'اختياري';
+
+  @override
+  String get edit => 'تعديل';
+
+  @override
+  String get idTypeIqama => 'الإقامة';
+
+  @override
+  String get idTypeNationalId => 'الهوية الوطنية';
+
+  @override
+  String get idNumber => 'رقم الهوية';
+
+  @override
+  String get idExpiryDate => 'تاريخ انتهاء الهوية';
+
+  @override
+  String get idExpiryNotSet => 'لا يوجد تاريخ انتهاء';
+
+  @override
+  String get idNotEntered => 'غير مدخلة';
+
+  @override
+  String get idReminderHint =>
+      'يتم تذكير الموارد البشرية والمدير العام ومدير المبيعات قبل الانتهاء بـ 30 و15 يوماً، وكل يوم بعد انتهائها.';
+
+  @override
+  String get employeeRecordTitle => 'الهوية والجنسية والتأمين';
+
+  @override
+  String get nationality => 'الجنسية';
+
+  @override
+  String get insuranceNotCovered => 'غير مشمول';
+
+  @override
+  String get insuranceNoPolicy =>
+      'لم يُدخل تأمين صحي (مستندات الشركة ← خدمات لها تاريخ انتهاء)';
+
+  @override
+  String insuranceUsual(String name) {
+    return 'تأمين الشركة ($name)';
+  }
+
+  @override
+  String idRenewalsDue(int count) {
+    return 'إقامات / هويات للتجديد ($count)';
+  }
+
+  @override
+  String notifIdDue(String name, String idType, int days, String date) {
+    return '$name: تنتهي $idType بعد $days يوماً ($date)';
+  }
+
+  @override
+  String notifIdExpired(String name, String idType, String date) {
+    return '$name: انتهت $idType ($date)';
+  }
+
+  @override
+  String get regionEastern => 'الشرقية';
+
+  @override
+  String get regionCentral => 'الوسطى';
+
+  @override
+  String get regionWestern => 'الغربية';
+
+  @override
+  String get employeesMap => 'خريطة الموظفين';
+
+  @override
+  String get allSites => 'كل المواقع';
+
+  @override
+  String get onTime => 'في الموعد';
+
+  @override
+  String lateByLong(String time) {
+    return 'متأخر $time';
+  }
+
+  @override
+  String get notOnAttendance => 'لا يُسجَّل حضوره';
+
+  @override
+  String get locationNotShared => 'لا يشارك موقعه';
+
+  @override
+  String get attendanceToday => 'الحضور اليوم';
+
+  @override
+  String get locationTitle => 'الموقع';
+
+  @override
+  String siteName(String name) {
+    return 'الموقع: $name';
+  }
+
+  @override
+  String employeesCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n موظف',
+      many: '$n موظفًا',
+      few: '$n موظفين',
+      two: 'موظفان',
+      one: 'موظف واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get employeesMapNote =>
+      'مواقع كل من في صفحة الحضور ممن يشارك هاتفه موقعه أو يسجّله. اضغط على الشخص لعرض حالة هاتفه وحضوره.';
+
+  @override
+  String get clientMap => 'خريطة العملاء';
+
+  @override
+  String get supervisesTitle => 'يشرف على';
+
+  @override
+  String get supervisesNone => 'لا أحد بعد';
+
+  @override
+  String get supervisesChoose => 'اختر الأشخاص';
+
+  @override
+  String get supervisesNote =>
+      'السائقون والعمال الذين يتابعهم مشرف المستودع: يرى حضورهم وحالة هواتفهم ومواقعهم على خريطة الموظفين.';
 }

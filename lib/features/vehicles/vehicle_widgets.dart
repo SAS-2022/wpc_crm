@@ -291,7 +291,7 @@ class VehicleRenewalsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider).value;
-    if (me == null || !me.role.managesDrivers) return const SizedBox.shrink();
+    if (me == null || !me.role.managesVehicles) return const SizedBox.shrink();
     if (!(ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.vehicles)) {
       return const SizedBox.shrink();
     }

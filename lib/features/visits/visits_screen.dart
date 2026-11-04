@@ -17,6 +17,7 @@ import '../plan/plan_task.dart';
 import 'call_chip.dart';
 import 'visit.dart';
 import 'visits_repository.dart';
+import '../../core/search_text.dart';
 
 /// Each period but [all] is browsed with ‹ › arrows like Team plans (user
 /// request 2026-10-21): a day (default), a week (Sunday–Saturday), a month,
@@ -235,13 +236,13 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
         data: (all) {
-          final q = _query.trim().toLowerCase();
+          final q = foldSearch(_query);
           final list = all
               .where((v) => !hidden.contains(v.clientId))
               .where((v) => _visitor == null || v.salesExecId == _visitor || v.kamId == _visitor)
               .where((v) => _inPeriod(v, now))
               .where((v) => _type == null || v.type == _type)
-              .where((v) => q.isEmpty || v.clientName.toLowerCase().contains(q) || v.notes.toLowerCase().contains(q))
+              .where((v) => q.isEmpty || searchHas(v.clientName, q) || searchHas(v.notes, q))
               .toList();
           final flagged = list.where((v) => v.isFlagged).length;
           final calls = list.where((v) => v.isCall).length;
@@ -706,13 +707,13 @@ class _ClientPickerSheetState extends ConsumerState<_ClientPickerSheet> {
     final theme = Theme.of(context);
     final rules = ref.watch(visitRulesProvider).value ?? VisitRules.defaults;
     final now = DateTime.now();
-    final q = Client.normalizeName(_query);
+    final q = foldSearch(_query);
     final clients = (ref.watch(clientsProvider).value ?? const <Client>[])
         .where((c) =>
             q.isEmpty ||
-            c.nameKey.contains(q) ||
-            c.aliases.any((a) => Client.normalizeName(a).contains(q)) ||
-            c.city.toLowerCase().contains(_query.trim().toLowerCase()))
+            searchHas(c.name, q) ||
+            c.aliases.any((a) => searchHas(a, q)) ||
+            searchHas(c.city, q))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
 

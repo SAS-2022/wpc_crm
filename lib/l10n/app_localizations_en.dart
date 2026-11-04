@@ -559,10 +559,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get issueBattery => 'Turn off battery optimization for this app';
 
   @override
-  String get issueMotion =>
-      'Allow motion detection (\"Physical activity\" / \"Motion & Fitness\") so walking isn\'t counted as vehicle km';
-
-  @override
   String get fix => 'Fix';
 
   @override
@@ -4468,6 +4464,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Can be chosen as someone\'s direct manager, e.g. the accounting manager.';
 
   @override
+  String isManagerByRole(String role) {
+    return 'Already a manager by the role ($role): approves their team\'s leave and overtime.';
+  }
+
+  @override
   String get directManager => 'Direct manager';
 
   @override
@@ -5273,4 +5274,760 @@ class AppLocalizationsEn extends AppLocalizations {
   String travelAfterWorkOn(String day, String time) {
     return 'Departs $day at $time';
   }
+
+  @override
+  String get companyDocs => 'Company documents';
+
+  @override
+  String get moreSectionCompany => 'Company';
+
+  @override
+  String get moreOptions => 'More options';
+
+  @override
+  String get docSectionOfficial => 'Official documents';
+
+  @override
+  String get docSectionOfficialHint =>
+      'CR, VAT, National Address … of each company';
+
+  @override
+  String get docSectionExpiring => 'Services that expire';
+
+  @override
+  String get docSectionExpiringHint =>
+      'Health insurance, Moqeem … with renewal reminders (management only)';
+
+  @override
+  String get docSectionProduct => 'Product documents';
+
+  @override
+  String get docSectionProductHint =>
+      'Company profile, datasheets, certificates';
+
+  @override
+  String docFileCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+      zero: 'No files',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docEmpty => 'Nothing here yet.';
+
+  @override
+  String get docEmptyEditable =>
+      'Nothing here yet. Tap + to add files or a folder.';
+
+  @override
+  String get docNoResults => 'No document matches.';
+
+  @override
+  String get docNotFound =>
+      'This document doesn\'t exist or you can\'t open it.';
+
+  @override
+  String get docSearchHint => 'Search documents';
+
+  @override
+  String get docUploadFiles => 'Upload files';
+
+  @override
+  String get docNewFolder => 'New folder';
+
+  @override
+  String get docEditFolder => 'Edit folder';
+
+  @override
+  String get docFolderName => 'Folder name';
+
+  @override
+  String get docAddFile => 'Add document';
+
+  @override
+  String get docEditDetails => 'Edit details';
+
+  @override
+  String get docName => 'Document name';
+
+  @override
+  String get docNoCompany => 'No company';
+
+  @override
+  String get docEmployee => 'Employee';
+
+  @override
+  String get docForCompany => 'The company (no employee)';
+
+  @override
+  String get docNumber => 'Document number';
+
+  @override
+  String get docIssueDate => 'Issue date';
+
+  @override
+  String get docExpiryDate => 'Expiry date';
+
+  @override
+  String get docExpiryRequired => 'Choose the expiry date';
+
+  @override
+  String get docUpload => 'Upload';
+
+  @override
+  String get docManagementOnly => 'Management only';
+
+  @override
+  String get docManagementOnlyHint => 'Hidden from the sales team';
+
+  @override
+  String get docSalesCanSee => 'The sales team can see and share it';
+
+  @override
+  String get docNoExpiry => 'No expiry date';
+
+  @override
+  String docValidUntil(String date) {
+    return 'Valid until $date';
+  }
+
+  @override
+  String docExpiresIn(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Expires in $days days',
+      one: 'Expires tomorrow',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docExpiresToday => 'Expires today';
+
+  @override
+  String docExpiredAgo(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Expired $days days ago',
+      one: 'Expired yesterday',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docShare => 'Share';
+
+  @override
+  String get docSelectToShare => 'Select files to share';
+
+  @override
+  String get docOpen => 'Open';
+
+  @override
+  String docRenewTitle(String name) {
+    return 'Renew $name';
+  }
+
+  @override
+  String get docNewExpiry => 'New expiry date';
+
+  @override
+  String get docNewFileOptional => 'New document file (optional)';
+
+  @override
+  String get docOldFileKept => 'The current file is kept in the history';
+
+  @override
+  String get docReplaceFile => 'Replace file';
+
+  @override
+  String get docFileReplaced => 'File replaced – the old one is in the history';
+
+  @override
+  String get docMove => 'Move';
+
+  @override
+  String docMoveTo(String name) {
+    return 'Move $name to';
+  }
+
+  @override
+  String docDeleteTitle(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get docDeleteFileText =>
+      'The file and its earlier versions are deleted for everyone.';
+
+  @override
+  String docDeleteFolderText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The folder and the $count files in it are deleted for everyone.',
+      one: 'The folder and the 1 file in it are deleted for everyone.',
+      zero: 'The folder is deleted for everyone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get docLocation => 'Folder';
+
+  @override
+  String get docLastChange => 'Last change';
+
+  @override
+  String get docHistory => 'History';
+
+  @override
+  String docRenewedTo(String date) {
+    return 'Renewed – valid until $date';
+  }
+
+  @override
+  String docWasUntil(String date) {
+    return 'was until $date';
+  }
+
+  @override
+  String docReplacedOn(String date) {
+    return 'Replaced $date';
+  }
+
+  @override
+  String docRenewalsDue(int count) {
+    return 'Documents to renew ($count)';
+  }
+
+  @override
+  String notifCompanyDocDue(String name, int days, String date) {
+    return '$name expires in $days days ($date)';
+  }
+
+  @override
+  String notifCompanyDocExpired(String name, String date) {
+    return '$name has expired ($date)';
+  }
+
+  @override
+  String get settingDocRenewal => 'Document renewal reminder';
+
+  @override
+  String get settingDocRenewalHelp =>
+      'HR, the GM and the sales manager are reminded this many days before a service or subscription expires, again 15 days before and every day after it has expired; it stays on their Home until it\'s renewed.';
+
+  @override
+  String get docShareFailed =>
+      'Couldn\'t prepare the file to share. Check the connection and try again.';
+
+  @override
+  String productionLogisticsCount(int n) {
+    return 'Production & logistics ($n)';
+  }
+
+  @override
+  String get productionLogisticsNote =>
+      'Position recorded for attendance, 08:00–18:00 on work days, every 30 seconds.';
+
+  @override
+  String get noProductionLogisticsStaff =>
+      'No production or logistics staff with a work site yet. They appear here once they record attendance at a work site.';
+
+  @override
+  String get noPositionRecordedToday => 'No position recorded today';
+
+  @override
+  String lastPositionRecorded(String ago) {
+    return 'Last position $ago';
+  }
+
+  @override
+  String get productionLogistics => 'Production & logistics';
+
+  @override
+  String get catalogsPage => 'Catalogs & stands';
+
+  @override
+  String get catalogsGivenInPeriod => 'Given in a period';
+
+  @override
+  String get catalogsClientsHelp =>
+      'One row per client who got a catalogue, stand or samples. Item columns: how many in all and the last date (red = a new one is due). Tap a column title to sort, a row to open the client.';
+
+  @override
+  String get catalogsUpToDate => 'Up to date';
+
+  @override
+  String catalogsClientsShown(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n clients',
+      one: '1 client',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catalogsNoClients => 'No clients to show.';
+
+  @override
+  String get catalogsNeverVisited => 'Never visited';
+
+  @override
+  String get catalogsPeriodHelp =>
+      'Every catalog, stand and sample handed over in the period, at visits and recorded on client pages, counted for the person who gave it. Tap a salesperson to see only theirs.';
+
+  @override
+  String get catalogsBySalesperson => 'By salesperson';
+
+  @override
+  String catalogsHandovers(int n) {
+    return 'Hand-overs ($n)';
+  }
+
+  @override
+  String catalogsShowAll(int n) {
+    return 'Show all ($n)';
+  }
+
+  @override
+  String get catalogsType => 'Catalogue type';
+
+  @override
+  String get catalogsAllTypes => 'All types';
+
+  @override
+  String get catalogsStatus => 'Status';
+
+  @override
+  String get catalogsAnyStatusShort => 'Any status';
+
+  @override
+  String get catalogsAllCities => 'All cities';
+
+  @override
+  String get catalogsItemColumnHelp =>
+      'How many in all, and the last date given. Red = a new one is due.';
+
+  @override
+  String get catalogsCalls => 'Calls';
+
+  @override
+  String get catalogsDate => 'Date';
+
+  @override
+  String get catalogsHow => 'How';
+
+  @override
+  String get allCompanies => 'All companies';
+
+  @override
+  String otherEmployeesCount(int n) {
+    return 'Other employees ($n)';
+  }
+
+  @override
+  String get noOtherEmployees =>
+      'No other employees with a work site yet. They appear here once they record attendance at a work site.';
+
+  @override
+  String get mapPeople => 'People on the map';
+
+  @override
+  String get mapPeopleSales => 'Salespeople';
+
+  @override
+  String get mapPeopleDrivers => 'Drivers';
+
+  @override
+  String get mapPeopleStaff => 'Other employees';
+
+  @override
+  String get phoneStatus => 'Phone status';
+
+  @override
+  String get phoneStatusShowMap => 'Show on the map';
+
+  @override
+  String get phoneStatusProblemsOnly => 'Problems only';
+
+  @override
+  String get phoneStatusNoReport =>
+      'Phone settings not reported – needs the latest app version';
+
+  @override
+  String phoneStatusUpdated(String time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String phoneStatusStale(String time) {
+    return 'Last report $time';
+  }
+
+  @override
+  String get phoneStatusAllGood => 'All good';
+
+  @override
+  String phoneStatusProblems(int n) {
+    return '$n to fix';
+  }
+
+  @override
+  String get phoneStatusSearch => 'Search name';
+
+  @override
+  String get phoneStatusNoPeople => 'Nobody to show';
+
+  @override
+  String get phoneStatusNote =>
+      'Phones report when the app is opened, every 5 minutes while it is open, and every 2 minutes while sharing the location. “Stopped reporting” = a phone that should share its location now has sent nothing for 15 minutes. On Wi-Fi a phone can\'t tell whether mobile data is also switched on.';
+
+  @override
+  String phoneStatusApp(String version) {
+    return 'App $version';
+  }
+
+  @override
+  String get checkGps => 'GPS';
+
+  @override
+  String get checkLocation => 'Location permission';
+
+  @override
+  String get checkPrecise => 'Precise location';
+
+  @override
+  String get checkNetwork => 'Internet';
+
+  @override
+  String get checkNotifications => 'Notifications';
+
+  @override
+  String get checkBattery => 'Battery optimization';
+
+  @override
+  String get checkBackground => 'Background use';
+
+  @override
+  String get checkCamera => 'Camera';
+
+  @override
+  String get valueOn => 'On';
+
+  @override
+  String get valueOff => 'Off';
+
+  @override
+  String get valueAllowed => 'Allowed';
+
+  @override
+  String get valueNotAllowed => 'Not allowed';
+
+  @override
+  String get valueNotReported => 'Not reported';
+
+  @override
+  String get locationAlways => 'Always';
+
+  @override
+  String get locationWhileInUse => 'Only while using the app';
+
+  @override
+  String get locationDenied => 'Denied';
+
+  @override
+  String get precisePrecise => 'Precise';
+
+  @override
+  String get preciseApproximate => 'Approximate';
+
+  @override
+  String get networkWifi => 'Wi-Fi';
+
+  @override
+  String get networkMobile => 'Mobile data';
+
+  @override
+  String get networkNone => 'No internet';
+
+  @override
+  String get networkOther => 'Other';
+
+  @override
+  String get batteryOptimizedValue => 'On – may pause the app';
+
+  @override
+  String get batteryUnrestricted => 'Off (unrestricted)';
+
+  @override
+  String get backgroundRestrictedValue => 'Restricted';
+
+  @override
+  String get backgroundSleeping => 'Put to sleep by Android';
+
+  @override
+  String get phoneStatusNoPhone => 'Never signed in on a phone';
+
+  @override
+  String phoneStatusLastHeard(String time) {
+    return 'Last heard from the phone $time';
+  }
+
+  @override
+  String phoneStatusStopped(String time) {
+    return 'Stopped reporting · last heard $time';
+  }
+
+  @override
+  String get phoneStatusStoppedNever => 'Stopped reporting · nothing received';
+
+  @override
+  String phoneStatusStoppedCount(int n) {
+    return '$n stopped reporting';
+  }
+
+  @override
+  String get phoneStatusOldApp =>
+      'Older app version: only GPS, location permission, notifications and battery are known';
+
+  @override
+  String fromPhoneStatus(int n) {
+    return 'From Phone status ($n)';
+  }
+
+  @override
+  String get filterGpsOff => 'GPS off';
+
+  @override
+  String get filterNoInternet => 'No internet';
+
+  @override
+  String get filterBatteryOptimized => 'Battery optimization on';
+
+  @override
+  String get docSectionSubscription => 'Subscriptions';
+
+  @override
+  String get docSectionSubscriptionHint =>
+      'Website logins with renewal reminders (management only)';
+
+  @override
+  String get docAddSubscription => 'Add subscription';
+
+  @override
+  String get docAddService => 'Add service';
+
+  @override
+  String get docHealthInsurance => 'Health insurance';
+
+  @override
+  String get docHealthInsuranceHint =>
+      'Covers every employee; each person\'s class can be changed';
+
+  @override
+  String get docUsualClass => 'Usual class';
+
+  @override
+  String get docUsualClassHint => 'The class most employees have';
+
+  @override
+  String get docLoginUrl => 'Login page (URL)';
+
+  @override
+  String get docLoginSteps => 'How to log in';
+
+  @override
+  String get docUsername => 'User name';
+
+  @override
+  String get docPassword => 'Password';
+
+  @override
+  String get docPolicyNumber => 'Policy number';
+
+  @override
+  String docClassValue(String cls) {
+    return 'Class $cls';
+  }
+
+  @override
+  String get docNoFile => 'No file attached';
+
+  @override
+  String get docAttachFile => 'Attach file';
+
+  @override
+  String docInsuredEmployees(int count) {
+    return 'Employees covered ($count)';
+  }
+
+  @override
+  String get docInsuredHint =>
+      'Every active employee is covered unless their HR record says otherwise.';
+
+  @override
+  String get docInsuredHintEdit =>
+      'Every active employee is covered unless their HR record says otherwise. Tap a person to change their class (bold = their own class).';
+
+  @override
+  String docClassOf(String name) {
+    return 'Insurance class – $name';
+  }
+
+  @override
+  String get docInsuranceClass => 'Insurance class';
+
+  @override
+  String docClassEmptyHint(String cls) {
+    return 'Empty = the usual class ($cls)';
+  }
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get copied => 'Copied';
+
+  @override
+  String get optional => 'Optional';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get idTypeIqama => 'Iqama';
+
+  @override
+  String get idTypeNationalId => 'National ID';
+
+  @override
+  String get idNumber => 'ID number';
+
+  @override
+  String get idExpiryDate => 'ID expiry date';
+
+  @override
+  String get idExpiryNotSet => 'No expiry date';
+
+  @override
+  String get idNotEntered => 'Not entered';
+
+  @override
+  String get idReminderHint =>
+      'HR, the GM and the sales manager are reminded 30 and 15 days before it expires, and every day after it has expired.';
+
+  @override
+  String get employeeRecordTitle => 'ID, nationality and insurance';
+
+  @override
+  String get nationality => 'Nationality';
+
+  @override
+  String get insuranceNotCovered => 'Not covered';
+
+  @override
+  String get insuranceNoPolicy =>
+      'No health insurance entered (Company documents → Services that expire)';
+
+  @override
+  String insuranceUsual(String name) {
+    return 'Company policy ($name)';
+  }
+
+  @override
+  String idRenewalsDue(int count) {
+    return 'Iqamas / IDs to renew ($count)';
+  }
+
+  @override
+  String notifIdDue(String name, String idType, int days, String date) {
+    return '$name\'s $idType expires in $days days ($date)';
+  }
+
+  @override
+  String notifIdExpired(String name, String idType, String date) {
+    return '$name\'s $idType has expired ($date)';
+  }
+
+  @override
+  String get regionEastern => 'Eastern';
+
+  @override
+  String get regionCentral => 'Central';
+
+  @override
+  String get regionWestern => 'Western';
+
+  @override
+  String get employeesMap => 'Employee Map';
+
+  @override
+  String get allSites => 'All sites';
+
+  @override
+  String get onTime => 'On time';
+
+  @override
+  String lateByLong(String time) {
+    return 'Late by $time';
+  }
+
+  @override
+  String get notOnAttendance => 'Attendance not recorded';
+
+  @override
+  String get locationNotShared => 'Location not shared';
+
+  @override
+  String get attendanceToday => 'Attendance today';
+
+  @override
+  String get locationTitle => 'Location';
+
+  @override
+  String siteName(String name) {
+    return 'Site: $name';
+  }
+
+  @override
+  String employeesCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n employees',
+      one: '1 employee',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get employeesMapNote =>
+      'Positions of everyone on the attendance page whose phone shares or records its location. Tap a person for their phone and attendance.';
+
+  @override
+  String get clientMap => 'Client Map';
+
+  @override
+  String get supervisesTitle => 'Supervises';
+
+  @override
+  String get supervisesNone => 'Nobody yet';
+
+  @override
+  String get supervisesChoose => 'Choose people';
+
+  @override
+  String get supervisesNote =>
+      'Drivers and workers this warehouse supervisor follows: they see their attendance, phones and places on the employee map.';
 }

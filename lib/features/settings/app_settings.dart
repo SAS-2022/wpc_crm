@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../attendance/attendance_rules.dart' as attendance;
 import '../clients/given_items.dart' as given;
+import '../documents/company_docs.dart' as docs;
 import '../vehicles/vehicle.dart' as vehicle;
 import '../visits/visit.dart' as visit;
 
@@ -40,7 +41,11 @@ enum AppSetting {
 
   /// Vehicle oil change: reminded and on Home this many km before it's due
   /// (user request 2026-10-26).
-  oilDueSoonKm(500, 100, 5000);
+  oilDueSoonKm(500, 100, 5000),
+
+  /// Expiring company documents: reminded and on Home this many days
+  /// before the expiry (2026-11-01, `companyDocReminders`).
+  docRenewalDays(30, 1, 120);
 
   const AppSetting(this.defaultValue, this.min, this.max);
 
@@ -81,6 +86,7 @@ class AppSettings {
     attendance.awayGraceMin = this[AppSetting.awayGraceMin];
     vehicle.renewalDueSoonDays = this[AppSetting.vehicleRenewalDays];
     vehicle.oilDueSoonKm = this[AppSetting.oilDueSoonKm];
+    docs.docDueSoonDays = this[AppSetting.docRenewalDays];
   }
 }
 

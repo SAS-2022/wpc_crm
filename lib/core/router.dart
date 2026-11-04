@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_user.dart';
+import '../features/devices/phone_status_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/status_screens.dart';
 import '../features/clients/given_items_widgets.dart';
@@ -42,11 +43,13 @@ import '../features/users/users_screen.dart';
 import '../features/plan/plan_task.dart';
 import 'providers.dart';
 import '../features/clients/transfers_screen.dart';
+import '../features/clients/catalogs_screen.dart';
 import '../features/plan/team_plan_map_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/attendance/attendance_person_month_screen.dart';
 import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
+import '../features/attendance/employees_map_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
 import '../features/settings/app_settings_screen.dart';
@@ -54,6 +57,8 @@ import '../features/settings/page_access.dart';
 import '../features/settings/page_access_screen.dart';
 import '../features/settings/tracking_schedules_screen.dart';
 import '../features/vehicles/vehicles_screen.dart';
+import '../features/documents/company_docs.dart' show DocSection;
+import '../features/documents/company_docs_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -92,22 +97,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Logistics manager: the drivers' live map and route history; logistics
           // and factory managers: the Users page for their people.
           !(me.role.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
-          !(me.role.managesDrivers && loc.startsWith('/vehicles')) &&
+          !(me.role.managesVehicles && loc.startsWith('/vehicles')) &&
+          !(me.role.seesPhoneStatus && loc == '/phone-status') &&
+          !(me.role.seesCompanyDocs && loc.startsWith('/documents')) &&
           !(me.role.managesUsers && loc.startsWith('/users'))) {
         return '/';
       }
       if (loc == '/drivers' && !me.role.seesDrivers) return '/';
-      if (loc.startsWith('/vehicles') && !me.role.managesDrivers) return '/';
+      if (loc == '/phone-status' && !me.role.seesPhoneStatus) return '/';
+      if (loc.startsWith('/vehicles') && !me.role.managesVehicles) return '/';
+      if (loc.startsWith('/documents') && !me.role.seesCompanyDocs) return '/';
       if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
       // Departments: HR edits them too (HR area → Leave types tab).
       if (loc == '/departments' && !me.role.canManageHr) return '/';
       // Managers and warehouse supervisors: the attendance of the people under them.
       if (loc.startsWith('/attendance') && !me.seesTeamAttendance) return '/';
+      if (loc == '/attendance/map' && !me.seesEmployeesMap) return '/';
       // "My leave" is greyed out until finished; requests to approve still open.
       if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
       if (loc.startsWith('/users') && !me.role.managesUsers) return '/';
       if ((loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.role.isAdmin) return '/';
-      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers'].contains(loc) &&
+      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers', '/catalogs'].contains(loc) &&
           !me.role.isSupervisor &&
           !(me.role.seesDrivers && loc == '/history')) {
         return '/';
@@ -227,9 +237,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ),
               ],
             ),
-            GoRoute(path: '/live', builder: (_, _) => const LiveMapScreen()),
+            GoRoute(
+              path: '/live',
+              builder: (_, state) => LiveMapScreen(
+                onlyIds: state.uri.queryParameters['ids']?.split(',').where((id) => id.isNotEmpty).toSet(),
+              ),
+            ),
+            // Phones' GPS, internet and permissions (2026-11-01).
+            GoRoute(path: '/phone-status', builder: (_, _) => const PhoneStatusScreen()),
             // Drivers only (sales manager, GM, logistics manager).
-            GoRoute(path: '/drivers', builder: (_, _) => const LiveMapScreen(driversOnly: true)),
+            GoRoute(
+              path: '/drivers',
+              builder: (_, state) => LiveMapScreen(
+                driversOnly: true,
+                onlyIds: state.uri.queryParameters['ids']?.split(',').where((id) => id.isNotEmpty).toSet(),
+              ),
+            ),
             // Vehicles: sales manager, GM, logistics manager (2026-10-24).
             GoRoute(
               path: '/vehicles',
@@ -246,8 +269,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ),
               ],
             ),
+            // Company documents (2026-11-01): the tree, one page per folder
+            // (?s=section&c=company&f=folder), and a file's page.
+            GoRoute(
+              path: '/documents',
+              builder: (_, state) => CompanyDocsScreen(
+                section: DocSection.values.asNameMap()[state.uri.queryParameters['s']],
+                companyId: state.uri.queryParameters['c'] ?? '',
+                folderId: state.uri.queryParameters['f'] ?? '',
+              ),
+              routes: [
+                GoRoute(path: 'file/:id', builder: (_, state) => CompanyDocScreen(id: state.pathParameters['id']!)),
+              ],
+            ),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(path: '/transfers', builder: (_, _) => const TransfersScreen()),
+            GoRoute(path: '/catalogs', builder: (_, _) => const CatalogsScreen()),
             GoRoute(
               path: '/team-plans',
               builder: (_, state) => TeamPlansScreen(initialDate: state.uri.queryParameters['date']),
@@ -290,6 +327,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/attendance',
               builder: (_, state) => AttendanceScreen(initialDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? '')),
             ),
+            GoRoute(path: '/attendance/map', builder: (_, _) => const EmployeesMapScreen()),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(
               path: '/attendance/report/:uid',

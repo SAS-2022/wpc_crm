@@ -9,10 +9,12 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_user.dart';
+import '../../core/city_areas.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/person_style.dart';
+import '../users/company_filter.dart';
 import '../users/users_repository.dart';
 import 'live_data.dart';
 import 'motion.dart';
@@ -31,10 +33,14 @@ String timeAgo(BuildContext context, DateTime? t, DateTime now) {
 /// Live positions of field staff. KAMs see their team (and themselves);
 /// sales manager and GM see everyone.
 class LiveMapScreen extends ConsumerStatefulWidget {
-  const LiveMapScreen({super.key, this.driversOnly = false});
+  const LiveMapScreen({super.key, this.driversOnly = false, this.onlyIds});
 
   /// The Drivers page: drivers only, no Sales team / Drivers switch.
   final bool driversOnly;
+
+  /// Opened from Phone status with a search or "Problems only" on: just the
+  /// people that page showed (`/live?ids=a,b`; user 2026-11-02).
+  final Set<String>? onlyIds;
 
   @override
   ConsumerState<LiveMapScreen> createState() => _LiveMapScreenState();
@@ -48,8 +54,17 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   Timer? _tick;
   bool _fitted = false;
 
-  /// Drivers are listed apart from the sales team (user request 2026-10-20).
-  bool _drivers = false;
+  /// Drivers are listed apart from the sales team (user request 2026-10-20),
+  /// the other employees too (2026-11-01).
+  _Group _group = _Group.sales;
+
+  /// Region buttons (user request 2026-11-04, were cities) and company filter.
+  SaudiRegion? _city;
+
+  /// [LiveMapScreen.onlyIds] until the chip is cleared; the group shown
+  /// first is the first one with any of them.
+  late Set<String>? _onlyIds = widget.onlyIds;
+  bool _groupPicked = false;
 
   @override
   void initState() {
@@ -106,29 +121,78 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
-    final locations = ref.watch(liveLocationsProvider).value ?? const {};
     final presence = ref.watch(presenceProvider).value ?? const {};
     final now = DateTime.now();
+    final companyId = ref.watch(peopleCompanyProvider);
+    final onlyIds = _onlyIds;
 
     // The logistics manager sees drivers only.
     final driversOnly = widget.driversOnly || !(me?.role.isSupervisor ?? false);
     final everyone = users.where((u) {
       if (!u.active || !u.role.isLocationTracked) return false;
       if (driversOnly && !u.role.isDriver) return false;
+      if (companyId != null && u.companyId != companyId) return false;
+      if (onlyIds != null && !onlyIds.contains(u.id)) return false;
       if (me?.role == UserRole.kam) return u.id == me!.id || u.kamId == me.id;
       // Warehouse supervisor: their own drivers.
       if (me?.role == UserRole.warehouseSupervisor) return u.supervisorId == me!.id;
       return true;
     }).toList();
     final driverCount = everyone.where((u) => u.role.isDriver).length;
+    // Every other employee whose GPS is recorded for attendance (sales
+    // manager / GM; 08:00–18:00 on work days, [AppUser.recordsGps]): production
+    // and logistics (2026-11-01), office staff too since the same day.
+    final staff = driversOnly || !(me?.role.isAdmin ?? false)
+        ? const <AppUser>[]
+        : users
+            .where((u) =>
+                u.recordsGps &&
+                (companyId == null || u.companyId == companyId) &&
+                (onlyIds == null || onlyIds.contains(u.id)))
+            .toList();
     // Sales manager / GM always see the switch (drivers may not share yet).
-    final showDrivers = !driversOnly && (driverCount > 0 || (me?.role.isAdmin ?? false));
-    final drivers = driversOnly || (_drivers && showDrivers);
-    final people = everyone.where((u) => u.role.isDriver == drivers).toList();
+    final showGroups = !driversOnly && (driverCount > 0 || (me?.role.isAdmin ?? false));
+    if (onlyIds != null && !_groupPicked && users.isNotEmpty) {
+      _groupPicked = true;
+      if (everyone.length == driverCount && driverCount > 0) {
+        _group = _Group.drivers;
+      } else if (everyone.isEmpty && staff.isNotEmpty) {
+        _group = _Group.staff;
+      }
+    }
+    final group = driversOnly ? _Group.drivers : (showGroups ? _group : _Group.sales);
+    final recorded = group == _Group.staff;
+    final inGroup = recorded ? staff : everyone.where((u) => u.role.isDriver == (group == _Group.drivers)).toList();
+    final staffKey = (DateFormat('yyyy-MM-dd').format(now), (staff.map((u) => u.id).toList()..sort()).join(','));
+    final locations = recorded
+        ? ref.watch(recordedLocationsProvider(staffKey)).value ?? const <String, LiveLocation>{}
+        : ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{};
+    LiveState stateOf(String id) =>
+        recorded ? recordedState(locations[id], now) : liveState(locations[id], presence[id], now);
+    String statusOf(String id) {
+      final loc = locations[id];
+      if (recorded) {
+        if (loc == null) return l10n.noPositionRecordedToday;
+        return stateOf(id) == LiveState.live
+            ? l10n.liveUpdated(_ago(l10n, loc.updatedAt, now))
+            : l10n.lastPositionRecorded(_ago(l10n, loc.updatedAt, now));
+      }
+      final p = presence[id];
+      return loc == null && p == null ? l10n.noLocationYet : _status(l10n, stateOf(id), loc, p, now);
+    }
+
+    // A city picked: only the people whose position is inside it.
+    final city = _city;
+    final people = city == null
+        ? inGroup
+        : [
+            for (final u in inGroup)
+              if (locations[u.id] case final l? when city.contains(l.lat, l.lng)) u,
+          ];
     final order = {LiveState.live: 0, LiveState.stale: 1, LiveState.offDuty: 2, LiveState.offline: 3};
     people.sort((a, b) {
-      final sa = liveState(locations[a.id], presence[a.id], now);
-      final sb = liveState(locations[b.id], presence[b.id], now);
+      final sa = stateOf(a.id);
+      final sb = stateOf(b.id);
       return order[sa]!.compareTo(order[sb]!) != 0 ? order[sa]!.compareTo(order[sb]!) : a.name.compareTo(b.name);
     });
     final located = [
@@ -137,7 +201,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     ];
     final points = [for (final u in located) LatLng(locations[u.id]!.lat, locations[u.id]!.lng)];
 
-    if (_map != null && !_fitted && points.isNotEmpty) {
+    if (_map != null && !_fitted && points.isNotEmpty && city == null) {
       _fitted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitAll(points));
     }
@@ -163,7 +227,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     center: LatLng(locations[u.id]!.lat, locations[u.id]!.lng),
                     radius: accuracy,
                     strokeWidth: 0,
-                    fillColor: _color(liveState(locations[u.id], presence[u.id], now)).withValues(alpha: 0.12),
+                    fillColor: _color(stateOf(u.id)).withValues(alpha: 0.12),
                   ),
             },
             markers: {
@@ -176,18 +240,40 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     context: context,
                     fill: Colors.white,
                     text: initialsOf(u.name),
-                    textColor: _color(liveState(locations[u.id], presence[u.id], now)),
+                    textColor: _color(stateOf(u.id)),
                     ring: locations[u.id]!.mocked
                         ? Theme.of(context).colorScheme.error
-                        : _color(liveState(locations[u.id], presence[u.id], now)),
+                        : _color(stateOf(u.id)),
                     ringWidth: 4,
                     size: 40,
                   ),
-                  onTap: () => _showPerson(u, locations[u.id], presence[u.id]),
+                  onTap: () => _showPerson(u, locations[u.id], recorded ? null : presence[u.id], statusOf(u.id)),
                 ),
             },
           ),
           const PositionedDirectional(top: 8, end: 8, child: MapTypeButton()),
+          PositionedDirectional(
+            top: 8,
+            start: 8,
+            end: 64,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: RegionChips(
+                selected: city,
+                onSelected: (c) => setState(() {
+                  _city = c;
+                  if (c != null) {
+                    c.zoomTo(_map, MediaQuery.sizeOf(context), [
+                      for (final u in inGroup)
+                        if (locations[u.id] case final l? when c.contains(l.lat, l.lng)) LatLng(l.lat, l.lng),
+                    ]);
+                  } else {
+                    _fitted = false; // back to everyone
+                  }
+                }),
+              ),
+            ),
+          ),
           DraggableScrollableSheet(
             initialChildSize: 0.28,
             minChildSize: 0.12,
@@ -207,47 +293,78 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                         decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
                       ),
                     ),
-                    if (showDrivers)
-                      Padding(
+                    Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        child: SegmentedButton<bool>(
-                          segments: [
-                            ButtonSegment(
-                              value: false,
-                              icon: const Icon(Icons.storefront_outlined),
-                              label: Text(l10n.salesTeamCount(everyone.length - driverCount)),
+                        // Chips wrap on narrow phones (three segments didn't fit).
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (showGroups)
+                            for (final (g, icon, label) in [
+                              (_Group.sales, Icons.storefront_outlined, l10n.salesTeamCount(everyone.length - driverCount)),
+                              (_Group.drivers, Icons.local_shipping_outlined, l10n.driversCount(driverCount)),
+                              if (me?.role.isAdmin ?? false)
+                                (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
+                            ])
+                              ChoiceChip(
+                                avatar: Icon(icon, size: 18),
+                                label: Text(label),
+                                selected: group == g,
+                                showCheckmark: false,
+                                onSelected: (_) => setState(() {
+                                  _group = g;
+                                  _fitted = false; // fit the map to the group shown
+                                }),
+                              ),
+                            CompanyFilterButton(
+                              value: companyId,
+                              onChanged: (id) {
+                                ref.read(peopleCompanyProvider.notifier).set(id);
+                                setState(() => _fitted = false);
+                              },
                             ),
-                            ButtonSegment(
-                              value: true,
-                              icon: const Icon(Icons.local_shipping_outlined),
-                              label: Text(l10n.driversCount(driverCount)),
-                            ),
+                            if (onlyIds != null)
+                              InputChip(
+                                visualDensity: VisualDensity.compact,
+                                avatar: const Icon(Icons.phone_android, size: 16),
+                                label: Text(l10n.fromPhoneStatus(onlyIds.length)),
+                                onDeleted: () => setState(() {
+                                  _onlyIds = null;
+                                  _fitted = false;
+                                }),
+                              ),
                           ],
-                          selected: {drivers},
-                          onSelectionChanged: (v) => setState(() {
-                            _drivers = v.first;
-                            _fitted = false; // fit the map to the group shown
-                          }),
                         ),
                       ),
-                    if (people.isEmpty) ListTile(title: Text(drivers ? l10n.noDriversYet : l10n.noTrackedStaff)),
+                    if (recorded)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                        child: Text(l10n.productionLogisticsNote, style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                    if (people.isEmpty)
+                      ListTile(
+                        title: Text(switch (group) {
+                          _Group.sales => l10n.noTrackedStaff,
+                          _Group.drivers => l10n.noDriversYet,
+                          _Group.staff => l10n.noOtherEmployees,
+                        }),
+                      ),
                     for (final u in people)
                       Builder(
                         builder: (context) {
                           final loc = locations[u.id];
-                          final p = presence[u.id];
-                          final s = liveState(loc, p, now);
+                          final p = recorded ? null : presence[u.id];
                           return ListTile(
-                            leading: _Avatar(name: u.name, color: _color(s), mocked: loc?.mocked ?? false),
+                            leading: _Avatar(name: u.name, color: _color(stateOf(u.id)), mocked: loc?.mocked ?? false),
                             title: Text(u.name),
-                            subtitle: Text(
-                              loc == null && p == null ? l10n.noLocationYet : _status(l10n, s, loc, p, now),
-                            ),
+                            subtitle: Text(recorded ? '${u.role.label(l10n)} · ${statusOf(u.id)}' : statusOf(u.id)),
                             trailing: loc == null ? null : const Icon(Icons.center_focus_strong),
                             onTap: loc == null
                                 ? null
                                 : () => _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 16)),
-                            onLongPress: () => _showPerson(u, loc, p),
+                            onLongPress: () => _showPerson(u, loc, p, statusOf(u.id)),
                           );
                         },
                       ),
@@ -278,10 +395,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     if (_map != null) fitPoints(_map!, points, padding: 48);
   }
 
-  void _showPerson(AppUser u, LiveLocation? loc, Presence? p) {
+  /// [p] null: a production / logistics person (recorded GPS, no presence).
+  void _showPerson(AppUser u, LiveLocation? loc, Presence? p, String status) {
     final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
-    final s = liveState(loc, p, now);
+    final s = p == null ? recordedState(loc, now) : liveState(loc, p, now);
     final error = Theme.of(context).colorScheme.error;
     showModalBottomSheet<void>(
       context: context,
@@ -299,7 +417,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 children: [
                   Icon(Icons.circle, size: 12, color: _color(s)),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_status(l10n, s, loc, p, now))),
+                  Expanded(child: Text(status)),
                 ],
               ),
               if (loc?.accuracy != null) Text(l10n.locationAccuracy(loc!.accuracy!.round())),
@@ -348,6 +466,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     );
   }
 }
+
+enum _Group { sales, drivers, staff }
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.name, required this.color, required this.mocked});

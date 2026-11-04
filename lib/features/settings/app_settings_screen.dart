@@ -71,6 +71,8 @@ class AppSettingsScreen extends ConsumerWidget {
           header(l10n.vehicles),
           number(Icons.directions_car_outlined, AppSetting.vehicleRenewalDays),
           number(Icons.oil_barrel_outlined, AppSetting.oilDueSoonKm),
+          header(l10n.companyDocs),
+          number(Icons.event_busy_outlined, AppSetting.docRenewalDays),
         ],
       ),
     );
@@ -87,6 +89,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoon,
+      AppSetting.docRenewalDays => l10n.settingDocRenewal,
     };
 
 String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
@@ -99,6 +102,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoonHelp,
+      AppSetting.docRenewalDays => l10n.settingDocRenewalHelp,
     };
 
 /// "30 seconds", "300 m" …
@@ -107,7 +111,7 @@ String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin || AppSetting.driveHomeGraceMin =>
         l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
-      AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays => l10n.valueDays(v),
+      AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays || AppSetting.docRenewalDays => l10n.valueDays(v),
       AppSetting.oilDueSoonKm => l10n.kmValue('$v'),
     };
 

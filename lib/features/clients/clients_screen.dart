@@ -246,7 +246,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   tooltip: l10n.exportClients,
                   onPressed: list.isEmpty ? null : () => showClientExportDialog(context, ref, list),
                 ),
-              IconButton(icon: const Icon(Icons.map), tooltip: l10n.map, onPressed: () => context.go('/map')),
+              IconButton(icon: const Icon(Icons.map), tooltip: l10n.clientMap, onPressed: () => context.go('/map')),
               if (me?.role.isAdmin ?? false)
                 IconButton(
                   icon: const Icon(Icons.upload_file),

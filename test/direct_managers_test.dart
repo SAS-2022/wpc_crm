@@ -77,4 +77,27 @@ void main() {
     expect(driversOf(by('ws'), list).map((x) => x.id), ['d1']);
     expect(driversOf(by('kam'), list), isEmpty);
   });
+
+  test('department heads: the top manager of the department sees and approves it', () {
+    AppUser d(String id, UserRole role, String? dept, {String? managerId, bool isManager = false}) => AppUser(
+        id: id, name: id, email: '', phone: '', role: role, kamId: null, active: true,
+        department: dept, managerId: managerId, markedManager: isManager);
+    final list = [
+      ...users,
+      u('lm', UserRole.logisticsManager),
+      u('fm', UserRole.factoryManager),
+      // Production worker whose direct manager was chosen as someone else.
+      d('pw', UserRole.worker, 'production', managerId: 'lm'),
+      d('accMgr', UserRole.accounting, null, isManager: true),
+      d('acc', UserRole.accounting, null),
+    ];
+    AppUser by(String id) => list.firstWhere((x) => x.id == id);
+    expect(departmentHeadsOf(by('pw'), list), ['fm']);
+    expect(departmentHeadsOf(by('acc'), list), ['accMgr']);
+    expect(departmentHeadsOf(by('exec'), list), ['sm']); // not the KAM
+    expect(departmentHeadsOf(by('worker'), list), isEmpty); // no department
+    expect(peopleUnder(by('fm'), list).map((x) => x.id), ['pw']);
+    expect(peopleUnder(by('accMgr'), list).map((x) => x.id), ['acc']);
+    expect(peopleUnder(by('kam'), list).map((x) => x.id), ['exec']);
+  });
 }

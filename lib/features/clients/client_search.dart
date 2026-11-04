@@ -1,3 +1,4 @@
+import '../../core/search_text.dart';
 import 'client.dart';
 
 // Client search (user request 2026-10-20): name, other names, city, contact
@@ -34,8 +35,8 @@ class SearchMatch {
 /// A typed search, prepared once for many clients.
 class ClientQuery {
   ClientQuery(String raw)
-      : text = raw.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' '),
-        digits = _national(raw.replaceAll(RegExp(r'\D'), ''));
+      : text = foldSearch(raw),
+        digits = _national(searchDigits(raw));
 
   final String text;
 
@@ -46,13 +47,14 @@ class ClientQuery {
   bool get isEmpty => text.isEmpty;
   bool get _phoneLike => digits.length >= 3 && !RegExp(r'[^\d\s+()\-]').hasMatch(text);
 
-  /// Every [start, end) where the query appears in [s], ignoring case.
+  /// Every [start, end) where the query appears in [s], ignoring case and
+  /// Arabic letter forms ([foldSearch]); ranges are in [s] itself.
   List<(int, int)> rangesIn(String s) {
     if (text.isEmpty || s.isEmpty) return const [];
-    final lower = s.toLowerCase();
+    final (folded, at) = foldSearchMapped(s);
     final out = <(int, int)>[];
-    for (var i = lower.indexOf(text); i >= 0; i = lower.indexOf(text, i + text.length)) {
-      out.add((i, i + text.length));
+    for (var i = folded.indexOf(text); i >= 0; i = folded.indexOf(text, i + text.length)) {
+      out.add((at[i], at[i + text.length - 1] + 1));
     }
     return out;
   }
@@ -60,9 +62,11 @@ class ClientQuery {
   /// Phone numbers: digits only, so "055 123" finds "+966 55 123 4567".
   List<(int, int)> phoneRangesIn(String s) {
     if (!_phoneLike) return const [];
-    // Positions of the digits in [s], after the country code / leading 0.
-    final positions = [for (var i = 0; i < s.length; i++) if (_isDigit(s.codeUnitAt(i))) i];
-    final all = String.fromCharCodes([for (final i in positions) s.codeUnitAt(i)]);
+    // Positions of the digits in [s] (Arabic-Indic too), after the country
+    // code / leading 0.
+    final (folded, from) = foldSearchMapped(s);
+    final positions = [for (var i = 0; i < folded.length; i++) if (_isDigit(folded.codeUnitAt(i))) from[i]];
+    final all = String.fromCharCodes([for (var i = 0; i < folded.length; i++) if (_isDigit(folded.codeUnitAt(i))) folded.codeUnitAt(i)]);
     final skip = all.length - _national(all).length;
     final national = all.substring(skip);
     final at = national.indexOf(digits);

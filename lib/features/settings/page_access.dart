@@ -21,13 +21,18 @@ enum AppPage {
   teamPlans(['/team-plans'], {_kam, _sm, _gm}),
   reports(['/reports'], {_kam, _sm, _gm}),
   transfers(['/transfers'], {_kam, _sm, _gm}),
+  catalogs(['/catalogs'], {_kam, _sm, _gm}),
   liveTracking(['/live'], {_kam, _sm, _gm}),
   routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws}),
   drivers(['/drivers'], {_sm, _gm, _lm, _ws}),
-  vehicles(['/vehicles'], {_sm, _gm, _lm}),
+  phoneStatus(['/phone-status'], {_kam, _sm, _gm, _lm, _fm}),
+  vehicles(['/vehicles'], {_sm, _gm, _lm, _hr}),
+  companyDocs(['/documents'], {_exec, _kam, _sm, _gm, _hr}),
+  /// Listed before [attendance]: its path is under `/attendance`.
+  employeesMap(['/attendance/map'], {_kam, _sm, _gm, _lm, _ws, _fm}),
   attendance(['/attendance'], {_hr, _gm, _sm, _kam, _lm, _ws, _fm}),
   hrArea(['/hr'], {_hr, _gm, _sm}),
-  users(['/users'], {_sm, _gm, _lm, _fm}),
+  users(['/users'], {_sm, _gm, _lm, _fm, _hr}),
   importClients(['/import'], {_sm, _gm}),
 
   /// Never turned off for SM / GM ([locked]): nobody can lock themselves out.
@@ -80,7 +85,8 @@ class PageAccess {
   /// [user] may open [page]. People marked "Is a manager" always see their
   /// team's attendance (it follows the person, not the role).
   bool allowsUser(AppUser user, AppPage page) =>
-      allows(user.role, page) || (page == AppPage.attendance && user.markedManager);
+      allows(user.role, page) ||
+      ((page == AppPage.attendance || page == AppPage.employeesMap) && user.markedManager);
 
   /// Whether [user] may open [location] (pages not listed here: yes).
   bool allowsLocation(AppUser user, String location) {
