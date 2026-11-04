@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wpc_crm/features/tracking/device_health.dart';
+import 'package:wpc_crm/features/tracking/phone_setup_guide.dart';
 
 void main() {
   test('a gap is 15 min or more without sending, on the same day', () {
@@ -16,7 +17,13 @@ void main() {
     expect(phoneBrand('samsung'), PhoneBrand.samsung);
     expect(phoneBrand('HONOR'), PhoneBrand.huawei);
     expect(phoneBrand('realme'), PhoneBrand.oppo);
+    expect(phoneBrand('motorola'), PhoneBrand.motorola);
+    expect(phoneBrand('INFINIX MOBILITY LIMITED'), PhoneBrand.transsion);
+    expect(phoneBrand('TECNO'), PhoneBrand.transsion);
     expect(phoneBrand('Google'), PhoneBrand.other);
+    for (final b in PhoneBrand.values) {
+      expect(phoneSetupSteps(b), isNotEmpty, reason: '$b');
+    }
   });
 
   test('maker checklist: Autostart read from the phone decides, else "I\'ve done this"', () {

@@ -10,7 +10,9 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../clients/person_style.dart' show initialsOf;
 import '../settings/page_access.dart';
+import '../tracking/device_health.dart' show phoneBrand;
 import '../tracking/live_data.dart';
+import '../tracking/phone_setup_guide.dart';
 import '../tracking/live_map_screen.dart' show timeAgo;
 import '../tracking/tracking_schedule.dart';
 import '../tracking/work_hours.dart';
@@ -18,6 +20,7 @@ import '../users/companies.dart';
 import '../users/company_filter.dart';
 import '../users/users_repository.dart';
 import 'device_status.dart';
+import 'quiet_reason_text.dart';
 import '../../core/search_text.dart';
 
 /// Phone status (user request 2026-11-01): a card per employee with their
@@ -285,14 +288,16 @@ class _PhoneCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              switch (r.signal) {
-                PhoneSignal.noPhone => l10n.phoneStatusNoPhone,
-                PhoneSignal.stopped =>
-                  heard == null ? l10n.phoneStatusStoppedNever : l10n.phoneStatusStopped(heard),
-                PhoneSignal.recent || PhoneSignal.quiet => l10n.phoneStatusLastHeard(heard ?? '–'),
-              },
+              r.quiet != null
+                  ? quietLine(context, r.quiet!, r.lastPosition, now)
+                  : switch (r.signal) {
+                      PhoneSignal.noPhone => l10n.phoneStatusNoPhone,
+                      PhoneSignal.stopped =>
+                        heard == null ? l10n.phoneStatusStoppedNever : l10n.phoneStatusStopped(heard),
+                      PhoneSignal.recent || PhoneSignal.quiet => l10n.phoneStatusLastHeard(heard ?? '–'),
+                    },
               style: theme.textTheme.labelMedium?.copyWith(
-                color: switch (r.signal) {
+                color: r.quiet != null ? theme.colorScheme.error : switch (r.signal) {
                   PhoneSignal.stopped => theme.colorScheme.error,
                   PhoneSignal.recent => Colors.green.shade700,
                   PhoneSignal.quiet => Colors.orange.shade800,
@@ -334,6 +339,18 @@ class _PhoneCard extends StatelessWidget {
                   child: Text(
                     [if (s.app != null) l10n.phoneStatusApp(s.app!), ?s.phoneLabel].join(' · '),
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  ),
+                ),
+              // The maker's setup steps in English + Arabic (2026-11-04), to
+              // guide a phone set to Arabic.
+              if (s.android)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                    onPressed: () => showPhoneSetupGuide(context, phoneBrand(s.maker ?? '')),
+                    icon: const Icon(Icons.list_alt, size: 18),
+                    label: Text(l10n.phoneSetupShowSteps),
                   ),
                 ),
             ],

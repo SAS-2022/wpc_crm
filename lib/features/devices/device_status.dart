@@ -176,7 +176,17 @@ class PhoneReport {
     required this.signal,
     required this.fromOldApp,
     this.shouldShare = false,
+    this.quiet,
+    this.lastPosition,
   });
+
+  /// Should share now but no position came for [stoppedAfter]: why
+  /// (2026-11-04). Also set while the phone itself still reports
+  /// ([QuietReason.notRecording]).
+  final QuietReason? quiet;
+
+  /// Newest position (live or recorded today).
+  final DateTime? lastPosition;
 
   /// Null when nothing about the phone's settings is known.
   final DeviceStatus? status;
@@ -190,7 +200,9 @@ class PhoneReport {
   /// The location should be shared / recorded now.
   final bool shouldShare;
 
-  bool get stopped => signal == PhoneSignal.stopped;
+  /// Not sending its location while it should (silent, or the phone
+  /// reports but no positions come).
+  bool get stopped => signal == PhoneSignal.stopped || quiet != null;
 
   /// Stopped reporting counts as a problem, before the settings.
   int get problemCount =>
@@ -237,7 +249,67 @@ PhoneReport phoneReport({
           : shouldShare
               ? PhoneSignal.stopped
               : PhoneSignal.quiet;
-  return PhoneReport(status: status, lastHeard: lastHeard, signal: signal, fromOldApp: old, shouldShare: shouldShare);
+  final lastPosition = latest([liveAt, recordedAt]);
+  final quiet = shouldShare && signal != PhoneSignal.noPhone && (lastPosition == null || now.difference(lastPosition) >= stoppedAfter)
+      ? quietReason(device: device, presence: presence, lastPosition: lastPosition, now: now)
+      : null;
+  return PhoneReport(
+    status: status,
+    lastHeard: lastHeard,
+    signal: signal,
+    fromOldApp: old,
+    shouldShare: shouldShare,
+    quiet: quiet,
+    lastPosition: lastPosition,
+  );
+}
+
+/// Why a phone that should share its location sent none lately
+/// (2026-11-04, user: "Offline" didn't say what was really happening).
+enum QuietReason {
+  /// GPS / location services switched off on the phone.
+  gpsOff,
+
+  /// Location permission isn't "Allow all the time".
+  noPermission,
+
+  /// The phone still reports (the app opens) but sends no positions: the
+  /// background recording isn't running (maker battery manager, autostart).
+  notRecording,
+
+  /// Nothing at all from the phone, and its last report had no internet.
+  noInternet,
+
+  /// Nothing at all from the phone: the app was closed by the phone
+  /// (battery saving / autostart off / swiped away) or the phone is off.
+  appClosed,
+}
+
+/// [device] the phone's last own report, [presence] the tracker's (tracked
+/// roles only), [lastPosition] the newest position (live or recorded). Null
+/// when the phone never reported anything.
+QuietReason? quietReason({
+  required DeviceStatus? device,
+  required Presence? presence,
+  required DateTime? lastPosition,
+  required DateTime now,
+}) {
+  if (device == null && presence == null) return null;
+  bool fresh(DateTime? t) => t != null && now.difference(t) < stoppedAfter;
+  // The newest of the two reports decides the settings.
+  final presenceNewer = presence != null && (device?.at == null || (presence.lastSeen?.isAfter(device!.at!) ?? false));
+  final gps = presenceNewer ? presence.gpsOn : (device?.gps ?? presence?.gpsOn);
+  final permission = presenceNewer
+      ? (presence.permission.isEmpty ? device?.location : presence.permission)
+      : (device?.location ?? (presence?.permission.isEmpty ?? true ? null : presence!.permission));
+  if (gps == false) return QuietReason.gpsOff;
+  if (permission != null && permission != 'always') return QuietReason.noPermission;
+  // The phone answers (app open / heartbeat) yet no position came.
+  if (fresh(device?.at) || (presence != null && presence.online && fresh(presence.lastSeen))) {
+    if (!fresh(lastPosition)) return QuietReason.notRecording;
+  }
+  if (device?.network != null && device!.network!.isEmpty) return QuietReason.noInternet;
+  return QuietReason.appClosed;
 }
 
 String? get _platform => kIsWeb

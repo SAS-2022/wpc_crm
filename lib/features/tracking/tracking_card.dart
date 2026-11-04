@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'device_health.dart';
+import 'phone_setup_guide.dart';
 import 'tracking_device.dart';
 import 'tracking_status.dart';
 
@@ -203,6 +204,13 @@ class PhoneHealthTips extends ConsumerWidget {
             alignment: WrapAlignment.end,
             spacing: 8,
             children: [
+              // Numbered steps in Arabic and English (2026-11-04): the
+              // maker pages don't open the right place on every phone.
+              FilledButton.icon(
+                onPressed: () => showPhoneSetupGuide(context, health.brand),
+                icon: const Icon(Icons.list_alt),
+                label: Text(l10n.phoneSetupShowSteps),
+              ),
               OutlinedButton(
                 onPressed: openBackgroundSettings,
                 child: Text(health.brand == PhoneBrand.xiaomi ? l10n.openAutostart : l10n.openSettings),
@@ -233,5 +241,7 @@ String makerSetupText(AppLocalizations l10n, PhoneBrand brand) => switch (brand)
       PhoneBrand.oppo => l10n.phoneSetupOppo,
       PhoneBrand.vivo => l10n.phoneSetupVivo,
       PhoneBrand.oneplus => l10n.phoneSetupOneplus,
+      PhoneBrand.motorola => l10n.phoneSetupMotorola,
+      PhoneBrand.transsion => l10n.phoneSetupTranssion,
       PhoneBrand.other => '',
     };

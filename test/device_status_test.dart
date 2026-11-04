@@ -153,4 +153,36 @@ void main() {
     expect(s.phoneLabel, 'Redmi Note 12 · xiaomi 23021RAAEG · Android 15');
     expect(DeviceStatus.fromMap({'platform': 'ios', 'os': 'iOS 18.1'})!.phoneLabel, 'iOS 18.1');
   });
+
+  group('quietReason', () {
+    final now = DateTime(2026, 11, 4, 10);
+    DeviceStatus dev({bool gps = true, String location = 'always', List<String>? network = const ['wifi'], int ago = 1}) =>
+        DeviceStatus(platform: 'android', gps: gps, location: location, network: network, at: now.subtract(Duration(minutes: ago)));
+    QuietReason? r(DeviceStatus? d, {Presence? p, int? pointAgo}) => quietReason(
+          device: d,
+          presence: p,
+          lastPosition: pointAgo == null ? null : now.subtract(Duration(minutes: pointAgo)),
+          now: now,
+        );
+
+    test('nothing ever reported', () => expect(r(null), isNull));
+    test('GPS off wins', () => expect(r(dev(gps: false, ago: 120)), QuietReason.gpsOff));
+    test('permission not always', () => expect(r(dev(location: 'whileInUse')), QuietReason.noPermission));
+    test('phone reports but no positions', () {
+      expect(r(dev(ago: 3), pointAgo: 120), QuietReason.notRecording);
+      expect(r(dev(ago: 3)), QuietReason.notRecording);
+    });
+    test('phone silent', () {
+      expect(r(dev(ago: 115), pointAgo: 113), QuietReason.appClosed);
+      expect(r(dev(ago: 115, network: const []), pointAgo: 113), QuietReason.noInternet);
+    });
+    test('newer presence decides GPS', () {
+      final p = Presence(online: true, lastSeen: now.subtract(const Duration(minutes: 1)), gpsOn: false, permission: 'always');
+      expect(r(dev(ago: 60), p: p, pointAgo: 30), QuietReason.gpsOff);
+      final on = Presence(online: true, lastSeen: now.subtract(const Duration(minutes: 1)), gpsOn: true, permission: 'always');
+      expect(r(null, p: on, pointAgo: 30), QuietReason.notRecording);
+      final off = Presence(online: false, lastSeen: now.subtract(const Duration(minutes: 60)), gpsOn: true, permission: 'always');
+      expect(r(null, p: off, pointAgo: 60), QuietReason.appClosed);
+    });
+  });
 }

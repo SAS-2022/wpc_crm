@@ -16,7 +16,11 @@ import '../../l10n/app_localizations.dart';
 import '../clients/person_style.dart';
 import '../users/company_filter.dart';
 import '../users/users_repository.dart';
+import '../devices/device_status.dart';
+import '../devices/quiet_reason_text.dart';
 import 'live_data.dart';
+import 'tracking_schedule.dart';
+import 'work_hours.dart';
 import 'motion.dart';
 
 /// "Just now", "5 min ago", "2 h ago", else the date and time.
@@ -169,16 +173,48 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         : ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{};
     LiveState stateOf(String id) =>
         recorded ? recordedState(locations[id], now) : liveState(locations[id], presence[id], now);
+    // Why someone who should share sends nothing (2026-11-04, user:
+    // "Offline" didn't say what was really happening).
+    final devices = ref.watch(deviceStatusesProvider).value ?? const <String, DeviceStatus>{};
+    final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+    final schedules = ref.watch(trackingSchedulesProvider).value ?? const <String, TrackingSchedule>{};
+    final byId = {for (final u in users) u.id: u};
+    String? reasonOf(String id) {
+      final u = byId[id];
+      if (u == null) return null;
+      final shares = (schedules[id] ?? const TrackingSchedule.standard()).isOn(
+        now,
+        company,
+        driver: u.role.isDriver,
+        recordOnly: u.recordsGps,
+        days: u.workSchedule?.days,
+      );
+      if (!shares) return null;
+      final loc = locations[id];
+      final why = quietReason(
+        device: devices[id],
+        presence: recorded ? null : presence[id],
+        lastPosition: loc?.updatedAt,
+        now: now,
+      );
+      return why == null ? null : quietLine(context, why, loc?.updatedAt, now);
+    }
+
     String statusOf(String id) {
       final loc = locations[id];
+      final state = stateOf(id);
+      if (state == LiveState.offline || (recorded && state != LiveState.live)) {
+        final why = reasonOf(id);
+        if (why != null) return why;
+      }
       if (recorded) {
         if (loc == null) return l10n.noPositionRecordedToday;
-        return stateOf(id) == LiveState.live
+        return state == LiveState.live
             ? l10n.liveUpdated(_ago(l10n, loc.updatedAt, now))
             : l10n.lastPositionRecorded(_ago(l10n, loc.updatedAt, now));
       }
       final p = presence[id];
-      return loc == null && p == null ? l10n.noLocationYet : _status(l10n, stateOf(id), loc, p, now);
+      return loc == null && p == null ? l10n.noLocationYet : _status(l10n, state, loc, p, now);
     }
 
     // A city picked: only the people whose position is inside it.

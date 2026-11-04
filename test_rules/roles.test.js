@@ -148,6 +148,12 @@ describe('sales team keeps its access', () => {
     await assertSucceeds(updateDoc(doc(fs('gm'), 'users/exec'), { updateRemindedAt: serverTimestamp() }));
   });
 
+  test('everyone saves their own side menu order, not someone else\'s', async () => {
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'users/exec'), { menuOrder: ['/visits', '/'] }));
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'users/hr'), { menuOrder: null }));
+    await assertFails(updateDoc(doc(fs('exec'), 'users/kam'), { menuOrder: ['/'] }));
+  });
+
   test('sales exec asks to close own client, never sets the status or asks as someone else', async () => {
     const ask = { statusRequest: { status: 'closed', byId: 'exec', at: serverTimestamp(), note: 'Shop shut' } };
     await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), ask));

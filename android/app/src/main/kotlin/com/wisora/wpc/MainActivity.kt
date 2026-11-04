@@ -148,39 +148,64 @@ class MainActivity : FlutterFragmentActivity() {
         return false
     }
 
-    /** Known auto-start / background pages per maker; true when one opened. */
+    /**
+     * Known auto-start / background pages per maker; true when one opened.
+     * 2026-11-04 (user: the button opened the wrong place on some phones):
+     * more pages per maker, newest first; Motorola and Tecno / Infinix / itel
+     * added. On Oppo / Realme / OnePlus with Android 12+ and on Motorola the
+     * switches live on the app's own page (Battery usage), so that opens.
+     * The app also shows numbered steps (phone_setup_guide.dart).
+     */
     private fun openBackgroundSettings(): Boolean {
-        val candidates = listOf(
-            ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
-            ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity"),
-            ComponentName("com.samsung.android.sm", "com.samsung.android.sm.battery.ui.BatteryActivity"),
-            ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
-            ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"),
-            ComponentName("com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
-            ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
-            ComponentName("com.oplus.safecenter", "com.oplus.safecenter.permission.startup.StartupAppListActivity"),
-            ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
-            ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"),
-        )
         val maker = Build.MANUFACTURER.lowercase()
-        val mine = candidates.filter { c ->
-            when {
-                maker.contains("xiaomi") || maker.contains("redmi") || maker.contains("poco") -> c.packageName.startsWith("com.miui")
-                maker.contains("samsung") -> c.packageName.startsWith("com.samsung")
-                maker.contains("huawei") -> c.packageName.startsWith("com.huawei")
-                maker.contains("honor") -> c.packageName.startsWith("com.hihonor") || c.packageName.startsWith("com.huawei")
-                maker.contains("oppo") || maker.contains("realme") -> c.packageName.startsWith("com.coloros") || c.packageName.startsWith("com.oplus")
-                maker.contains("oneplus") -> c.packageName.startsWith("com.oneplus") || c.packageName.startsWith("com.oplus")
-                maker.contains("vivo") -> c.packageName.startsWith("com.vivo")
-                else -> false
-            }
+        val xiaomi = maker.contains("xiaomi") || maker.contains("redmi") || maker.contains("poco")
+        val oplus = maker.contains("oppo") || maker.contains("realme") || maker.contains("oneplus")
+        val appPageFirst = maker.contains("motorola") || (oplus && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        val candidates: List<ComponentName> = when {
+            appPageFirst -> emptyList()
+            xiaomi -> listOf(
+                ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+            )
+            maker.contains("samsung") -> listOf(
+                ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity"),
+                ComponentName("com.samsung.android.sm", "com.samsung.android.sm.battery.ui.BatteryActivity"),
+            )
+            maker.contains("honor") -> listOf(
+                ComponentName("com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+                ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+            )
+            maker.contains("huawei") -> listOf(
+                ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+                ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"),
+            )
+            oplus -> listOf(
+                ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
+                ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
+                ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"),
+                ComponentName("com.oplus.safecenter", "com.oplus.safecenter.permission.startup.StartupAppListActivity"),
+                ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"),
+            )
+            maker.contains("vivo") -> listOf(
+                // Android 12+: "Background power consumption management".
+                ComponentName("com.vivo.abe", "com.vivo.applicationbehaviorengine.ui.ExcessivePowerManagerActivity"),
+                ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
+                ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"),
+                ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"),
+            )
+            maker.contains("tecno") || maker.contains("infinix") || maker.contains("itel") -> listOf(
+                ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity"),
+            )
+            else -> emptyList()
         }
-        for (c in mine) {
+        for (c in candidates) {
             try {
-                startActivity(Intent().setComponent(c).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                val intent = Intent().setComponent(c).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Only pages this phone really has (no "app not found" screen).
+                if (intent.resolveActivity(packageManager) == null) continue
+                startActivity(intent)
                 return true
             } catch (_: Exception) {
-                // Not on this phone / version: try the next one.
+                // Not exported on this version: try the next one.
             }
         }
         startActivity(

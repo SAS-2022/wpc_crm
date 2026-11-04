@@ -6030,4 +6030,63 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get supervisesNote =>
       'Drivers and workers this warehouse supervisor follows: they see their attendance, phones and places on the employee map.';
+
+  @override
+  String get editMenu => 'Edit menu';
+
+  @override
+  String get editMenuHint => 'Drag the entries into the order you want.';
+
+  @override
+  String get menuOrderSaved => 'Menu order saved';
+
+  @override
+  String get quietGpsOff => 'GPS is off on the phone';
+
+  @override
+  String get quietNoPermission => 'Location isn\'t allowed all the time';
+
+  @override
+  String get quietNotRecording =>
+      'Phone is on, but the app isn\'t sending its location';
+
+  @override
+  String get quietNoInternet => 'No internet on the phone';
+
+  @override
+  String get quietAppClosed =>
+      'App closed by the phone (battery saving / autostart)';
+
+  @override
+  String quietLine(String reason, String ago) {
+    return '$reason · last location $ago';
+  }
+
+  @override
+  String quietLineNone(String reason) {
+    return '$reason · no location today';
+  }
+
+  @override
+  String phoneSetupGuideTitle(String brand) {
+    return 'Phone setup – $brand';
+  }
+
+  @override
+  String get phoneSetupGuideNote =>
+      'Do these once so the phone doesn\'t stop WPC CRM in the background. Menu names can differ a little between phone versions.';
+
+  @override
+  String get openAppInfo => 'App settings';
+
+  @override
+  String get phoneSetupShowSteps => 'Setup steps';
+
+  @override
+  String get phoneSetupMotorola =>
+      'Motorola stops apps in the background. Set WPC CRM\'s battery usage to “Unrestricted” and lock it in recent apps.';
+
+  @override
+  String get phoneSetupTranssion =>
+      'Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”.';
 }

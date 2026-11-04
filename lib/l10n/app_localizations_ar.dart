@@ -6043,4 +6043,62 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get supervisesNote =>
       'السائقون والعمال الذين يتابعهم مشرف المستودع: يرى حضورهم وحالة هواتفهم ومواقعهم على خريطة الموظفين.';
+
+  @override
+  String get editMenu => 'ترتيب القائمة';
+
+  @override
+  String get editMenuHint => 'اسحب العناصر بالترتيب الذي تريده.';
+
+  @override
+  String get menuOrderSaved => 'تم حفظ ترتيب القائمة';
+
+  @override
+  String get quietGpsOff => 'الموقع (GPS) مغلق في الجوال';
+
+  @override
+  String get quietNoPermission => 'إذن الموقع ليس «السماح طوال الوقت»';
+
+  @override
+  String get quietNotRecording => 'الجوال يعمل لكن التطبيق لا يرسل الموقع';
+
+  @override
+  String get quietNoInternet => 'لا يوجد إنترنت في الجوال';
+
+  @override
+  String get quietAppClosed =>
+      'أغلق الجوال التطبيق (توفير البطارية / التشغيل التلقائي)';
+
+  @override
+  String quietLine(String reason, String ago) {
+    return '$reason · آخر موقع $ago';
+  }
+
+  @override
+  String quietLineNone(String reason) {
+    return '$reason · لا يوجد موقع اليوم';
+  }
+
+  @override
+  String phoneSetupGuideTitle(String brand) {
+    return 'إعداد الجوال – $brand';
+  }
+
+  @override
+  String get phoneSetupGuideNote =>
+      'نفّذ هذه الخطوات مرة واحدة حتى لا يوقف الجوال تطبيق WPC CRM في الخلفية. قد تختلف أسماء القوائم قليلاً بين إصدارات الجوالات.';
+
+  @override
+  String get openAppInfo => 'إعدادات التطبيق';
+
+  @override
+  String get phoneSetupShowSteps => 'خطوات الإعداد';
+
+  @override
+  String get phoneSetupMotorola =>
+      'توقف أجهزة Motorola التطبيقات في الخلفية. اضبط استخدام البطارية لتطبيق WPC CRM على «غير مقيد» واقفله في التطبيقات الأخيرة.';
+
+  @override
+  String get phoneSetupTranssion =>
+      'توقف أجهزة Tecno / Infinix / itel التطبيقات في الخلفية. فعّل التشغيل التلقائي لتطبيق WPC CRM واضبط استخدام البطارية على «غير مقيد».';
 }

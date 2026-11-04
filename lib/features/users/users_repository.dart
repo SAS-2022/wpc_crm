@@ -112,6 +112,10 @@ class UsersRepository {
   Future<void> setOwnHomeLocation(String uid, double lat, double lng) =>
       saving(() => _users.doc(uid).update({'homeLocation': {'lat': lat, 'lng': lng}}));
 
+  /// The person's own side menu order (web); null = back to the default.
+  Future<void> setMenuOrder(String uid, List<String>? order) =>
+      saving(() => _users.doc(uid).update({'menuOrder': order}));
+
   Future<void> rejectRegistration(String uid) =>
       saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false}));
 

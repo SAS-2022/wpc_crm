@@ -242,6 +242,7 @@ class AppUser {
     this.joiningDate,
     this.department,
     this.homeLocation,
+    this.menuOrder,
   });
 
   final String id;
@@ -355,6 +356,10 @@ class AppUser {
   /// site (they take the company car home).
   final ({double lat, double lng})? homeLocation;
 
+  /// Their own side menu order on the web (paths, 2026-11-04; null = the
+  /// default). Set by the person only, from the menu's "Edit menu".
+  final List<String>? menuOrder;
+
   /// Attendance page for the people under them (2026-10-23): managers and
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
   /// The employee map with the people under them (department heads,
@@ -419,6 +424,10 @@ class AppUser {
       supervisorId: d['supervisorId'] as String?,
       homeLocation: switch (d['homeLocation']) {
         {'lat': final num lat, 'lng': final num lng} => (lat: lat.toDouble(), lng: lng.toDouble()),
+        _ => null,
+      },
+      menuOrder: switch (d['menuOrder']) {
+        final List l when l.isNotEmpty => [for (final p in l) if (p is String) p],
         _ => null,
       },
       joiningDate: switch (d['joiningDate']) {

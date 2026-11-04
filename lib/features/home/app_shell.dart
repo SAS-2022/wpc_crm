@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../attendance/at_site_prompt.dart';
 import '../attendance/overtime_widgets.dart' show OvertimePromptGate;
 import '../settings/page_access.dart';
+import '../users/users_repository.dart';
+import 'menu_order.dart';
 
 /// Below this width: bottom tabs (phones). From it: a side menu (web,
 /// tablets) with the dashboard pages as their own entries.
@@ -71,7 +73,7 @@ class AppShell extends ConsumerWidget {
     final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     final supervisor = role?.isSupervisor ?? false;
     final backOffice = role?.isBackOffice ?? false;
-    final items = [
+    final List<_MenuItem> items = [
       (path: '/', icon: Icons.dashboard_outlined, selected: Icons.dashboard, label: l10n.home),
       if (!backOffice) ...[
         (path: '/clients', icon: Icons.store_outlined, selected: Icons.store, label: l10n.clients),
@@ -97,8 +99,75 @@ class AppShell extends ConsumerWidget {
         (path: '/documents', icon: Icons.folder_copy_outlined, selected: Icons.folder_copy, label: l10n.companyDocs),
       (path: '/more', icon: Icons.menu, selected: Icons.menu_open, label: l10n.more),
     ].where((item) => me == null || access.allowsLocation(me, item.path)).toList();
+    return Scaffold(
+      body: Row(
+        children: [
+          _SideMenu(items: items, location: location),
+          const VerticalDivider(width: 1),
+          Expanded(child: shell),
+        ],
+      ),
+    );
+  }
+}
+
+typedef _MenuItem = ({String path, IconData icon, IconData selected, String label});
+
+/// The web side menu. Each person can put the entries in their own order
+/// (2026-11-04, user request): "Edit menu" at the bottom turns it into a
+/// drag list; Done saves it in `users/{uid}.menuOrder` (follows them to any
+/// browser), Reset goes back to the default order.
+class _SideMenu extends ConsumerStatefulWidget {
+  const _SideMenu({required this.items, required this.location});
+
+  /// Allowed entries in the default order.
+  final List<_MenuItem> items;
+  final String location;
+
+  @override
+  ConsumerState<_SideMenu> createState() => _SideMenuState();
+}
+
+class _SideMenuState extends ConsumerState<_SideMenu> {
+  /// The order being edited; null = not editing.
+  List<_MenuItem>? _draft;
+
+  List<_MenuItem> _ordered(List<String>? saved) {
+    final byPath = {for (final i in widget.items) i.path: i};
+    return [for (final p in orderMenu([for (final i in widget.items) i.path], saved)) byPath[p]!];
+  }
+
+  Future<void> _save(List<_MenuItem> order) async {
+    final me = ref.read(currentUserProvider).value;
+    if (me == null) return;
+    final toSave = menuOrderToSave(
+      [for (final i in order) i.path],
+      [for (final i in widget.items) i.path],
+      me.menuOrder,
+    );
+    setState(() => _draft = null);
+    final messenger = ScaffoldMessenger.of(context);
+    final text = AppLocalizations.of(context).menuOrderSaved;
+    try {
+      await ref.read(usersRepositoryProvider).setMenuOrder(me.id, toSave);
+      messenger.showSnackBar(SnackBar(content: Text(text)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final me = ref.watch(currentUserProvider).value;
+    final extended = MediaQuery.sizeOf(context).width >= 1200;
+    final draft = _draft;
+    if (draft != null) return _editor(context, l10n, draft);
+
+    final items = _ordered(me?.menuOrder);
     // The entry whose path is the longest prefix of the location; Home also
     // holds the plan and notification pages.
+    final location = widget.location;
     var index = 0;
     var best = -1;
     for (final (i, item) in items.indexed) {
@@ -111,41 +180,138 @@ class AppShell extends ConsumerWidget {
         best = item.path.length;
       }
     }
-    final extended = MediaQuery.sizeOf(context).width >= 1200;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          // Scrolls when the entries don't fit the window's height.
-          LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: NavigationRail(
-                    extended: extended,
-                    labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-                    selectedIndex: index,
-                    leading: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Image.asset('assets/images/Regular.png', width: extended ? 140 : 56),
-                    ),
-                    onDestinationSelected: (i) => context.go(items[i].path),
-                    destinations: [
-                      for (final item in items)
-                        NavigationRailDestination(
-                          icon: Icon(item.icon),
-                          selectedIcon: Icon(item.selected),
-                          label: Text(item.label),
-                        ),
-                    ],
-                  ),
-                ),
+    // Scrolls when the entries don't fit the window's height.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: NavigationRail(
+              extended: extended,
+              labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              selectedIndex: index,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Image.asset('assets/images/Regular.png', width: extended ? 140 : 56),
               ),
+              // Pinned to the bottom (an Expanded inside the rail's own
+              // column could leave it unseen).
+              trailingAtBottom: true,
+              trailing: me == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 12, top: 8),
+                      child: extended
+                          ? OutlinedButton.icon(
+                              icon: const Icon(Icons.swap_vert),
+                              label: Text(l10n.editMenu),
+                              onPressed: () => setState(() => _draft = List.of(items)),
+                            )
+                          : Tooltip(
+                              message: l10n.editMenu,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () => setState(() => _draft = List.of(items)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.swap_vert),
+                                      Text(l10n.editMenu, style: Theme.of(context).textTheme.labelSmall),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+              onDestinationSelected: (i) => context.go(items[i].path),
+              destinations: [
+                for (final item in items)
+                  NavigationRailDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.selected),
+                    label: Text(item.label),
+                  ),
+              ],
             ),
           ),
-          const VerticalDivider(width: 1),
-          Expanded(child: shell),
+        ),
+      ),
+    );
+  }
+
+  Widget _editor(BuildContext context, AppLocalizations l10n, List<_MenuItem> draft) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 240,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(l10n.editMenu, style: theme.textTheme.titleMedium),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(l10n.editMenuHint, style: theme.textTheme.bodySmall),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ReorderableListView(
+              buildDefaultDragHandles: false,
+              onReorderItem: (from, to) => setState(() => draft.insert(to, draft.removeAt(from))),
+              children: [
+                for (final (i, item) in draft.indexed)
+                  ReorderableDragStartListener(
+                    key: ValueKey(item.path),
+                    index: i,
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      child: ListTile(
+                        dense: true,
+                        mouseCursor: SystemMouseCursors.grab,
+                        leading: Icon(item.icon),
+                        title: Text(item.label, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        trailing: const Icon(Icons.drag_indicator),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: Text(l10n.done),
+                  onPressed: () => _save(draft),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => setState(() => _draft = List.of(widget.items)),
+                        child: Text(l10n.resetToDefault, textAlign: TextAlign.center),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => setState(() => _draft = null),
+                        child: Text(l10n.cancel),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -12,7 +12,7 @@ const _channel = MethodChannel('wpc/device');
 
 /// Makers whose own battery managers pause background apps; each has a
 /// setting the app can't read, so it's a checklist the person confirms.
-enum PhoneBrand { xiaomi, samsung, huawei, oppo, vivo, oneplus, other }
+enum PhoneBrand { xiaomi, samsung, huawei, oppo, vivo, oneplus, motorola, transsion, other }
 
 PhoneBrand phoneBrand(String manufacturer) {
   final m = manufacturer.toLowerCase();
@@ -22,6 +22,10 @@ PhoneBrand phoneBrand(String manufacturer) {
   if (m.contains('oppo') || m.contains('realme')) return PhoneBrand.oppo;
   if (m.contains('vivo')) return PhoneBrand.vivo;
   if (m.contains('oneplus')) return PhoneBrand.oneplus;
+  // 2026-11-04: a Motorola g13 stopped recording 3 min after check-in.
+  if (m.contains('motorola') || m.contains('moto')) return PhoneBrand.motorola;
+  // Tecno / Infinix / itel (HiOS / XOS), common with the factory staff.
+  if (m.contains('tecno') || m.contains('infinix') || m.contains('itel')) return PhoneBrand.transsion;
   return PhoneBrand.other;
 }
 

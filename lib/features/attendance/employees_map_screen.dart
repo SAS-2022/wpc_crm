@@ -17,6 +17,9 @@ import '../../l10n/app_localizations.dart';
 import '../clients/person_style.dart' show initialsOf;
 import '../devices/device_status.dart';
 import '../devices/phone_status_screen.dart' show PhoneCheckRow;
+import '../devices/quiet_reason_text.dart';
+import '../tracking/device_health.dart' show phoneBrand;
+import '../tracking/phone_setup_guide.dart';
 import '../home/app_shell.dart' show wideLayoutWidth;
 import '../hr/leave_repository.dart';
 import '../hr/leave_rules.dart';
@@ -433,7 +436,12 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: p.report.problemCount > 0
-                  ? Icon(Icons.phonelink_erase, color: theme.colorScheme.error, size: 20)
+                  ? Tooltip(
+                      message: p.report.quiet != null
+                          ? quietLine(context, p.report.quiet!, p.report.lastPosition, DateTime.now())
+                          : l10n.phoneStatusProblems(p.report.problemCount),
+                      child: Icon(Icons.phonelink_erase, color: theme.colorScheme.error, size: 20),
+                    )
                   : null,
               onTap: () => _open(p, wide),
             ),
@@ -746,6 +754,8 @@ class _PersonDetails extends ConsumerWidget {
     final s = r.status;
     final heard = r.lastHeard == null ? null : timeAgo(context, r.lastHeard, now);
     final phone = <Widget>[
+      if (r.quiet != null)
+        line(quietLine(context, r.quiet!, r.lastPosition, now), color: error, bold: true),
       line(
         switch (r.signal) {
           PhoneSignal.noPhone => l10n.phoneStatusNoPhone,
@@ -777,6 +787,15 @@ class _PersonDetails extends ConsumerWidget {
             ),
           ),
         if (r.fromOldApp) line(l10n.phoneStatusOldApp, color: theme.colorScheme.outline),
+        if (s.android)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: () => showPhoneSetupGuide(context, phoneBrand(s.maker ?? '')),
+              icon: const Icon(Icons.list_alt, size: 18),
+              label: Text(l10n.phoneSetupShowSteps),
+            ),
+          ),
       ] else if (u.appVersions.isNotEmpty)
         line(l10n.phoneStatusApp(u.appVersions.values.map((v) => v.label).join(', ')), color: theme.colorScheme.outline),
     ];

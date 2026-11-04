@@ -9912,6 +9912,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drivers and workers this warehouse supervisor follows: they see their attendance, phones and places on the employee map.'**
   String get supervisesNote;
+
+  /// No description provided for @editMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit menu'**
+  String get editMenu;
+
+  /// No description provided for @editMenuHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the entries into the order you want.'**
+  String get editMenuHint;
+
+  /// No description provided for @menuOrderSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu order saved'**
+  String get menuOrderSaved;
+
+  /// No description provided for @quietGpsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'GPS is off on the phone'**
+  String get quietGpsOff;
+
+  /// No description provided for @quietNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Location isn\'t allowed all the time'**
+  String get quietNoPermission;
+
+  /// No description provided for @quietNotRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone is on, but the app isn\'t sending its location'**
+  String get quietNotRecording;
+
+  /// No description provided for @quietNoInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet on the phone'**
+  String get quietNoInternet;
+
+  /// No description provided for @quietAppClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'App closed by the phone (battery saving / autostart)'**
+  String get quietAppClosed;
+
+  /// No description provided for @quietLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{reason} · last location {ago}'**
+  String quietLine(String reason, String ago);
+
+  /// No description provided for @quietLineNone.
+  ///
+  /// In en, this message translates to:
+  /// **'{reason} · no location today'**
+  String quietLineNone(String reason);
+
+  /// No description provided for @phoneSetupGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone setup – {brand}'**
+  String phoneSetupGuideTitle(String brand);
+
+  /// No description provided for @phoneSetupGuideNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Do these once so the phone doesn\'t stop WPC CRM in the background. Menu names can differ a little between phone versions.'**
+  String get phoneSetupGuideNote;
+
+  /// No description provided for @openAppInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'App settings'**
+  String get openAppInfo;
+
+  /// No description provided for @phoneSetupShowSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup steps'**
+  String get phoneSetupShowSteps;
+
+  /// No description provided for @phoneSetupMotorola.
+  ///
+  /// In en, this message translates to:
+  /// **'Motorola stops apps in the background. Set WPC CRM\'s battery usage to “Unrestricted” and lock it in recent apps.'**
+  String get phoneSetupMotorola;
+
+  /// No description provided for @phoneSetupTranssion.
+  ///
+  /// In en, this message translates to:
+  /// **'Tecno / Infinix / itel stop apps in the background. Turn on Auto-start for WPC CRM and set its battery usage to “Unrestricted”.'**
+  String get phoneSetupTranssion;
 }
 
 class _AppLocalizationsDelegate
