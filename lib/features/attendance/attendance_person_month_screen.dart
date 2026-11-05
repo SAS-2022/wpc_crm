@@ -73,6 +73,8 @@ class _AttendancePersonMonthScreenState extends ConsumerState<AttendancePersonMo
         ),
       if ((res.afterHoursMin ?? 0) > 0)
         (label: l10n.calAfterHours, value: formatMinutes(res.afterHoursMin!), color: null),
+      if ((res.breakOverMin ?? 0) > 0)
+        (label: l10n.calBreakOver, value: formatMinutes(res.breakOverMin!), color: Theme.of(context).colorScheme.error),
       if (res.checkInEventAt != null)
         (label: l10n.arrivedByGps(time.format(res.checkInEventAt!)), value: '', color: null),
       if (res.overtimeEndUnknown && res.lastSeenAt != null)
@@ -352,6 +354,8 @@ class _Summary extends StatelessWidget {
             Colors.purple.shade400,
           ),
         if (row.afterHoursMin > 0) chip(l10n.reportStayedLine(formatMinutes(row.afterHoursMin))),
+        if (row.breakOverMin > 0)
+          chip(l10n.reportBreakOverLine(row.breakOverDays, formatMinutes(row.breakOverMin)), scheme.error),
       ],
     );
   }

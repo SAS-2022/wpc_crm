@@ -6122,4 +6122,183 @@ class AppLocalizationsAr extends AppLocalizations {
   String siteTripLine(String left, String back, String time) {
     return 'خرج $left – عاد $back · $time';
   }
+
+  @override
+  String get requestBreak => 'طلب استراحة';
+
+  @override
+  String breakDialogHelp(String names) {
+    return 'يجب أن يوافق $names على استراحتك قبل مغادرة الموقع. مغادرة الموقع بدون استراحة موافق عليها تُسجَّل كمغادرة بدون إذن.';
+  }
+
+  @override
+  String get breakLength => 'مدة الاستراحة';
+
+  @override
+  String breakMinutes(int count) {
+    return '$count دقيقة';
+  }
+
+  @override
+  String get breakReasonOptional => 'السبب (اختياري)';
+
+  @override
+  String breakRequestSent(String names) {
+    return 'تم إرسال طلب الاستراحة إلى $names';
+  }
+
+  @override
+  String breakWaiting(int minutes, String names) {
+    return 'استراحة ($minutes دقيقة) – بانتظار $names';
+  }
+
+  @override
+  String breakApprovedLine(String name, int minutes) {
+    return 'وافق $name على استراحتك ($minutes دقيقة) – يمكنك مغادرة الموقع';
+  }
+
+  @override
+  String breakRejectedLine(String name) {
+    return 'لم يوافق $name على استراحتك';
+  }
+
+  @override
+  String breakRequestsWaiting(int count) {
+    return 'طلبات الاستراحة ($count)';
+  }
+
+  @override
+  String get breakNoApprover =>
+      'لا يوجد مشرف للموافقة على الاستراحات بعد – اطلب من الموارد البشرية تحديده.';
+
+  @override
+  String get breaksTitle => 'الاستراحات ومغادرة الموقع';
+
+  @override
+  String breakAskedLine(String time, int minutes) {
+    return 'طُلبت الساعة $time · $minutes دقيقة';
+  }
+
+  @override
+  String get breakStatusPending => 'بانتظار الموافقة';
+
+  @override
+  String breakStatusApproved(String name) {
+    return 'وافق $name';
+  }
+
+  @override
+  String breakStatusRejected(String name) {
+    return 'رفض $name';
+  }
+
+  @override
+  String get breakStatusExpired => 'لم يتم الرد في ذلك اليوم';
+
+  @override
+  String get leftWithoutPermission => 'غادر بدون إذن';
+
+  @override
+  String leftWithoutPermissionCount(int count) {
+    return 'غادر بدون إذن $count مرة';
+  }
+
+  @override
+  String exitOnBreak(int minutes) {
+    return 'في استراحة (تمت الموافقة على $minutes دقيقة)';
+  }
+
+  @override
+  String exitBreakOver(String time) {
+    return 'تجاوز الاستراحة بـ $time';
+  }
+
+  @override
+  String get exitBreakWaiting => 'الاستراحة لم تُعتمد بعد';
+
+  @override
+  String get exitBreakRefused =>
+      'لم تتم الموافقة على الاستراحة – غادر بدون إذن';
+
+  @override
+  String exitStillOut(String time) {
+    return 'خارج الموقع منذ $time';
+  }
+
+  @override
+  String notifBreakRequested(String name, int minutes) {
+    return 'يطلب $name استراحة لمدة $minutes دقيقة';
+  }
+
+  @override
+  String notifBreakApproved(String name, int minutes) {
+    return 'وافق $name على استراحتك ($minutes دقيقة) – يمكنك مغادرة الموقع';
+  }
+
+  @override
+  String notifBreakRejected(String name) {
+    return 'لم يوافق $name على استراحتك';
+  }
+
+  @override
+  String get overtimePermission => 'صلاحية العمل الإضافي';
+
+  @override
+  String get overtimePermissionHelp =>
+      'فقط الأشخاص المفعّلون هنا يستحقون العمل الإضافي. أما الآخرون فلا يُحتسب لهم الوقت بعد نهاية الدوام حتى لو بقوا.';
+
+  @override
+  String get overtimePermissionNone =>
+      'لا يوجد موظفون تابعون لك لتحديد العمل الإضافي لهم.';
+
+  @override
+  String overtimeUpTo(String time) {
+    return 'حتى $time يومياً';
+  }
+
+  @override
+  String get settingBreakAllowance => 'وقت الاستراحة اليومي';
+
+  @override
+  String get settingBreakAllowanceHelp =>
+      'العمال والمشغلون ومشرفو المستودعات: الوقت خارج الموقع حتى هذا المقدار يومياً (استراحات موافق عليها) جزء من يوم العمل – بدون خصم أو تنبيه. ما يزيد عنه يُخصم من الساعات المحتسبة ويظهر كتنبيه. كل استراحة ما زالت تحتاج إلى موافقة.';
+
+  @override
+  String breakTimeLine(String time, String allowance) {
+    return 'الاستراحات اليوم: $time من $allowance';
+  }
+
+  @override
+  String breakOverWarning(String time) {
+    return 'تجاوز الاستراحة بـ $time – تم الخصم';
+  }
+
+  @override
+  String breakLeftToday(String time) {
+    return 'المتبقي من استراحة اليوم: $time';
+  }
+
+  @override
+  String get breakNoneLeftToday =>
+      'انتهى وقت استراحة اليوم – أي وقت إضافي خارج الموقع يُخصم من ساعاتك.';
+
+  @override
+  String reportBreakOverLine(int count, String time) {
+    return 'تجاوز الاستراحة في $count يوم (خُصم $time)';
+  }
+
+  @override
+  String get reportBreakOverDays => 'تجاوز الاستراحة (أيام)';
+
+  @override
+  String get reportBreakOverHours => 'تجاوز الاستراحة، مخصوم (ساعات)';
+
+  @override
+  String get reportBreakMinutes => 'الاستراحات (دقيقة)';
+
+  @override
+  String get reportBreakOverMinutes => 'تجاوز الاستراحة، مخصوم (دقيقة)';
+
+  @override
+  String get calBreakOver => 'تجاوز الاستراحة';
 }

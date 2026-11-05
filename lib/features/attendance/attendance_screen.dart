@@ -21,6 +21,8 @@ import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'break_widgets.dart';
+import 'overtime.dart' show canSetOvertimeFor;
 import 'work_sites.dart';
 import '../../core/search_text.dart';
 
@@ -216,6 +218,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               trips.length,
               formatMinutes(trips.fold(0, (sum, t) => sum + t.backAt.difference(t.leftAt).inMinutes)),
             );
+      // Breaks (2026-11-05): exits without an approved break.
+      final isToday = dayKey == attendanceDay(now);
+      final unpermitted = personExitChecks(u, records[u.id], d, company)
+          .where((c) => exitWithoutPermission(c, today: isToday))
+          .length;
       final (IconData icon, Color color, String line) = switch (p.status) {
         DayStatus.notIn => (
             Icons.person_off_outlined,
@@ -268,6 +275,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           else if (d != null && d.overtimeEndUnknown && d.lastSeenAt != null)
             l10n.overtimeEndUnknown(time.format(d.lastSeenAt!)),
           if (records[u.id]?.overtimeWaiting ?? false) l10n.overtimeWaiting(formatMinutes(d?.overtimeMin ?? 0)),
+          if (unpermitted > 0) '⚠ ${l10n.leftWithoutPermissionCount(unpermitted)}',
+          if ((d?.breakOverMin ?? 0) > 0) '⚠ ${l10n.breakOverWarning(formatMinutes(d!.breakOverMin!))}',
         ].join('\n')),
         isThreeLine: true,
         trailing: p.workedMin > 0 ? Text(formatMinutes(p.workedMin), style: theme.textTheme.titleSmall) : null,
@@ -416,6 +425,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               icon: const Icon(Icons.map_outlined),
               tooltip: l10n.employeesMap,
               onPressed: () => context.push('/attendance/map'),
+            ),
+          // Department heads switch overtime on / off for their people (2026-11-05).
+          if (me != null && allUsers.any((u) => u.checksAttendance && canSetOvertimeFor(me, u, allUsers)))
+            IconButton(
+              icon: const Icon(Icons.more_time),
+              tooltip: l10n.overtimePermission,
+              onPressed: () => context.push('/attendance/overtime'),
             ),
           TextButton.icon(
             icon: const Icon(Icons.table_chart_outlined),

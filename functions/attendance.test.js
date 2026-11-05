@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const {
   gpsPresence,
-  deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap,
+  deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, saudiTime, overtimeCap, breakTaker,
 } = require('./attendance');
 
 const day = '2026-10-20';
@@ -391,4 +391,46 @@ test('gpsPresence: out the whole time given = fromStart', () => {
   const r = gpsPresence([fix(0, 0.01), fix(1, 0.02)], [office], t(9, 2));
   assert.strictEqual(r.inside, false);
   assert.strictEqual(r.fromStart, true);
+});
+
+test('break approved: away for the break + grace before leftSite; refused / pending: the usual grace', () => {
+  const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(12) }];
+  const asked = (status) => [{ id: 'b1', at: t(11, 58), minutes: 30, status }];
+  // 30 min break + 30 min grace: still open at 12:50, checked out (at 12:00) from 13:00.
+  assert.equal(run(events, { now: t(12, 50), breaks: asked('approved') }).closed, false);
+  const late = run(events, { now: t(13), breaks: asked('approved') });
+  assert.deepEqual([late.checkOutAt, late.checkOutType], [t(12), 'leftSite']);
+  assert.equal(run(events, { now: t(12, 30), breaks: asked('rejected') }).checkOutType, 'leftSite');
+  assert.equal(run(events, { now: t(12, 30), breaks: asked('pending') }).checkOutType, 'leftSite');
+  // Asked after leaving (beyond 5 min): doesn't cover the exit.
+  assert.equal(run(events, { now: t(12, 40), breaks: [{ id: 'b1', at: t(12, 10), minutes: 30, status: 'approved' }] }).checkOutType, 'leftSite');
+});
+
+test('breakTaker: each exit takes the latest unused request asked before it', () => {
+  const take = breakTaker([
+    { id: 'old', at: t(9), minutes: 15, status: 'rejected' },
+    { id: 'new', at: t(13, 55), minutes: 30, status: 'approved' },
+  ]);
+  assert.equal(take(t(14)).id, 'new');
+  assert.equal(take(t(15)).id, 'old');
+  assert.equal(take(t(16)), null);
+  assert.equal(breakTaker([{ id: 'x', at: t(10, 4), minutes: 15, status: 'approved' }])(t(10)).id, 'x'); // slack
+});
+
+test('daily break: up to the allowance free, the rest off the counted time', () => {
+  const trips = (back1, back2) => [
+    { type: 'in', at: t(8) },
+    { type: 'out', at: t(10) }, { type: 'in', at: back1 },
+    { type: 'out', at: t(13) }, { type: 'in', at: back2 },
+    { type: 'out', at: t(17, 5) },
+  ];
+  const o = { now: t(18), breakAllowanceMin: 60, awayGraceMin: 240 };
+  const ok = run(trips(t(10, 30), t(13, 30)), o); // 30 + 30 min
+  assert.deepEqual([ok.breakMin, ok.breakOverMin, ok.countedMin], [60, 0, 540]);
+  const over = run(trips(t(10, 30), t(13, 50)), o); // 30 + 50 min
+  assert.deepEqual([over.breakMin, over.breakOverMin, over.countedMin], [80, 20, 520]);
+  // Not tracked for people who don't request breaks.
+  assert.equal(run(trips(t(10, 30), t(13, 50)), { now: t(18), awayGraceMin: 240 }).breakMin, null);
+  // Still out now: counted so far.
+  assert.equal(run([{ type: 'in', at: t(8) }, { type: 'out', at: t(10) }], { now: t(10, 20), breakAllowanceMin: 60 }).breakMin, 20);
 });

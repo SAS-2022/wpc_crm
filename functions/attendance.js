@@ -68,6 +68,8 @@ const MINUTE = 60 * 1000;
 const LATE_GRACE_MIN = 15;
 
 /** Away from the site longer than this (not allowed to leave) → checked out when they left. */
+/** Break time a day before the rest is deducted (App setting `breakAllowanceMin`, user 2026-11-05). */
+const BREAK_ALLOWANCE_MIN = 60;
 const AWAY_GRACE_MIN = 30;
 
 /** Most overtime counted a day unless the user form sets more (user decision 2026-10-24). */
@@ -95,7 +97,33 @@ function saudiTime(date, minutes) {
  *   graceMin: App settings `lateGraceMin` (default LATE_GRACE_MIN); awayGraceMin: `awayGraceMin` (AWAY_GRACE_MIN);
  *   overtimeMaxMin: the person's cap (OVERTIME_MAX_MIN); lastSeenAt: last GPS fix at the site (server only);
  *   arrivedAt: GPS arrival of the stay the day's first check-in falls in (server: `siteArrival`).
+ *   breakAllowanceMin: break time a day before it's deducted (App setting, 60) — only for people who request
+ *     breaks (else breakMin / breakOverMin stay null);
+ *   breaks: the day's break requests [{id, at (asked), minutes, status pending|approved|rejected}] (2026-11-05).
  */
+/** A break asked up to this long after the exit still covers it (`breakMatchSlack` in attendance_rules.dart). */
+const BREAK_SLACK_MS = 5 * MINUTE;
+
+/**
+ * Gives each exit (called in time order) the latest unused break asked
+ * before it (or within BREAK_SLACK_MS after); null = none. Same as
+ * `breakTaker` in attendance_rules.dart.
+ * @param {Array<{id?: string, at: number, minutes: number, status: string}>} breaks
+ */
+function breakTaker(breaks) {
+  const newestFirst = breaks.filter((b) => typeof b.at === 'number').map((b, i) => ({ ...b, key: b.id ?? i }))
+    .sort((a, b) => b.at - a.at);
+  const used = new Set();
+  return (exitAt) => {
+    for (const b of newestFirst) {
+      if (used.has(b.key) || b.at > exitAt + BREAK_SLACK_MS) continue;
+      used.add(b.key);
+      return b;
+    }
+    return null;
+  };
+}
+
 function deriveDay(events, o) {
   const s = {
     checkInAt: null, checkInSource: null, siteId: null, inside: false, lastExitAt: null,
@@ -116,12 +144,24 @@ function deriveDay(events, o) {
     s.checkOutType = null;
   };
   const graceMs = (o.awayGraceMin ?? AWAY_GRACE_MIN) * MINUTE;
+  // Breaks (2026-11-05): an approved break covering the last exit gives its
+  // minutes on top of the grace time before "away too long" checks out.
+  const takeBreak = breakTaker(o.breaks || []);
+  let allowanceMs = 0;
+  // Time out of the site before the end while checked in (people who
+  // request breaks): the daily break; beyond o.breakAllowanceMin it's
+  // taken off the counted time (user decision 2026-11-05).
+  let breakMs = 0, outSince = null;
+  const backIn = (t) => {
+    if (outSince !== null && !s.closed) breakMs += Math.max(0, Math.min(t, o.endMs) - outSince);
+    outSince = null;
+  };
   const capMs = (o.overtimeMaxMin ?? OVERTIME_MAX_MIN) * MINUTE;
   // Last time the person was seen at the site (arrival / check-in events, GPS).
   let seenAt = typeof o.lastSeenAt === 'number' ? o.lastSeenAt : null;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   const awayTooLong = (t) => !o.leavesSite && s.checkInAt !== null && !s.closed && !s.inside
-    && s.lastExitAt !== null && s.lastExitAt < o.endMs && t >= s.lastExitAt + graceMs;
+    && s.lastExitAt !== null && s.lastExitAt < o.endMs && t >= s.lastExitAt + graceMs + allowanceMs;
   const drive = o.drive && typeof o.drive.startAt === 'number' ? o.drive : null;
   // Overtime started ("Start overtime") / declined.
   let confirmedAt = null, declined = false;
@@ -130,8 +170,9 @@ function deriveDay(events, o) {
     .filter((e) => !drive || e.at <= drive.startAt || e.type === 'checkOut' || e.type === 'hrOut')
     .sort((a, b) => a.at - b.at);
   for (const e of sorted) {
-    if (awayTooLong(e.at)) close(s.lastExitAt, 'leftSite');
+    if (awayTooLong(e.at)) { close(s.lastExitAt, 'leftSite'); outSince = null; }
     if (e.type === 'in' || e.type === 'checkIn' || e.type === 'hrIn') {
+      backIn(e.at);
       seenAt = Math.max(seenAt ?? 0, e.at);
       if (s.checkInAt === null) {
         s.checkInAt = e.at;
@@ -156,6 +197,7 @@ function deriveDay(events, o) {
     } else if (e.type === 'otDecline') {
       if (s.checkInAt !== null && !s.closed) declined = true;
     } else if (e.type === 'seen') {
+      backIn(e.at);
       seenAt = Math.max(seenAt ?? 0, e.at);
       if (s.checkInAt !== null && !s.closed) {
         s.inside = true;
@@ -175,10 +217,18 @@ function deriveDay(events, o) {
       const at = e.check === true && seenAt !== null ? Math.min(e.at, Math.max(seenAt, o.endMs, s.checkInAt)) : e.at;
       s.lastExitAt = at;
       if (e.at >= o.endMs) close(at, 'left');
+      else {
+        const b = takeBreak(at);
+        allowanceMs = b && b.status === 'approved' ? (b.minutes || 0) * MINUTE : 0;
+        if (wasInside) outSince = at;
+      }
     } else if (e.type === 'checkOut' || e.type === 'hrOut') {
       if (s.checkInAt !== null && !s.closed) close(e.at, e.type === 'hrOut' ? 'hr' : 'manual');
+      outSince = null;
     }
   }
+  // Still out and the day still open (not checked out below for it): counts up to now.
+  if (outSince !== null && !s.closed && o.now < o.endMs && !awayTooLong(o.now)) backIn(o.now);
   const overtimeOn = o.overtimeAllowed && (drive !== null || confirmedAt !== null);
   if (drive && s.checkInAt !== null && !s.closed) {
     // Driving: open until the server finds the arrival (or the cap).
@@ -211,12 +261,17 @@ function deriveDay(events, o) {
       : Math.max(0, Math.round((Math.min(s.checkOutAt, o.endMs) - s.checkInAt - awayBefore) / MINUTE));
   }
   const awayMin = Math.round((awayBefore + awayAfter) / MINUTE);
+  // Breaks over the daily allowance: taken off the counted time.
+  const tracksBreaks = typeof o.breakAllowanceMin === 'number';
+  const breakMin = tracksBreaks ? Math.round(breakMs / MINUTE) : null;
+  const breakOverMin = tracksBreaks ? Math.max(0, breakMin - o.breakAllowanceMin) : null;
+  if (countedMin !== null && breakOverMin) countedMin = Math.max(0, countedMin - breakOverMin);
   // Overtime started, no exit / arrival seen and not seen up to the cap: when it ended is unknown.
   const overtimeEndUnknown = s.closed && s.checkOutType === 'auto' && overtimeOn
     && s.checkOutAt < Math.max(o.endMs, s.checkInAt) + capMs;
   const lateMin = s.checkInAt === null || o.startMs === null || o.startMs === undefined
     ? null : lateMinutes(s.checkInAt - o.startMs, o.graceMin ?? LATE_GRACE_MIN);
-  return { ...s, workedMin, countedMin, overtimeMin, afterHoursMin, lateMin, awayMin, lastSeenAt: seenAt,
+  return { ...s, workedMin, countedMin, overtimeMin, afterHoursMin, lateMin, awayMin, breakMin, breakOverMin, lastSeenAt: seenAt,
     overtimeOn, overtimeConfirmedAt: confirmedAt, overtimeDeclined: declined, overtimeEndUnknown };
 }
 
@@ -452,5 +507,5 @@ function driveEnd({ points, startAt, now, capMs, places }) {
 
 module.exports = {
   gpsPresence, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
-  deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN,
+  deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN, BREAK_ALLOWANCE_MIN, breakTaker,
 };

@@ -160,6 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const PendingAbsencesCard(),
           // Direct managers: today's requests to leave early (hidden when none).
           const EarlyCheckoutRequestsCard(),
+          const BreakRequestsCard(),
           // Managers / HR area: overtime waiting for their approval (hidden when none).
           OvertimeApprovalsCard(me: me),
           // Vehicle renewals expired or due within 30 days (hidden when none).
@@ -431,6 +432,7 @@ class _BackOfficeHome extends ConsumerWidget {
           const LeaveApprovalsCard(),
           const PendingAbsencesCard(),
           const EarlyCheckoutRequestsCard(),
+          const BreakRequestsCard(),
           OvertimeApprovalsCard(me: me),
           // Drivers without a home location: asked to set it (decides their overtime).
           SetHomeLocationCard(me: me),

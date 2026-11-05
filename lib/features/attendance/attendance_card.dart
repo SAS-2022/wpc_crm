@@ -22,6 +22,7 @@ import 'absence_sheet.dart';
 import 'at_site_prompt.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'break_request.dart';
 import 'early_checkout.dart';
 import 'geofences.dart';
 import 'identity_check.dart';
@@ -378,6 +379,81 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     }
   }
 
+  /// "Request a break" (2026-11-05): length + optional reason, sent to the
+  /// warehouse supervisor / department head.
+  Future<void> _askBreak(List<String> approverIds, String names, int usedMin) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final reason = TextEditingController();
+    var minutes = breakMinuteChoices[1];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, setDialog) => AlertDialog(
+          title: Text(l10n.requestBreak),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.breakDialogHelp(names)),
+                const SizedBox(height: 8),
+                Text(
+                  usedMin < breakAllowanceMin
+                      ? l10n.breakLeftToday(formatMinutes(breakAllowanceMin - usedMin))
+                      : l10n.breakNoneLeftToday,
+                  style: TextStyle(
+                    color: usedMin < breakAllowanceMin ? null : Theme.of(dialog).colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(l10n.breakLength, style: Theme.of(dialog).textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final m in breakMinuteChoices)
+                      ChoiceChip(
+                        label: Text(l10n.breakMinutes(m)),
+                        selected: minutes == m,
+                        onSelected: (_) => setDialog(() => minutes = m),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: reason,
+                  minLines: 1,
+                  maxLines: 3,
+                  maxLength: 300,
+                  decoration: InputDecoration(labelText: l10n.breakReasonOptional),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.sendRequest)),
+          ],
+        ),
+      ),
+    );
+    final text = reason.text.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) => reason.dispose());
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await askBreak(me: widget.me, approverIds: approverIds, minutes: minutes, reason: text);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.breakRequestSent(names))));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -420,6 +496,14 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     final early = open ? ref.watch(myEarlyCheckoutTodayProvider).value : null;
     final mustAsk = open && approvers.isNotEmpty && needsEarlyCheckoutApproval(now, hours) && !(early?.approved ?? false);
     final endTime = time.format(DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute)));
+    // Breaks (2026-11-05): asked while checked in before the end of the work day.
+    final breakApprovers = users == null || !me.requestsBreaks ? const <String>[] : breakApproversOf(me, users);
+    final breakNames = breakApprovers.map((id) => byId[id]?.name ?? '').where((n) => n.isNotEmpty).join(', ');
+    final breaks = open && me.requestsBreaks ? ref.watch(myBreaksTodayProvider).value ?? const <BreakRequest>[] : const <BreakRequest>[];
+    final lastBreak = breaks.lastOrNull;
+    // Same test as leaving early: a work day, before its end.
+    final beforeEnd = needsEarlyCheckoutApproval(now, hours);
+    final canAskBreak = open && me.requestsBreaks && users != null && beforeEnd && !(lastBreak?.pending ?? false);
 
     final String title;
     final String detail;
@@ -436,11 +520,14 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
       final end = DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute));
       final capEnd = end.add(Duration(minutes: me.overtimeAllowed && day.overtimeOn ? me.overtimeCapMin : 0));
       final upTo = now.isBefore(capEnd) ? now : capEnd;
-      final so = upTo.difference(day.checkInAt!) - Duration(minutes: day.awayMin ?? 0);
+      final so = upTo.difference(day.checkInAt!) - Duration(minutes: (day.awayMin ?? 0) + (day.breakOverMin ?? 0));
       detail = [
         if (day.checkInEventAt != null) l10n.arrivedByGps(time.format(day.checkInEventAt!)),
         l10n.checkedInFor(formatMinutes(so.isNegative ? 0 : so.inMinutes)),
         day.inside || day.lastExitAt == null ? l10n.atTheSite : l10n.leftSiteAt(time.format(day.lastExitAt!)),
+        if (me.requestsBreaks && (day.breakMin ?? 0) > 0)
+          l10n.breakTimeLine(formatMinutes(day.breakMin!), formatMinutes(breakAllowanceMin)),
+        if ((day.breakOverMin ?? 0) > 0) l10n.breakOverWarning(formatMinutes(day.breakOverMin!)),
       ].join(' · ');
       icon = Icons.how_to_reg;
       color = Colors.green.shade700;
@@ -451,6 +538,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         l10n.workedTime(formatMinutes(day.countedMin ?? 0)),
         if ((day.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(day.overtimeMin!)),
         if ((day.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(day.afterHoursMin!)),
+        if ((day.breakOverMin ?? 0) > 0) l10n.breakOverWarning(formatMinutes(day.breakOverMin!)),
       ].where((s) => s.isNotEmpty).join(' · ');
       icon = Icons.logout;
       color = theme.colorScheme.primary;
@@ -497,6 +585,35 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                 trailing: early.pending
                     ? TextButton(
                         onPressed: _busy ? null : () => cancelEarlyCheckout(early),
+                        child: Text(l10n.cancelRequest),
+                      )
+                    : null,
+              ),
+            if (lastBreak != null)
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  lastBreak.pending ? Icons.hourglass_top : lastBreak.approved ? Icons.free_breakfast : Icons.cancel,
+                  color: lastBreak.pending
+                      ? Colors.orange.shade800
+                      : lastBreak.approved
+                      ? Colors.green.shade700
+                      : theme.colorScheme.error,
+                ),
+                title: Text(lastBreak.pending
+                    ? l10n.breakWaiting(lastBreak.minutes, breakNames)
+                    : lastBreak.approved
+                    ? l10n.breakApprovedLine(byId[lastBreak.decidedBy]?.name ?? '', lastBreak.minutes)
+                    : l10n.breakRejectedLine(byId[lastBreak.decidedBy]?.name ?? '')),
+                subtitle: lastBreak.reason.isEmpty && lastBreak.comment.isEmpty
+                    ? null
+                    : Text([
+                        if (lastBreak.reason.isNotEmpty) lastBreak.reason,
+                        if (lastBreak.comment.isNotEmpty) '“${lastBreak.comment}”',
+                      ].join('\n')),
+                trailing: lastBreak.pending
+                    ? TextButton(
+                        onPressed: _busy ? null : () => cancelBreak(lastBreak),
                         child: Text(l10n.cancelRequest),
                       )
                     : null,
@@ -558,6 +675,23 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.login),
                           label: Text(day != null && day.closed ? l10n.checkInAgain : l10n.checkIn),
+                        ),
+                ),
+              ),
+            // Request a break before leaving the site (2026-11-05).
+            if (canAskBreak)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Align(
+                  alignment: widget.prominent ? Alignment.center : AlignmentDirectional.centerEnd,
+                  widthFactor: widget.prominent ? null : 1,
+                  child: breakApprovers.isEmpty
+                      ? Text(l10n.breakNoApprover, style: theme.textTheme.bodySmall)
+                      : FilledButton.tonalIcon(
+                          style: widget.prominent ? FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)) : null,
+                          onPressed: _busy ? null : () => _askBreak(breakApprovers, breakNames, day.breakMin ?? 0),
+                          icon: const Icon(Icons.free_breakfast_outlined),
+                          label: Text(l10n.requestBreak),
                         ),
                 ),
               ),

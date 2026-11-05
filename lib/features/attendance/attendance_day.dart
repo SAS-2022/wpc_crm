@@ -74,7 +74,8 @@ PersonDay personDay(
   // (with overtime started: at most the cap after it).
   final capEnd = end.add(Duration(minutes: overtimeAllowed && d.overtimeOn ? overtimeMaxMin : 0));
   final upTo = now.isBefore(capEnd) ? now : capEnd;
-  final worked = upTo.difference(d.checkInAt!).inMinutes - (d.awayMin ?? 0);
+  // Breaks over the daily allowance come off too (2026-11-05).
+  final worked = upTo.difference(d.checkInAt!).inMinutes - (d.awayMin ?? 0) - (d.breakOverMin ?? 0);
   return (
     status: d.inside ? DayStatus.onSite : DayStatus.away,
     workedMin: worked < 0 ? 0 : worked,

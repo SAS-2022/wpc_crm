@@ -75,6 +75,8 @@ class DayResult {
     this.lateMin,
     this.afterHoursMin,
     this.awayMin,
+    this.breakMin,
+    this.breakOverMin,
     this.lastSeenAt,
     this.overtimeOn = false,
     this.overtimeConfirmedAt,
@@ -111,6 +113,13 @@ class DayResult {
   /// Minutes between a check-out and checking in again the same day (not
   /// counted; 2026-10-22). Null on days worked out before it existed.
   final int? awayMin;
+
+  /// Minutes out of the site before the end of the work day while checked
+  /// in (people who request breaks, 2026-11-05) and how much of it is over
+  /// the daily allowance ([breakAllowanceMin]; taken off [countedMin]).
+  /// Null for everyone else and days worked out before.
+  final int? breakMin;
+  final int? breakOverMin;
 
   /// Last time the person was known to be at the site (arrival, check-in,
   /// site check, GPS fix).
@@ -150,6 +159,8 @@ class DayResult {
         lateMin: lateMin ?? other.lateMin,
         afterHoursMin: afterHoursMin ?? other.afterHoursMin,
         awayMin: awayMin ?? other.awayMin,
+        breakMin: breakMin ?? other.breakMin,
+        breakOverMin: breakOverMin ?? other.breakOverMin,
         lastSeenAt: lastSeenAt ?? other.lastSeenAt,
         overtimeOn: overtimeOn,
         overtimeConfirmedAt: overtimeConfirmedAt,
@@ -172,6 +183,8 @@ DayResult deriveDay(
   Duration? awayGrace,
   DriveOvertime? drive,
   DateTime? arrivedAt,
+  List<BreakSlot> breaks = const [],
+  int? breakAllowanceMin,
 }) {
   DateTime? checkInAt, lastExitAt, checkOutAt, checkInEventAt;
   String? source, siteId, outType;
@@ -198,12 +211,28 @@ DayResult deriveDay(
 
   final grace = awayGrace ?? Duration(minutes: awayGraceMin);
   final cap = Duration(minutes: overtimeMaxMin);
+  // Breaks (2026-11-05): an approved break covering the last exit gives its
+  // minutes on top of the grace time before "away too long" checks out.
+  final takeBreak = breakTaker(breaks);
+  var allowance = Duration.zero;
+  // Time out of the site before the end while checked in: the daily break;
+  // beyond [breakAllowanceMin] it's taken off the counted time (2026-11-05).
+  var breakTime = Duration.zero;
+  DateTime? outSince;
+  void backIn(DateTime t) {
+    final since = outSince;
+    if (since != null && !closed) {
+      final d = (t.isBefore(end) ? t : end).difference(since);
+      if (!d.isNegative) breakTime += d;
+    }
+    outSince = null;
+  }
   // Last time the person was seen at the site (arrival / check-in events, GPS).
   var seenAt = lastSeenAt;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   bool awayTooLong(DateTime t) =>
       !leavesSite && checkInAt != null && !closed && !inside &&
-      lastExitAt != null && lastExitAt.isBefore(end) && !t.isBefore(lastExitAt.add(grace));
+      lastExitAt != null && lastExitAt.isBefore(end) && !t.isBefore(lastExitAt.add(grace + allowance));
 
   DateTime later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
   // Overtime started ("Start overtime") / declined.
@@ -219,9 +248,13 @@ DayResult deriveDay(
         e,
   ]..sort((a, b) => a.at.compareTo(b.at));
   for (final e in sorted) {
-    if (awayTooLong(e.at)) close(lastExitAt!, 'leftSite');
+    if (awayTooLong(e.at)) {
+      close(lastExitAt!, 'leftSite');
+      outSince = null;
+    }
     switch (e.type) {
       case AttendanceEventType.in_ || AttendanceEventType.checkIn || AttendanceEventType.hrIn:
+        backIn(e.at);
         if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
         if (checkInAt == null) {
           checkInAt = e.at;
@@ -253,6 +286,7 @@ DayResult deriveDay(
       case AttendanceEventType.otDecline:
         if (checkInAt != null && !closed) declined = true;
       case AttendanceEventType.seen:
+        backIn(e.at);
         if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
         if (checkInAt != null && !closed) {
           inside = true;
@@ -272,11 +306,20 @@ DayResult deriveDay(
         final seen = seenAt;
         final at = e.check && seen != null ? _earlier(e.at, later(later(seen, end), checkInAt)) : e.at;
         lastExitAt = at;
-        if (!e.at.isBefore(end)) close(at, 'left');
+        if (!e.at.isBefore(end)) {
+          close(at, 'left');
+        } else {
+          final slot = takeBreak(at);
+          allowance = slot != null && slot.status == BreakStatus.approved ? Duration(minutes: slot.minutes) : Duration.zero;
+          if (wasInside) outSince = at;
+        }
       case AttendanceEventType.checkOut || AttendanceEventType.hrOut:
         if (checkInAt != null && !closed) close(e.at, e.type == AttendanceEventType.hrOut ? 'hr' : 'manual');
+        outSince = null;
     }
   }
+  // Still out and the day still open (not checked out below for it): counts up to now.
+  if (outSince != null && !closed && now.isBefore(end) && !awayTooLong(now)) backIn(now);
   final overtimeOn = overtimeAllowed && (drive != null || confirmedAt != null);
   if (drive != null && checkInAt != null && !closed) {
     // Driving: open until the server finds the arrival (or the cap).
@@ -323,6 +366,9 @@ DayResult deriveDay(
         ? (worked - afterHours < 0 ? 0 : worked - afterHours)
         : _minutes((outAt.isBefore(end) ? outAt : end).difference(inAt) - awayBefore);
   }
+  final breakTotal = breakAllowanceMin == null ? null : _minutes(breakTime);
+  final breakOver = breakTotal == null ? null : (breakTotal - breakAllowanceMin! > 0 ? breakTotal - breakAllowanceMin : 0);
+  if (counted != null && (breakOver ?? 0) > 0) counted = counted - breakOver! < 0 ? 0 : counted - breakOver;
   final late = checkInAt == null || start == null ? null : lateMinutes(checkInAt.difference(start));
   // Overtime started, no exit / arrival seen and not seen up to the cap: when it ended is unknown.
   final endUnknown = closed && outType == 'auto' && overtimeOn && checkOutAt!.isBefore(later(end, checkInAt!).add(cap));
@@ -340,6 +386,8 @@ DayResult deriveDay(
     lateMin: late,
     afterHoursMin: afterHours,
     awayMin: _minutes(awayBefore + awayAfter),
+    breakMin: breakTotal,
+    breakOverMin: breakOver,
     lastSeenAt: seenAt,
     overtimeOn: overtimeOn,
     overtimeConfirmedAt: confirmedAt,
@@ -380,6 +428,11 @@ List<AttendanceEvent> correctedEvents(List<AttendanceEvent> events, AttendanceCo
 /// Away from the site longer than this (people not allowed to leave it) →
 /// checked out at the time they left (2026-10-22). Editable in App settings.
 var awayGraceMin = 30;
+
+/// Break time a day before the rest is taken off the counted hours (user
+/// decision 2026-11-05: 9 hours with 1 hour of break). Editable in App
+/// settings; `BREAK_ALLOWANCE_MIN` in attendance.js.
+var breakAllowanceMin = 60;
 
 /// Most overtime counted a day unless the user form sets more (user
 /// decision 2026-10-24; `OVERTIME_MAX_MIN` in attendance.js).
@@ -465,4 +518,90 @@ List<SiteTrip> siteTrips(List<AttendanceEvent> events) {
     }
   }
   return trips;
+}
+
+/// Break requests (2026-11-05, `break_request.dart`): pending until the
+/// supervisor / department head answers; a pending one is never carried to
+/// the next day.
+enum BreakStatus {
+  pending,
+  approved,
+  rejected;
+
+  static BreakStatus fromKey(Object? key) => values.asNameMap()[key] ?? pending;
+}
+
+/// A break request as copied onto the attendance day by the server
+/// (`attendance.breaks` [{id, at, minutes, status, decidedBy}]; `at` = when
+/// it was asked).
+class BreakSlot {
+  const BreakSlot({required this.id, required this.at, required this.minutes, this.status = BreakStatus.pending, this.decidedBy});
+
+  final String id;
+  final DateTime at;
+  final int minutes;
+  final BreakStatus status;
+  final String? decidedBy;
+}
+
+/// A request made up to this long after the exit still covers it (the
+/// phone often reports the exit a little late). `BREAK_SLACK_MS` in attendance.js.
+const breakMatchSlack = Duration(minutes: 5);
+
+/// Gives each exit (called in time order) the latest unused break asked
+/// before it (or within [breakMatchSlack] after); null = none. An old,
+/// unused request (e.g. refused in the morning) doesn't cover a later exit
+/// that has a newer one. Same as `breakTaker` in functions/attendance.js.
+BreakSlot? Function(DateTime exitAt) breakTaker(List<BreakSlot> breaks) {
+  final newestFirst = [...breaks]..sort((a, b) => b.at.compareTo(a.at));
+  final used = <String>{};
+  return (exitAt) {
+    for (final b in newestFirst) {
+      if (used.contains(b.id) || b.at.isAfter(exitAt.add(breakMatchSlack))) continue;
+      used.add(b.id);
+      return b;
+    }
+    return null;
+  };
+}
+
+/// Whether leaving the site was allowed (display, 2026-11-05).
+enum ExitPermission { onBreak, waiting, refused, none }
+
+/// One exit from the site before the end of the work day, with the break
+/// that covers it.
+class ExitCheck {
+  const ExitCheck({required this.leftAt, this.backAt, this.slot});
+
+  final DateTime leftAt;
+
+  /// Null = still away (or checked out for it).
+  final DateTime? backAt;
+  final BreakSlot? slot;
+
+  ExitPermission get permission => switch (slot?.status) {
+        BreakStatus.approved => ExitPermission.onBreak,
+        BreakStatus.pending => ExitPermission.waiting,
+        BreakStatus.rejected => ExitPermission.refused,
+        null => ExitPermission.none,
+      };
+
+  /// Left without an approved break.
+  bool get withoutPermission => permission != ExitPermission.onBreak;
+
+  /// Minutes away longer than the approved break (0 when not back yet).
+  int get overMin {
+    final s = slot, back = backAt;
+    if (s == null || back == null || s.status != BreakStatus.approved) return 0;
+    final over = back.difference(leftAt).inMinutes - s.minutes;
+    return over > 0 ? over : 0;
+  }
+}
+
+/// The day's exits before [end] (trips out and back, plus the exit they're
+/// still away on or were checked out for), each with its break.
+List<ExitCheck> checkExits(List<({DateTime leftAt, DateTime? backAt})> exits, List<BreakSlot> breaks, DateTime end) {
+  final sorted = [for (final e in exits) if (e.leftAt.isBefore(end)) e]..sort((a, b) => a.leftAt.compareTo(b.leftAt));
+  final take = breakTaker(breaks);
+  return [for (final e in sorted) ExitCheck(leftAt: e.leftAt, backAt: e.backAt, slot: take(e.leftAt))];
 }

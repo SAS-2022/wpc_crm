@@ -108,6 +108,15 @@ enum NotificationType {
   earlyCheckoutApproved,
   earlyCheckoutRejected,
 
+  /// `ownerId` asks the recipient (warehouse supervisor / department head)
+  /// for a break of [AppNotification.count] minutes (2026-11-05);
+  /// [AppNotification.note] = reason, [AppNotification.ref] = `break_requests` id.
+  breakRequested,
+
+  /// The recipient's break was approved / rejected (note = comment).
+  breakApproved,
+  breakRejected,
+
   /// `ownerId`'s overtime started (2026-10-25): [AppNotification.issue]
   /// 'site' = they pressed "Start overtime" (to their direct managers, who
   /// approve it later); 'driving' = a driver still on the road after the

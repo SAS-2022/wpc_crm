@@ -50,6 +50,7 @@ import '../features/attendance/attendance_person_month_screen.dart';
 import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/employees_map_screen.dart';
+import '../features/attendance/overtime_permission_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
 import '../features/settings/app_settings_screen.dart';
@@ -328,6 +329,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, state) => AttendanceScreen(initialDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? '')),
             ),
             GoRoute(path: '/attendance/map', builder: (_, _) => const EmployeesMapScreen()),
+            GoRoute(path: '/attendance/overtime', builder: (_, _) => const OvertimePermissionScreen()),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(
               path: '/attendance/report/:uid',

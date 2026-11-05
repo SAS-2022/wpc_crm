@@ -91,6 +91,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                             ? l10n.overtimeWaiting(formatMinutes(res.overtimeMin!))
                             : l10n.overtimeApprovedText(formatMinutes(d.approvedOvertimeMin!)),
                       if ((res.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(res.afterHoursMin!)),
+                      if ((res.breakOverMin ?? 0) > 0) l10n.breakOverWarning(formatMinutes(res.breakOverMin!)),
                     ].where((s) => s.isNotEmpty).join(' · '),
                   _ => reportDayStatus(l10n, d),
                 }),
@@ -174,6 +175,8 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                                 if (r.overtimeMin > 0)
                                   '${l10n.overtimeTime(formatMinutes(r.overtimeMin))} (${l10n.overtimeApprovedText(formatMinutes(r.approvedOvertimeMin))})',
                                 if (r.afterHoursMin > 0) l10n.reportStayedLine(formatMinutes(r.afterHoursMin)),
+                                if (r.breakOverMin > 0)
+                                  l10n.reportBreakOverLine(r.breakOverDays, formatMinutes(r.breakOverMin)),
                               ].join(' · '),
                             ].where((s) => s.isNotEmpty).join('\n')),
                             trailing: Text(formatMinutes(r.workedMin), style: theme.textTheme.titleSmall),

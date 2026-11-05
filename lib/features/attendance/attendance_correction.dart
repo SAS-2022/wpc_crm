@@ -14,6 +14,7 @@ import 'absence_sheet.dart' show absenceReasonLabel, absenceStatusText;
 import 'attendance_card.dart' show checkOutTypeLabel;
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'break_widgets.dart';
 import 'overtime.dart' show canApproveOvertime;
 import 'overtime_widgets.dart' show showApproveOvertimeDialog;
 import 'work_sites.dart';
@@ -48,6 +49,10 @@ Future<void> showAttendanceDaySheet(
         // Overtime recorded (2026-10-25): approved by a manager, minutes adjustable.
         final hasOvertime = d != null && d.closed && (d.overtimeMin ?? 0) > 0 && record != null;
         final mayApprove = hasOvertime && me != null && canApproveOvertime(me, person, users.values.toList());
+        // Breaks (2026-11-05): each exit with the break covering it, and the requests.
+        final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
+        final exits = personExitChecks(person, record, d, company);
+        final isToday = record?.date == attendanceDay(DateTime.now());
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -67,7 +72,27 @@ Future<void> showAttendanceDaySheet(
                     Text('${l10n.checkedOutAt(time.format(d.checkOutAt!))} · ${checkOutTypeLabel(l10n, d.checkOutType)}'),
                   if (d.countedMin != null) Text(l10n.workedTime(formatMinutes(d.countedMin!))),
                   if ((d.awayMin ?? 0) > 0) Text(l10n.awayTime(formatMinutes(d.awayMin!))),
-                  if (record?.trips case final trips? when trips.isNotEmpty) ...[
+                  if (person.requestsBreaks && (exits.isNotEmpty || (record?.breaks.isNotEmpty ?? false))) ...[
+                    const SizedBox(height: 8),
+                    Text(l10n.breaksTitle, style: Theme.of(sheet).textTheme.titleSmall),
+                    if (d.breakMin != null)
+                      Text(l10n.breakTimeLine(formatMinutes(d.breakMin!), formatMinutes(breakAllowanceMin))),
+                    if ((d.breakOverMin ?? 0) > 0)
+                      Text(
+                        l10n.breakOverWarning(formatMinutes(d.breakOverMin!)),
+                        style: TextStyle(color: Theme.of(sheet).colorScheme.error, fontWeight: FontWeight.w600),
+                      ),
+                    for (final c in exits)
+                      Text(
+                        exitCheckLine(l10n, time, c, today: isToday),
+                        style: TextStyle(color: exitCheckColor(sheet, c, today: isToday)),
+                      ),
+                    for (final b in record!.breaks)
+                      Text(
+                        breakSlotLine(l10n, time, b, users, today: isToday),
+                        style: Theme.of(sheet).textTheme.bodySmall,
+                      ),
+                  ] else if (record?.trips case final trips? when trips.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(l10n.siteTripsTitle, style: Theme.of(sheet).textTheme.titleSmall),
                     for (final t in trips)

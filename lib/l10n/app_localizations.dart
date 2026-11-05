@@ -10026,6 +10026,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Out {left} – back {back} · {time}'**
   String siteTripLine(String left, String back, String time);
+
+  /// No description provided for @requestBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a break'**
+  String get requestBreak;
+
+  /// No description provided for @breakDialogHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} must approve your break before you leave the site. Leaving without an approved break is recorded as left without permission.'**
+  String breakDialogHelp(String names);
+
+  /// No description provided for @breakLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Break length'**
+  String get breakLength;
+
+  /// No description provided for @breakMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String breakMinutes(int count);
+
+  /// No description provided for @breakReasonOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get breakReasonOptional;
+
+  /// No description provided for @breakRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Break request sent to {names}'**
+  String breakRequestSent(String names);
+
+  /// No description provided for @breakWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Break ({minutes} min) – waiting for {names}'**
+  String breakWaiting(int minutes, String names);
+
+  /// No description provided for @breakApprovedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved your {minutes} min break – you may leave the site'**
+  String breakApprovedLine(String name, int minutes);
+
+  /// No description provided for @breakRejectedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t approve your break'**
+  String breakRejectedLine(String name);
+
+  /// No description provided for @breakRequestsWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Break requests ({count})'**
+  String breakRequestsWaiting(int count);
+
+  /// No description provided for @breakNoApprover.
+  ///
+  /// In en, this message translates to:
+  /// **'No supervisor to approve breaks yet – ask HR to set one.'**
+  String get breakNoApprover;
+
+  /// No description provided for @breaksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaks and leaving the site'**
+  String get breaksTitle;
+
+  /// No description provided for @breakAskedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked at {time} · {minutes} min'**
+  String breakAskedLine(String time, int minutes);
+
+  /// No description provided for @breakStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval'**
+  String get breakStatusPending;
+
+  /// No description provided for @breakStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by {name}'**
+  String breakStatusApproved(String name);
+
+  /// No description provided for @breakStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved by {name}'**
+  String breakStatusRejected(String name);
+
+  /// No description provided for @breakStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Not answered that day'**
+  String get breakStatusExpired;
+
+  /// No description provided for @leftWithoutPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Left without permission'**
+  String get leftWithoutPermission;
+
+  /// No description provided for @leftWithoutPermissionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Left without permission {count, plural, =1{once} other{{count} times}}'**
+  String leftWithoutPermissionCount(int count);
+
+  /// No description provided for @exitOnBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'On break ({minutes} min approved)'**
+  String exitOnBreak(int minutes);
+
+  /// No description provided for @exitBreakOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} longer than the break'**
+  String exitBreakOver(String time);
+
+  /// No description provided for @exitBreakWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Break not approved yet'**
+  String get exitBreakWaiting;
+
+  /// No description provided for @exitBreakRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Break not approved – left without permission'**
+  String get exitBreakRefused;
+
+  /// No description provided for @exitStillOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Out since {time}'**
+  String exitStillOut(String time);
+
+  /// No description provided for @notifBreakRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asks for a {minutes} min break'**
+  String notifBreakRequested(String name, int minutes);
+
+  /// No description provided for @notifBreakApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved your {minutes} min break – you may leave the site'**
+  String notifBreakApproved(String name, int minutes);
+
+  /// No description provided for @notifBreakRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} didn\'t approve your break'**
+  String notifBreakRejected(String name);
+
+  /// No description provided for @overtimePermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime permission'**
+  String get overtimePermission;
+
+  /// No description provided for @overtimePermissionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the people switched on here earn overtime. For the others, time after the end of the work day isn\'t counted, even when they stay.'**
+  String get overtimePermissionHelp;
+
+  /// No description provided for @overtimePermissionNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No employees under you to set overtime for.'**
+  String get overtimePermissionNone;
+
+  /// No description provided for @overtimeUpTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {time} a day'**
+  String overtimeUpTo(String time);
+
+  /// No description provided for @settingBreakAllowance.
+  ///
+  /// In en, this message translates to:
+  /// **'Break time a day'**
+  String get settingBreakAllowance;
+
+  /// No description provided for @settingBreakAllowanceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Workers, operators and warehouse supervisors: up to this much time out of the site a day in total (approved breaks) is part of the work day – no deduction, no warning. Time beyond it comes off the counted hours and shows as a warning. Each break still needs approval.'**
+  String get settingBreakAllowanceHelp;
+
+  /// No description provided for @breakTimeLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaks today: {time} of {allowance}'**
+  String breakTimeLine(String time, String allowance);
+
+  /// No description provided for @breakOverWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over by {time} – deducted'**
+  String breakOverWarning(String time);
+
+  /// No description provided for @breakLeftToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} of today\'s break left'**
+  String breakLeftToday(String time);
+
+  /// No description provided for @breakNoneLeftToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s break time is used up – more time out comes off your hours.'**
+  String get breakNoneLeftToday;
+
+  /// No description provided for @reportBreakOverLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over on {count} days ({time} deducted)'**
+  String reportBreakOverLine(int count, String time);
+
+  /// No description provided for @reportBreakOverDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over (days)'**
+  String get reportBreakOverDays;
+
+  /// No description provided for @reportBreakOverHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over, deducted (hours)'**
+  String get reportBreakOverHours;
+
+  /// No description provided for @reportBreakMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaks (min)'**
+  String get reportBreakMinutes;
+
+  /// No description provided for @reportBreakOverMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over, deducted (min)'**
+  String get reportBreakOverMinutes;
+
+  /// No description provided for @calBreakOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Break over'**
+  String get calBreakOver;
 }
 
 class _AppLocalizationsDelegate

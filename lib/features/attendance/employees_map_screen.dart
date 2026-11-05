@@ -39,6 +39,7 @@ import 'attendance_correction.dart';
 import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'break_widgets.dart';
 import 'work_sites.dart';
 
 // Employees map (user request 2026-11-04): opened from the Attendance page,
@@ -726,8 +727,12 @@ class _PersonDetails extends ConsumerWidget {
               ? line(l10n.lateByLong(formatMinutes(day.lateMin)), color: error, bold: true)
               : line(l10n.onTime, color: green, bold: true),
           if (day.status == DayStatus.away && d.lastExitAt != null) line(l10n.leftSiteAt(time.format(d.lastExitAt!))),
-          for (final t in p.record?.trips ?? const <SiteTrip>[])
-            line(l10n.siteTripLine(
+          if (u.requestsBreaks)
+            for (final c in personExitChecks(u, p.record, d, ref.watch(workHoursProvider).value ?? WorkHours.defaults))
+              line(exitCheckLine(l10n, time, c, today: true), color: exitCheckColor(context, c, today: true))
+          else
+            for (final t in p.record?.trips ?? const <SiteTrip>[])
+              line(l10n.siteTripLine(
               time.format(t.leftAt),
               time.format(t.backAt),
               formatMinutes(t.backAt.difference(t.leftAt).inMinutes),

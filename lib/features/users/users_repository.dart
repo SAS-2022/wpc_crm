@@ -80,6 +80,14 @@ class UsersRepository {
   /// The drivers and workers warehouse supervisor [supervisorId] follows
   /// (2026-11-04, from their user form): sets `supervisorId` on the people
   /// added, clears it on the people removed. [current]: everyone now under them.
+  /// Overtime on / off for [uid] and its daily cap (null = standard 3 h);
+  /// department heads use it from Attendance → Overtime permission
+  /// (2026-11-05; the rules allow only these two fields for them).
+  Future<void> setOvertime(String uid, {required bool allowed, int? maxMin}) => saving(() => _users.doc(uid).update({
+        'overtimeAllowed': allowed,
+        'overtimeMaxMin': allowed ? maxMin : null,
+      }));
+
   Future<void> setSupervised(String supervisorId, Set<String> ids, Iterable<AppUser> current, List<AppUser> users) =>
       saving(() async {
         final before = {for (final u in current) u.id};

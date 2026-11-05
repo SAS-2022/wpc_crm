@@ -172,6 +172,11 @@ enum UserRole {
   /// office staff are (at the time they left).
   bool get leavesSiteForWork => this == salesExec || this == kam || this == driver;
 
+  /// Ask for a break before leaving the site (user request 2026-11-05):
+  /// their warehouse supervisor / department head approves it; leaving
+  /// without one shows as "Left without permission".
+  bool get asksForBreaks => this == worker || this == operator || this == warehouseSupervisor;
+
   /// HR or GM: run the HR area (attendance, payroll, leave, warnings).
   bool get isHr => this == hr || this == gm;
 
@@ -319,6 +324,10 @@ class AppUser {
   /// work day doesn't check them out. Not set = the sales team and drivers.
   final bool? leaveSiteAllowed;
   bool get leavesSite => leaveSiteAllowed ?? role.leavesSiteForWork;
+
+  /// Requests breaks ([UserRole.asksForBreaks]) — not when allowed to leave
+  /// the site, and only with attendance.
+  bool get requestsBreaks => role.asksForBreaks && !leavesSite && checksAttendance;
 
   /// Checks in and out: attendance required and at least one work site.
   bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;

@@ -100,6 +100,15 @@ class NotificationsScreen extends ConsumerWidget {
             if (n.note.isNotEmpty) '“${n.note}”',
           ].join(' '),
         NotificationType.earlyCheckoutApproved => l10n.notifEarlyCheckoutApproved(from),
+        NotificationType.breakRequested => [
+            l10n.notifBreakRequested(owner, n.count),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
+        NotificationType.breakApproved => l10n.notifBreakApproved(from, n.count),
+        NotificationType.breakRejected => [
+            l10n.notifBreakRejected(from),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
         NotificationType.earlyCheckoutRejected => [
             l10n.notifEarlyCheckoutRejected(from),
             if (n.note.isNotEmpty) '“${n.note}”',
@@ -210,6 +219,9 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.earlyCheckoutRequested => Icons.directions_walk,
                     NotificationType.earlyCheckoutApproved => Icons.check_circle,
                     NotificationType.earlyCheckoutRejected => Icons.cancel,
+                    NotificationType.breakRequested => Icons.free_breakfast_outlined,
+                    NotificationType.breakApproved => Icons.check_circle,
+                    NotificationType.breakRejected => Icons.cancel,
                     NotificationType.vehicleRenewalDue => Icons.directions_car_outlined,
                     NotificationType.vehicleOilDue => Icons.oil_barrel_outlined,
                     NotificationType.companyDocExpiry => Icons.event_busy_outlined,
@@ -254,7 +266,10 @@ class NotificationsScreen extends ConsumerWidget {
                             NotificationType.overtimeAsk ||
                             NotificationType.earlyCheckoutRequested ||
                             NotificationType.earlyCheckoutApproved ||
-                            NotificationType.earlyCheckoutRejected:
+                            NotificationType.earlyCheckoutRejected ||
+                            NotificationType.breakRequested ||
+                            NotificationType.breakApproved ||
+                            NotificationType.breakRejected:
                         context.go('/');
                       case NotificationType.absenceReported ||
                             NotificationType.absenceAccepted ||

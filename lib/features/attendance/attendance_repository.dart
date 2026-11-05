@@ -58,6 +58,7 @@ class AttendanceRecord {
     this.review,
     this.overtimeStatus,
     this.arrivedAt,
+    this.breaks = const [],
   });
 
   final String uid;
@@ -79,6 +80,9 @@ class AttendanceRecord {
   /// Server (2026-10-28): GPS arrival at the site before the day's first
   /// check-in event (`arrivedAt`); the check-in counts from then.
   final DateTime? arrivedAt;
+
+  /// The day's break requests (server copy, 2026-11-05).
+  final List<BreakSlot> breaks;
 
   /// Server: 'running' | 'pending' (recorded, waiting for approval) | 'approved' | null.
   final String? overtimeStatus;
@@ -132,6 +136,17 @@ class AttendanceRecord {
       },
       overtimeStatus: d['overtimeStatus'] as String?,
       arrivedAt: time('arrivedAt'),
+      breaks: [
+        for (final b in d['breaks'] as List? ?? const [])
+          if (b is Map && b['at'] is Timestamp)
+            BreakSlot(
+              id: b['id'] as String? ?? '',
+              at: (b['at'] as Timestamp).toDate(),
+              minutes: (b['minutes'] as num?)?.toInt() ?? 0,
+              status: BreakStatus.fromKey(b['status']),
+              decidedBy: b['decidedBy'] as String?,
+            ),
+      ],
       server: d.containsKey('closed')
           ? DayResult(
               checkInAt: time('checkInAt'),
@@ -151,6 +166,8 @@ class AttendanceRecord {
               },
               afterHoursMin: (d['afterHoursMin'] as num?)?.toInt(),
               awayMin: (d['awayMin'] as num?)?.toInt(),
+              breakMin: (d['breakMin'] as num?)?.toInt(),
+              breakOverMin: (d['breakOverMin'] as num?)?.toInt(),
               lastSeenAt: time('lastSeenAt'),
               overtimeOn: d['overtimeOn'] == true,
               overtimeConfirmedAt: time('overtimeConfirmedAt'),
@@ -165,6 +182,19 @@ class AttendanceRecord {
   /// Trips out of the site and back today (display only, [siteTrips]).
   List<SiteTrip> get trips => siteTrips(correctedEvents(events, correction));
 
+  /// Exits before [end] (the person's end of the work day) with the break
+  /// covering each (2026-11-05): trips out and back, plus the exit they're
+  /// still away on or were checked out for ([d] = the day's result).
+  List<ExitCheck> exitChecks(DayResult? d, DateTime end) {
+    final list = <({DateTime leftAt, DateTime? backAt})>[
+      for (final t in trips) (leftAt: t.leftAt, backAt: t.backAt),
+    ];
+    final last = d?.lastExitAt;
+    final stillOut = d != null && !d.inside && (!d.closed || d.checkOutType == 'leftSite' || d.checkOutType == 'leftEarly');
+    if (last != null && stillOut && !list.any((e) => e.leftAt == last)) list.add((leftAt: last, backAt: null));
+    return checkExits(list, breaks, end);
+  }
+
   /// The day as it stands now: worked out from the events on the phone (so
   /// a new event shows at once), the same way the server does. [hours]: the
   /// person's schedule ([AppUser.scheduleOr]).
@@ -173,6 +203,7 @@ class AttendanceRecord {
     required bool leavesSite,
     required bool overtimeAllowed,
     int overtimeMaxMin = defaultOvertimeMaxMin,
+    int? breakAllowance,
     DateTime? now,
   }) {
     final day = DateTime.parse(date);
@@ -187,6 +218,8 @@ class AttendanceRecord {
       overtimeMaxMin: overtimeMaxMin,
       drive: drive,
       arrivedAt: arrivedAt,
+      breaks: breaks,
+      breakAllowanceMin: breakAllowance,
     );
   }
 
@@ -198,6 +231,7 @@ class AttendanceRecord {
       leavesSite: user.leavesSite,
       overtimeAllowed: user.overtimeAllowed,
       overtimeMaxMin: user.overtimeCapMin,
+      breakAllowance: user.requestsBreaks ? breakAllowanceMin : null,
     );
     return server?.fillFrom(local) ?? local;
   }

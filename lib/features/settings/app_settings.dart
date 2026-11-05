@@ -32,6 +32,10 @@ enum AppSetting {
   /// `driveHomeGraceMin` in functions/index.js).
   driveHomeGraceMin(30, 0, 120),
 
+  /// Break time a day (workers, operators, warehouse supervisors) before
+  /// the rest comes off the counted hours (user decision 2026-11-05).
+  breakAllowanceMin(60, 0, 240),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90),
 
@@ -84,6 +88,7 @@ class AppSettings {
     given.givenDueSoonDays = this[AppSetting.givenDueSoonDays];
     attendance.lateGraceMin = this[AppSetting.lateGraceMin];
     attendance.awayGraceMin = this[AppSetting.awayGraceMin];
+    attendance.breakAllowanceMin = this[AppSetting.breakAllowanceMin];
     vehicle.renewalDueSoonDays = this[AppSetting.vehicleRenewalDays];
     vehicle.oilDueSoonKm = this[AppSetting.oilDueSoonKm];
     docs.docDueSoonDays = this[AppSetting.docRenewalDays];

@@ -6108,4 +6108,188 @@ class AppLocalizationsEn extends AppLocalizations {
   String siteTripLine(String left, String back, String time) {
     return 'Out $left – back $back · $time';
   }
+
+  @override
+  String get requestBreak => 'Request a break';
+
+  @override
+  String breakDialogHelp(String names) {
+    return '$names must approve your break before you leave the site. Leaving without an approved break is recorded as left without permission.';
+  }
+
+  @override
+  String get breakLength => 'Break length';
+
+  @override
+  String breakMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get breakReasonOptional => 'Reason (optional)';
+
+  @override
+  String breakRequestSent(String names) {
+    return 'Break request sent to $names';
+  }
+
+  @override
+  String breakWaiting(int minutes, String names) {
+    return 'Break ($minutes min) – waiting for $names';
+  }
+
+  @override
+  String breakApprovedLine(String name, int minutes) {
+    return '$name approved your $minutes min break – you may leave the site';
+  }
+
+  @override
+  String breakRejectedLine(String name) {
+    return '$name didn\'t approve your break';
+  }
+
+  @override
+  String breakRequestsWaiting(int count) {
+    return 'Break requests ($count)';
+  }
+
+  @override
+  String get breakNoApprover =>
+      'No supervisor to approve breaks yet – ask HR to set one.';
+
+  @override
+  String get breaksTitle => 'Breaks and leaving the site';
+
+  @override
+  String breakAskedLine(String time, int minutes) {
+    return 'Asked at $time · $minutes min';
+  }
+
+  @override
+  String get breakStatusPending => 'Waiting for approval';
+
+  @override
+  String breakStatusApproved(String name) {
+    return 'Approved by $name';
+  }
+
+  @override
+  String breakStatusRejected(String name) {
+    return 'Not approved by $name';
+  }
+
+  @override
+  String get breakStatusExpired => 'Not answered that day';
+
+  @override
+  String get leftWithoutPermission => 'Left without permission';
+
+  @override
+  String leftWithoutPermissionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count times',
+      one: 'once',
+    );
+    return 'Left without permission $_temp0';
+  }
+
+  @override
+  String exitOnBreak(int minutes) {
+    return 'On break ($minutes min approved)';
+  }
+
+  @override
+  String exitBreakOver(String time) {
+    return '$time longer than the break';
+  }
+
+  @override
+  String get exitBreakWaiting => 'Break not approved yet';
+
+  @override
+  String get exitBreakRefused => 'Break not approved – left without permission';
+
+  @override
+  String exitStillOut(String time) {
+    return 'Out since $time';
+  }
+
+  @override
+  String notifBreakRequested(String name, int minutes) {
+    return '$name asks for a $minutes min break';
+  }
+
+  @override
+  String notifBreakApproved(String name, int minutes) {
+    return '$name approved your $minutes min break – you may leave the site';
+  }
+
+  @override
+  String notifBreakRejected(String name) {
+    return '$name didn\'t approve your break';
+  }
+
+  @override
+  String get overtimePermission => 'Overtime permission';
+
+  @override
+  String get overtimePermissionHelp =>
+      'Only the people switched on here earn overtime. For the others, time after the end of the work day isn\'t counted, even when they stay.';
+
+  @override
+  String get overtimePermissionNone =>
+      'No employees under you to set overtime for.';
+
+  @override
+  String overtimeUpTo(String time) {
+    return 'Up to $time a day';
+  }
+
+  @override
+  String get settingBreakAllowance => 'Break time a day';
+
+  @override
+  String get settingBreakAllowanceHelp =>
+      'Workers, operators and warehouse supervisors: up to this much time out of the site a day in total (approved breaks) is part of the work day – no deduction, no warning. Time beyond it comes off the counted hours and shows as a warning. Each break still needs approval.';
+
+  @override
+  String breakTimeLine(String time, String allowance) {
+    return 'Breaks today: $time of $allowance';
+  }
+
+  @override
+  String breakOverWarning(String time) {
+    return 'Break over by $time – deducted';
+  }
+
+  @override
+  String breakLeftToday(String time) {
+    return '$time of today\'s break left';
+  }
+
+  @override
+  String get breakNoneLeftToday =>
+      'Today\'s break time is used up – more time out comes off your hours.';
+
+  @override
+  String reportBreakOverLine(int count, String time) {
+    return 'Break over on $count days ($time deducted)';
+  }
+
+  @override
+  String get reportBreakOverDays => 'Break over (days)';
+
+  @override
+  String get reportBreakOverHours => 'Break over, deducted (hours)';
+
+  @override
+  String get reportBreakMinutes => 'Breaks (min)';
+
+  @override
+  String get reportBreakOverMinutes => 'Break over, deducted (min)';
+
+  @override
+  String get calBreakOver => 'Break over';
 }

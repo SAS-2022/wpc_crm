@@ -2,7 +2,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../core/app_user.dart';
 import '../../core/location.dart';
-import '../notifications/notifications.dart' show peopleUnder;
+import '../notifications/notifications.dart' show departmentHeadsOf, directManagersOf, peopleUnder;
 import '../tracking/work_hours.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
@@ -76,3 +76,17 @@ Future<void> declineOvertime(AppUser me) => recordAttendance(me.id, AttendanceEv
 /// department head, the whole department); never their own.
 bool canApproveOvertime(AppUser me, AppUser person, List<AppUser> users) =>
     me.id != person.id && (me.role.canSeeHr || peopleUnder(me, users).any((u) => u.id == person.id));
+
+/// Whether [me] decides if [person] earns overtime (user request
+/// 2026-11-05, Attendance → Overtime permission; off = time after the end of
+/// the work day never counts): the sales manager / GM for everyone, HR for
+/// the roles they manage, a manager for the people whose department they
+/// head or whose direct manager they are; never themselves. The rules allow
+/// the same (same department, chosen manager, or the roles they manage).
+bool canSetOvertimeFor(AppUser me, AppUser person, List<AppUser> users) {
+  if (person.id == me.id || !person.active || !me.active) return false;
+  if (me.role.isAdmin) return true;
+  if (me.role == UserRole.hr) return UserRole.hrManagedRoles.contains(person.role);
+  if (!me.isManager) return false;
+  return departmentHeadsOf(person, users).contains(me.id) || directManagersOf(person, users).contains(me.id);
+}

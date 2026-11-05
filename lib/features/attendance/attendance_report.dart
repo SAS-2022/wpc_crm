@@ -56,6 +56,11 @@ class AttendanceReportRow {
   /// Overtime approved by managers (2026-10-25), possibly changed from what was recorded.
   int get approvedOvertimeMin => days.fold(0, (s, d) => s + (d.approvedOvertimeMin ?? 0));
   int get afterHoursMin => _results.fold(0, (s, r) => s + (r.afterHoursMin ?? 0));
+
+  /// Days whose breaks went over the daily allowance, and the minutes
+  /// deducted for it (2026-11-05).
+  int get breakOverDays => _results.where((r) => (r.breakOverMin ?? 0) > 0).length;
+  int get breakOverMin => _results.fold(0, (s, r) => s + (r.breakOverMin ?? 0));
 }
 
 final _key = DateFormat('yyyy-MM-dd');
@@ -178,6 +183,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportOvertimeHours,
     l10n.reportOvertimeApprovedHours,
     l10n.reportStayedAfterHours,
+    l10n.reportBreakOverDays,
+    l10n.reportBreakOverHours,
   ], widths: {0: 28, 4: 34});
   for (final r in rows) {
     summary.appendRow([
@@ -196,6 +203,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
       DoubleCellValue(hoursOf(r.overtimeMin)),
       DoubleCellValue(hoursOf(r.approvedOvertimeMin)),
       DoubleCellValue(hoursOf(r.afterHoursMin)),
+      IntCellValue(r.breakOverDays),
+      DoubleCellValue(hoursOf(r.breakOverMin)),
     ]);
   }
 
@@ -213,6 +222,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportOvertimeHours,
     l10n.reportOvertimeApprovedHours,
     l10n.reportStayedAfterHours,
+    l10n.reportBreakMinutes,
+    l10n.reportBreakOverMinutes,
   ], widths: {0: 28, 2: 22, 3: 22, 6: 26});
   final dayFormat = DateFormat('EEE yyyy-MM-dd', x.languageCode);
   for (final r in rows) {
@@ -233,6 +244,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
         res?.overtimeMin == null ? null : DoubleCellValue(hoursOf(res!.overtimeMin!)),
         d.approvedOvertimeMin == null ? null : DoubleCellValue(hoursOf(d.approvedOvertimeMin!)),
         res?.afterHoursMin == null ? null : DoubleCellValue(hoursOf(res!.afterHoursMin!)),
+        res?.breakMin == null ? null : IntCellValue(res!.breakMin!),
+        res?.breakOverMin == null ? null : IntCellValue(res!.breakOverMin!),
       ]);
     }
   }

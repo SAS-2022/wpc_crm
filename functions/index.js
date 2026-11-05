@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
-  gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap,
+  gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap, BREAK_ALLOWANCE_MIN,
   LATE_GRACE_MIN, AWAY_GRACE_MIN,
 } = require('./attendance');
 
@@ -168,6 +168,9 @@ const TEXTS = {
     earlyCheckoutRequested: (n, c, d, o, x) => `${o} asks to leave early today${x.note ? ` – ${x.note}` : ''}`,
     earlyCheckoutApproved: (n) => `${n} approved your early check-out – you can check out now`,
     earlyCheckoutRejected: (n, c, d, o, x) => `${n} didn't approve your early check-out${x.note ? ` – ${x.note}` : ''}`,
+    breakRequested: (n, c, d, o, x) => `${o} asks for a ${c} min break${x.note ? ` – ${x.note}` : ''}`,
+    breakApproved: (n, c) => `${n} approved your ${c} min break – you may leave the site`,
+    breakRejected: (n, c, d, o, x) => `${n} didn't approve your break${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ${x.renewal} expires in ${c} days (${d})`
       : `${x.vehicle}: ${x.renewal} has expired (${d})`),
@@ -232,6 +235,9 @@ const TEXTS = {
     earlyCheckoutRequested: (n, c, d, o, x) => `يطلب ${o} الانصراف مبكراً اليوم${x.note ? ` – ${x.note}` : ''}`,
     earlyCheckoutApproved: (n) => `وافق ${n} على انصرافك المبكر – يمكنك تسجيل الانصراف الآن`,
     earlyCheckoutRejected: (n, c, d, o, x) => `لم يوافق ${n} على انصرافك المبكر${x.note ? ` – ${x.note}` : ''}`,
+    breakRequested: (n, c, d, o, x) => `يطلب ${o} استراحة لمدة ${c} دقيقة${x.note ? ` – ${x.note}` : ''}`,
+    breakApproved: (n, c) => `وافق ${n} على استراحتك (${c} دقيقة) – يمكنك مغادرة الموقع`,
+    breakRejected: (n, c, d, o, x) => `لم يوافق ${n} على استراحتك${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ينتهي ${x.renewal} بعد ${c} يوماً (${d})`
       : `${x.vehicle}: انتهى ${x.renewal} (${d})`),
@@ -288,7 +294,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const db = admin.firestore();
   // For client transfers ownerId is the other sales executive (empty = unassigned);
   // for leave requests it is the person who asked.
-  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
+  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested', 'breakRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -326,7 +332,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
         route: n.type === 'registrationRequested' ? `/users/${n.ownerId}`
           : n.type.startsWith('absence') && n.ref ? `/absence/${n.ref}`
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
-          : n.type.startsWith('earlyCheckout') ? '/'
+          : n.type.startsWith('earlyCheckout') || n.type.startsWith('break') ? '/'
           // Managers too: Home has their "Overtime to approve" card on top (2026-11-03).
           : n.type === 'overtimeStarted' ? '/'
           : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
@@ -912,7 +918,9 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
 });
 
 const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
-const DERIVED = ['checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
+// Request breaks before leaving the site (UserRole.asksForBreaks, 2026-11-05).
+const BREAK_ROLES = ['worker', 'operator', 'warehouse_supervisor'];
+const DERIVED = ['breakMin', 'breakOverMin', 'checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
   'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin', 'awayMin', 'lastSeenAt',
   'overtimeOn', 'overtimeConfirmedAt', 'overtimeDeclined', 'overtimeEndUnknown', 'overtimeStatus', 'checkInEventAt'];
 const TIME_FIELDS = ['checkInAt', 'lastExitAt', 'checkOutAt', 'lastSeenAt', 'overtimeConfirmedAt', 'checkInEventAt'];
@@ -1066,7 +1074,7 @@ async function askOvertime(data, siteId, endMs, remind) {
 const OVERTIME_NOTICE_MS = 2 * 3600 * 1000;
 
 /** Works the day out from its events (see attendance.js) and saves the result when it changed. */
-async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin }) {
+async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin, breakAllowanceMin }) {
   if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
   const user = (await admin.firestore().doc(`users/${data.uid}`).get()).data() || {};
   const mine = scheduleOf(user, hours);
@@ -1076,13 +1084,16 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     (data.events || []).map((e) => ({ ...e, at: ms(e.at) })),
     c ? { checkInAt: ms(c.checkInAt), checkOutAt: ms(c.checkOutAt), siteId: c.siteId } : null,
   );
+  const leavesSite = typeof user.leaveSiteAllowed === 'boolean' ? user.leaveSiteAllowed : LEAVES_SITE_ROLES.includes(user.role);
   const options = {
     startMs: mine.days.includes(weekdayOf(data.date)) ? saudiTime(data.date, mine.start) : null,
     endMs: saudiTime(data.date, mine.end),
     closeAllMs: saudiTime(data.date, 23 * 60 + 55),
     now,
     // User form "Allowed to leave the site" (2026-10-22); not set = sales team and drivers.
-    leavesSite: typeof user.leaveSiteAllowed === 'boolean' ? user.leaveSiteAllowed : LEAVES_SITE_ROLES.includes(user.role),
+    leavesSite,
+    // People who request breaks (AppUser.requestsBreaks): time out over the daily allowance is deducted.
+    breakAllowanceMin: BREAK_ROLES.includes(user.role) && !leavesSite ? breakAllowanceMin : null,
     overtimeAllowed: user.overtimeAllowed === true,
     overtimeMaxMin: overtimeCap(user.overtimeMaxMin),
     graceMin,
@@ -1092,6 +1103,9 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
     drive: ['running', 'done'].includes(data.driveOvertime?.status) && ms(data.driveOvertime.startAt)
       ? { startAt: ms(data.driveOvertime.startAt), endAt: ms(data.driveOvertime.endAt) ?? null, place: data.driveOvertime.place ?? null }
       : null,
+    // Break requests of the day (copied here by breakRequestWritten, 2026-11-05).
+    breaks: (Array.isArray(data.breaks) ? data.breaks : [])
+      .map((b) => ({ id: b.id, at: ms(b.at), minutes: b.minutes || 0, status: b.status || 'pending' })),
   };
   // At the site before the first check-in event (GPS): the day starts then (2026-10-28).
   const arrival = await gpsArrival(data, events);
@@ -1156,11 +1170,12 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin 
 
 /** App settings the day rules use (same ranges as `AppSetting` in app_settings.dart). */
 async function attendanceSettings() {
-  const [graceMin, awayGraceMin] = await Promise.all([
+  const [graceMin, awayGraceMin, breakAllowanceMin] = await Promise.all([
     appSetting('lateGraceMin', LATE_GRACE_MIN, 0, 60),
     appSetting('awayGraceMin', AWAY_GRACE_MIN, 5, 240),
+    appSetting('breakAllowanceMin', BREAK_ALLOWANCE_MIN, 0, 240),
   ]);
-  return { graceMin, awayGraceMin };
+  return { graceMin, awayGraceMin, breakAllowanceMin };
 }
 
 /** Recalculates a day whenever a phone adds an event. */
@@ -1169,6 +1184,33 @@ exports.attendanceUpdated = onDocumentWritten('attendance/{id}', async (event) =
   if (!after?.exists) return;
   const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
   await updateAttendance(after.ref, after.data(), hours, Date.now(), await attendanceSettings());
+});
+
+/**
+ * Break requests (2026-11-05, break_request.dart): copies the person's
+ * requests of that day onto their attendance day (`breaks` [{id, at,
+ * minutes, status, decidedBy}]) so deriveDay sees them; the update runs
+ * attendanceUpdated again. No attendance day yet: nothing to do (the app
+ * asks only while checked in).
+ */
+exports.breakRequestWritten = onDocumentWritten('break_requests/{id}', async (event) => {
+  const d = event.data?.after?.data() || event.data?.before?.data();
+  if (!d?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return;
+  const db = admin.firestore();
+  const ref = db.doc(`attendance/${d.uid}_${d.date}`);
+  const [day, list] = await Promise.all([
+    ref.get(),
+    db.collection('break_requests').where('uid', '==', d.uid).where('date', '==', d.date).get(),
+  ]);
+  if (!day.exists) return;
+  const breaks = list.docs
+    .filter((x) => x.get('createdAt'))
+    .map((x) => ({
+      id: x.id, at: x.get('createdAt'), minutes: x.get('minutes') || 0,
+      status: x.get('status') || 'pending', decidedBy: x.get('decidedBy') || null,
+    }))
+    .sort((a, b) => a.at.toMillis() - b.at.toMillis());
+  await ref.update({ breaks });
 });
 
 /** Every 10 minutes: closes open days whose time has come (end of the work day, late evening). */
