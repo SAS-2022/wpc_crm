@@ -114,7 +114,29 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
         files.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: Text(r.typeName(lang))),
+      appBar: AppBar(title: Text(r.typeName(lang)), actions: [
+        // A past record HR entered (2026-11-08) can be removed again.
+        if (r.pastRecord && me.role.canManageHr)
+          IconButton(
+            tooltip: l10n.delete,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (d) => AlertDialog(
+                  title: Text(l10n.deletePastLeave),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(d, false), child: Text(l10n.cancel)),
+                    FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(l10n.delete)),
+                  ],
+                ),
+              );
+              if (ok != true || !context.mounted) return;
+              await ref.read(leaveRepositoryProvider).deletePastLeave(r.id);
+              if (context.mounted) Navigator.of(context).maybePop();
+            },
+          ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -129,6 +151,11 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(alignment: AlignmentDirectional.centerStart, child: LeaveStatusChip(request: r)),
           ),
+          if (r.pastRecord)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Text(l10n.pastLeaveRecorded, style: theme.textTheme.bodySmall),
+            ),
           if (dates.isNotEmpty)
             ListTile(
               leading: const Icon(Icons.event),

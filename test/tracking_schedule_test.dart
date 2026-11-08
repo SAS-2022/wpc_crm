@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wpc_crm/core/app_user.dart';
 import 'package:wpc_crm/features/settings/app_settings.dart';
 import 'package:wpc_crm/features/tracking/tracking_schedule.dart';
 import 'package:wpc_crm/features/tracking/work_hours.dart';
@@ -62,5 +63,19 @@ void main() {
       expect(s[AppSetting.lateGraceMin], 15);
       expect(AppSettings.fromMap(null)[AppSetting.offlineAlertMin], 30);
     });
+  });
+
+  test('sales manager: 08:00–18:00 on the company days, not the company end (2026-11-07)', () {
+    final company = WorkHours(days: const {1, 2, 3, 4, 6, 7}, startMinute: 8 * 60, endMinute: 17 * 60);
+    const s = TrackingSchedule.standard();
+    // Saturday 2026-11-07.
+    expect(s.isOn(DateTime(2026, 11, 7, 17, 30), company, driver: false), isFalse);
+    expect(s.isOn(DateTime(2026, 11, 7, 17, 30), company, driver: false, officeHours: true), isTrue);
+    expect(s.isOn(DateTime(2026, 11, 7, 18, 0), company, driver: false, officeHours: true), isFalse);
+    expect(s.isOn(DateTime(2026, 11, 7, 7, 59), company, driver: false, officeHours: true), isFalse);
+    // Friday off.
+    expect(s.isOn(DateTime(2026, 11, 6, 10), company, driver: false, officeHours: true), isFalse);
+    expect(UserRole.salesManager.isLocationTracked && UserRole.salesManager.tracksOfficeHours, isTrue);
+    expect(UserRole.salesManager.isTracked, isFalse);
   });
 }

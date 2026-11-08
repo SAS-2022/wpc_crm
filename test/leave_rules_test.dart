@@ -138,6 +138,8 @@ void main() {
       year: 2026,
       entitledOverride: const {'annual': 30},
       adjustments: const [(typeId: 'annual', days: 5), (typeId: 'sick', days: -1)],
+      // After the year: all of it earned.
+      asOf: DateTime(2027, 1, 1),
       requests: const [
         (typeId: 'annual', from: null, year: 2026, days: 3, status: LeaveStatus.approved),
         (typeId: 'annual', from: null, year: 2026, days: 2, status: LeaveStatus.pending),
@@ -190,6 +192,7 @@ void main() {
         entitledOverride: const {},
         adjustments: const [],
         carried: const {'annual': -4},
+        asOf: DateTime(2027, 3, 15),
         requests: const [
           (typeId: 'annual', year: 2026, from: '2026-03-10', days: 5, status: LeaveStatus.approved),
           (typeId: 'annual', year: 2027, from: '2027-01-10', days: 2, status: LeaveStatus.approved),
@@ -199,6 +202,51 @@ void main() {
       expect(b['annual']!.used, 2);
       expect(b['annual']!.carried, -4);
       expect(b['annual']!.remaining, 15);
+    });
+
+    test('annual leave earned monthly: 1.75 a month, 2.5 after 5 years of service', () {
+      // Joined 15 Mar 2024, leave year 2026 (3rd year): 15 Mar 2026 – 14 Mar 2027.
+      var a = annualAccrual(joiningDate: '2024-03-15', year: 2026, asOf: DateTime(2026, 3, 14 + 1));
+      expect((a.months, a.earned, a.monthly, a.yearly), (0, 0.0, 1.75, 21.0));
+      a = annualAccrual(joiningDate: '2024-03-15', year: 2026, asOf: DateTime(2026, 4, 14));
+      expect(a.months, 0);
+      a = annualAccrual(joiningDate: '2024-03-15', year: 2026, asOf: DateTime(2026, 4, 15));
+      expect((a.months, a.earned), (1, 1.75));
+      a = annualAccrual(joiningDate: '2024-03-15', year: 2026, asOf: DateTime(2026, 11, 7));
+      expect((a.months, a.earned), (7, 12.25));
+      a = annualAccrual(joiningDate: '2024-03-15', year: 2026, asOf: DateTime(2028));
+      expect((a.months, a.earned), (12, 21.0));
+      // 5 years done on 15 Mar 2026: 2.5 a month, 30 a year.
+      a = annualAccrual(joiningDate: '2021-03-15', year: 2026, asOf: DateTime(2026, 6, 20));
+      expect((a.serviceYears, a.monthly, a.months, a.earned, a.yearly), (5, 2.5, 3, 7.5, 30.0));
+      a = annualAccrual(joiningDate: '2021-03-15', year: 2025, asOf: DateTime(2026, 6, 20));
+      expect((a.monthly, a.earned), (1.75, 21.0));
+      // Before joining: nothing; first year starts on the joining day.
+      expect(annualAccrual(joiningDate: '2026-10-01', year: 2025, asOf: DateTime(2026, 11, 7)).earned, 0);
+      expect(annualAccrual(joiningDate: '2026-10-01', year: 2026, asOf: DateTime(2026, 11, 7)).earned, 1.75);
+      // Joined on the 31st: the month is done on the last day of shorter months.
+      expect(annualAccrual(joiningDate: '2025-01-31', year: 2026, asOf: DateTime(2026, 2, 28)).months, 1);
+      // No joining date: calendar year, months from 1 January.
+      expect(annualAccrual(year: 2026, asOf: DateTime(2026, 11, 7)).earned, 17.5);
+      // HR's yearly number for the person, still earned monthly.
+      expect(annualAccrual(year: 2026, asOf: DateTime(2026, 7, 1), override: 24).earned, 12);
+    });
+
+    test('balance uses the earned days for annual leave', () {
+      final b = leaveBalances(
+        types: LeaveType.defaults,
+        year: 2026,
+        joiningDate: '2024-03-15',
+        entitledOverride: const {},
+        adjustments: const [(typeId: 'annual', days: 1)],
+        asOf: DateTime(2026, 11, 7),
+        requests: const [(typeId: 'annual', year: 2026, from: '2026-06-01', days: 5, status: LeaveStatus.approved)],
+      );
+      expect(b['annual']!.entitled, 13.25);
+      expect(b['annual']!.remaining, 8.25);
+      expect(b['annual']!.accrual!.months, 7);
+      expect(b['sick']!.accrual, isNull);
+      expect(b['sick']!.entitled, 120);
     });
 
     test('carry: overdrawn days always, days left only when allowed', () {

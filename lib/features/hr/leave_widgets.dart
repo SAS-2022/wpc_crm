@@ -101,6 +101,7 @@ class LeaveRequestTile extends ConsumerWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               LeaveStatusChip(request: request),
+              if (request.pastRecord) Text(l10n.pastLeaveRecorded, style: Theme.of(context).textTheme.bodySmall),
               if (yourTurn)
                 Text(l10n.yourTurn,
                     style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),

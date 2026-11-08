@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_user.dart';
+import '../clients/clients_map_screen.dart' show managerPinColor;
 import '../../core/city_areas.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
@@ -187,6 +188,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         company,
         driver: u.role.isDriver,
         recordOnly: u.recordsGps,
+        officeHours: u.role.tracksOfficeHours,
         days: u.workSchedule?.days,
       );
       if (!shares) return null;
@@ -274,9 +276,10 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   anchor: const Offset(0.5, 0.5),
                   icon: _icons.circle(
                     context: context,
-                    fill: Colors.white,
+                    // Sales manager: blue with white initials (user 2026-11-07).
+                    fill: u.role == UserRole.salesManager ? managerPinColor : Colors.white,
                     text: initialsOf(u.name),
-                    textColor: _color(stateOf(u.id)),
+                    textColor: u.role == UserRole.salesManager ? Colors.white : _color(stateOf(u.id)),
                     ring: locations[u.id]!.mocked
                         ? Theme.of(context).colorScheme.error
                         : _color(stateOf(u.id)),

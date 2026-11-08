@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'features/hr/hr_acknowledge_gate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,7 +80,8 @@ class WpcCrmApp extends ConsumerWidget {
           data: MediaQuery.of(context).copyWith(
             textScaler: appTextScaler(MediaQuery.textScalerOf(context), MediaQuery.sizeOf(context).width),
           ),
-          child: SavingBar(child: UpdateGate(child: child)),
+          // HR records waiting for "Agreed and Accepted" cover the app (2026-11-07).
+          child: SavingBar(child: UpdateGate(child: HrAcknowledgeGate(child: child))),
         ),
       ),
     );

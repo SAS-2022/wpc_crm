@@ -1769,6 +1769,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get logResumed => 'عاد للإرسال';
 
   @override
+  String get logRestarted => 'أغلق الهاتف التطبيق – أُعيد تشغيله تلقائياً';
+
+  @override
+  String get logRestartedIos =>
+      'كان التطبيق مغلقاً – أعاد الآيفون تشغيله بعد تحرك الهاتف';
+
+  @override
   String get logNoAnswer => 'لم يستجب لفحص التنبيه – تم إبلاغ المديرين';
 
   @override
@@ -5826,6 +5833,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filterBatteryOptimized => 'تحسين البطارية مفعّل';
 
   @override
+  String get filterAppClosed => 'أغلق الهاتف التطبيق';
+
+  @override
+  String get filterNotRecording => 'لا يرسل الموقع';
+
+  @override
+  String get filterNoPermission => 'الموقع ليس \"طوال الوقت\"';
+
+  @override
+  String get filterApproximate => 'موقع تقريبي';
+
+  @override
+  String get filterBackground => 'الخلفية مقيّدة';
+
+  @override
+  String get filterNotificationsOff => 'الإشعارات مغلقة';
+
+  @override
+  String get filterNeverSignedIn => 'لم يسجّل الدخول من هاتف';
+
+  @override
   String get docSectionSubscription => 'الاشتراكات';
 
   @override
@@ -6301,4 +6329,663 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calBreakOver => 'تجاوز الاستراحة';
+
+  @override
+  String notifVisitComment(String name, String client, String comment) {
+    return 'علّق $name على زيارتك إلى $client: «$comment»';
+  }
+
+  @override
+  String notifVisitReply(String name, String client, String comment) {
+    return 'ردّ $name على زيارة $client: «$comment»';
+  }
+
+  @override
+  String get all => 'الكل';
+
+  @override
+  String get date => 'التاريخ';
+
+  @override
+  String get notFound => 'غير موجود';
+
+  @override
+  String get reasonOptional => 'السبب (اختياري)';
+
+  @override
+  String get employee => 'الموظف';
+
+  @override
+  String get payroll => 'الرواتب';
+
+  @override
+  String annualEarnedLine(String earned, String yearly, String monthly) {
+    return 'المكتسب حتى الآن $earned من $yearly ($monthly شهريًا)';
+  }
+
+  @override
+  String annualDaysHelper(int base, int senior, int years) {
+    return 'فارغ = $base يومًا في السنة ($senior بعد $years سنوات خدمة). تُكتسب شهريًا من تاريخ الالتحاق.';
+  }
+
+  @override
+  String deleteLeaveTypeTitle(String name) {
+    return 'حذف «$name»؟';
+  }
+
+  @override
+  String get deleteLeaveTypeBody =>
+      'لن يتمكن الموظفون من طلب هذا النوع بعد الآن. تحتفظ الطلبات السابقة باسم النوع.';
+
+  @override
+  String get hrActionsTitle => 'الإنذارات والخصومات';
+
+  @override
+  String get hrKindWarning => 'إنذار';
+
+  @override
+  String get hrKindDeduction => 'خصم';
+
+  @override
+  String get hrKindReward => 'مكافأة';
+
+  @override
+  String get hrKindNote => 'ملاحظة';
+
+  @override
+  String get warningVerbal => 'تنبيه شفهي';
+
+  @override
+  String get warningFirst => 'إنذار كتابي أول';
+
+  @override
+  String get warningSecond => 'إنذار كتابي ثانٍ';
+
+  @override
+  String get warningLast => 'إنذار نهائي';
+
+  @override
+  String get warningLevel => 'درجة الإنذار';
+
+  @override
+  String warningLevelSuggested(int days) {
+    return 'مقترحة حسب إنذارات آخر $days يومًا';
+  }
+
+  @override
+  String warningsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إنذار',
+      few: '$count إنذارات',
+      two: 'إنذاران',
+      one: 'إنذار واحد',
+    );
+    return '$_temp0 مسجلة';
+  }
+
+  @override
+  String amountSar(String amount) {
+    return '$amount ريال';
+  }
+
+  @override
+  String daysOfSalary(String days) {
+    return '$days يوم من الراتب';
+  }
+
+  @override
+  String get amountSarLabel => 'المبلغ (ريال)';
+
+  @override
+  String get daysOfSalaryLabel => 'أو أيام من الراتب';
+
+  @override
+  String get deductionAmount => 'المخصوم';
+
+  @override
+  String get rewardAmount => 'المكافأة';
+
+  @override
+  String get payrollMonth => 'شهر الراتب';
+
+  @override
+  String payrollMonthOf(String month) {
+    return 'راتب $month';
+  }
+
+  @override
+  String get payrollMonthHelper => 'الرواتب غير مفعّلة بعد؛ ستستخدم هذا الشهر';
+
+  @override
+  String get hrActionCancelled => 'ملغى';
+
+  @override
+  String get cancelHrAction => 'إلغاء';
+
+  @override
+  String get cancelHrActionTitle => 'إلغاء هذا السجل؟';
+
+  @override
+  String get restoreHrAction => 'استعادة';
+
+  @override
+  String get deleteHrActionTitle => 'حذف هذا السجل؟';
+
+  @override
+  String get deleteHrActionBody =>
+      'سيُحذف السجل ومستنداته نهائيًا. للاحتفاظ به دون احتسابه، ألغِه بدلًا من ذلك.';
+
+  @override
+  String get recordedBy => 'سجّله';
+
+  @override
+  String get showCancelled => 'إظهار الملغاة';
+
+  @override
+  String get noHrActions => 'لا توجد سجلات';
+
+  @override
+  String get searchEmployeeOrTitle => 'ابحث عن موظف أو عنوان';
+
+  @override
+  String get newHrAction => 'سجل جديد';
+
+  @override
+  String get editHrAction => 'تعديل السجل';
+
+  @override
+  String get chooseEmployee => 'اختر الموظف';
+
+  @override
+  String get hrTitleRequired => 'أدخل العنوان';
+
+  @override
+  String get amountOrDaysRequired => 'أدخل مبلغًا أو أيامًا من الراتب';
+
+  @override
+  String get hrActionTitleLabel => 'العنوان / السبب';
+
+  @override
+  String get hrActionTitleHint => 'مثال: تأخر 3 مرات هذا الأسبوع';
+
+  @override
+  String get hrAttachAfterSave =>
+      'يمكن إرفاق المستندات (الإنذار الموقّع، الإثبات) بعد الحفظ.';
+
+  @override
+  String get payrollNotActive => 'الرواتب غير مفعّلة بعد';
+
+  @override
+  String get payrollNotActiveBody =>
+      'هذا القسم مُجهّز وسيُفعّل لاحقًا. الخصومات والمكافآت المسجلة في الإنذارات والخصومات تحمل شهر الراتب، لذا ستُحتسب.';
+
+  @override
+  String get payrollPlanSalary =>
+      'راتب كل موظف: الأساسي والسكن والمواصلات والبدلات الأخرى';
+
+  @override
+  String get payrollPlanDeductions =>
+      'خصومات ومكافآت الشهر (مبلغ أو أيام من الراتب، اليوم = الراتب الشهري ÷ 30)';
+
+  @override
+  String get payrollPlanPayslips => 'قسائم الرواتب الشهرية';
+
+  @override
+  String get noAccess => 'ليس لديك صلاحية الوصول';
+
+  @override
+  String get searchEmployee => 'ابحث عن موظف';
+
+  @override
+  String get payrollEmployees => 'الرواتب المُدخلة';
+
+  @override
+  String get payrollGross => 'الإجمالي';
+
+  @override
+  String get payrollDeductions => 'الخصومات';
+
+  @override
+  String get payrollRewards => 'المكافآت';
+
+  @override
+  String get payrollNet => 'الصافي';
+
+  @override
+  String get payrollHint =>
+      'اضغط على موظف لإدخال راتبه. الخصومات والمكافآت من قسم الإنذارات والخصومات لشهر الراتب هذا (يوم الراتب = الشهري ÷ 30). مرئي لك فقط.';
+
+  @override
+  String get salaryBasic => 'الأساسي';
+
+  @override
+  String get salaryHousing => 'بدل السكن';
+
+  @override
+  String get salaryTransport => 'بدل المواصلات';
+
+  @override
+  String get salaryOther => 'بدلات أخرى';
+
+  @override
+  String get salaryNotSet => 'لم يُدخل الراتب';
+
+  @override
+  String get salary => 'الراتب';
+
+  @override
+  String salaryOf(String name) {
+    return 'الراتب · $name';
+  }
+
+  @override
+  String get allowanceName => 'اسم البدل';
+
+  @override
+  String get addAllowance => 'إضافة بدل';
+
+  @override
+  String get sar => 'ريال';
+
+  @override
+  String get total => 'الإجمالي';
+
+  @override
+  String get hrGateTitle => 'من الموارد البشرية';
+
+  @override
+  String hrGateMore(int count) {
+    return '$count سجلات للقراءة، واحدًا تلو الآخر';
+  }
+
+  @override
+  String get hrGateBody =>
+      'يرجى قراءة ما سبق. بالضغط على «موافق ومقبول» تؤكد أنك قرأته وقبلته؛ ويُحفظ ذلك في سجلك لدى الموارد البشرية وتُبلَّغ به. يُفتح التطبيق بعد ذلك.';
+
+  @override
+  String get hrAgreedAccepted => 'موافق ومقبول';
+
+  @override
+  String hrAcceptedOn(String date) {
+    return 'قبله الموظف $date';
+  }
+
+  @override
+  String get hrAccepted => 'مقبول';
+
+  @override
+  String get hrAwaitingAcceptance => 'بانتظار قبول الموظف';
+
+  @override
+  String get hrInternalOnly => 'داخلي (لم يُرسل للموظف)';
+
+  @override
+  String get hrEmployeeAcceptance => 'قبول الموظف';
+
+  @override
+  String get hrSendNote => 'إرسال إلى الموظف';
+
+  @override
+  String get hrSendNoteHint =>
+      'يجب أن يقرأها ويضغط «موافق ومقبول» قبل استخدام التطبيق';
+
+  @override
+  String get hrWillBeSent =>
+      'يُبلَّغ الموظف ويجب أن يضغط «موافق ومقبول» قبل استخدام التطبيق؛ وتُبلَّغ الموارد البشرية عند قبوله.';
+
+  @override
+  String get hrWillAskAgain =>
+      'سبق أن قبل الموظف هذا السجل. إذا غيّرت محتواه فسيُطلب منه قبوله مرة أخرى.';
+
+  @override
+  String notifHrActionIssued(String kind, String title) {
+    return 'أرسلت لك الموارد البشرية $kind: «$title» – افتح التطبيق لقراءته وقبوله';
+  }
+
+  @override
+  String notifHrActionAccepted(String name, String kind, String title) {
+    return 'قبل $name $kind: «$title»';
+  }
+
+  @override
+  String phoneChecksFromLastReport(String ago) {
+    return 'آخر تقرير $ago – الإعدادات أدناه من ذلك الوقت وليست الآن';
+  }
+
+  @override
+  String get addPastLeave => 'إضافة إجازة سابقة';
+
+  @override
+  String get pastLeaveHelp =>
+      'إجازة أُخذت سابقاً تُدخل بالتاريخ (مثلاً قبل استخدام التطبيق). تُحفظ كإجازة معتمدة وتُحتسب من رصيد سنة الإجازة الخاصة بها.';
+
+  @override
+  String get pastLeaveType => 'نوع الإجازة';
+
+  @override
+  String get pastLeavePickDates => 'اختر التواريخ';
+
+  @override
+  String get pastLeaveDaysUsed => 'الأيام المستخدمة';
+
+  @override
+  String get pastLeaveDaysHint =>
+      'محسوبة من أيام عمل الموظف والعطل الرسمية؛ غيّرها إذا لزم.';
+
+  @override
+  String get pastLeaveOneYear =>
+      'يجب أن تكون التواريخ في سنة إجازة واحدة. أدخل كل سنة على حدة.';
+
+  @override
+  String get pastLeaveRecorded => 'سجل سابق أدخلته الموارد البشرية';
+
+  @override
+  String get deletePastLeave => 'حذف هذا السجل السابق؟';
+
+  @override
+  String deleteHolidayQ(String name) {
+    return 'حذف $name؟';
+  }
+
+  @override
+  String get publicHolidaysByYearHint =>
+      'العطل بأسمائها، سنة بسنة. تتغير مواعيد العيد كل عام: أضف تواريخ كل سنة بالاسم نفسه. لا تُحسب أيام العطل إجازة ولا غياباً.';
+
+  @override
+  String noHolidaysThisYear(int year) {
+    return 'لا توجد عطل مُدخلة لعام $year';
+  }
+
+  @override
+  String get holidayNoName => 'بدون اسم';
+
+  @override
+  String holidayDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوماً',
+      few: '$count أيام',
+      two: 'يومان',
+      one: 'يوم واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String holidaysFromOtherYears(int year) {
+    return 'من سنوات أخرى — أضفها بتواريخ $year:';
+  }
+
+  @override
+  String get editHoliday => 'تعديل العطلة';
+
+  @override
+  String get holidayName => 'اسم العطلة';
+
+  @override
+  String holidayLastTime(int year, String dates) {
+    return 'في $year: $dates';
+  }
+
+  @override
+  String get overtimeDays => 'عمل إضافي في يوم محدد';
+
+  @override
+  String get overtimeDaysHelp =>
+      'اسمح بالعمل الإضافي في تاريخ واحد، مثل يوم جمعة، دون جعله يوم عمل. في يوم الإجازة أو العطلة يُحتسب كل الوقت من الوصول حتى المغادرة عملاً إضافياً؛ وفي يوم العمل يُحتسب الوقت بعد نهاية الدوام دون \"بدء العمل الإضافي\". ويبقى بانتظار الاعتماد.';
+
+  @override
+  String get allowOvertimeDay => 'السماح بعمل إضافي في يوم';
+
+  @override
+  String get pickDay => 'اختر اليوم';
+
+  @override
+  String allowedBy(String name) {
+    return 'سمح به $name';
+  }
+
+  @override
+  String removeOvertimeDayQ(String name, String date) {
+    return 'إلغاء العمل الإضافي لـ $name يوم $date؟';
+  }
+
+  @override
+  String allowForCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'سماح لـ $count شخصاً',
+      few: 'سماح لـ $count أشخاص',
+      two: 'سماح لشخصين',
+      one: 'سماح لشخص واحد',
+      zero: 'سماح',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String overtimeDayToday(String name) {
+    return 'سمح لك $name بالعمل الإضافي اليوم – يُحتسب وقتك في الموقع عملاً إضافياً';
+  }
+
+  @override
+  String notifOvertimeDayAllowed(String name, String date) {
+    return 'سمح لك $name بالعمل الإضافي يوم $date – يُحتسب وقتك في الموقع عملاً إضافياً';
+  }
+
+  @override
+  String get userLogTitle => 'سجل المستخدمين';
+
+  @override
+  String userLogTitleFor(String name) {
+    return 'السجل: $name';
+  }
+
+  @override
+  String get userLogSearch => 'ابحث بالمستخدم أو بمن أجرى التغيير';
+
+  @override
+  String get userLogNote =>
+      'كل مستخدم أُضيف أو سجّل أو اعتُمد أو تغيّر أو عُيّنت له كلمة مرور أو حُذف، ومن قام بذلك. يُسجَّل منذ 8 نوفمبر 2026؛ التغييرات من إصدارات أقدم للتطبيق تظهر \"غير معروف\".';
+
+  @override
+  String get userLogEmpty => 'لا توجد تغييرات مسجّلة بعد';
+
+  @override
+  String get userLogUnknownActor => 'غير معروف (إصدار أقدم من التطبيق)';
+
+  @override
+  String userLogRegistered(String target) {
+    return '$target سجّل بنفسه (إنشاء حساب)';
+  }
+
+  @override
+  String userLogCreated(String actor, String target) {
+    return '$actor أضاف $target';
+  }
+
+  @override
+  String userLogApproved(String actor, String target) {
+    return '$actor اعتمد $target';
+  }
+
+  @override
+  String userLogRejected(String actor, String target) {
+    return '$actor رفض $target';
+  }
+
+  @override
+  String userLogUpdated(String actor, String target) {
+    return '$actor عدّل $target';
+  }
+
+  @override
+  String userLogDeleted(String actor, String target) {
+    return '$actor حذف $target';
+  }
+
+  @override
+  String userLogPasswordSet(String actor, String target) {
+    return '$actor عيّن كلمة مرور جديدة لـ $target';
+  }
+
+  @override
+  String userLogHours(String h) {
+    return '$h س';
+  }
+
+  @override
+  String get userLogHistory => 'السجل';
+
+  @override
+  String get userLogFieldName => 'الاسم';
+
+  @override
+  String get userLogFieldEmail => 'البريد الإلكتروني';
+
+  @override
+  String get userLogFieldPhone => 'الهاتف';
+
+  @override
+  String get userLogFieldRole => 'الدور';
+
+  @override
+  String get userLogFieldPosition => 'الوظيفة المطلوبة';
+
+  @override
+  String get userLogFieldActive => 'نشط';
+
+  @override
+  String get userLogFieldApproval => 'الاعتماد';
+
+  @override
+  String get userLogFieldKam => 'مدير الحسابات الرئيسية';
+
+  @override
+  String get userLogFieldManager => 'المدير المباشر';
+
+  @override
+  String get userLogFieldIsManager => 'مدير';
+
+  @override
+  String get userLogFieldSupervisor => 'مشرف المستودع';
+
+  @override
+  String get userLogFieldOdooName => 'الاسم في Odoo';
+
+  @override
+  String get userLogFieldTarget => 'الهدف الشهري';
+
+  @override
+  String get userLogFieldCompany => 'الشركة';
+
+  @override
+  String get userLogFieldSites => 'مواقع العمل';
+
+  @override
+  String get userLogFieldOvertime => 'العمل الإضافي مسموح';
+
+  @override
+  String get userLogFieldOvertimeMax => 'أقصى عمل إضافي في اليوم';
+
+  @override
+  String get userLogFieldAttendance => 'الحضور مطلوب';
+
+  @override
+  String get userLogFieldLeaveSite => 'مسموح بمغادرة الموقع';
+
+  @override
+  String get userLogFieldSchedule => 'جدول عمل خاص';
+
+  @override
+  String get userLogFieldHome => 'موقع المنزل';
+
+  @override
+  String get userLogFieldJoining => 'تاريخ الالتحاق';
+
+  @override
+  String get userLogFieldDepartment => 'القسم';
+
+  @override
+  String get otFilterEveryone => 'الجميع';
+
+  @override
+  String otFilterAll(int n) {
+    return 'العمل الإضافي ($n)';
+  }
+
+  @override
+  String otFilterApproved(int n) {
+    return 'معتمد ($n)';
+  }
+
+  @override
+  String otFilterPending(int n) {
+    return 'بانتظار الاعتماد ($n)';
+  }
+
+  @override
+  String otFilterRejected(int n) {
+    return 'غير معتمد ($n)';
+  }
+
+  @override
+  String get otSectionApproved => 'عمل إضافي معتمد';
+
+  @override
+  String get otSectionPending => 'عمل إضافي بانتظار الاعتماد';
+
+  @override
+  String get otSectionRejected => 'عمل إضافي غير معتمد';
+
+  @override
+  String otSectionTotal(int n, String time) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n شخصاً',
+      few: '$n أشخاص',
+      two: 'شخصان',
+      one: 'شخص واحد',
+    );
+    return '$_temp0 · $time';
+  }
+
+  @override
+  String get otSectionEmpty => 'لا أحد هذا الشهر';
+
+  @override
+  String otDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n يوماً',
+      few: '$n أيام',
+      two: 'يومان',
+      one: 'يوم واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get otStateApproved => 'معتمد';
+
+  @override
+  String get otStatePending => 'بانتظار الاعتماد';
+
+  @override
+  String get otStateRejected => 'غير معتمد';
+
+  @override
+  String get reportOvertimePendingHours => 'عمل إضافي بانتظار الاعتماد (ساعات)';
+
+  @override
+  String get reportOvertimeRejectedHours => 'عمل إضافي غير معتمد (ساعات)';
+
+  @override
+  String get reportOvertimeStatus => 'حالة العمل الإضافي';
 }

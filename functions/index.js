@@ -125,6 +125,10 @@ const TEXTS = {
     planRejected: (n, c, d) => `${n} rejected an item in your plan for ${d}`,
     planChanged: (n, c, d) => `${n} changed your plan for ${d}`,
     planItemsAdded: (n, c, d) => `${n} added ${c} item(s) to your plan for ${d}`,
+    visitComment: (n, c, d, o, x) => `${x.reply ? `${n} replied on the visit to` : `${n} commented on your visit to`} ${x.client}: “${x.note}”`,
+    hrActionIssued: (n, c, d, o, x) => `HR sent you ${x.hrKind}: “${x.note}” – open the app to read and accept it`,
+    hrActionAccepted: (n, c, d, o, x) => `${o} accepted ${x.hrKind}: “${x.note}”`,
+    hrKind: { warning: 'a warning', deduction: 'a deduction', reward: 'a reward', note: 'a note' },
     clientsTransferredIn: (n, c) => `${n} moved ${c} clients to you`,
     clientsTransferredOut: (n, c, d, o) => `${n} moved ${c} of your clients to ${o || 'Unassigned'}`,
     tracking_gpsOff: (n) => `${n} turned off location (GPS)`,
@@ -170,6 +174,7 @@ const TEXTS = {
     earlyCheckoutRejected: (n, c, d, o, x) => `${n} didn't approve your early check-out${x.note ? ` – ${x.note}` : ''}`,
     breakRequested: (n, c, d, o, x) => `${o} asks for a ${c} min break${x.note ? ` – ${x.note}` : ''}`,
     breakApproved: (n, c) => `${n} approved your ${c} min break – you may leave the site`,
+    overtimeDayAllowed: (n, c, d, o, x) => `${n} allowed you overtime on ${d} – your time at the site counts as overtime${x.note ? ` – ${x.note}` : ''}`,
     breakRejected: (n, c, d, o, x) => `${n} didn't approve your break${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ${x.renewal} expires in ${c} days (${d})`
@@ -192,6 +197,10 @@ const TEXTS = {
     planRejected: (n, c, d) => `رفض ${n} عنصراً في خطتك ليوم ${d}`,
     planChanged: (n, c, d) => `عدّل ${n} خطتك ليوم ${d}`,
     planItemsAdded: (n, c, d) => `أضاف ${n} ${c} عنصر إلى خطتك ليوم ${d}`,
+    visitComment: (n, c, d, o, x) => `${x.reply ? `ردّ ${n} على زيارة` : `علّق ${n} على زيارتك إلى`} ${x.client}: «${x.note}»`,
+    hrActionIssued: (n, c, d, o, x) => `أرسلت لك الموارد البشرية ${x.hrKind}: «${x.note}» – افتح التطبيق لقراءته وقبوله`,
+    hrActionAccepted: (n, c, d, o, x) => `قبل ${o} ${x.hrKind}: «${x.note}»`,
+    hrKind: { warning: 'إنذارًا', deduction: 'خصمًا', reward: 'مكافأة', note: 'ملاحظة' },
     clientsTransferredIn: (n, c) => `نقل ${n} ${c} عميل إليك`,
     clientsTransferredOut: (n, c, d, o) => `نقل ${n} ${c} من عملائك إلى ${o || 'غير مُسند'}`,
     tracking_gpsOff: (n) => `أوقف ${n} خدمة الموقع (GPS)`,
@@ -237,6 +246,7 @@ const TEXTS = {
     earlyCheckoutRejected: (n, c, d, o, x) => `لم يوافق ${n} على انصرافك المبكر${x.note ? ` – ${x.note}` : ''}`,
     breakRequested: (n, c, d, o, x) => `يطلب ${o} استراحة لمدة ${c} دقيقة${x.note ? ` – ${x.note}` : ''}`,
     breakApproved: (n, c) => `وافق ${n} على استراحتك (${c} دقيقة) – يمكنك مغادرة الموقع`,
+    overtimeDayAllowed: (n, c, d, o, x) => `سمح لك ${n} بالعمل الإضافي يوم ${d} – يُحتسب وقتك في الموقع عملاً إضافياً${x.note ? ` – ${x.note}` : ''}`,
     breakRejected: (n, c, d, o, x) => `لم يوافق ${n} على استراحتك${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ينتهي ${x.renewal} بعد ${c} يوماً (${d})`
@@ -277,6 +287,16 @@ function formatClock(hhmm, lang) {
  * MainActivity.kt; sound res/raw/overtime_alert), shown on the lock screen;
  * iOS plays Library/Sounds/overtime_alert.caf (copied there by the app).
  */
+/**
+ * Visit comments (user request 2026-11-05): their own sound and Android
+ * channel 'comments' (MainActivity.kt, res/raw/comment_alert); iOS plays
+ * Library/Sounds/comment_alert.caf (copied there by the app).
+ */
+const COMMENT_PUSH = {
+  android: { priority: 'high', notification: { channelId: 'comments', sound: 'comment_alert' } },
+  apns: { payload: { aps: { sound: 'comment_alert.caf' } } },
+};
+
 const OVERTIME_PUSH = {
   android: {
     priority: 'high',
@@ -294,7 +314,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const db = admin.firestore();
   // For client transfers ownerId is the other sales executive (empty = unassigned);
   // for leave requests it is the person who asked.
-  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested', 'breakRequested'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
+  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested', 'breakRequested', 'hrActionAccepted'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -322,6 +342,8 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
       vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '', km: String(n.note || ''),
       idType: lang === 'ar' ? (n.issue === 'nationalId' ? 'الهوية الوطنية' : 'الإقامة') : (n.issue === 'nationalId' ? 'national ID' : 'Iqama'),
+      reply: n.issue === 'reply',
+      hrKind: t.hrKind[n.issue] || t.hrKind.note,
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
@@ -332,10 +354,14 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
         route: n.type === 'registrationRequested' ? `/users/${n.ownerId}`
           : n.type.startsWith('absence') && n.ref ? `/absence/${n.ref}`
           : n.type === 'teamOnLeave' && n.ref ? `/leave/${n.ref}`
-          : n.type.startsWith('earlyCheckout') || n.type.startsWith('break') ? '/'
+          : n.type.startsWith('earlyCheckout') || n.type.startsWith('break') || n.type === 'overtimeDayAllowed' ? '/'
           // Managers too: Home has their "Overtime to approve" card on top (2026-11-03).
           : n.type === 'overtimeStarted' ? '/'
           : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
+          : n.type === 'visitComment' && n.ref ? `/visits/${n.ref}`
+          // The app covers the screen with it until accepted.
+          : n.type === 'hrActionIssued' ? '/'
+          : n.type === 'hrActionAccepted' && n.ref ? `/hr/action/${n.ref}`
           : !n.ref ? '/notifications'
           : n.type.startsWith('leave') ? `/leave/${n.ref}`
           : n.type.startsWith('clientStatus') ? `/clients/${n.ref}`
@@ -345,7 +371,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : '/notifications',
         notificationId: event.params.id,
       },
-      ...(overtimeAlert ? OVERTIME_PUSH : { android: { priority: 'high' }, apns: { payload: { aps: { sound: 'default' } } } }),
+      ...(overtimeAlert ? OVERTIME_PUSH : n.type === 'visitComment' ? COMMENT_PUSH : { android: { priority: 'high' }, apns: { payload: { aps: { sound: 'default' } } } }),
     });
     res.responses.forEach((r, i) => {
       const code = r.error?.code;
@@ -399,6 +425,11 @@ function presenceEvents(before, after) {
   if (typeof after.notifications === 'boolean' && typeof b.notifications === 'boolean'
     && b.notifications !== after.notifications) {
     events.push({ type: after.notifications ? 'notificationsOn' : 'notificationsOff' });
+  }
+  // Started again after the phone closed the app (2026-11-08): Android
+  // watchdog / iPhone relaunch, value = 'watchdog' | 'ios'.
+  if (typeof after.restartedAt === 'number' && after.restartedAt !== b.restartedAt) {
+    events.push({ type: 'restarted', value: after.restartBy || null });
   }
   return events;
 }
@@ -696,6 +727,77 @@ exports.cleanRouteHistory = onSchedule(
  * When a sales manager / GM deletes a visit, removes its comments and
  * attachment records and the attachment files in Storage.
  */
+/**
+ * A comment on a visit (user request 2026-11-05) notifies both ends: the
+ * person who made the visit ('own') and everyone who commented on it before
+ * ('reply'), never the author. ref = visit id, note = the comment (cut).
+ */
+exports.visitCommented = onDocumentCreated({ document: 'visits/{visitId}/comments/{commentId}', maxInstances: 5 }, async (event) => {
+  const c = event.data?.data();
+  const author = c?.authorId;
+  if (!author) return;
+  const db = admin.firestore();
+  const visitRef = db.doc(`visits/${event.params.visitId}`);
+  const [visit, earlier] = await Promise.all([visitRef.get(), visitRef.collection('comments').get()]);
+  if (!visit.exists) return;
+  const v = visit.data();
+  const to = new Set();
+  if (v.salesExecId) to.add(v.salesExecId);
+  for (const d of earlier.docs) if (d.id !== event.params.commentId && d.get('authorId')) to.add(d.get('authorId'));
+  to.delete(author);
+  const body = String(c.body || '').trim();
+  const note = body.length > 140 ? `${body.slice(0, 137)}…` : body;
+  const checked = v.checkedInAt?.toDate?.() ?? new Date();
+  const date = new Date(checked.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const batch = db.batch();
+  for (const uid of to) {
+    batch.set(db.collection('notifications').doc(`comment_${event.params.commentId}_${uid}`), {
+      toId: uid, fromId: author, ownerId: v.salesExecId || '', type: 'visitComment',
+      issue: uid === v.salesExecId ? 'own' : 'reply', ref: event.params.visitId,
+      clientName: v.clientName || '', note, date, count: 0, read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  if (to.size) await batch.commit();
+});
+
+/**
+ * HR records (2026-11-07, `hr_actions`): one sent to the employee and
+ * waiting for "Agreed and Accepted" → `hrActionIssued` to them (the app
+ * covers its screen with it); accepted → `hrActionAccepted` to every active
+ * HR user and whoever recorded it. issue = kind, note = title, ref = id.
+ */
+const { hrActionEvents } = require('./hrActions');
+
+exports.hrActionWritten = onDocumentWritten({ document: 'hr_actions/{id}', maxInstances: 5 }, async (event) => {
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  if (!after?.uid) return;
+  const { issued, accepted } = hrActionEvents(before, after);
+  if (!issued && !accepted) return;
+  const db = admin.firestore();
+  const base = {
+    ownerId: after.uid, type: '', issue: after.kind || 'note', ref: event.params.id,
+    note: String(after.title || '').slice(0, 140), date: saudiDay(Date.now()), count: 0, read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  const batch = db.batch();
+  if (issued) {
+    batch.set(db.collection('notifications').doc(), {
+      ...base, type: 'hrActionIssued', toId: after.uid, fromId: after.updatedBy || after.createdBy || '',
+    });
+  }
+  if (accepted) {
+    const hr = (await db.collection('users').where('role', '==', 'hr').where('active', '==', true).get()).docs.map((d) => d.id);
+    const to = new Set([...hr, ...(after.createdBy ? [after.createdBy] : [])]);
+    to.delete(after.uid);
+    for (const toId of to) {
+      batch.set(db.collection('notifications').doc(), { ...base, type: 'hrActionAccepted', toId, fromId: after.uid });
+    }
+  }
+  await batch.commit();
+});
+
 exports.cleanDeletedVisit = onDocumentDeleted({ document: 'visits/{id}', maxInstances: 5 }, async (event) => {
   const id = event.params.id;
   await admin.firestore().recursiveDelete(admin.firestore().doc(`visits/${id}`));
@@ -1107,6 +1209,23 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
     breaks: (Array.isArray(data.breaks) ? data.breaks : [])
       .map((b) => ({ id: b.id, at: ms(b.at), minutes: b.minutes || 0, status: b.status || 'pending' })),
   };
+  // Overtime day allowed by a manager (2026-11-08, `overtime_days`): copied
+  // onto the day for the app; a day off / holiday = the whole stay is overtime.
+  const otDoc = await admin.firestore().doc(`overtime_days/${data.uid}_${data.date}`).get();
+  if (otDoc.exists) {
+    const holidays = options.startMs === null ? [] : (await admin.firestore().doc('settings/holidays').get()).get('dates') || [];
+    options.overtimeDay = { dayOff: options.startMs === null || holidays.includes(data.date) };
+  } else options.overtimeDay = null;
+  const otField = otDoc.exists
+    ? { byId: otDoc.get('byId') || null, note: otDoc.get('note') || '', dayOff: options.overtimeDay.dayOff }
+    : null;
+  const oldOt = data.overtimeDay ?? null;
+  const sameOt = oldOt === null || otField === null ? oldOt === otField
+    : oldOt.byId === otField.byId && oldOt.note === otField.note && oldOt.dayOff === otField.dayOff;
+  if (!sameOt) {
+    await ref.update({ overtimeDay: otField ?? admin.firestore.FieldValue.delete() });
+    return; // runs again with it
+  }
   // At the site before the first check-in event (GPS): the day starts then (2026-10-28).
   const arrival = await gpsArrival(data, events);
   options.arrivedAt = arrival.arrivedAt;
@@ -1121,7 +1240,7 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
   }
   // Closed with no exit seen: with overtime, the last GPS fix at the site
   // tells how long they stayed.
-  if (d.checkOutType === 'auto' && options.overtimeAllowed) {
+  if (d.checkOutType === 'auto' && (options.overtimeAllowed || options.overtimeDay)) {
     const lastSeenAt = await lastSeenAtSite(data.uid, data.date, d.siteId);
     if (lastSeenAt !== null) d = deriveDay(events, { ...options, lastSeenAt });
   }
@@ -1214,6 +1333,31 @@ exports.breakRequestWritten = onDocumentWritten('break_requests/{id}', async (ev
 });
 
 /** Every 10 minutes: closes open days whose time has come (end of the work day, late evening). */
+/**
+ * Overtime day allowed / taken back (2026-11-08): the person's attendance
+ * day picks it up (updateAttendance copies it and recalculates); a day not
+ * started yet reads it when the first event comes. The employee is told.
+ */
+exports.overtimeDayWritten = onDocumentWritten('overtime_days/{id}', async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  const d = after || before;
+  if (!d?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return;
+  const db = admin.firestore();
+  const day = await db.doc(`attendance/${d.uid}_${d.date}`).get();
+  if (day.exists) {
+    const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
+    await updateAttendance(day.ref, day.data(), hours, Date.now(), await attendanceSettings());
+  }
+  if (after && !before) {
+    await db.doc(`notifications/otDay_${d.uid}_${d.date}`).set({
+      toId: d.uid, fromId: d.byId || '', ownerId: d.uid, type: 'overtimeDayAllowed', date: d.date,
+      note: (d.note || '').slice(0, 140), count: 0, read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+});
+
 exports.closeAttendance = onSchedule(
   { schedule: 'every 10 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
   async () => {
@@ -1787,7 +1931,9 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
   ]);
   const writes = [
     ...clients.docs.map((d) => (b) => b.update(d.ref, { assignedTo: null, updatedAt: admin.firestore.FieldValue.serverTimestamp() })),
-    ...team.docs.map((d) => (b) => b.update(d.ref, { kamId: null })),
+    ...team.docs.map((d) => (b) => b.update(d.ref, {
+      kamId: null, changedBy: callerId, changedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })),
     ...devices.docs.map((d) => (b) => b.delete(d.ref)),
   ];
   for (let i = 0; i < writes.length; i += 400) {
@@ -1796,6 +1942,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
     await batch.commit();
   }
   await userRef.delete();
+  await logUserEvent({ action: 'deleted', targetId: uid, targetName: target?.name || '', actorId: callerId, changes: [] });
   await admin.database().ref().update(Object.fromEntries([
     'roles', 'live_locations', 'presence', 'tracking_device', 'settings/trackingSchedules', 'location_history',
     'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site', 'device_status',
@@ -1837,6 +1984,7 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
     (caller.role === 'hr' && HR_MANAGED_ROLES.includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
+  await logUserEvent({ action: 'passwordSet', targetId: uid, targetName: target?.name || '', actorId: callerId, changes: [] });
   return { ok: true };
 });
 
@@ -2146,3 +2294,29 @@ exports.closeLeaveYears = onSchedule(
     }
   },
 );
+
+const { userLogEntry } = require('./userLog');
+
+/** Adds a `user_log` entry; the actor's name is kept for deleted accounts. */
+async function logUserEvent({ action, targetId, targetName, actorId, stamped = true, changes }) {
+  const db = admin.firestore();
+  const actorName = actorId ? (await db.doc(`users/${actorId}`).get()).get('name') || '' : '';
+  await db.collection('user_log').add({
+    at: admin.firestore.FieldValue.serverTimestamp(),
+    action, targetId, targetName, actorId: actorId || null, actorName, stamped, changes,
+  });
+}
+
+/**
+ * Who adds users and what changes (2026-11-08, user request): one
+ * `user_log` entry per `users/{uid}` write (logic `userLog.js`, node tested).
+ * Read by GM / SM / HR (App: Users → History). Deletes and password changes
+ * are logged by deleteUser / setUserPassword.
+ */
+exports.userChanged = onDocumentWritten({ document: 'users/{uid}', maxInstances: 5 }, async (event) => {
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  const e = userLogEntry(before, after, event.params.uid);
+  if (!e) return;
+  await logUserEvent({ ...e, targetId: event.params.uid, targetName: after?.name || before?.name || '' });
+});

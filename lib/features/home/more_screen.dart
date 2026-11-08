@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../attendance/overtime.dart' show canSetOvertimeFor;
 import '../hr/leave_rules.dart' show myLeaveEnabled;
+import '../users/users_repository.dart';
 import '../settings/page_access.dart';
 import '../../core/login_name.dart';
 import '../../core/providers.dart';
@@ -26,6 +28,7 @@ class MoreScreen extends ConsumerWidget {
     final locale = ref.watch(localeProvider) ?? Localizations.localeOf(context);
     final role = me.role;
     final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
+    final users = ref.watch(usersProvider).value ?? const [];
     _Item item(IconData icon, String label, String path, {bool go = false}) =>
         (icon: icon, label: label, path: path, onTap: () => go ? context.go(path) : context.push(path));
 
@@ -54,6 +57,10 @@ class MoreScreen extends ConsumerWidget {
         if (role.managesVehicles) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
         if (me.seesTeamAttendance) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
         if (me.seesEmployeesMap) item(Icons.person_pin_circle, l10n.employeesMap, '/attendance/map'),
+        // Department heads / managers allow overtime per person (2026-11-05;
+        // the Attendance app-bar icon alone was missed by the user).
+        if (users.any((u) => u.checksAttendance && canSetOvertimeFor(me, u, users)))
+          item(Icons.more_time, l10n.overtimePermission, '/attendance/overtime'),
         if (role.canSeeHr) item(Icons.badge, l10n.hrArea, '/hr'),
         if (role.managesUsers) item(Icons.people, l10n.users, '/users'),
       ]),

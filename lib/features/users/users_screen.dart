@@ -97,7 +97,18 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final editable = me?.role.editableRoles ?? const <UserRole>[];
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.users)),
+      appBar: AppBar(
+        title: Text(l10n.users),
+        actions: [
+          // Who added / changed users (2026-11-08).
+          if (me?.role.canManageHr == true)
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: l10n.userLogTitle,
+              onPressed: () => context.push('/users/log'),
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/users/new'),
         icon: const Icon(Icons.person_add),

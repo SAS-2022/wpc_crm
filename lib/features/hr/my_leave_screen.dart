@@ -82,8 +82,11 @@ class LeaveBalancesCard extends ConsumerWidget {
                   dense: true,
                   onTap: onTap == null ? null : () => onTap!(t),
                   title: Text(t.name(lang)),
-                  subtitle: b.pending > 0 || b.carried != 0
+                  subtitle: b.pending > 0 || b.carried != 0 || b.accrual != null
                       ? Text([
+                          // Annual leave earned month by month (2026-11-07).
+                          if (b.accrual case final a?)
+                            l10n.annualEarnedLine(formatLeaveDays(a.earned), formatLeaveDays(a.yearly), formatLeaveDays(a.monthly)),
                           if (b.carried != 0) l10n.leaveCarriedDays('${b.carried > 0 ? '+' : ''}${formatLeaveDays(b.carried)}'),
                           if (b.pending > 0) l10n.leavePendingDays(formatLeaveDays(b.pending)),
                         ].join(' · '))

@@ -41,4 +41,71 @@ void main() {
     final trips = siteTrips([e(inn, t(8)), e(out, t(17, 10)), e(AttendanceEventType.seen, t(17, 40))]);
     expect(trips, [(leftAt: t(17, 10), backAt: t(17, 40))]);
   });
+
+  // 2026-11-07: Wissam inside the Service Center, then the phone's first
+  // report for the Showroom (20 km away) said "exit".
+  group('exit from another site', () {
+    AttendanceEvent at(AttendanceEventType type, DateTime when, String site, {String? source}) =>
+        AttendanceEvent(type, when, siteId: site, source: source);
+
+    test('is not leaving: still inside, no trip', () {
+      final events = [at(inn, t(8, 32), 'service'), at(out, t(8, 33), 'showroom'), at(inn, t(9), 'service')];
+      final d = deriveDay(
+        events,
+        start: t(8),
+        end: t(17),
+        closeAll: t(23, 55),
+        now: t(10),
+        leavesSite: true,
+        overtimeAllowed: false,
+      );
+      expect(d.inside, isTrue);
+      expect(d.lastExitAt, isNull);
+      expect(siteTrips(events), isEmpty);
+    });
+
+    test('an exit from their own site or a GPS exit still counts', () {
+      final own = deriveDay(
+        [at(inn, t(8), 'service'), at(out, t(9), 'service')],
+        start: t(8),
+        end: t(17),
+        closeAll: t(23, 55),
+        now: t(10),
+        leavesSite: true,
+        overtimeAllowed: false,
+      );
+      expect(own.inside, isFalse);
+      final gps = deriveDay(
+        [at(inn, t(8), 'service'), at(out, t(9), 'showroom', source: 'gps')],
+        start: t(8),
+        end: t(17),
+        closeAll: t(23, 55),
+        now: t(10),
+        leavesSite: true,
+        overtimeAllowed: false,
+      );
+      expect(gps.inside, isFalse);
+    });
+  });
+
+  test('moving between sites before the start: no exit checked, break counted from the start', () {
+    final exits = checkExits([(leftAt: t(7, 59), backAt: t(8, 6))], const [], t(17), start: t(8));
+    expect(exits, isEmpty);
+    final d = deriveDay(
+      [
+        AttendanceEvent(inn, t(7, 55), siteId: 'a'),
+        AttendanceEvent(out, t(7, 59), siteId: 'a'),
+        AttendanceEvent(inn, t(8, 6), siteId: 'b'),
+      ],
+      start: t(8),
+      end: t(17),
+      closeAll: t(23, 55),
+      now: t(10),
+      leavesSite: false,
+      overtimeAllowed: false,
+      breakAllowanceMin: 60,
+    );
+    expect(d.inside, isTrue);
+    expect(d.breakMin, 6);
+  });
 }

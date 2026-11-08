@@ -1772,6 +1772,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logResumed => 'Sending again';
 
   @override
+  String get logRestarted =>
+      'The phone closed the app – started again automatically';
+
+  @override
+  String get logRestartedIos =>
+      'App was closed – iPhone started it again after the phone moved';
+
+  @override
   String get logNoAnswer => 'No answer to the wake-up check – managers told';
 
   @override
@@ -5816,6 +5824,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterBatteryOptimized => 'Battery optimization on';
 
   @override
+  String get filterAppClosed => 'App closed by the phone';
+
+  @override
+  String get filterNotRecording => 'Not sending location';
+
+  @override
+  String get filterNoPermission => 'Location not \"all the time\"';
+
+  @override
+  String get filterApproximate => 'Approximate location';
+
+  @override
+  String get filterBackground => 'Background restricted';
+
+  @override
+  String get filterNotificationsOff => 'Notifications off';
+
+  @override
+  String get filterNeverSignedIn => 'Never signed in';
+
+  @override
   String get docSectionSubscription => 'Subscriptions';
 
   @override
@@ -6292,4 +6321,654 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calBreakOver => 'Break over';
+
+  @override
+  String notifVisitComment(String name, String client, String comment) {
+    return '$name commented on your visit to $client: “$comment”';
+  }
+
+  @override
+  String notifVisitReply(String name, String client, String comment) {
+    return '$name replied on the visit to $client: “$comment”';
+  }
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get date => 'Date';
+
+  @override
+  String get notFound => 'Not found';
+
+  @override
+  String get reasonOptional => 'Reason (optional)';
+
+  @override
+  String get employee => 'Employee';
+
+  @override
+  String get payroll => 'Payroll';
+
+  @override
+  String annualEarnedLine(String earned, String yearly, String monthly) {
+    return 'Earned $earned of $yearly so far ($monthly a month)';
+  }
+
+  @override
+  String annualDaysHelper(int base, int senior, int years) {
+    return 'Empty = $base days a year ($senior after $years years of service). Earned month by month from the joining date.';
+  }
+
+  @override
+  String deleteLeaveTypeTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get deleteLeaveTypeBody =>
+      'Employees won\'t be able to ask for this type any more. Requests already made keep their type name.';
+
+  @override
+  String get hrActionsTitle => 'Warnings & deductions';
+
+  @override
+  String get hrKindWarning => 'Warning';
+
+  @override
+  String get hrKindDeduction => 'Deduction';
+
+  @override
+  String get hrKindReward => 'Reward';
+
+  @override
+  String get hrKindNote => 'Note';
+
+  @override
+  String get warningVerbal => 'Verbal warning';
+
+  @override
+  String get warningFirst => 'First written warning';
+
+  @override
+  String get warningSecond => 'Second written warning';
+
+  @override
+  String get warningLast => 'Final warning';
+
+  @override
+  String get warningLevel => 'Warning level';
+
+  @override
+  String warningLevelSuggested(int days) {
+    return 'Suggested from the warnings of the last $days days';
+  }
+
+  @override
+  String warningsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count warnings',
+      one: '1 warning',
+    );
+    return '$_temp0 on record';
+  }
+
+  @override
+  String amountSar(String amount) {
+    return '$amount SAR';
+  }
+
+  @override
+  String daysOfSalary(String days) {
+    return '$days days of salary';
+  }
+
+  @override
+  String get amountSarLabel => 'Amount (SAR)';
+
+  @override
+  String get daysOfSalaryLabel => 'Or days of salary';
+
+  @override
+  String get deductionAmount => 'Deducted';
+
+  @override
+  String get rewardAmount => 'Reward';
+
+  @override
+  String get payrollMonth => 'Payroll month';
+
+  @override
+  String payrollMonthOf(String month) {
+    return 'Payroll $month';
+  }
+
+  @override
+  String get payrollMonthHelper =>
+      'Payroll isn\'t active yet; it will use this month';
+
+  @override
+  String get hrActionCancelled => 'Cancelled';
+
+  @override
+  String get cancelHrAction => 'Cancel it';
+
+  @override
+  String get cancelHrActionTitle => 'Cancel this record?';
+
+  @override
+  String get restoreHrAction => 'Restore';
+
+  @override
+  String get deleteHrActionTitle => 'Delete this record?';
+
+  @override
+  String get deleteHrActionBody =>
+      'It and its documents are removed for good. To keep it on record without counting it, cancel it instead.';
+
+  @override
+  String get recordedBy => 'Recorded by';
+
+  @override
+  String get showCancelled => 'Show cancelled';
+
+  @override
+  String get noHrActions => 'Nothing recorded';
+
+  @override
+  String get searchEmployeeOrTitle => 'Search employee or title';
+
+  @override
+  String get newHrAction => 'New record';
+
+  @override
+  String get editHrAction => 'Edit record';
+
+  @override
+  String get chooseEmployee => 'Choose the employee';
+
+  @override
+  String get hrTitleRequired => 'Enter a title';
+
+  @override
+  String get amountOrDaysRequired => 'Enter an amount or days of salary';
+
+  @override
+  String get hrActionTitleLabel => 'Title / reason';
+
+  @override
+  String get hrActionTitleHint => 'e.g. Late 3 times this week';
+
+  @override
+  String get hrAttachAfterSave =>
+      'Documents (signed warning, proof) can be attached after saving.';
+
+  @override
+  String get payrollNotActive => 'Payroll is not active yet';
+
+  @override
+  String get payrollNotActiveBody =>
+      'This section is prepared and will be turned on later. Deductions and rewards recorded under Warnings & deductions already carry their payroll month, so they will be included.';
+
+  @override
+  String get payrollPlanSalary =>
+      'Salary per employee: basic, housing, transport and other allowances';
+
+  @override
+  String get payrollPlanDeductions =>
+      'Deductions and rewards of the month (amount or days of salary, a day = monthly salary ÷ 30)';
+
+  @override
+  String get payrollPlanPayslips => 'Monthly payslips';
+
+  @override
+  String get noAccess => 'You don\'t have access to this';
+
+  @override
+  String get searchEmployee => 'Search employee';
+
+  @override
+  String get payrollEmployees => 'Salaries set';
+
+  @override
+  String get payrollGross => 'Gross';
+
+  @override
+  String get payrollDeductions => 'Deductions';
+
+  @override
+  String get payrollRewards => 'Rewards';
+
+  @override
+  String get payrollNet => 'Net';
+
+  @override
+  String get payrollHint =>
+      'Tap an employee to set their salary. Deductions and rewards come from Warnings & deductions for this payroll month (a day of salary = monthly ÷ 30). Visible to you only.';
+
+  @override
+  String get salaryBasic => 'Basic';
+
+  @override
+  String get salaryHousing => 'Home allowance';
+
+  @override
+  String get salaryTransport => 'Transportation';
+
+  @override
+  String get salaryOther => 'Other allowances';
+
+  @override
+  String get salaryNotSet => 'Salary not set';
+
+  @override
+  String get salary => 'Salary';
+
+  @override
+  String salaryOf(String name) {
+    return 'Salary · $name';
+  }
+
+  @override
+  String get allowanceName => 'Allowance name';
+
+  @override
+  String get addAllowance => 'Add allowance';
+
+  @override
+  String get sar => 'SAR';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get hrGateTitle => 'From HR';
+
+  @override
+  String hrGateMore(int count) {
+    return '$count records to read, one at a time';
+  }
+
+  @override
+  String get hrGateBody =>
+      'Please read the above. By pressing \"Agreed and Accepted\" you confirm you have read and accept it; this is saved in your HR record and HR is informed. The app opens after that.';
+
+  @override
+  String get hrAgreedAccepted => 'Agreed and Accepted';
+
+  @override
+  String hrAcceptedOn(String date) {
+    return 'Accepted by the employee $date';
+  }
+
+  @override
+  String get hrAccepted => 'Accepted';
+
+  @override
+  String get hrAwaitingAcceptance => 'Waiting for the employee to accept';
+
+  @override
+  String get hrInternalOnly => 'Internal (not sent to the employee)';
+
+  @override
+  String get hrEmployeeAcceptance => 'Employee\'s acceptance';
+
+  @override
+  String get hrSendNote => 'Send to the employee';
+
+  @override
+  String get hrSendNoteHint =>
+      'They must read it and press \"Agreed and Accepted\" before using the app';
+
+  @override
+  String get hrWillBeSent =>
+      'The employee is notified and must press \"Agreed and Accepted\" before using the app; HR is told when they do.';
+
+  @override
+  String get hrWillAskAgain =>
+      'The employee already accepted this. If you change what it says, they will be asked to accept it again.';
+
+  @override
+  String notifHrActionIssued(String kind, String title) {
+    return 'HR sent you a $kind: “$title” – open the app to read and accept it';
+  }
+
+  @override
+  String notifHrActionAccepted(String name, String kind, String title) {
+    return '$name accepted the $kind: “$title”';
+  }
+
+  @override
+  String phoneChecksFromLastReport(String ago) {
+    return 'Last report $ago – the settings below are from then, not now';
+  }
+
+  @override
+  String get addPastLeave => 'Add past leave';
+
+  @override
+  String get pastLeaveHelp =>
+      'Leave already taken, entered by date (for example before the app was used). It is saved as approved and counts in the balance of its leave year.';
+
+  @override
+  String get pastLeaveType => 'Leave type';
+
+  @override
+  String get pastLeavePickDates => 'Choose dates';
+
+  @override
+  String get pastLeaveDaysUsed => 'Days used';
+
+  @override
+  String get pastLeaveDaysHint =>
+      'Counted from the person\'s work days and public holidays; change it if needed.';
+
+  @override
+  String get pastLeaveOneYear =>
+      'The dates must be in one leave year. Enter each leave year separately.';
+
+  @override
+  String get pastLeaveRecorded => 'Past record entered by HR';
+
+  @override
+  String get deletePastLeave => 'Delete this past record?';
+
+  @override
+  String deleteHolidayQ(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get publicHolidaysByYearHint =>
+      'Holidays by name, one year at a time. Eid dates change every year: add each year\'s dates under the same name. Holiday days don\'t count as leave or as missed days.';
+
+  @override
+  String noHolidaysThisYear(int year) {
+    return 'No holidays entered for $year';
+  }
+
+  @override
+  String get holidayNoName => 'No name';
+
+  @override
+  String holidayDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String holidaysFromOtherYears(int year) {
+    return 'From other years — add with the dates for $year:';
+  }
+
+  @override
+  String get editHoliday => 'Edit holiday';
+
+  @override
+  String get holidayName => 'Holiday name';
+
+  @override
+  String holidayLastTime(int year, String dates) {
+    return 'In $year: $dates';
+  }
+
+  @override
+  String get overtimeDays => 'Overtime on a day';
+
+  @override
+  String get overtimeDaysHelp =>
+      'Allow overtime on one date, e.g. a Friday, without making it a work day. On a day off or a holiday everything from arrival until leaving counts as overtime; on a work day the time after the end counts without \"Start overtime\". It still waits for approval.';
+
+  @override
+  String get allowOvertimeDay => 'Allow overtime on a day';
+
+  @override
+  String get pickDay => 'Choose the day';
+
+  @override
+  String allowedBy(String name) {
+    return 'Allowed by $name';
+  }
+
+  @override
+  String removeOvertimeDayQ(String name, String date) {
+    return 'Remove overtime for $name on $date?';
+  }
+
+  @override
+  String allowForCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Allow for $count people',
+      one: 'Allow for 1 person',
+      zero: 'Allow',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String overtimeDayToday(String name) {
+    return '$name allowed overtime for you today – your time at the site counts as overtime';
+  }
+
+  @override
+  String notifOvertimeDayAllowed(String name, String date) {
+    return '$name allowed you overtime on $date – your time at the site counts as overtime';
+  }
+
+  @override
+  String get userLogTitle => 'User history';
+
+  @override
+  String userLogTitleFor(String name) {
+    return 'History: $name';
+  }
+
+  @override
+  String get userLogSearch => 'Search by user or by who made the change';
+
+  @override
+  String get userLogNote =>
+      'Every user added, registered, approved, changed, given a new password or deleted, and who did it. Recorded from 8 Nov 2026; changes from older app versions show \"Unknown\".';
+
+  @override
+  String get userLogEmpty => 'No changes recorded yet';
+
+  @override
+  String get userLogUnknownActor => 'Unknown (older app version)';
+
+  @override
+  String userLogRegistered(String target) {
+    return '$target registered themselves (Create account)';
+  }
+
+  @override
+  String userLogCreated(String actor, String target) {
+    return '$actor added $target';
+  }
+
+  @override
+  String userLogApproved(String actor, String target) {
+    return '$actor approved $target';
+  }
+
+  @override
+  String userLogRejected(String actor, String target) {
+    return '$actor turned down $target';
+  }
+
+  @override
+  String userLogUpdated(String actor, String target) {
+    return '$actor changed $target';
+  }
+
+  @override
+  String userLogDeleted(String actor, String target) {
+    return '$actor deleted $target';
+  }
+
+  @override
+  String userLogPasswordSet(String actor, String target) {
+    return '$actor set a new password for $target';
+  }
+
+  @override
+  String userLogHours(String h) {
+    return '$h h';
+  }
+
+  @override
+  String get userLogHistory => 'History';
+
+  @override
+  String get userLogFieldName => 'Name';
+
+  @override
+  String get userLogFieldEmail => 'Email';
+
+  @override
+  String get userLogFieldPhone => 'Phone';
+
+  @override
+  String get userLogFieldRole => 'Role';
+
+  @override
+  String get userLogFieldPosition => 'Job asked for';
+
+  @override
+  String get userLogFieldActive => 'Active';
+
+  @override
+  String get userLogFieldApproval => 'Approval';
+
+  @override
+  String get userLogFieldKam => 'KAM';
+
+  @override
+  String get userLogFieldManager => 'Direct manager';
+
+  @override
+  String get userLogFieldIsManager => 'Is a manager';
+
+  @override
+  String get userLogFieldSupervisor => 'Warehouse supervisor';
+
+  @override
+  String get userLogFieldOdooName => 'Odoo name';
+
+  @override
+  String get userLogFieldTarget => 'Monthly target';
+
+  @override
+  String get userLogFieldCompany => 'Company';
+
+  @override
+  String get userLogFieldSites => 'Work sites';
+
+  @override
+  String get userLogFieldOvertime => 'Overtime allowed';
+
+  @override
+  String get userLogFieldOvertimeMax => 'Most overtime a day';
+
+  @override
+  String get userLogFieldAttendance => 'Attendance required';
+
+  @override
+  String get userLogFieldLeaveSite => 'Allowed to leave the site';
+
+  @override
+  String get userLogFieldSchedule => 'Own work schedule';
+
+  @override
+  String get userLogFieldHome => 'Home location';
+
+  @override
+  String get userLogFieldJoining => 'Joining date';
+
+  @override
+  String get userLogFieldDepartment => 'Department';
+
+  @override
+  String get otFilterEveryone => 'Everyone';
+
+  @override
+  String otFilterAll(int n) {
+    return 'Overtime ($n)';
+  }
+
+  @override
+  String otFilterApproved(int n) {
+    return 'Approved ($n)';
+  }
+
+  @override
+  String otFilterPending(int n) {
+    return 'Waiting for approval ($n)';
+  }
+
+  @override
+  String otFilterRejected(int n) {
+    return 'Not approved ($n)';
+  }
+
+  @override
+  String get otSectionApproved => 'Overtime approved';
+
+  @override
+  String get otSectionPending => 'Overtime waiting for approval';
+
+  @override
+  String get otSectionRejected => 'Overtime not approved';
+
+  @override
+  String otSectionTotal(int n, String time) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n people',
+      one: '1 person',
+    );
+    return '$_temp0 · $time';
+  }
+
+  @override
+  String get otSectionEmpty => 'Nobody this month';
+
+  @override
+  String otDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get otStateApproved => 'Approved';
+
+  @override
+  String get otStatePending => 'Waiting for approval';
+
+  @override
+  String get otStateRejected => 'Not approved';
+
+  @override
+  String get reportOvertimePendingHours => 'Overtime waiting (hours)';
+
+  @override
+  String get reportOvertimeRejectedHours => 'Overtime not approved (hours)';
+
+  @override
+  String get reportOvertimeStatus => 'Overtime status';
 }

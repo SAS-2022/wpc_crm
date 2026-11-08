@@ -335,6 +335,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       appBar: AppBar(
         title: Text(_isNew ? l10n.addUser : l10n.editUser),
         actions: [
+          if (!_isNew && me?.role.canManageHr == true)
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: l10n.userLogHistory,
+              onPressed: () => context.push('/users/log?uid=${widget.userId}'),
+            ),
           if (_canDelete(me))
             IconButton(icon: const Icon(Icons.delete_outline), tooltip: l10n.delete, onPressed: _busy ? null : _delete),
         ],

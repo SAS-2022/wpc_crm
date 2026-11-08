@@ -16,6 +16,10 @@ import '../users/users_repository.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
 import 'leave_widgets.dart';
+import 'holidays_section.dart';
+import 'hr_actions_screen.dart';
+import 'payroll.dart';
+import 'payroll_screen.dart';
 import '../../core/search_text.dart';
 
 enum _Filter { pending, waitingForMe, approved, rejected, all }
@@ -31,8 +35,10 @@ class HrScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    // Payroll: only the payroll account (2026-11-07, user decision).
+    final payroll = canSeePayroll(ref.watch(currentUserProvider).value);
     return DefaultTabController(
-      length: 5,
+      length: payroll ? 7 : 6,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.hrArea),
@@ -46,11 +52,22 @@ class HrScreen extends ConsumerWidget {
               Tab(child: _EarlyCheckoutsTabLabel()),
               Tab(text: l10n.leaveBalances),
               Tab(text: l10n.leaveTypesAndHolidays),
+              // Warnings, deductions, rewards, notes (2026-11-07).
+              Tab(text: l10n.hrActionsTitle),
+              if (payroll) Tab(text: l10n.payroll),
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [_RequestsTab(), HrAbsencesTab(), _EarlyCheckoutsTab(), _BalancesTab(), _TypesTab()],
+        body: TabBarView(
+          children: [
+            const _RequestsTab(),
+            const HrAbsencesTab(),
+            const _EarlyCheckoutsTab(),
+            const _BalancesTab(),
+            const _TypesTab(),
+            const HrActionsTab(),
+            if (payroll) const PayrollTab(),
+          ],
         ),
       ),
     );
@@ -293,10 +310,8 @@ class _TypesTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
-    final locale = Localizations.localeOf(context).toString();
     final canEdit = ref.watch(currentUserProvider).value?.role.canManageHr ?? false;
     final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
-    final holidays = (ref.watch(holidaysProvider).value ?? const <String>{}).toList()..sort();
     final repo = ref.read(leaveRepositoryProvider);
 
     return ListView(
@@ -330,7 +345,25 @@ class _TypesTab extends ConsumerWidget {
                 ? IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: l10n.delete,
-                    onPressed: () => repo.saveTypes(types.where((x) => x.id != t.id).toList()),
+                    onPressed: () async {
+                      // Asked first (user 2026-11-07).
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (d) => AlertDialog(
+                          title: Text(l10n.deleteLeaveTypeTitle(t.name(lang))),
+                          content: Text(l10n.deleteLeaveTypeBody),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(d, false), child: Text(l10n.cancel)),
+                            FilledButton(
+                              style: FilledButton.styleFrom(backgroundColor: Theme.of(d).colorScheme.error),
+                              onPressed: () => Navigator.pop(d, true),
+                              child: Text(l10n.delete),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true) await repo.saveTypes(types.where((x) => x.id != t.id).toList());
+                    },
                   )
                 : null,
             onTap: canEdit ? () => _edit(context, ref, types, t) : null,
@@ -348,47 +381,7 @@ class _TypesTab extends ConsumerWidget {
             ),
           ),
         const Divider(height: 32),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-          child: Text(l10n.publicHolidays, style: theme.textTheme.titleMedium),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(l10n.publicHolidaysHint, style: theme.textTheme.bodySmall),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final d in holidays)
-                InputChip(
-                  label: Text(DateFormat.yMMMEd(locale).format(DateTime.parse(d))),
-                  onDeleted: canEdit ? () => repo.saveHolidays({...holidays}..remove(d)) : null,
-                ),
-              if (canEdit)
-                ActionChip(
-                  avatar: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.addHoliday),
-                  onPressed: () async {
-                    final now = DateTime.now();
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      firstDate: DateTime(now.year - 1),
-                      lastDate: DateTime(now.year + 2, 12, 31),
-                    );
-                    if (picked == null) return;
-                    await repo.saveHolidays({
-                      ...holidays,
-                      for (var d = picked.start; !d.isAfter(picked.end); d = DateTime(d.year, d.month, d.day + 1))
-                        leaveDayKey(d),
-                    });
-                  },
-                ),
-            ],
-          ),
-        ),
+        const HolidaysSection(),
       ],
     );
   }

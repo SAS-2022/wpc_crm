@@ -209,6 +209,67 @@ class PhoneReport {
       (stopped || (signal == PhoneSignal.noPhone && shouldShare) ? 1 : 0) + (status?.problems.length ?? 0);
 }
 
+/// Every problem the Phone status page can filter by (2026-11-08, user:
+/// cards showed "App closed by the phone" etc. but only GPS off / no
+/// internet / battery optimization had a filter chip).
+enum PhoneIssue {
+  gpsOff,
+  noPermission,
+  approximate,
+  noInternet,
+  notifications,
+  battery,
+  background,
+  appClosed,
+  notRecording,
+  neverSignedIn,
+}
+
+/// The [PhoneIssue]s of one phone: its settings' problems plus why it sends
+/// nothing ([PhoneReport.quiet]) and "never signed in" when it should share.
+Set<PhoneIssue> phoneIssues(PhoneReport r) {
+  final s = r.status;
+  final out = <PhoneIssue>{};
+  if (s != null) {
+    for (final c in s.problems) {
+      switch (c) {
+        case PhoneCheck.gps:
+          out.add(PhoneIssue.gpsOff);
+        case PhoneCheck.location:
+          out.add(PhoneIssue.noPermission);
+        case PhoneCheck.precise:
+          out.add(PhoneIssue.approximate);
+        case PhoneCheck.network:
+          out.add(PhoneIssue.noInternet);
+        case PhoneCheck.notifications:
+          out.add(PhoneIssue.notifications);
+        case PhoneCheck.battery:
+          out.add(PhoneIssue.battery);
+        case PhoneCheck.background:
+          out.add(PhoneIssue.background);
+        case PhoneCheck.camera:
+          break;
+      }
+    }
+  }
+  switch (r.quiet) {
+    case QuietReason.gpsOff:
+      out.add(PhoneIssue.gpsOff);
+    case QuietReason.noPermission:
+      out.add(PhoneIssue.noPermission);
+    case QuietReason.noInternet:
+      out.add(PhoneIssue.noInternet);
+    case QuietReason.appClosed:
+      out.add(PhoneIssue.appClosed);
+    case QuietReason.notRecording:
+      out.add(PhoneIssue.notRecording);
+    case null:
+      break;
+  }
+  if (r.signal == PhoneSignal.noPhone && r.shouldShare) out.add(PhoneIssue.neverSignedIn);
+  return out;
+}
+
 PhoneReport phoneReport({
   required DeviceStatus? device,
   required Presence? presence,

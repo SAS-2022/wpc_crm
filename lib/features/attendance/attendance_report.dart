@@ -15,8 +15,13 @@ import 'attendance_rules.dart';
 // lateness, hours, overtime and time stayed after hours without overtime.
 // Shown in the HR area and exported to Excel.
 
+/// A day's overtime in the monthly report (2026-11-08, user: filter the
+/// people with overtime by approved / waiting / not approved).
+enum OvertimeState { approved, pending, rejected }
+
 class AttendanceReportDay {
-  const AttendanceReportDay(this.date, this.mark, this.result, [this.absence, this.approvedOvertimeMin]);
+  const AttendanceReportDay(this.date, this.mark, this.result,
+      [this.absence, this.approvedOvertimeMin, this.overtimeRejected = false]);
 
   final DateTime date;
   final DayMark mark;
@@ -29,6 +34,23 @@ class AttendanceReportDay {
 
   /// Overtime a manager approved that day (null = not approved; 2026-10-25).
   final int? approvedOvertimeMin;
+
+  /// A manager turned the day's overtime down (2026-10-27).
+  final bool overtimeRejected;
+
+  int get recordedOvertimeMin => result?.checkedIn == true ? result!.overtimeMin ?? 0 : 0;
+
+  /// Null = no overtime that day.
+  OvertimeState? get overtimeState => overtimeRejected
+      ? OvertimeState.rejected
+      : approvedOvertimeMin != null
+          ? OvertimeState.approved
+          : recordedOvertimeMin > 0
+              ? OvertimeState.pending
+              : null;
+
+  /// Approved: the approved minutes; waiting / not approved: what was recorded.
+  int get overtimeStateMin => overtimeState == OvertimeState.approved ? approvedOvertimeMin! : recordedOvertimeMin;
 }
 
 class AttendanceReportRow {
@@ -57,6 +79,17 @@ class AttendanceReportRow {
   int get approvedOvertimeMin => days.fold(0, (s, d) => s + (d.approvedOvertimeMin ?? 0));
   int get afterHoursMin => _results.fold(0, (s, r) => s + (r.afterHoursMin ?? 0));
 
+  /// The days whose overtime is in [state].
+  List<AttendanceReportDay> overtimeDays(OvertimeState state) => [
+        for (final d in days)
+          if (d.overtimeState == state) d,
+      ];
+
+  /// Minutes of [state]: approved = as approved; waiting / not approved = as recorded.
+  int overtimeMinOf(OvertimeState state) => overtimeDays(state).fold(0, (s, d) => s + d.overtimeStateMin);
+
+  bool get hasOvertime => days.any((d) => d.overtimeState != null);
+
   /// Days whose breaks went over the daily allowance, and the minutes
   /// deducted for it (2026-11-05).
   int get breakOverDays => _results.where((r) => (r.breakOverMin ?? 0) > 0).length;
@@ -77,6 +110,7 @@ AttendanceReportRow reportRow({
   required Set<String> leaveDays,
   Map<String, Absence> absences = const {},
   Map<String, int> approvedOvertime = const {},
+  Set<String> rejectedOvertime = const {},
   required DateTime today,
 }) {
   final attended = {for (final MapEntry(:key, :value) in results.entries) if (value.checkedIn) key};
@@ -96,7 +130,14 @@ AttendanceReportRow reportRow({
     schedule: schedule,
     days: [
       for (final MapEntry(key: d, value: m) in marks.entries)
-        AttendanceReportDay(d, m, results[_key.format(d)], absences[_key.format(d)], approvedOvertime[_key.format(d)]),
+        AttendanceReportDay(
+          d,
+          m,
+          results[_key.format(d)],
+          absences[_key.format(d)],
+          approvedOvertime[_key.format(d)],
+          rejectedOvertime.contains(_key.format(d)),
+        ),
     ],
   );
 }
@@ -182,6 +223,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportWorkedHours,
     l10n.reportOvertimeHours,
     l10n.reportOvertimeApprovedHours,
+    l10n.reportOvertimePendingHours,
+    l10n.reportOvertimeRejectedHours,
     l10n.reportStayedAfterHours,
     l10n.reportBreakOverDays,
     l10n.reportBreakOverHours,
@@ -202,6 +245,8 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
       DoubleCellValue(hoursOf(r.workedMin)),
       DoubleCellValue(hoursOf(r.overtimeMin)),
       DoubleCellValue(hoursOf(r.approvedOvertimeMin)),
+      DoubleCellValue(hoursOf(r.overtimeMinOf(OvertimeState.pending))),
+      DoubleCellValue(hoursOf(r.overtimeMinOf(OvertimeState.rejected))),
       DoubleCellValue(hoursOf(r.afterHoursMin)),
       IntCellValue(r.breakOverDays),
       DoubleCellValue(hoursOf(r.breakOverMin)),
@@ -221,6 +266,7 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
     l10n.reportWorkedHours,
     l10n.reportOvertimeHours,
     l10n.reportOvertimeApprovedHours,
+    l10n.reportOvertimeStatus,
     l10n.reportStayedAfterHours,
     l10n.reportBreakMinutes,
     l10n.reportBreakOverMinutes,
@@ -243,6 +289,10 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
         res?.countedMin == null ? null : DoubleCellValue(hoursOf(res!.countedMin!)),
         res?.overtimeMin == null ? null : DoubleCellValue(hoursOf(res!.overtimeMin!)),
         d.approvedOvertimeMin == null ? null : DoubleCellValue(hoursOf(d.approvedOvertimeMin!)),
+        switch (d.overtimeState) {
+          null => null,
+          final s => TextCellValue(overtimeStateLabel(l10n, s)),
+        },
         res?.afterHoursMin == null ? null : DoubleCellValue(hoursOf(res!.afterHoursMin!)),
         res?.breakMin == null ? null : IntCellValue(res!.breakMin!),
         res?.breakOverMin == null ? null : IntCellValue(res!.breakOverMin!),
@@ -251,3 +301,9 @@ List<int> buildAttendanceXlsx(List<AttendanceReportRow> rows, AttendanceReportCo
   }
   return excel.encode()!;
 }
+
+String overtimeStateLabel(AppLocalizations l10n, OvertimeState s) => switch (s) {
+      OvertimeState.approved => l10n.otStateApproved,
+      OvertimeState.pending => l10n.otStatePending,
+      OvertimeState.rejected => l10n.otStateRejected,
+    };

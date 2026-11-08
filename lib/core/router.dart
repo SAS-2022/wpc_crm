@@ -20,6 +20,7 @@ import '../features/home/more_screen.dart';
 import '../features/import/import_screen.dart';
 import '../features/import/location_import_screen.dart';
 import '../features/hr/employee_leave_screen.dart';
+import '../features/hr/hr_actions_screen.dart';
 import '../features/hr/hr_screen.dart';
 import '../features/attendance/absence_screen.dart';
 import '../features/hr/leave_request_form.dart';
@@ -28,6 +29,7 @@ import '../features/hr/leave_rules.dart' show myLeaveEnabled;
 import '../features/hr/my_leave_screen.dart';
 import '../features/users/profile_screen.dart';
 import '../features/users/user_form_screen.dart';
+import '../features/users/user_log_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plan/plan_map_screen.dart';
 import '../features/plan/plan_screen.dart';
@@ -236,6 +238,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     year: int.tryParse(state.uri.queryParameters['year'] ?? ''),
                   ),
                 ),
+                // Warnings / deductions / rewards / notes (2026-11-07); 'new' before ':id'.
+                GoRoute(path: 'action/new', builder: (_, state) => HrActionForm(uid: state.uri.queryParameters['uid'])),
+                GoRoute(path: 'action/:id', builder: (_, state) => HrActionScreen(id: state.pathParameters['id']!)),
+                GoRoute(path: 'action/:id/edit', builder: (_, state) => HrActionForm(id: state.pathParameters['id']!)),
               ],
             ),
             GoRoute(
@@ -348,6 +354,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const UsersScreen(),
               routes: [
                 GoRoute(path: 'new', builder: (_, _) => const UserFormScreen(userId: null)),
+                GoRoute(path: 'log', builder: (_, state) => UserLogScreen(userId: state.uri.queryParameters['uid'])),
                 GoRoute(
                   path: ':id',
                   builder: (_, state) => UserFormScreen(userId: state.pathParameters['id']),

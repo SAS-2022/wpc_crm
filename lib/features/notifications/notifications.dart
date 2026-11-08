@@ -116,6 +116,7 @@ enum NotificationType {
   /// The recipient's break was approved / rejected (note = comment).
   breakApproved,
   breakRejected,
+  overtimeDayAllowed,
 
   /// `ownerId`'s overtime started (2026-10-25): [AppNotification.issue]
   /// 'site' = they pressed "Start overtime" (to their direct managers, who
@@ -149,6 +150,20 @@ enum NotificationType {
   // Iqama / national ID expiring (2026-11-03): count = days left, date =
   // expiry, ref = the person's uid, issue = iqama | nationalId, note = name.
   idExpiry,
+
+  /// A comment on a visit (2026-11-05, `visitCommented` Cloud Function, own
+  /// sound): [AppNotification.issue] 'own' = on the recipient's visit,
+  /// 'reply' = on a visit they commented on; [AppNotification.ref] = visit
+  /// id, [AppNotification.note] = the comment, `ownerId` = the visitor.
+  visitComment,
+
+  /// HR record for the recipient to accept (2026-11-07, `hrActionWritten`):
+  /// [AppNotification.issue] = kind (warning | deduction | reward | note),
+  /// [AppNotification.note] = title, [AppNotification.ref] = record id.
+  hrActionIssued,
+
+  /// `ownerId` accepted an HR record (to HR and whoever recorded it).
+  hrActionAccepted,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud

@@ -368,3 +368,24 @@ describe('own per-day docs can be watched before they exist (2026-10-27)', () =>
     }
   });
 });
+
+describe('user history stamp (2026-11-08)', () => {
+  test('a write may stamp only its own uid, at the server time', async () => {
+    await assertSucceeds(updateDoc(doc(fs('sm'), 'users/driver'), { phone: '1', changedBy: 'sm', changedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(fs('sm'), 'users/driver'), { phone: '2', changedBy: 'gm', changedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(fs('sm'), 'users/driver'), { phone: '3', changedBy: 'sm', changedAt: new Date(0) }));
+    // Own profile with the stamp; an old stamp left as it is still works.
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'users/exec'), { phone: '4', changedBy: 'exec', changedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(fs('driver'), 'users/driver'), { name: 'Driver' }));
+    // HR fields and the logistics manager's own users.
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'users/acc'), { joiningDate: '2024-01-01', changedBy: 'hr', changedAt: serverTimestamp() }));
+    await assertSucceeds(setDoc(doc(fs('lm'), 'users/d2'), { name: 'D2', role: 'driver', active: true, changedBy: 'lm', changedAt: serverTimestamp() }));
+  });
+
+  test('the log is read by GM / SM / HR only and written by nobody', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'user_log/e1'), { action: 'created', targetId: 'driver' }));
+    for (const uid of ['gm', 'sm', 'hr']) await assertSucceeds(getDoc(doc(fs(uid), 'user_log/e1')));
+    for (const uid of ['kam', 'lm', 'exec', 'driver']) await assertFails(getDoc(doc(fs(uid), 'user_log/e1')));
+    await assertFails(setDoc(doc(fs('gm'), 'user_log/e2'), { action: 'created' }));
+  });
+});

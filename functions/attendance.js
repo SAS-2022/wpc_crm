@@ -124,7 +124,21 @@ function breakTaker(breaks) {
   };
 }
 
+/**
+ * Overtime day (2026-11-08, user: someone needed on a Friday without making
+ * Friday a work day): a manager allows overtime for one person on one date
+ * (`overtime_days/{uid}_{date}`, copied to the day as `overtimeDay`;
+ * o.overtimeDay = {dayOff}). On a day off / holiday (dayOff) the whole stay,
+ * arrival → leaving, is overtime (no cap; time out and back isn't counted);
+ * on a work day the time after the end counts as overtime without the
+ * "Start overtime?" confirmation (up to the person's cap). Overtime
+ * approval as usual. Same in attendance_rules.dart.
+ */
 function deriveDay(events, o) {
+  const otDay = o.overtimeDay && typeof o.overtimeDay === 'object' ? o.overtimeDay : null;
+  const otDayOff = otDay !== null && otDay.dayOff === true;
+  // Day off: the work day "ends" at midnight, so everything is after it.
+  if (otDayOff) o = { ...o, startMs: null, endMs: o.closeAllMs - (23 * 60 + 55) * MINUTE, overtimeMaxMin: 24 * 60 };
   const s = {
     checkInAt: null, checkInSource: null, siteId: null, inside: false, lastExitAt: null,
     checkOutAt: null, checkOutType: null, closed: false, checkInEventAt: null,
@@ -156,12 +170,23 @@ function deriveDay(events, o) {
     if (outSince !== null && !s.closed) breakMs += Math.max(0, Math.min(t, o.endMs) - outSince);
     outSince = null;
   };
+  // Leaving before the work day starts isn't leaving work (2026-11-07: workers
+  // moved from one site to another at 07:59): away time counts from the start.
+  const startMs = typeof o.startMs === 'number' ? o.startMs : null;
+  const fromStart = (t) => (startMs !== null ? Math.max(t, startMs) : t);
+  // The site the person is in ('*' = unknown): an exit from another site
+  // while inside one isn't leaving (2026-11-07: Wissam at the Service Center,
+  // the phone's first report for the Showroom 20 km away said "exit").
+  let inSite = null;
+  const enter = (e) => { inSite = e.siteId || '*'; };
+  const strayExit = (e) => s.inside && inSite !== null && inSite !== '*' && e.source !== 'gps' && e.check !== true
+    && typeof e.siteId === 'string' && e.siteId !== '' && e.siteId !== inSite;
   const capMs = (o.overtimeMaxMin ?? OVERTIME_MAX_MIN) * MINUTE;
   // Last time the person was seen at the site (arrival / check-in events, GPS).
   let seenAt = typeof o.lastSeenAt === 'number' ? o.lastSeenAt : null;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   const awayTooLong = (t) => !o.leavesSite && s.checkInAt !== null && !s.closed && !s.inside
-    && s.lastExitAt !== null && s.lastExitAt < o.endMs && t >= s.lastExitAt + graceMs + allowanceMs;
+    && s.lastExitAt !== null && s.lastExitAt < o.endMs && t >= fromStart(s.lastExitAt) + graceMs + allowanceMs;
   const drive = o.drive && typeof o.drive.startAt === 'number' ? o.drive : null;
   // Overtime started ("Start overtime") / declined.
   let confirmedAt = null, declined = false;
@@ -186,11 +211,13 @@ function deriveDay(events, o) {
       } else if (s.closed) {
         // Back after the day closed: a manual check-in opens it again, and so
         // does arriving before the end after being checked out for leaving.
-        const back = e.type !== 'in' || (s.checkOutType === 'leftSite' && e.at < o.endMs);
-        if (!back) { s.inside = true; continue; }
+        const back = e.type !== 'in' || (s.checkOutType === 'leftSite' && e.at < o.endMs)
+          || (otDayOff && s.checkOutType === 'left');
+        if (!back) { s.inside = true; enter(e); continue; }
         reopen(e.at);
       }
       s.inside = true;
+      enter(e);
       s.lastExitAt = null;
     } else if (e.type === 'otStart') {
       if (s.checkInAt !== null && !s.closed && confirmedAt === null) confirmedAt = e.at;
@@ -201,11 +228,14 @@ function deriveDay(events, o) {
       seenAt = Math.max(seenAt ?? 0, e.at);
       if (s.checkInAt !== null && !s.closed) {
         s.inside = true;
+        enter(e);
         s.lastExitAt = null;
       }
     } else if (e.type === 'out') {
+      if (strayExit(e)) continue;
       const wasInside = s.inside;
       s.inside = false;
+      inSite = null;
       if (s.checkInAt === null || s.closed) continue;
       // Already away when the end came (allowed to leave): the day closed at
       // the end; a later exit (e.g. geofences registered again) doesn't move it.
@@ -220,7 +250,7 @@ function deriveDay(events, o) {
       else {
         const b = takeBreak(at);
         allowanceMs = b && b.status === 'approved' ? (b.minutes || 0) * MINUTE : 0;
-        if (wasInside) outSince = at;
+        if (wasInside) outSince = fromStart(at);
       }
     } else if (e.type === 'checkOut' || e.type === 'hrOut') {
       if (s.checkInAt !== null && !s.closed) close(e.at, e.type === 'hrOut' ? 'hr' : 'manual');
@@ -229,7 +259,7 @@ function deriveDay(events, o) {
   }
   // Still out and the day still open (not checked out below for it): counts up to now.
   if (outSince !== null && !s.closed && o.now < o.endMs && !awayTooLong(o.now)) backIn(o.now);
-  const overtimeOn = o.overtimeAllowed && (drive !== null || confirmedAt !== null);
+  const overtimeOn = otDay !== null || (o.overtimeAllowed && (drive !== null || confirmedAt !== null));
   if (drive && s.checkInAt !== null && !s.closed) {
     // Driving: open until the server finds the arrival (or the cap).
     if (typeof drive.endAt === 'number') {
@@ -301,7 +331,11 @@ const SITE_CHECK_SLACK_MS = 5 * MINUTE;
  * @param {{now: number, endMs: number, closeAllMs: number, overtimeAllowed: boolean, overtimeMaxMin?: number, lastCheckAt?: number|null}} o
  */
 function siteCheckDue(d, o) {
-  if (!o.overtimeAllowed || d.checkInAt === null || d.closed || !d.inside || d.overtimeConfirmedAt === null) return false;
+  // An overtime day (2026-11-08) needs no "Start overtime"; o.overtimeDay = {dayOff}.
+  const otDay = o.overtimeDay ? o.overtimeDay : null;
+  if (otDay?.dayOff) o = { ...o, endMs: o.closeAllMs - (23 * 60 + 55) * MINUTE, overtimeMaxMin: 24 * 60 };
+  if (otDay === null && (!o.overtimeAllowed || d.overtimeConfirmedAt === null)) return false;
+  if (d.checkInAt === null || d.closed || !d.inside) return false;
   if (o.drive) return false;
   const from = Math.max(o.endMs, d.checkInAt);
   const capMs = (o.overtimeMaxMin ?? OVERTIME_MAX_MIN) * MINUTE;
@@ -322,6 +356,7 @@ const REMIND_AFTER_MS = 30 * MINUTE;
  * @param {{now: number, endMs: number, closeAllMs: number, overtimeAllowed: boolean, overtimeMaxMin?: number, driver?: boolean, askedAt?: number|null, remindedAt?: number|null}} o
  */
 function overtimeAskDue(d, o) {
+  if (o.overtimeDay) return null; // overtime already allowed for the day (2026-11-08)
   if (!o.overtimeAllowed || o.driver || d.checkInAt === null || d.closed || !d.inside) return null;
   if (d.overtimeConfirmedAt !== null || d.overtimeDeclined) return null;
   const from = Math.max(o.endMs, d.checkInAt);
@@ -415,6 +450,8 @@ function siteArrival(points, site, atMs) {
 
 /** GPS presence uses fixes this fresh (2026-10-31). */
 const PRESENCE_FRESH_MS = 15 * MINUTE;
+/** The fixes that decide `gpsPresence` must span at least this long. */
+const PRESENCE_SPAN_MS = 20 * 1000;
 
 /**
  * Where the phone's GPS puts someone now (user report 2026-10-31: Azat showed
@@ -448,8 +485,13 @@ function gpsPresence(points, sites, now) {
     return near ? null : 'out';
   };
   const marks = pts.map(where);
-  const a = marks[marks.length - 2], b = marks[marks.length - 1];
-  if (a === null || a !== b) return null;
+  const b = marks[marks.length - 1];
+  // Two fixes at least PRESENCE_SPAN_MS apart, all agreeing (2026-11-07: two
+  // cached fixes of the same second when recording started said "left").
+  const last = pts[pts.length - 1].t;
+  let j = pts.length - 2;
+  while (j >= 0 && pts[j].t > last - PRESENCE_SPAN_MS) j--;
+  if (b === null || j < 0 || marks.slice(j).some((m) => m !== b)) return null;
   // Back to where the current state began.
   let i = pts.length - 1;
   if (b === 'out') {

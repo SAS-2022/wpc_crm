@@ -271,7 +271,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       for (final u in users.values)
         if (showSales &&
             u.active &&
-            u.role.isTracked &&
+            (u.role.isTracked || u.role == UserRole.salesManager) &&
             live.containsKey(u.id) &&
             inRegion(live[u.id]!.lat, live[u.id]!.lng) &&
             inCompany(u) &&
@@ -397,9 +397,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      fill: liveState(loc, presence[u.id], now) == LiveState.live
-                          ? salespersonPinColor
-                          : salespersonPinColor.withValues(alpha: 0.45),
+                      // The sales manager in blue (user 2026-11-07).
+                      fill: (u.role == UserRole.salesManager ? managerPinColor : salespersonPinColor)
+                          .withValues(alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45),
                       text: styles[u.id]?.initials ?? initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
@@ -868,6 +868,9 @@ class MapPeopleController extends Notifier<Set<MapPeople>> {
 /// The sales team's pins on the clients map: one purple for everyone, unlike
 /// any client colour (status or salesperson palette).
 const salespersonPinColor = Color(0xFF6A1B9A);
+
+/// The sales manager's pin on the clients map and the live map (2026-11-07).
+const managerPinColor = Color(0xFF1565C0);
 
 /// Drivers' and the other employees' pins (2026-11-01).
 const driverPinColor = Color(0xFF5D4037);

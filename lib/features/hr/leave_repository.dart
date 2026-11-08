@@ -5,6 +5,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../attachments/attachments.dart';
 import '../notifications/notifications.dart';
+import 'holidays.dart';
 import 'leave_rules.dart';
 import '../../core/saving.dart';
 
@@ -32,6 +33,7 @@ class LeaveRequest {
     required this.awaitingKey,
     required this.createdAt,
     this.watcherIds = const [],
+    this.pastRecord = false,
   });
 
   final String id;
@@ -66,6 +68,9 @@ class LeaveRequest {
 
   /// Told of every step without approving ([leaveWatchers], 2026-10-30).
   final List<String> watcherIds;
+
+  /// Entered by HR afterwards for leave taken in the past ([LeaveRepository.recordPastLeave]).
+  final bool pastRecord;
 
   String typeName(String lang) => lang == 'ar' && typeAr.isNotEmpty ? typeAr : typeEn;
 
@@ -107,6 +112,7 @@ class LeaveRequest {
       awaitingKey: d['awaitingKey'] as String?,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
       watcherIds: [for (final id in d['watcherIds'] as List<dynamic>? ?? const []) if (id is String) id],
+      pastRecord: d['pastRecord'] as bool? ?? false,
     );
   }
 }
@@ -143,6 +149,10 @@ final leaveTypesProvider = StreamProvider<List<LeaveType>>((ref) => _typesDoc.sn
 final holidaysProvider = StreamProvider<Set<String>>((ref) => _holidaysDoc
     .snapshots()
     .map((s) => {for (final d in s.data()?['dates'] as List<dynamic>? ?? const []) if (d is String) d}));
+
+/// The same doc with the holidays' names per year (2026-11-08).
+final holidayListProvider =
+    StreamProvider<HolidayList>((ref) => _holidaysDoc.snapshots().map((s) => HolidayList.fromMap(s.data())));
 
 /// The signed-in user's own requests.
 final myLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
@@ -339,6 +349,51 @@ class LeaveRepository {
     return doc.id;
   });
 
+  /// HR records leave taken in the past (2026-11-08, user: e.g. before the
+  /// app was used): saved approved at once with `pastRecord`, so it counts
+  /// in the balance of the leave year of [from]. No notifications.
+  Future<String> recordPastLeave({
+    required AppUser me,
+    required AppUser person,
+    required LeaveType type,
+    required String from,
+    required String to,
+    required bool halfDay,
+    required double days,
+    required String note,
+  }) => saving(() async {
+    final doc = _requests.doc();
+    final step = ApprovalStep(role: me.role, uid: me.id)
+        .decide(approve: true, byId: me.id, at: DateTime.now(), comment: note);
+    await doc.set({
+      'uid': person.id,
+      'kamId': person.role == UserRole.salesExec ? person.kamId : null,
+      'typeId': type.id,
+      'typeEn': type.en,
+      'typeAr': type.ar,
+      'isLeave': true,
+      'paid': type.paid,
+      'from': from,
+      'to': to,
+      'halfDay': halfDay,
+      'days': days,
+      'year': leaveYearOf(person.joiningDate, DateTime.parse(from)),
+      'reason': note,
+      'status': LeaveStatus.approved.name,
+      'steps': [_stepMap(step)],
+      'stepIndex': 0,
+      'awaitingKey': null,
+      'pastRecord': true,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'decidedAt': FieldValue.serverTimestamp(),
+    });
+    return doc.id;
+  });
+
+  /// HR removes a past record it entered by mistake.
+  Future<void> deletePastLeave(String id) => saving(() => _requests.doc(id).delete());
+
   /// The owner withdraws a request that is still waiting.
   Future<void> cancel(LeaveRequest r) => saving(() async {
         await _requests.doc(r.id).update({
@@ -468,7 +523,7 @@ class LeaveRepository {
 
   Future<void> saveTypes(List<LeaveType> types) => saving(() => _typesDoc.set({'types': [for (final t in types) t.toMap()]}));
 
-  Future<void> saveHolidays(Set<String> dates) => saving(() => _holidaysDoc.set({'dates': (dates.toList()..sort())}));
+  Future<void> saveHolidayList(HolidayList list) => saving(() => _holidaysDoc.set(list.toMap()));
 
   /// HR sets [uid]'s days for [typeId] in [year]; null = back to the type's number.
   Future<void> setEntitled(String uid, int year, String typeId, num? days) => saving(() =>

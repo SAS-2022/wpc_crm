@@ -15,7 +15,13 @@ import 'attendance_rules.dart';
 List<ExitCheck> personExitChecks(AppUser person, AttendanceRecord? record, DayResult? d, WorkHours company) {
   if (record == null || !person.requestsBreaks) return const [];
   final day = DateTime.parse(record.date);
-  return record.exitChecks(d, day.add(Duration(minutes: person.scheduleOr(company).endMinute)));
+  final hours = person.scheduleOr(company);
+  return record.exitChecks(
+    d,
+    day.add(Duration(minutes: hours.endMinute)),
+    // Exits before the work day starts aren't checked (2026-11-07).
+    start: hours.days.contains(day.weekday) ? day.add(Duration(minutes: hours.startMinute)) : null,
+  );
 }
 
 /// A break still waiting counts as no permission once its day is over.

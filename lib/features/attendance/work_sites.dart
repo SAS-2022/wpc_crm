@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../users/user_log.dart';
 import '../../core/saving.dart';
 
 /// Where people check in (user request 2026-10-19): `work_sites/{id}`
@@ -73,10 +74,10 @@ Future<void> assignWorkSite(String siteId, {required List<String> assign, requir
       final batch = FirebaseFirestore.instance.batch();
       final users = FirebaseFirestore.instance.collection('users');
       for (final uid in assign) {
-        batch.update(users.doc(uid), {'workSiteIds': FieldValue.arrayUnion([siteId])});
+        batch.update(users.doc(uid), {'workSiteIds': FieldValue.arrayUnion([siteId]), ...userChangeStamp()});
       }
       for (final uid in unassign) {
-        batch.update(users.doc(uid), {'workSiteIds': FieldValue.arrayRemove([siteId])});
+        batch.update(users.doc(uid), {'workSiteIds': FieldValue.arrayRemove([siteId]), ...userChangeStamp()});
       }
       await batch.commit();
     });

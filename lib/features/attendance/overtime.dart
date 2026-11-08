@@ -34,6 +34,8 @@ const overtimeAskAfter = Duration(minutes: 10);
 bool overtimeQuestionPending(AppUser me, DayResult? day, WorkHours hours, DateTime now, {bool afterDecline = false}) {
   if (!me.overtimeAllowed || me.role == UserRole.driver || day == null) return false;
   if (!day.checkedIn || day.closed || !day.inside || day.overtimeConfirmedAt != null) return false;
+  // Overtime already on (e.g. an overtime day a manager allowed, 2026-11-08).
+  if (day.overtimeOn) return false;
   if (day.overtimeDeclined != afterDecline) return false;
   if (!hours.days.contains(now.weekday)) return false;
   final end = DateTime(now.year, now.month, now.day).add(Duration(minutes: hours.endMinute));

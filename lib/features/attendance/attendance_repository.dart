@@ -46,6 +46,17 @@ class OvertimeReview {
   final bool rejected;
 }
 
+/// A manager allowed overtime on this day (`attendance.overtimeDay`).
+class OvertimeDayInfo {
+  const OvertimeDayInfo({required this.byId, this.note = '', required this.dayOff});
+
+  final String byId;
+  final String note;
+
+  /// A day off / holiday: the whole stay counts as overtime.
+  final bool dayOff;
+}
+
 /// One person's day as stored (events + the server's result).
 class AttendanceRecord {
   const AttendanceRecord({
@@ -59,6 +70,7 @@ class AttendanceRecord {
     this.overtimeStatus,
     this.arrivedAt,
     this.breaks = const [],
+    this.overtimeDay,
   });
 
   final String uid;
@@ -84,6 +96,10 @@ class AttendanceRecord {
   /// The day's break requests (server copy, 2026-11-05).
   final List<BreakSlot> breaks;
 
+  /// Overtime allowed for this day by a manager (server copy of
+  /// `overtime_days`, 2026-11-08); null = none.
+  final OvertimeDayInfo? overtimeDay;
+
   /// Server: 'running' | 'pending' (recorded, waiting for approval) | 'approved' | null.
   final String? overtimeStatus;
 
@@ -104,6 +120,7 @@ class AttendanceRecord {
               (e['at'] as Timestamp).toDate(),
               siteId: e['siteId'] as String?,
               check: e['check'] == true,
+              source: e['source'] as String?,
             ),
       ],
       correction: switch (d['correction']) {
@@ -135,6 +152,14 @@ class AttendanceRecord {
         _ => null,
       },
       overtimeStatus: d['overtimeStatus'] as String?,
+      overtimeDay: switch (d['overtimeDay']) {
+        final Map v => OvertimeDayInfo(
+            byId: v['byId'] as String? ?? '',
+            note: v['note'] as String? ?? '',
+            dayOff: v['dayOff'] == true,
+          ),
+        _ => null,
+      },
       arrivedAt: time('arrivedAt'),
       breaks: [
         for (final b in d['breaks'] as List? ?? const [])
@@ -185,14 +210,14 @@ class AttendanceRecord {
   /// Exits before [end] (the person's end of the work day) with the break
   /// covering each (2026-11-05): trips out and back, plus the exit they're
   /// still away on or were checked out for ([d] = the day's result).
-  List<ExitCheck> exitChecks(DayResult? d, DateTime end) {
+  List<ExitCheck> exitChecks(DayResult? d, DateTime end, {DateTime? start}) {
     final list = <({DateTime leftAt, DateTime? backAt})>[
       for (final t in trips) (leftAt: t.leftAt, backAt: t.backAt),
     ];
     final last = d?.lastExitAt;
     final stillOut = d != null && !d.inside && (!d.closed || d.checkOutType == 'leftSite' || d.checkOutType == 'leftEarly');
     if (last != null && stillOut && !list.any((e) => e.leftAt == last)) list.add((leftAt: last, backAt: null));
-    return checkExits(list, breaks, end);
+    return checkExits(list, breaks, end, start: start);
   }
 
   /// The day as it stands now: worked out from the events on the phone (so
@@ -211,6 +236,7 @@ class AttendanceRecord {
       correctedEvents(events, correction),
       start: hours.days.contains(day.weekday) ? day.add(Duration(minutes: hours.startMinute)) : null,
       end: day.add(Duration(minutes: hours.endMinute)),
+      overtimeDayOff: overtimeDay?.dayOff,
       closeAll: day.add(const Duration(hours: 23, minutes: 55)),
       now: now ?? DateTime.now(),
       leavesSite: leavesSite,

@@ -10,6 +10,8 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import 'notifications.dart';
+import '../hr/hr_actions.dart';
+import '../hr/hr_actions_screen.dart' show hrKindLabel;
 import '../attendance/absence.dart';
 import '../attendance/absence_sheet.dart' show absenceLeaveLabel, absenceReasonIcon, absenceReasonLabel;
 import '../clients/client_status.dart';
@@ -62,6 +64,8 @@ class NotificationsScreen extends ConsumerWidget {
         null => item,
       };
 
+  String _hrKind(AppLocalizations l10n, String issue) => hrKindLabel(l10n, HrActionKind.fromKey(issue));
+
   String _checkIn(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String meId) {
     final time = _clock(context, n.time);
     return [
@@ -109,6 +113,10 @@ class NotificationsScreen extends ConsumerWidget {
             l10n.notifBreakRejected(from),
             if (n.note.isNotEmpty) '“${n.note}”',
           ].join(' '),
+        NotificationType.overtimeDayAllowed => [
+            l10n.notifOvertimeDayAllowed(from, day),
+            if (n.note.isNotEmpty) '“${n.note}”',
+          ].join(' '),
         NotificationType.earlyCheckoutRejected => [
             l10n.notifEarlyCheckoutRejected(from),
             if (n.note.isNotEmpty) '“${n.note}”',
@@ -130,6 +138,11 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
         NotificationType.planChanged => l10n.notifPlanChanged(from, day),
         NotificationType.planItemsAdded => l10n.notifPlanItemsAdded(from, n.count, day),
+        NotificationType.hrActionIssued => l10n.notifHrActionIssued(_hrKind(l10n, n.issue), n.note),
+        NotificationType.hrActionAccepted => l10n.notifHrActionAccepted(owner, _hrKind(l10n, n.issue), n.note),
+        NotificationType.visitComment => n.issue == 'reply'
+            ? l10n.notifVisitReply(from, n.clientName, n.note)
+            : l10n.notifVisitComment(from, n.clientName, n.note),
         NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
         NotificationType.clientsTransferredOut =>
           l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
@@ -196,6 +209,9 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planRejected => Icons.cancel,
                     NotificationType.planChanged => Icons.edit_calendar,
                     NotificationType.planItemsAdded => Icons.playlist_add,
+                    NotificationType.visitComment => Icons.comment_outlined,
+                    NotificationType.hrActionIssued => Icons.gavel,
+                    NotificationType.hrActionAccepted => Icons.verified_outlined,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
                     NotificationType.leaveRequested => Icons.beach_access,
                     NotificationType.leaveApproved => Icons.event_available,
@@ -222,6 +238,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.breakRequested => Icons.free_breakfast_outlined,
                     NotificationType.breakApproved => Icons.check_circle,
                     NotificationType.breakRejected => Icons.cancel,
+                    NotificationType.overtimeDayAllowed => Icons.more_time,
                     NotificationType.vehicleRenewalDue => Icons.directions_car_outlined,
                     NotificationType.vehicleOilDue => Icons.oil_barrel_outlined,
                     NotificationType.companyDocExpiry => Icons.event_busy_outlined,
@@ -269,7 +286,8 @@ class NotificationsScreen extends ConsumerWidget {
                             NotificationType.earlyCheckoutRejected ||
                             NotificationType.breakRequested ||
                             NotificationType.breakApproved ||
-                            NotificationType.breakRejected:
+                            NotificationType.breakRejected ||
+                            NotificationType.overtimeDayAllowed:
                         context.go('/');
                       case NotificationType.absenceReported ||
                             NotificationType.absenceAccepted ||
@@ -283,6 +301,13 @@ class NotificationsScreen extends ConsumerWidget {
                         if (n.ref.isNotEmpty) context.push('/documents/file/${n.ref}');
                       case NotificationType.idExpiry:
                         if (n.ref.isNotEmpty) context.push('/hr/employee/${n.ref}');
+                      case NotificationType.visitComment:
+                        if (n.ref.isNotEmpty) context.push('/visits/${n.ref}');
+                      // The gate shows it until accepted.
+                      case NotificationType.hrActionIssued:
+                        context.go('/');
+                      case NotificationType.hrActionAccepted:
+                        if (n.ref.isNotEmpty) context.push('/hr/action/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

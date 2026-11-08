@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { leaveYearOf, leaveYearRange, closeYear, DEFAULT_TYPES } = require('./leaveYears');
+const { leaveYearOf, leaveYearRange, closeYear, annualAccrual, DEFAULT_TYPES } = require('./leaveYears');
 
 test('leave years follow the joining anniversary, else the calendar', () => {
   assert.strictEqual(leaveYearOf(null, '2026-03-01'), 2026);
@@ -45,4 +45,22 @@ test('types without a yearly limit and non-leave requests keep no record', () =>
   const r = closeYear({ types: [...DEFAULT_TYPES, { id: 'unpaid' }, { id: 'letter', isLeave: false, yearlyDays: 1 }], joining: null, year: 2026, carryOver: false, requests: [] });
   assert.ok(!('unpaid' in r.types));
   assert.ok(!('letter' in r.types));
+});
+
+test('annual leave earned monthly (= leave_rules.dart)', () => {
+  const a = (joining, year, asOf, o = {}) => annualAccrual({ joining, year, asOf, ...o });
+  assert.strictEqual(a('2024-03-15', 2026, '2026-04-14').months, 0);
+  assert.strictEqual(a('2024-03-15', 2026, '2026-04-15').earned, 1.75);
+  assert.strictEqual(a('2024-03-15', 2026, '2026-11-07').earned, 12.25);
+  assert.strictEqual(a('2024-03-15', 2026, '2028-01-01').earned, 21);
+  assert.deepStrictEqual(a('2021-03-15', 2026, '2026-06-20'), { yearly: 30, monthly: 2.5, months: 3, earned: 7.5, serviceYears: 5 });
+  assert.strictEqual(a('2026-10-01', 2025, '2026-11-07').earned, 0);
+  assert.strictEqual(a('2025-01-31', 2026, '2026-02-28').months, 1);
+  assert.strictEqual(a(null, 2026, '2026-11-07').earned, 17.5);
+  assert.strictEqual(a(null, 2026, '2026-07-01', { override: 24 }).earned, 12);
+});
+
+test('closing a year after 5 years of service: 30 annual days', () => {
+  const r = closeYear({ types: DEFAULT_TYPES, joining: '2021-03-15', year: 2026, carryOver: true, requests: [req('2026-06-01', 10)] });
+  assert.deepStrictEqual(r.types.annual, { entitled: 30, carried: 0, used: 10, remaining: 20 });
 });

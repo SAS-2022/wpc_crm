@@ -43,6 +43,18 @@ service firebase.storage {
       allow delete: if hrArea() || (request.auth != null && absence().uid == request.auth.uid && absence().status == 'pending');
     }
 
+    // HR action documents (signed warning, proof; 2026-11-07): HR area and the
+    // employee (once sent to them) read; only HR adds / removes.
+    match /hr_actions/{actionId}/{fileName} {
+      function hrArea() { return request.auth != null && profile().active == true && profile().role in ['hr', 'gm', 'sales_manager']; }
+      function item() { return firestore.get(/databases/(default)/documents/hr_actions/$(actionId)).data; }
+      function hrOnly() { return request.auth != null && profile().active == true && profile().role == 'hr'; }
+      allow read: if hrArea()
+        || (request.auth != null && item().uid == request.auth.uid && item().get('sent', false) == true);
+      allow delete: if hrOnly();
+      allow create: if hrOnly() && request.resource.size < 20 * 1024 * 1024;
+    }
+
     // Company documents (2026-11-01): read as the Firestore item; added and
     // removed by the GM / sales manager and HR (the Firestore rules decide
     // which section each may change), max 50 MB.

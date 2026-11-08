@@ -68,7 +68,7 @@ class _AttendancePersonMonthScreenState extends ConsumerState<AttendancePersonMo
         (
           label: l10n.calOvertime,
           value:
-              '${formatMinutes(res.overtimeMin!)} · ${d.approvedOvertimeMin == null ? l10n.calOvertimeWaiting : l10n.calOvertimeApproved(formatMinutes(d.approvedOvertimeMin!))}',
+              '${formatMinutes(res.overtimeMin!)} · ${d.overtimeRejected ? l10n.overtimeRejectedText : d.approvedOvertimeMin == null ? l10n.calOvertimeWaiting : l10n.calOvertimeApproved(formatMinutes(d.approvedOvertimeMin!))}',
           color: Colors.purple.shade400,
         ),
       if ((res.afterHoursMin ?? 0) > 0)

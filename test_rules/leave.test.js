@@ -74,6 +74,27 @@ describe('sending and reading requests', () => {
   });
 });
 
+describe('past leave entered by HR', () => {
+  const past = (uid, over = {}) => request(uid, {
+    status: 'approved', awaitingKey: null, pastRecord: true, from: '2025-03-01', to: '2025-03-05',
+    steps: [{ role: 'hr', uid: 'hr', status: 'approved', byId: 'hr' }], ...over,
+  });
+  test('HR / GM / SM record someone\'s past leave as approved; not their own, not others', async () => {
+    await assertSucceeds(setDoc(doc(fs('hr'), 'leave_requests/p1'), past('exec')));
+    await assertSucceeds(setDoc(doc(fs('gm'), 'leave_requests/p2'), past('exec')));
+    await assertFails(setDoc(doc(fs('hr'), 'leave_requests/p3'), past('hr')));
+    await assertFails(setDoc(doc(fs('kam'), 'leave_requests/p4'), past('exec')));
+    await assertFails(setDoc(doc(fs('acc'), 'leave_requests/p5'), past('acc')));
+    await assertFails(setDoc(doc(fs('hr'), 'leave_requests/p6'), past('exec', { pastRecord: false })));
+    await assertSucceeds(deleteDoc(doc(fs('hr'), 'leave_requests/p1')));
+    // The developer (SM, by email) may record their own.
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'users', 'dev'), { name: 'dev', active: true, role: 'sales_manager' }));
+    const dev = env.authenticatedContext('dev', { email: 'wissam.b@woodpanelsco.com' }).firestore();
+    await assertSucceeds(setDoc(doc(dev, 'leave_requests/p7'), past('dev')));
+    await assertFails(setDoc(doc(fs('sm'), 'leave_requests/p8'), past('sm')));
+  });
+});
+
 describe('approval in order', () => {
   test('only the current step\'s approver decides', async () => {
     await assertFails(updateDoc(r1('sm'), approveKamStep)); // SM before the KAM

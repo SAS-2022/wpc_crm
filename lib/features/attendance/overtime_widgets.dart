@@ -397,15 +397,16 @@ class OvertimeApprovalsCard extends ConsumerWidget {
     ];
     if (waiting.isEmpty) return const SizedBox.shrink();
     final locale = Localizations.localeOf(context).toString();
+    // Collapsed by default (2026-11-08, user); tap the header to open the list.
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: Icon(Icons.more_time, color: Colors.orange.shade800),
+        title: Text(l10n.overtimeToApprove(waiting.length), style: Theme.of(context).textTheme.titleMedium),
         children: [
-          ListTile(
-            leading: Icon(Icons.more_time, color: Colors.orange.shade800),
-            title: Text(l10n.overtimeToApprove(waiting.length), style: Theme.of(context).textTheme.titleMedium),
-          ),
           for (final r in waiting)
             Builder(builder: (context) {
               final person = byId[r.uid]!;

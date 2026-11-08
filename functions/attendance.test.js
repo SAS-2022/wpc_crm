@@ -434,3 +434,79 @@ test('daily break: up to the allowance free, the rest off the counted time', () 
   // Still out now: counted so far.
   assert.equal(run([{ type: 'in', at: t(8) }, { type: 'out', at: t(10) }], { now: t(10, 20), breakAllowanceMin: 60 }).breakMin, 20);
 });
+
+// 2026-11-07: an exit from another site while inside one; leaving before the start.
+test('exit from another site while inside one is not leaving', () => {
+  const events = [
+    { type: 'in', at: t(8, 32), siteId: 'service' },
+    { type: 'out', at: t(8, 33), siteId: 'showroom' },
+  ];
+  const d = run(events, { now: t(10), leavesSite: true });
+  assert.equal(d.inside, true);
+  assert.equal(d.lastExitAt, null);
+  // An exit from the site they are in still counts.
+  const left = run([...events, { type: 'out', at: t(9), siteId: 'service' }], { now: t(10), leavesSite: true });
+  assert.equal(left.inside, false);
+  assert.equal(left.lastExitAt, t(9));
+  // A GPS exit means outside every site, whichever site it names.
+  const gps = run([...events, { type: 'out', at: t(9), siteId: 'showroom', source: 'gps' }], { now: t(10), leavesSite: true });
+  assert.equal(gps.inside, false);
+});
+
+test('moving between sites before the start: no break time, no leftSite', () => {
+  const events = [
+    { type: 'in', at: t(7, 30), siteId: 'a' },
+    { type: 'out', at: t(7, 59), siteId: 'a' },
+    { type: 'in', at: t(8, 6), siteId: 'b' },
+  ];
+  const d = run(events, { now: t(10), startMs: t(8), breakAllowanceMin: 60 });
+  assert.equal(d.inside, true);
+  assert.equal(d.breakMin, 6);
+  // Left at 07:00, grace counted from the 08:00 start: still open at 08:20.
+  const early = run([{ type: 'in', at: t(6, 50) }, { type: 'out', at: t(7) }], { now: t(8, 20), startMs: t(8) });
+  assert.equal(early.closed, false);
+  assert.equal(run([{ type: 'in', at: t(6, 50) }, { type: 'out', at: t(7) }], { now: t(8, 31), startMs: t(8) }).checkOutType, 'leftSite');
+});
+
+test('gpsPresence: fixes of the same second tell nothing', () => {
+  const p = (dLat) => ({ t: t(9, 0), lat: office.lat + dLat, lng: office.lng, accuracy: 50 });
+  assert.strictEqual(gpsPresence([p(0.01), p(0.005)], [office], t(9, 1)), null);
+});
+
+// Overtime on a chosen day (2026-11-08).
+test('overtime day: on a day off the whole stay is overtime, time out and back not counted', () => {
+  const date = '2026-11-13'; // a Friday
+  const t = (h, m = 0) => saudiTime(date, h * 60 + m);
+  const base = {
+    startMs: null, endMs: t(17), closeAllMs: t(23, 55), now: t(23, 59), leavesSite: false,
+    overtimeAllowed: false, overtimeDay: { dayOff: true },
+  };
+  const events = [
+    { type: 'in', at: t(8), siteId: 's' },
+    { type: 'out', at: t(12), siteId: 's' },
+    { type: 'in', at: t(13), siteId: 's' },
+    { type: 'out', at: t(19), siteId: 's' },
+  ];
+  const d = deriveDay(events, base);
+  assert.equal(d.checkOutAt, t(19));
+  assert.equal(d.workedMin, 10 * 60);
+  assert.equal(d.overtimeMin, 10 * 60);
+  assert.equal(d.countedMin, 10 * 60);
+  assert.equal(d.lateMin, null);
+  // Without the permission the same Friday counts no overtime.
+  const plain = deriveDay(events, { ...base, overtimeDay: null });
+  assert.equal(plain.overtimeMin, 0);
+});
+
+test('overtime day on a work day: time after the end counts without "Start overtime", up to the cap', () => {
+  const date = '2026-11-12';
+  const t = (h, m = 0) => saudiTime(date, h * 60 + m);
+  const o = {
+    startMs: t(8), endMs: t(17), closeAllMs: t(23, 55), now: t(23, 59), leavesSite: false,
+    overtimeAllowed: false, overtimeMaxMin: 180, overtimeDay: { dayOff: false },
+  };
+  const d = deriveDay([{ type: 'in', at: t(8), siteId: 's' }, { type: 'out', at: t(22), siteId: 's' }], o);
+  assert.equal(d.overtimeMin, 180);
+  assert.equal(d.overtimeOn, true);
+  assert.equal(overtimeAskDue(d, { ...o, now: t(17, 15) }), null);
+});

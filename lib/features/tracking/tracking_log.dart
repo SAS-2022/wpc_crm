@@ -16,7 +16,8 @@ class TrackingEvent {
   /// [value]), batteryOn, batteryOff, notificationsOff, notificationsOn;
   /// from the wake-up check (`offlineAlerts`, 2026-10-24): quiet (phone sent
   /// nothing for 10 min), woken (answered the silent ping), resumed (sending
-  /// again by itself), noAnswer (managers told).
+  /// again by itself), noAnswer (managers told); restarted (2026-11-08, the
+  /// Android watchdog or an iPhone relaunch started the app again).
   final String type;
 
   /// For 'permission': always, whileInUse, denied, deniedForever.
@@ -37,7 +38,7 @@ const _endedBy = {
   'gpsOff': {'gpsOn'},
   'batteryOn': {'batteryOff'},
   'notificationsOff': {'notificationsOn'},
-  'quiet': {'woken', 'resumed'},
+  'quiet': {'woken', 'resumed', 'restarted'},
 };
 
 /// The day's events in time order, each problem paired with the event that
@@ -98,6 +99,7 @@ class TrackingLogList extends ConsumerWidget {
         'quiet' => l10n.logQuiet,
         'woken' => l10n.logWoken,
         'resumed' => l10n.logResumed,
+        'restarted' => e.value == 'ios' ? l10n.logRestartedIos : l10n.logRestarted,
         'noAnswer' => l10n.logNoAnswer,
         'permission' => l10n.logPermission(switch (e.value) {
             'always' => l10n.permissionAlways,
@@ -118,6 +120,7 @@ class TrackingLogList extends ConsumerWidget {
         'notificationsOn' => Icons.notifications_active,
         'quiet' => Icons.phonelink_off,
         'woken' || 'resumed' => Icons.phonelink_ring,
+        'restarted' => Icons.restart_alt,
         'noAnswer' => Icons.report_problem_outlined,
         _ => Icons.lock_outline,
       };

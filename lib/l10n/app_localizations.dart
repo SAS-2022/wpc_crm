@@ -3098,6 +3098,18 @@ abstract class AppLocalizations {
   /// **'Sending again'**
   String get logResumed;
 
+  /// No description provided for @logRestarted.
+  ///
+  /// In en, this message translates to:
+  /// **'The phone closed the app – started again automatically'**
+  String get logRestarted;
+
+  /// No description provided for @logRestartedIos.
+  ///
+  /// In en, this message translates to:
+  /// **'App was closed – iPhone started it again after the phone moved'**
+  String get logRestartedIos;
+
   /// No description provided for @logNoAnswer.
   ///
   /// In en, this message translates to:
@@ -9553,6 +9565,48 @@ abstract class AppLocalizations {
   /// **'Battery optimization on'**
   String get filterBatteryOptimized;
 
+  /// No description provided for @filterAppClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'App closed by the phone'**
+  String get filterAppClosed;
+
+  /// No description provided for @filterNotRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sending location'**
+  String get filterNotRecording;
+
+  /// No description provided for @filterNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Location not \"all the time\"'**
+  String get filterNoPermission;
+
+  /// No description provided for @filterApproximate.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate location'**
+  String get filterApproximate;
+
+  /// No description provided for @filterBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background restricted'**
+  String get filterBackground;
+
+  /// No description provided for @filterNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications off'**
+  String get filterNotificationsOff;
+
+  /// No description provided for @filterNeverSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Never signed in'**
+  String get filterNeverSignedIn;
+
   /// No description provided for @docSectionSubscription.
   ///
   /// In en, this message translates to:
@@ -10284,6 +10338,1044 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Break over'**
   String get calBreakOver;
+
+  /// No description provided for @notifVisitComment.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} commented on your visit to {client}: “{comment}”'**
+  String notifVisitComment(String name, String client, String comment);
+
+  /// No description provided for @notifVisitReply.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} replied on the visit to {client}: “{comment}”'**
+  String notifVisitReply(String name, String client, String comment);
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @date.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get date;
+
+  /// No description provided for @notFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get notFound;
+
+  /// No description provided for @reasonOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get reasonOptional;
+
+  /// No description provided for @employee.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee'**
+  String get employee;
+
+  /// No description provided for @payroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll'**
+  String get payroll;
+
+  /// No description provided for @annualEarnedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned {earned} of {yearly} so far ({monthly} a month)'**
+  String annualEarnedLine(String earned, String yearly, String monthly);
+
+  /// No description provided for @annualDaysHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty = {base} days a year ({senior} after {years} years of service). Earned month by month from the joining date.'**
+  String annualDaysHelper(int base, int senior, int years);
+
+  /// No description provided for @deleteLeaveTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String deleteLeaveTypeTitle(String name);
+
+  /// No description provided for @deleteLeaveTypeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Employees won\'t be able to ask for this type any more. Requests already made keep their type name.'**
+  String get deleteLeaveTypeBody;
+
+  /// No description provided for @hrActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Warnings & deductions'**
+  String get hrActionsTitle;
+
+  /// No description provided for @hrKindWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get hrKindWarning;
+
+  /// No description provided for @hrKindDeduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Deduction'**
+  String get hrKindDeduction;
+
+  /// No description provided for @hrKindReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward'**
+  String get hrKindReward;
+
+  /// No description provided for @hrKindNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get hrKindNote;
+
+  /// No description provided for @warningVerbal.
+  ///
+  /// In en, this message translates to:
+  /// **'Verbal warning'**
+  String get warningVerbal;
+
+  /// No description provided for @warningFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'First written warning'**
+  String get warningFirst;
+
+  /// No description provided for @warningSecond.
+  ///
+  /// In en, this message translates to:
+  /// **'Second written warning'**
+  String get warningSecond;
+
+  /// No description provided for @warningLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Final warning'**
+  String get warningLast;
+
+  /// No description provided for @warningLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning level'**
+  String get warningLevel;
+
+  /// No description provided for @warningLevelSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested from the warnings of the last {days} days'**
+  String warningLevelSuggested(int days);
+
+  /// No description provided for @warningsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 warning} other{{count} warnings}} on record'**
+  String warningsCount(int count);
+
+  /// No description provided for @amountSar.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} SAR'**
+  String amountSar(String amount);
+
+  /// No description provided for @daysOfSalary.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days of salary'**
+  String daysOfSalary(String days);
+
+  /// No description provided for @amountSarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (SAR)'**
+  String get amountSarLabel;
+
+  /// No description provided for @daysOfSalaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Or days of salary'**
+  String get daysOfSalaryLabel;
+
+  /// No description provided for @deductionAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Deducted'**
+  String get deductionAmount;
+
+  /// No description provided for @rewardAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward'**
+  String get rewardAmount;
+
+  /// No description provided for @payrollMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll month'**
+  String get payrollMonth;
+
+  /// No description provided for @payrollMonthOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll {month}'**
+  String payrollMonthOf(String month);
+
+  /// No description provided for @payrollMonthHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll isn\'t active yet; it will use this month'**
+  String get payrollMonthHelper;
+
+  /// No description provided for @hrActionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get hrActionCancelled;
+
+  /// No description provided for @cancelHrAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel it'**
+  String get cancelHrAction;
+
+  /// No description provided for @cancelHrActionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this record?'**
+  String get cancelHrActionTitle;
+
+  /// No description provided for @restoreHrAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreHrAction;
+
+  /// No description provided for @deleteHrActionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this record?'**
+  String get deleteHrActionTitle;
+
+  /// No description provided for @deleteHrActionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It and its documents are removed for good. To keep it on record without counting it, cancel it instead.'**
+  String get deleteHrActionBody;
+
+  /// No description provided for @recordedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded by'**
+  String get recordedBy;
+
+  /// No description provided for @showCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Show cancelled'**
+  String get showCancelled;
+
+  /// No description provided for @noHrActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded'**
+  String get noHrActions;
+
+  /// No description provided for @searchEmployeeOrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search employee or title'**
+  String get searchEmployeeOrTitle;
+
+  /// No description provided for @newHrAction.
+  ///
+  /// In en, this message translates to:
+  /// **'New record'**
+  String get newHrAction;
+
+  /// No description provided for @editHrAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit record'**
+  String get editHrAction;
+
+  /// No description provided for @chooseEmployee.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the employee'**
+  String get chooseEmployee;
+
+  /// No description provided for @hrTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a title'**
+  String get hrTitleRequired;
+
+  /// No description provided for @amountOrDaysRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount or days of salary'**
+  String get amountOrDaysRequired;
+
+  /// No description provided for @hrActionTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Title / reason'**
+  String get hrActionTitleLabel;
+
+  /// No description provided for @hrActionTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Late 3 times this week'**
+  String get hrActionTitleHint;
+
+  /// No description provided for @hrAttachAfterSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents (signed warning, proof) can be attached after saving.'**
+  String get hrAttachAfterSave;
+
+  /// No description provided for @payrollNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll is not active yet'**
+  String get payrollNotActive;
+
+  /// No description provided for @payrollNotActiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This section is prepared and will be turned on later. Deductions and rewards recorded under Warnings & deductions already carry their payroll month, so they will be included.'**
+  String get payrollNotActiveBody;
+
+  /// No description provided for @payrollPlanSalary.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary per employee: basic, housing, transport and other allowances'**
+  String get payrollPlanSalary;
+
+  /// No description provided for @payrollPlanDeductions.
+  ///
+  /// In en, this message translates to:
+  /// **'Deductions and rewards of the month (amount or days of salary, a day = monthly salary ÷ 30)'**
+  String get payrollPlanDeductions;
+
+  /// No description provided for @payrollPlanPayslips.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly payslips'**
+  String get payrollPlanPayslips;
+
+  /// No description provided for @noAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have access to this'**
+  String get noAccess;
+
+  /// No description provided for @searchEmployee.
+  ///
+  /// In en, this message translates to:
+  /// **'Search employee'**
+  String get searchEmployee;
+
+  /// No description provided for @payrollEmployees.
+  ///
+  /// In en, this message translates to:
+  /// **'Salaries set'**
+  String get payrollEmployees;
+
+  /// No description provided for @payrollGross.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross'**
+  String get payrollGross;
+
+  /// No description provided for @payrollDeductions.
+  ///
+  /// In en, this message translates to:
+  /// **'Deductions'**
+  String get payrollDeductions;
+
+  /// No description provided for @payrollRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards'**
+  String get payrollRewards;
+
+  /// No description provided for @payrollNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get payrollNet;
+
+  /// No description provided for @payrollHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an employee to set their salary. Deductions and rewards come from Warnings & deductions for this payroll month (a day of salary = monthly ÷ 30). Visible to you only.'**
+  String get payrollHint;
+
+  /// No description provided for @salaryBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get salaryBasic;
+
+  /// No description provided for @salaryHousing.
+  ///
+  /// In en, this message translates to:
+  /// **'Home allowance'**
+  String get salaryHousing;
+
+  /// No description provided for @salaryTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Transportation'**
+  String get salaryTransport;
+
+  /// No description provided for @salaryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other allowances'**
+  String get salaryOther;
+
+  /// No description provided for @salaryNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary not set'**
+  String get salaryNotSet;
+
+  /// No description provided for @salary.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary'**
+  String get salary;
+
+  /// No description provided for @salaryOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary · {name}'**
+  String salaryOf(String name);
+
+  /// No description provided for @allowanceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowance name'**
+  String get allowanceName;
+
+  /// No description provided for @addAllowance.
+  ///
+  /// In en, this message translates to:
+  /// **'Add allowance'**
+  String get addAllowance;
+
+  /// No description provided for @sar.
+  ///
+  /// In en, this message translates to:
+  /// **'SAR'**
+  String get sar;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @hrGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'From HR'**
+  String get hrGateTitle;
+
+  /// No description provided for @hrGateMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} records to read, one at a time'**
+  String hrGateMore(int count);
+
+  /// No description provided for @hrGateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Please read the above. By pressing \"Agreed and Accepted\" you confirm you have read and accept it; this is saved in your HR record and HR is informed. The app opens after that.'**
+  String get hrGateBody;
+
+  /// No description provided for @hrAgreedAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreed and Accepted'**
+  String get hrAgreedAccepted;
+
+  /// No description provided for @hrAcceptedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted by the employee {date}'**
+  String hrAcceptedOn(String date);
+
+  /// No description provided for @hrAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get hrAccepted;
+
+  /// No description provided for @hrAwaitingAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the employee to accept'**
+  String get hrAwaitingAcceptance;
+
+  /// No description provided for @hrInternalOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal (not sent to the employee)'**
+  String get hrInternalOnly;
+
+  /// No description provided for @hrEmployeeAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee\'s acceptance'**
+  String get hrEmployeeAcceptance;
+
+  /// No description provided for @hrSendNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to the employee'**
+  String get hrSendNote;
+
+  /// No description provided for @hrSendNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'They must read it and press \"Agreed and Accepted\" before using the app'**
+  String get hrSendNoteHint;
+
+  /// No description provided for @hrWillBeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'The employee is notified and must press \"Agreed and Accepted\" before using the app; HR is told when they do.'**
+  String get hrWillBeSent;
+
+  /// No description provided for @hrWillAskAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'The employee already accepted this. If you change what it says, they will be asked to accept it again.'**
+  String get hrWillAskAgain;
+
+  /// No description provided for @notifHrActionIssued.
+  ///
+  /// In en, this message translates to:
+  /// **'HR sent you a {kind}: “{title}” – open the app to read and accept it'**
+  String notifHrActionIssued(String kind, String title);
+
+  /// No description provided for @notifHrActionAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} accepted the {kind}: “{title}”'**
+  String notifHrActionAccepted(String name, String kind, String title);
+
+  /// No description provided for @phoneChecksFromLastReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Last report {ago} – the settings below are from then, not now'**
+  String phoneChecksFromLastReport(String ago);
+
+  /// No description provided for @addPastLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Add past leave'**
+  String get addPastLeave;
+
+  /// No description provided for @pastLeaveHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave already taken, entered by date (for example before the app was used). It is saved as approved and counts in the balance of its leave year.'**
+  String get pastLeaveHelp;
+
+  /// No description provided for @pastLeaveType.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave type'**
+  String get pastLeaveType;
+
+  /// No description provided for @pastLeavePickDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose dates'**
+  String get pastLeavePickDates;
+
+  /// No description provided for @pastLeaveDaysUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Days used'**
+  String get pastLeaveDaysUsed;
+
+  /// No description provided for @pastLeaveDaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted from the person\'s work days and public holidays; change it if needed.'**
+  String get pastLeaveDaysHint;
+
+  /// No description provided for @pastLeaveOneYear.
+  ///
+  /// In en, this message translates to:
+  /// **'The dates must be in one leave year. Enter each leave year separately.'**
+  String get pastLeaveOneYear;
+
+  /// No description provided for @pastLeaveRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Past record entered by HR'**
+  String get pastLeaveRecorded;
+
+  /// No description provided for @deletePastLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this past record?'**
+  String get deletePastLeave;
+
+  /// No description provided for @deleteHolidayQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String deleteHolidayQ(String name);
+
+  /// No description provided for @publicHolidaysByYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Holidays by name, one year at a time. Eid dates change every year: add each year\'s dates under the same name. Holiday days don\'t count as leave or as missed days.'**
+  String get publicHolidaysByYearHint;
+
+  /// No description provided for @noHolidaysThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'No holidays entered for {year}'**
+  String noHolidaysThisYear(int year);
+
+  /// No description provided for @holidayNoName.
+  ///
+  /// In en, this message translates to:
+  /// **'No name'**
+  String get holidayNoName;
+
+  /// No description provided for @holidayDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String holidayDays(int count);
+
+  /// No description provided for @holidaysFromOtherYears.
+  ///
+  /// In en, this message translates to:
+  /// **'From other years — add with the dates for {year}:'**
+  String holidaysFromOtherYears(int year);
+
+  /// No description provided for @editHoliday.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit holiday'**
+  String get editHoliday;
+
+  /// No description provided for @holidayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Holiday name'**
+  String get holidayName;
+
+  /// No description provided for @holidayLastTime.
+  ///
+  /// In en, this message translates to:
+  /// **'In {year}: {dates}'**
+  String holidayLastTime(int year, String dates);
+
+  /// No description provided for @overtimeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime on a day'**
+  String get overtimeDays;
+
+  /// No description provided for @overtimeDaysHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow overtime on one date, e.g. a Friday, without making it a work day. On a day off or a holiday everything from arrival until leaving counts as overtime; on a work day the time after the end counts without \"Start overtime\". It still waits for approval.'**
+  String get overtimeDaysHelp;
+
+  /// No description provided for @allowOvertimeDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow overtime on a day'**
+  String get allowOvertimeDay;
+
+  /// No description provided for @pickDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the day'**
+  String get pickDay;
+
+  /// No description provided for @allowedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed by {name}'**
+  String allowedBy(String name);
+
+  /// No description provided for @removeOvertimeDayQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove overtime for {name} on {date}?'**
+  String removeOvertimeDayQ(String name, String date);
+
+  /// No description provided for @allowForCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Allow} =1{Allow for 1 person} other{Allow for {count} people}}'**
+  String allowForCount(int count);
+
+  /// No description provided for @overtimeDayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} allowed overtime for you today – your time at the site counts as overtime'**
+  String overtimeDayToday(String name);
+
+  /// No description provided for @notifOvertimeDayAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} allowed you overtime on {date} – your time at the site counts as overtime'**
+  String notifOvertimeDayAllowed(String name, String date);
+
+  /// No description provided for @userLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'User history'**
+  String get userLogTitle;
+
+  /// No description provided for @userLogTitleFor.
+  ///
+  /// In en, this message translates to:
+  /// **'History: {name}'**
+  String userLogTitleFor(String name);
+
+  /// No description provided for @userLogSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by user or by who made the change'**
+  String get userLogSearch;
+
+  /// No description provided for @userLogNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Every user added, registered, approved, changed, given a new password or deleted, and who did it. Recorded from 8 Nov 2026; changes from older app versions show \"Unknown\".'**
+  String get userLogNote;
+
+  /// No description provided for @userLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes recorded yet'**
+  String get userLogEmpty;
+
+  /// No description provided for @userLogUnknownActor.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown (older app version)'**
+  String get userLogUnknownActor;
+
+  /// No description provided for @userLogRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} registered themselves (Create account)'**
+  String userLogRegistered(String target);
+
+  /// No description provided for @userLogCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} added {target}'**
+  String userLogCreated(String actor, String target);
+
+  /// No description provided for @userLogApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} approved {target}'**
+  String userLogApproved(String actor, String target);
+
+  /// No description provided for @userLogRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} turned down {target}'**
+  String userLogRejected(String actor, String target);
+
+  /// No description provided for @userLogUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} changed {target}'**
+  String userLogUpdated(String actor, String target);
+
+  /// No description provided for @userLogDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} deleted {target}'**
+  String userLogDeleted(String actor, String target);
+
+  /// No description provided for @userLogPasswordSet.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} set a new password for {target}'**
+  String userLogPasswordSet(String actor, String target);
+
+  /// No description provided for @userLogHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{h} h'**
+  String userLogHours(String h);
+
+  /// No description provided for @userLogHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get userLogHistory;
+
+  /// No description provided for @userLogFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get userLogFieldName;
+
+  /// No description provided for @userLogFieldEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get userLogFieldEmail;
+
+  /// No description provided for @userLogFieldPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get userLogFieldPhone;
+
+  /// No description provided for @userLogFieldRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get userLogFieldRole;
+
+  /// No description provided for @userLogFieldPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Job asked for'**
+  String get userLogFieldPosition;
+
+  /// No description provided for @userLogFieldActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get userLogFieldActive;
+
+  /// No description provided for @userLogFieldApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval'**
+  String get userLogFieldApproval;
+
+  /// No description provided for @userLogFieldKam.
+  ///
+  /// In en, this message translates to:
+  /// **'KAM'**
+  String get userLogFieldKam;
+
+  /// No description provided for @userLogFieldManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct manager'**
+  String get userLogFieldManager;
+
+  /// No description provided for @userLogFieldIsManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Is a manager'**
+  String get userLogFieldIsManager;
+
+  /// No description provided for @userLogFieldSupervisor.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse supervisor'**
+  String get userLogFieldSupervisor;
+
+  /// No description provided for @userLogFieldOdooName.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo name'**
+  String get userLogFieldOdooName;
+
+  /// No description provided for @userLogFieldTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly target'**
+  String get userLogFieldTarget;
+
+  /// No description provided for @userLogFieldCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get userLogFieldCompany;
+
+  /// No description provided for @userLogFieldSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Work sites'**
+  String get userLogFieldSites;
+
+  /// No description provided for @userLogFieldOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime allowed'**
+  String get userLogFieldOvertime;
+
+  /// No description provided for @userLogFieldOvertimeMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Most overtime a day'**
+  String get userLogFieldOvertimeMax;
+
+  /// No description provided for @userLogFieldAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance required'**
+  String get userLogFieldAttendance;
+
+  /// No description provided for @userLogFieldLeaveSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed to leave the site'**
+  String get userLogFieldLeaveSite;
+
+  /// No description provided for @userLogFieldSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Own work schedule'**
+  String get userLogFieldSchedule;
+
+  /// No description provided for @userLogFieldHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home location'**
+  String get userLogFieldHome;
+
+  /// No description provided for @userLogFieldJoining.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining date'**
+  String get userLogFieldJoining;
+
+  /// No description provided for @userLogFieldDepartment.
+  ///
+  /// In en, this message translates to:
+  /// **'Department'**
+  String get userLogFieldDepartment;
+
+  /// No description provided for @otFilterEveryone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get otFilterEveryone;
+
+  /// No description provided for @otFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime ({n})'**
+  String otFilterAll(int n);
+
+  /// No description provided for @otFilterApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved ({n})'**
+  String otFilterApproved(int n);
+
+  /// No description provided for @otFilterPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval ({n})'**
+  String otFilterPending(int n);
+
+  /// No description provided for @otFilterRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved ({n})'**
+  String otFilterRejected(int n);
+
+  /// No description provided for @otSectionApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime approved'**
+  String get otSectionApproved;
+
+  /// No description provided for @otSectionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime waiting for approval'**
+  String get otSectionPending;
+
+  /// No description provided for @otSectionRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime not approved'**
+  String get otSectionRejected;
+
+  /// No description provided for @otSectionTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 person} other{{n} people}} · {time}'**
+  String otSectionTotal(int n, String time);
+
+  /// No description provided for @otSectionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody this month'**
+  String get otSectionEmpty;
+
+  /// No description provided for @otDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 day} other{{n} days}}'**
+  String otDays(int n);
+
+  /// No description provided for @otStateApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get otStateApproved;
+
+  /// No description provided for @otStatePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for approval'**
+  String get otStatePending;
+
+  /// No description provided for @otStateRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved'**
+  String get otStateRejected;
+
+  /// No description provided for @reportOvertimePendingHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime waiting (hours)'**
+  String get reportOvertimePendingHours;
+
+  /// No description provided for @reportOvertimeRejectedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime not approved (hours)'**
+  String get reportOvertimeRejectedHours;
+
+  /// No description provided for @reportOvertimeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime status'**
+  String get reportOvertimeStatus;
 }
 
 class _AppLocalizationsDelegate

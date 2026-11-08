@@ -51,13 +51,15 @@ class TrackingSchedule {
 
   /// Whether the location is shared at [now]. Drivers keep the company car,
   /// so their standard is all day (user decision 2026-10-20). Office staff
-  /// ([recordOnly]): 08:00–18:00 on [days] (null = the company's days).
-  bool isOn(DateTime now, WorkHours company, {required bool driver, bool recordOnly = false, Set<int>? days}) =>
+  /// ([recordOnly]) and the sales manager ([officeHours], 2026-11-07):
+  /// 08:00–18:00 on [days] (null = the company's days).
+  bool isOn(DateTime now, WorkHours company,
+          {required bool driver, bool recordOnly = false, bool officeHours = false, Set<int>? days}) =>
       switch (mode) {
         TrackingMode.allDay => true,
         TrackingMode.own => hours!.isOn(now),
         TrackingMode.standard =>
-          driver || (recordOnly ? recordingHours(days ?? company.days) : company).isOn(now),
+          driver || (recordOnly || officeHours ? recordingHours(days ?? company.days) : company).isOn(now),
       };
 }
 

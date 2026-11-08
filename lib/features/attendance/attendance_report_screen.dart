@@ -39,6 +39,11 @@ class AttendanceReportScreen extends ConsumerStatefulWidget {
 class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
 
+  /// Overtime filter (2026-11-08): null = everyone; [_allOvertime] = the
+  /// three groups; else one group.
+  OvertimeState? _ot;
+  bool _allOvertime = false;
+
   Future<void> _export(List<AttendanceReportRow> rows, AttendanceReportContext x) async {
     final bytes = buildAttendanceXlsx(rows, x);
     final name = 'attendance_${DateFormat('yyyy-MM').format(_month)}.xlsx';
@@ -86,10 +91,12 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                       ?siteNames[res.siteId],
                       if ((res.lateMin ?? 0) > 0) l10n.lateBy(formatMinutes(res.lateMin!)),
                       if (res.checkOutType != null) checkOutTypeLabel(l10n, res.checkOutType),
-                      if ((res.overtimeMin ?? 0) > 0)
-                        d.approvedOvertimeMin == null
-                            ? l10n.overtimeWaiting(formatMinutes(res.overtimeMin!))
-                            : l10n.overtimeApprovedText(formatMinutes(d.approvedOvertimeMin!)),
+                      if (d.overtimeState case final s?)
+                        switch (s) {
+                          OvertimeState.approved => l10n.overtimeApprovedText(formatMinutes(d.approvedOvertimeMin!)),
+                          OvertimeState.pending => l10n.overtimeWaiting(formatMinutes(d.recordedOvertimeMin)),
+                          OvertimeState.rejected => l10n.overtimeRejectedText,
+                        },
                       if ((res.afterHoursMin ?? 0) > 0) l10n.stayedAfterTime(formatMinutes(res.afterHoursMin!)),
                       if ((res.breakOverMin ?? 0) > 0) l10n.breakOverWarning(formatMinutes(res.breakOverMin!)),
                     ].where((s) => s.isNotEmpty).join(' · '),
@@ -154,7 +161,27 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
               ),
             ],
           ),
-          Expanded(
+          _OvertimeChips(
+            rows: rows,
+            selected: _allOvertime ? null : _ot,
+            allOvertime: _allOvertime,
+            onChanged: (all, state) => setState(() {
+              _allOvertime = all;
+              _ot = state;
+            }),
+          ),
+          if ((_allOvertime || _ot != null) && !report.loading)
+            Expanded(
+              child: _OvertimeGroups(
+                rows: rows,
+                states: _allOvertime ? OvertimeState.values : [_ot!],
+                onTap: (r) => kIsWeb
+                    ? context.push('/attendance/report/${r.user.id}?month=${DateFormat('yyyy-MM').format(_month)}')
+                    : _showPerson(r, siteNames),
+              ),
+            )
+          else
+            Expanded(
             child: report.loading
                 ? const Center(child: CircularProgressIndicator())
                 : rows.isEmpty
@@ -214,11 +241,18 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
 
   final byUser = <String, Map<String, DayResult>>{};
   final approved = <String, Map<String, int>>{};
+  final rejected = <String, Set<String>>{};
   final users = {for (final u in people) u.id: u};
   for (final r in records.value ?? const <AttendanceRecord>[]) {
     final u = users[r.uid];
     if (u != null) (byUser[r.uid] ??= {})[r.date] = r.best(u, company);
-    if (u != null && r.review != null) (approved[r.uid] ??= {})[r.date] = r.review!.minutes;
+    if (u != null && r.review != null) {
+      if (r.review!.rejected) {
+        (rejected[r.uid] ??= {}).add(r.date);
+      } else {
+        (approved[r.uid] ??= {})[r.date] = r.review!.minutes;
+      }
+    }
   }
   final absences = <String, Map<String, Absence>>{};
   for (final a in ref.watch(monthAbsencesProvider(monthKey)).value ?? const <Absence>[]) {
@@ -240,8 +274,130 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
         },
         absences: absences[u.id] ?? const {},
         approvedOvertime: approved[u.id] ?? const {},
+        rejectedOvertime: rejected[u.id] ?? const {},
         today: now,
       ),
   ];
   return (rows: rows, loading: records.isLoading);
+}
+
+/// Everyone / people with overtime / approved / waiting / not approved,
+/// each with how many people (2026-11-08).
+class _OvertimeChips extends StatelessWidget {
+  const _OvertimeChips({required this.rows, required this.selected, required this.allOvertime, required this.onChanged});
+
+  final List<AttendanceReportRow> rows;
+  final OvertimeState? selected;
+  final bool allOvertime;
+  final void Function(bool all, OvertimeState? state) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    int count(OvertimeState s) => rows.where((r) => r.overtimeDays(s).isNotEmpty).length;
+    final none = !allOvertime && selected == null;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          for (final (label, on, all, state, icon) in [
+            (l10n.otFilterEveryone, none, false, null, Icons.people_outline),
+            (l10n.otFilterAll(rows.where((r) => r.hasOvertime).length), allOvertime, true, null, Icons.more_time),
+            (l10n.otFilterApproved(count(OvertimeState.approved)), selected == OvertimeState.approved, false,
+                OvertimeState.approved, Icons.check_circle_outline),
+            (l10n.otFilterPending(count(OvertimeState.pending)), selected == OvertimeState.pending, false,
+                OvertimeState.pending, Icons.hourglass_empty),
+            (l10n.otFilterRejected(count(OvertimeState.rejected)), selected == OvertimeState.rejected, false,
+                OvertimeState.rejected, Icons.cancel_outlined),
+          ])
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: ChoiceChip(
+                visualDensity: VisualDensity.compact,
+                avatar: Icon(icon, size: 16),
+                showCheckmark: false,
+                label: Text(label),
+                selected: on,
+                onSelected: (_) => onChanged(all, state),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Color overtimeStateColor(OvertimeState s, ColorScheme scheme) => switch (s) {
+      OvertimeState.approved => Colors.green.shade700,
+      OvertimeState.pending => Colors.orange.shade800,
+      OvertimeState.rejected => scheme.error,
+    };
+
+/// The people with overtime in each of [states]: a heading with the
+/// group's people and hours, then per person the days and hours (a person
+/// with some days approved and some waiting shows in both groups).
+class _OvertimeGroups extends StatelessWidget {
+  const _OvertimeGroups({required this.rows, required this.states, required this.onTap});
+
+  final List<AttendanceReportRow> rows;
+  final List<OvertimeState> states;
+  final void Function(AttendanceReportRow) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final dayFormat = DateFormat.MMMEd(Localizations.localeOf(context).toString());
+    final children = <Widget>[];
+    for (final s in states) {
+      final people = [
+        for (final r in rows)
+          if (r.overtimeDays(s).isNotEmpty) r,
+      ]..sort((a, b) => b.overtimeMinOf(s).compareTo(a.overtimeMinOf(s)));
+      final total = people.fold(0, (t, r) => t + r.overtimeMinOf(s));
+      final color = overtimeStateColor(s, theme.colorScheme);
+      children.add(Container(
+        color: color.withValues(alpha: 0.08),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Row(
+          children: [
+            Icon(Icons.circle, size: 10, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                switch (s) {
+                  OvertimeState.approved => l10n.otSectionApproved,
+                  OvertimeState.pending => l10n.otSectionPending,
+                  OvertimeState.rejected => l10n.otSectionRejected,
+                },
+                style: theme.textTheme.titleSmall?.copyWith(color: color),
+              ),
+            ),
+            Text(l10n.otSectionTotal(people.length, formatMinutes(total)), style: theme.textTheme.labelMedium),
+          ],
+        ),
+      ));
+      if (people.isEmpty) {
+        children.add(Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(l10n.otSectionEmpty, style: theme.textTheme.bodySmall),
+        ));
+      }
+      for (final r in people) {
+        final days = r.overtimeDays(s);
+        children.add(ListTile(
+          title: Text(r.user.name),
+          subtitle: Text(
+            '${l10n.otDays(days.length)}: '
+            '${days.map((d) => '${dayFormat.format(d.date)} (${formatMinutes(d.overtimeStateMin)})').join(', ')}',
+          ),
+          trailing: Text(formatMinutes(r.overtimeMinOf(s)), style: theme.textTheme.titleSmall?.copyWith(color: color)),
+          onTap: () => onTap(r),
+        ));
+        children.add(const Divider(height: 1));
+      }
+    }
+    return ListView(padding: const EdgeInsets.only(bottom: 24), children: children);
+  }
 }

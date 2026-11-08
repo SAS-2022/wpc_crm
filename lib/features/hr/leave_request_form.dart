@@ -168,7 +168,14 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     // What's left of this type after this request.
     final year = leaveYearOf(me.joiningDate, _dates?.start ?? DateTime.now());
     final mine = ref.watch(myLeaveRequestsProvider).value ?? const <LeaveRequest>[];
-    final balance = personLeaveBalances(ref, uid: me.id, year: year, types: [type], requests: [for (final r in mine) r.use])[type.id];
+    // Annual leave earned by the first day of the leave (2026-11-07).
+    final start = _dates?.start;
+    final balance = personLeaveBalances(ref,
+        uid: me.id,
+        year: year,
+        types: [type],
+        requests: [for (final r in mine) r.use],
+        asOf: start != null && start.isAfter(DateTime.now()) ? start : null)[type.id];
     final fmt = DateFormat.yMMMd(locale);
 
     return Scaffold(

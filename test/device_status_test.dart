@@ -142,6 +142,38 @@ void main() {
     });
   });
 
+  test('phoneIssues: settings, why it is quiet, never signed in', () {
+    final now = DateTime(2026, 11, 8, 11);
+    final versions = {'android': InstalledVersion(version: '1.0.27', build: 32, at: DateTime(2026, 11, 7))};
+    PhoneReport rep({DeviceStatus? d, Presence? p, DateTime? live, Map<String, InstalledVersion>? v, bool share = true}) =>
+        phoneReport(device: d, presence: p, liveAt: live, recordedAt: null, versions: v ?? versions, shouldShare: share, now: now);
+    // Silent for an hour with good settings = app closed by the phone.
+    final closed = rep(
+      d: DeviceStatus(platform: 'android', gps: true, location: 'always', network: const ['mobile'], batteryOptimized: false, at: now.subtract(const Duration(hours: 1))),
+    );
+    expect(phoneIssues(closed), {PhoneIssue.appClosed});
+    // Still reports, no position = not recording; battery optimization on.
+    final notRec = rep(
+      d: DeviceStatus(platform: 'android', gps: true, location: 'always', network: const ['wifi'], batteryOptimized: true, at: now.subtract(const Duration(minutes: 2))),
+    );
+    expect(phoneIssues(notRec), {PhoneIssue.notRecording, PhoneIssue.battery});
+    // GPS off counted once (setting + reason).
+    final gps = rep(
+      d: DeviceStatus(platform: 'android', gps: false, location: 'whileInUse', network: const ['wifi'], at: now.subtract(const Duration(hours: 1))),
+    );
+    expect(phoneIssues(gps), {PhoneIssue.gpsOff, PhoneIssue.noPermission});
+    expect(phoneIssues(rep(v: const {})), {PhoneIssue.neverSignedIn});
+    expect(phoneIssues(rep(v: const {}, share: false)), isEmpty);
+    // Sharing fine.
+    expect(
+      phoneIssues(rep(
+        d: DeviceStatus(platform: 'android', gps: true, location: 'always', network: const ['wifi'], batteryOptimized: false, at: now),
+        live: now,
+      )),
+      isEmpty,
+    );
+  });
+
   test('phone label from the report', () {
     final s = DeviceStatus.fromMap({
       'platform': 'android',

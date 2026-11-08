@@ -346,12 +346,61 @@ DateTime _anniversary(DateTime joining, int year) {
 double annualCarry(double remaining, {required bool carryOver}) =>
     remaining < 0 ? remaining : (carryOver ? remaining : 0);
 
+/// Annual leave after this many years of service (user 2026-11-07, Saudi
+/// labour law): [seniorAnnualDays] a year instead of the type's 21.
+const seniorAfterYears = 5;
+const seniorAnnualDays = 30;
+
+/// Annual leave earned month by month (user 2026-11-07): from the joining
+/// date each completed month adds a twelfth of the year's days — 1.75 of
+/// 21, and 2.5 of 30 once 5 years of service are done. The leave year starts
+/// on the joining anniversary, so a whole leave year has one rate.
+typedef AnnualAccrual = ({double yearly, double monthly, int months, double earned, int? serviceYears});
+
+/// [year]'s annual leave earned by [asOf] for someone who joined on
+/// [joiningDate] ('yyyy-MM-dd'; null = calendar year, rate of [baseYearly]).
+/// [override] = HR's yearly days for the person (still earned monthly).
+/// Same as `annualAccrual` in functions/leaveYears.js.
+AnnualAccrual annualAccrual({
+  String? joiningDate,
+  required int year,
+  required DateTime asOf,
+  num baseYearly = 21,
+  num? override,
+}) {
+  final j = joiningDate == null ? null : DateTime.tryParse(joiningDate);
+  final service = j == null ? null : year - j.year;
+  final yearly = (override ?? (service != null && service >= seniorAfterYears ? seniorAnnualDays : baseYearly)).toDouble();
+  final monthly = yearly / 12;
+  final start = leaveYearRange(joiningDate, year).start;
+  final day = DateTime(asOf.year, asOf.month, asOf.day);
+  var months = 0;
+  if (service == null || service >= 0) {
+    while (months < 12 && !day.isBefore(_addMonths(start, months + 1, j?.day ?? start.day))) {
+      months++;
+    }
+  }
+  final earned = months == 12 ? yearly : (monthly * months * 100).roundToDouble() / 100;
+  return (yearly: yearly, monthly: monthly, months: months, earned: earned, serviceYears: service);
+}
+
+/// [start] + [months] months on day [day] of the month (the last day when
+/// the month is shorter).
+DateTime _addMonths(DateTime start, int months, int day) {
+  final last = DateTime(start.year, start.month + months + 1, 0).day;
+  return DateTime(start.year, start.month + months, day > last ? last : day);
+}
+
 /// One person's numbers for one leave type and year.
 class LeaveBalance {
-  const LeaveBalance({required this.entitled, required this.used, required this.pending, this.carried = 0});
+  const LeaveBalance({required this.entitled, required this.used, required this.pending, this.carried = 0, this.accrual});
 
-  /// Yearly days (HR's number for the person, else the type's) plus adjustments.
+  /// Yearly days (HR's number for the person, else the type's) plus
+  /// adjustments; annual leave: the days earned so far ([accrual]) plus adjustments.
   final double entitled;
+
+  /// Annual leave: how it's earned month by month (null for other types).
+  final AnnualAccrual? accrual;
 
   /// Moved from the year before (annual leave; negative = overdrawn then).
   final double carried;
@@ -379,6 +428,7 @@ Map<String, LeaveBalance> leaveBalances({
   required List<LeaveAdjustment> adjustments,
   Map<String, num> carried = const {},
   required List<LeaveUse> requests,
+  DateTime? asOf,
 }) {
   bool inYear(LeaveUse r) {
     final from = r.from == null ? null : DateTime.tryParse(r.from!);
@@ -392,9 +442,19 @@ Map<String, LeaveBalance> leaveBalances({
           double sum(LeaveStatus s) => requests
               .where((r) => r.typeId == t.id && r.status == s && inYear(r))
               .fold(0.0, (a, r) => a + r.days);
-          final entitled = (entitledOverride[t.id] ?? t.yearlyDays!).toDouble() +
+          final accrual = t.id == annualLeaveTypeId
+              ? annualAccrual(
+                  joiningDate: joiningDate,
+                  year: year,
+                  asOf: asOf ?? DateTime.now(),
+                  baseYearly: t.yearlyDays!,
+                  override: entitledOverride[t.id],
+                )
+              : null;
+          final entitled = (accrual?.earned ?? (entitledOverride[t.id] ?? t.yearlyDays!).toDouble()) +
               adjustments.where((a) => a.typeId == t.id).fold(0.0, (a, b) => a + b.days);
           return LeaveBalance(
+            accrual: accrual,
             entitled: entitled,
             carried: (carried[t.id] ?? 0).toDouble(),
             used: sum(LeaveStatus.approved),
@@ -405,4 +465,7 @@ Map<String, LeaveBalance> leaveBalances({
 }
 
 /// "3" or "2.5".
-String formatLeaveDays(double days) => days == days.roundToDouble() ? '${days.round()}' : '$days';
+String formatLeaveDays(double days) {
+  final r = (days * 100).roundToDouble() / 100;
+  return r == r.roundToDouble() ? '${r.round()}' : '$r';
+}

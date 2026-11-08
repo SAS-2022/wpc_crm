@@ -11,6 +11,9 @@ import 'employee_record_widgets.dart';
 import 'hr_people.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
+import 'hr_actions_screen.dart';
+import 'payroll_screen.dart';
+import '../tracking/work_hours.dart';
 import 'leave_widgets.dart';
 import 'my_leave_screen.dart';
 
@@ -55,7 +58,10 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: l10n.daysThisYear,
-                  helperText: l10n.daysThisYearHelper(type.yearlyDays ?? 0),
+                  helperText: type.id == annualLeaveTypeId
+                      ? l10n.annualDaysHelper(type.yearlyDays ?? 21, seniorAnnualDays, seniorAfterYears)
+                      : l10n.daysThisYearHelper(type.yearlyDays ?? 0),
+                  helperMaxLines: 3,
                 ),
               ),
               const SizedBox(height: 16),
@@ -145,6 +151,8 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
               ),
             ),
           EmployeeRecordCard(uid: uid, margin: const EdgeInsets.fromLTRB(12, 8, 12, 0)),
+          // Payroll account only (2026-11-07).
+          if (person != null) PersonSalaryCard(user: person),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
             child: Row(children: [
@@ -167,6 +175,22 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
             requests: requests,
             onTap: canEdit && me != null ? (t) => _editType(context, ref, me, t, record, year) : null,
           ),
+          // Leave taken before (2026-11-08, user): entered by date.
+          if (canEdit && me != null && person != null && (person.id != me.id || isDeveloper(me)))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.history_edu),
+                  label: Text(l10n.addPastLeave),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => _PastLeaveDialog(me: me, person: person),
+                  ),
+                ),
+              ),
+            ),
           if (record.adjustments.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -197,6 +221,7 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
           ),
           if (requests.isEmpty) ListTile(title: Text(l10n.noLeaveRequests)),
           for (final r in requests) LeaveRequestTile(request: r),
+          PersonHrActionsSection(uid: uid),
         ],
       ),
     );
@@ -238,6 +263,148 @@ class _PastYearTile extends StatelessWidget {
                 style: TextStyle(color: e.value.remaining < 0 ? theme.colorScheme.error : null),
               ),
             ),
+      ],
+    );
+  }
+}
+
+/// HR enters leave the person already took, by date ([LeaveRepository.recordPastLeave]).
+class _PastLeaveDialog extends ConsumerStatefulWidget {
+  const _PastLeaveDialog({required this.me, required this.person});
+
+  final AppUser me;
+  final AppUser person;
+
+  @override
+  ConsumerState<_PastLeaveDialog> createState() => _PastLeaveDialogState();
+}
+
+class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
+  String? _typeId;
+  DateTimeRange? _dates;
+  bool _halfDay = false;
+  final _days = TextEditingController();
+  final _note = TextEditingController();
+
+  /// The day count the dialog last filled in; HR may type another.
+  double? _counted;
+
+  @override
+  void dispose() {
+    _days.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    final locale = Localizations.localeOf(context).toString();
+    final types = (ref.watch(leaveTypesProvider).value ?? LeaveType.defaults).where((t) => t.isLeave).toList();
+    final type = types.where((t) => t.id == _typeId).firstOrNull ?? types.first;
+    final workDays = widget.person.scheduleOr(ref.watch(workHoursProvider).value ?? WorkHours.defaults).days;
+    final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
+    final oneDay = _dates != null && _dates!.start == _dates!.end;
+    final counted = _dates == null
+        ? null
+        : leaveDays(
+            from: _dates!.start,
+            to: _dates!.end,
+            calendarDays: type.calendarDays,
+            workDays: workDays,
+            holidays: holidays,
+            halfDay: _halfDay && oneDay,
+          );
+    // Refresh the days field when the count changes, unless HR typed their own.
+    if (counted != _counted) {
+      if (_days.text.isEmpty || double.tryParse(_days.text) == _counted) _days.text = counted == null ? '' : formatLeaveDays(counted);
+      _counted = counted;
+    }
+    final crossesYear = _dates != null &&
+        leaveYearOf(widget.person.joiningDate, _dates!.start) != leaveYearOf(widget.person.joiningDate, _dates!.end);
+    final days = double.tryParse(_days.text.trim().replaceAll(',', '.'));
+    final f = DateFormat.yMMMEd(locale);
+    final now = DateTime.now();
+    return AlertDialog(
+      title: Text(l10n.addPastLeave),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.pastLeaveHelp, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: type.id,
+                isExpanded: true,
+                decoration: InputDecoration(labelText: l10n.pastLeaveType),
+                items: [for (final t in types) DropdownMenuItem(value: t.id, child: Text(t.name(lang)))],
+                onChanged: (v) => setState(() => _typeId = v),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.date_range),
+                label: Text(_dates == null
+                    ? l10n.pastLeavePickDates
+                    : oneDay
+                        ? f.format(_dates!.start)
+                        : '${f.format(_dates!.start)} – ${f.format(_dates!.end)}'),
+                onPressed: () async {
+                  final picked = await showDateRangePicker(
+                    context: context,
+                    initialDateRange: _dates,
+                    firstDate: DateTime(now.year - 10),
+                    lastDate: DateTime(now.year, now.month, now.day),
+                  );
+                  if (picked != null) setState(() => _dates = picked);
+                },
+              ),
+              if (crossesYear)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(l10n.pastLeaveOneYear, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
+              if (oneDay)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.halfDay),
+                  value: _halfDay,
+                  onChanged: (v) => setState(() => _halfDay = v),
+                ),
+              TextField(
+                controller: _days,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: l10n.pastLeaveDaysUsed, helperText: l10n.pastLeaveDaysHint, helperMaxLines: 2),
+                onChanged: (_) => setState(() {}),
+              ),
+              TextField(controller: _note, decoration: InputDecoration(labelText: l10n.adjustNote)),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        FilledButton(
+          onPressed: _dates == null || crossesYear || days == null || days < 0
+              ? null
+              : () async {
+                  await ref.read(leaveRepositoryProvider).recordPastLeave(
+                        me: widget.me,
+                        person: widget.person,
+                        type: type,
+                        from: leaveDayKey(_dates!.start),
+                        to: leaveDayKey(_dates!.end),
+                        halfDay: _halfDay && oneDay,
+                        days: days,
+                        note: _note.text.trim(),
+                      );
+                  if (context.mounted) Navigator.pop(context);
+                },
+          child: Text(l10n.save),
+        ),
       ],
     );
   }

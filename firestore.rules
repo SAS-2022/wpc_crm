@@ -14,6 +14,9 @@ service cloud.firestore {
     // Edits leave types, holidays, balances and request details: HR and GM,
     // and the sales manager for now (testing, user decision 2026-10-17).
     function managesHr() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+    // The SM who also develops the app (2026-11-08): tests HR features on
+    // their own record. Same list as `developerEmails` in app_user.dart.
+    function isDeveloper() { return active() && request.auth.token.email == 'wissam.b@woodpanelsco.com'; }
     function isHrArea() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
     // Managers (2026-10-23): manager roles, people marked "Is a manager" and
     // warehouse supervisors. They read attendance and reported absences;
@@ -53,10 +56,16 @@ service cloud.firestore {
            'accounting': 'accounting', 'procurement': 'procurement'}.get(u.role, null);
     }
     match /users/{uid} {
+      // Who changed it (2026-11-08, `user_log`): the app stamps `changedBy` +
+      // `changedAt`; a new stamp must name the writer at the server time.
+      function stampOk() {
+        return !request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys().hasAny(['changedBy', 'changedAt'])
+          || (request.resource.data.changedBy == request.auth.uid && request.resource.data.changedAt == request.time);
+      }
       allow read: if request.auth.uid == uid || active();
-      allow create, update: if isAdmin();
-      allow create: if active() && request.resource.data.role in managedRoles();
-      allow update: if active()
+      allow create, update: if isAdmin() && stampOk();
+      allow create: if active() && request.resource.data.role in managedRoles() && stampOk();
+      allow update: if active() && stampOk()
         && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
       // Self-registration: a new account creates its own profile, inactive
@@ -70,12 +79,12 @@ service cloud.firestore {
       // the version it runs (`appVersions`) and their side menu order
       // (`menuOrder`, 2026-11-04). Update reminders are admin-only.
       allow update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions', 'menuOrder']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions', 'menuOrder', 'changedBy', 'changedAt']) && stampOk();
       // A driver sets their own home location (2026-10-27, it decides their
       // overtime) only while none is set; after that the user form changes it.
       allow update: if request.auth != null && request.auth.uid == uid && resource.data.role == 'driver'
         && resource.data.get('homeLocation', null) == null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeLocation'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeLocation', 'changedBy', 'changedAt']) && stampOk()
         && request.resource.data.homeLocation.keys().hasOnly(['lat', 'lng'])
         && request.resource.data.homeLocation.lat is number && request.resource.data.homeLocation.lng is number;
       // Department heads / direct managers allow overtime for their people
@@ -83,12 +92,12 @@ service cloud.firestore {
       // department or the chosen direct manager, never for themselves. The
       // app shows each only the people they head (departmentHeadsOf).
       allow update: if isManagerUser() && request.auth.uid != uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['overtimeAllowed', 'overtimeMaxMin'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['overtimeAllowed', 'overtimeMaxMin', 'changedBy', 'changedAt']) && stampOk()
         && (resource.data.get('managerId', null) == request.auth.uid
             || (deptOf(resource.data) != null && deptOf(resource.data) == deptOf(me())));
       // HR sets each person's joining date and department (2026-10-24).
       allow update: if managesHr()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department', 'changedBy', 'changedAt']) && stampOk();
       // Only the `deleteUser` Cloud Function deletes users (allowed accounts
       // only, user decision 2026-10-23).
       allow delete: if false;
@@ -97,6 +106,13 @@ service cloud.firestore {
       match /devices/{token} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
+    }
+
+    // Who added / changed users (2026-11-08), written only by the
+    // `userChanged`, `deleteUser` and `setUserPassword` functions.
+    match /user_log/{id} {
+      allow read: if managesHr();
+      allow write: if false;
     }
 
     // KAM, sales manager and GM can edit clients; a sales exec edits contact
@@ -219,6 +235,41 @@ service cloud.firestore {
     // insurance class. Not on users docs, which every active user reads: the
     // HR area (HR, GM, SM) reads and writes them, the person reads their own.
     // `idNotified` is written by the companyDocReminders function.
+    // Payroll (2026-11-07, user decision): salaries are seen and edited by
+    // ONE account only (= payrollEmails in hr/payroll.dart) — not HR or the GM.
+    function payrollUser() {
+      return active() && request.auth.token.email == 'wissam.b@woodpanelsco.com';
+    }
+    match /payroll/{uid} {
+      allow read, write: if payrollUser();
+    }
+
+    // HR actions (2026-11-07): warnings, deductions, rewards, notes on an
+    // employee. Only HR (role hr) adds / changes / deletes them, never on
+    // their own record (user decision); GM / SM read. The employee reads the
+    // ones sent to them and only sets acceptedAt ("Agreed and Accepted") once.
+    function hrOnly() { return active() && me().role == 'hr'; }
+    match /hr_actions/{actionId} {
+      function ownSent() {
+        return active() && resource.data.uid == request.auth.uid && resource.data.get('sent', false) == true;
+      }
+      allow read: if isHrArea() || ownSent();
+      allow create: if hrOnly() && request.resource.data.uid is string && request.resource.data.uid != request.auth.uid
+        && request.resource.data.kind in ['warning', 'deduction', 'reward', 'note'];
+      allow update: if (hrOnly() && resource.data.uid != request.auth.uid && request.resource.data.uid == resource.data.uid
+          && request.resource.data.kind in ['warning', 'deduction', 'reward', 'note'])
+        || (ownSent() && resource.data.get('cancelled', false) != true && resource.data.get('acceptedAt', null) == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedAt'])
+          && request.resource.data.acceptedAt == request.time);
+      allow delete: if hrOnly() && resource.data.uid != request.auth.uid;
+      match /attachments/{attachmentId} {
+        function parent() { return get(/databases/$(database)/documents/hr_actions/$(actionId)).data; }
+        allow read: if isHrArea()
+          || (active() && parent().uid == request.auth.uid && parent().get('sent', false) == true);
+        allow create, delete: if hrOnly() && parent().uid != request.auth.uid;
+      }
+    }
+
     match /employee_records/{uid} {
       allow read: if isHrArea() || (active() && request.auth.uid == uid);
       allow create, update: if managesHr() && request.resource.data.uid == uid;
@@ -297,6 +348,20 @@ service cloud.firestore {
     // them approves or rejects while it waits; the person takes it back
     // while pending. The breakRequestWritten function copies them onto the
     // attendance day.
+    // Overtime on a chosen day (2026-11-08): a department head / manager,
+    // HR, SM or GM allows it for someone else ({uid}_{date}); the app limits
+    // it to the people they may set overtime for. The person reads their own
+    // (also before it exists, by the id).
+    match /overtime_days/{otId} {
+      allow read: if isHrArea() || isManagerUser() || (active() && otId.split('_')[0] == request.auth.uid);
+      allow create, update: if (isHrArea() || isManagerUser())
+        && request.resource.data.uid == otId.split('_')[0]
+        && otId == request.resource.data.uid + '_' + request.resource.data.date
+        && request.resource.data.uid != request.auth.uid
+        && request.resource.data.byId == request.auth.uid;
+      allow delete: if isHrArea() || isManagerUser();
+    }
+
     match /break_requests/{requestId} {
       allow read: if isHrArea() || (active() && (resource.data.uid == request.auth.uid
         || request.auth.uid in resource.data.approverIds));
@@ -427,7 +492,12 @@ service cloud.firestore {
         || (active() && me().role in ['hr', 'gm', 'sales_manager'] && request.resource.data.uid != request.auth.uid
             && request.resource.data.status == 'approved'
             && request.resource.data.absenceId is string
-            && exists(/databases/$(database)/documents/absences/$(request.resource.data.absenceId)));
+            && exists(/databases/$(database)/documents/absences/$(request.resource.data.absenceId)))
+        // HR records leave someone took in the past (2026-11-08): approved at once.
+        || (managesHr() && (request.resource.data.uid != request.auth.uid || isDeveloper())
+            && request.resource.data.status == 'approved'
+            && request.resource.data.get('pastRecord', false) == true
+            && request.resource.data.awaitingKey == null);
       allow update: if (managesHr()
             && !request.resource.data.diff(resource.data).affectedKeys()
                 .hasAny(['uid', 'steps', 'stepIndex', 'awaitingKey', 'status', 'decidedAt']))

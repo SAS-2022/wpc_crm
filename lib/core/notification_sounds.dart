@@ -12,11 +12,14 @@ Future<void> installNotificationSounds() async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
   try {
     final dir = Directory('${(await getLibraryDirectory()).path}/Sounds');
-    final file = File('${dir.path}/overtime_alert.caf');
-    if (await file.exists()) return;
-    await dir.create(recursive: true);
-    final data = await rootBundle.load('assets/sounds/overtime_alert.caf');
-    await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    // Visit comments (2026-11-05) have their own sound too: comment_alert.caf.
+    for (final name in ['overtime_alert.caf', 'comment_alert.caf']) {
+      final file = File('${dir.path}/$name');
+      if (await file.exists()) continue;
+      await dir.create(recursive: true);
+      final data = await rootBundle.load('assets/sounds/$name');
+      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    }
   } catch (e) {
     debugPrint('notification sounds: $e');
   }

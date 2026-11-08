@@ -17,7 +17,10 @@ enum AttachmentParent {
   leaveRequests('leave_requests'),
 
   /// A reported absence (e.g. the medical report for a sick day).
-  absences('absences');
+  absences('absences'),
+
+  /// An HR warning / deduction / reward / note (signed letter, proof).
+  hrActions('hr_actions');
 
   const AttachmentParent(this.collection);
 

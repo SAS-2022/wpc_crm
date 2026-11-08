@@ -428,11 +428,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             ),
           // Department heads switch overtime on / off for their people (2026-11-05).
           if (me != null && allUsers.any((u) => u.checksAttendance && canSetOvertimeFor(me, u, allUsers)))
-            IconButton(
-              icon: const Icon(Icons.more_time),
-              tooltip: l10n.overtimePermission,
-              onPressed: () => context.push('/attendance/overtime'),
-            ),
+            MediaQuery.sizeOf(context).width >= 600
+                ? TextButton.icon(
+                    icon: const Icon(Icons.more_time),
+                    label: Text(l10n.overtimePermission),
+                    onPressed: () => context.push('/attendance/overtime'),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.more_time),
+                    tooltip: l10n.overtimePermission,
+                    onPressed: () => context.push('/attendance/overtime'),
+                  ),
           TextButton.icon(
             icon: const Icon(Icons.table_chart_outlined),
             label: Text(l10n.attendanceReport),

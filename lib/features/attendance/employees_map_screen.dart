@@ -39,6 +39,7 @@ import 'attendance_correction.dart';
 import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
+import 'site_now.dart';
 import 'break_widgets.dart';
 import 'work_sites.dart';
 
@@ -302,13 +303,29 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
     final site = sites.where((s) => s.id == _siteId).firstOrNull;
     final companyId = ref.watch(peopleCompanyProvider);
     final q = foldSearch(_query);
+    // A site (2026-11-07): who is there now, plus those assigned to it who
+    // are at no site now — not everyone assigned to it.
+    bool underSite(_Person p) {
+      if (site == null) return true;
+      final at = siteNow(
+        sites: activeSites,
+        lat: p.loc?.lat,
+        lng: p.loc?.lng,
+        accuracy: p.loc?.accuracy,
+        at: p.loc?.updatedAt,
+        now: now,
+        inside: p.result != null && p.result!.checkInAt != null && !p.result!.closed && p.result!.inside,
+        events: p.record?.events ?? const [],
+      );
+      return showsUnderSite(site.id, now: at, assigned: p.user.workSiteIds);
+    }
 
     // Company, site, region and search narrow everyone; the status chips
     // count those, then narrow further.
     final scoped = [
       for (final p in everyone)
         if ((companyId == null || p.user.companyId == companyId) &&
-            (site == null || p.user.workSiteIds.contains(site.id)) &&
+            underSite(p) &&
             inRegion(p) &&
             searchHas(p.user.name, q))
           p,
@@ -501,7 +518,8 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
       child: Align(
         alignment: AlignmentDirectional.topStart,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
+          // Wider (user 2026-11-07).
+          constraints: const BoxConstraints(maxWidth: 720),
           child: PointerInterceptor(
             child: Material(
               elevation: 3,
@@ -809,10 +827,13 @@ class _PersonDetails extends ConsumerWidget {
         bold: true,
       ),
       if (s != null) ...[
-        line(
-          s.problems.isNotEmpty ? l10n.phoneStatusProblems(s.problems.length) : l10n.phoneStatusAllGood,
-          color: s.problems.isNotEmpty ? error : green,
-        ),
+        // Stopped: these are the last report's values (2026-11-07).
+        r.stopped && r.lastHeard != null
+            ? line(l10n.phoneChecksFromLastReport(timeAgo(context, r.lastHeard, now)), color: theme.colorScheme.outline)
+            : line(
+                s.problems.isNotEmpty ? l10n.phoneStatusProblems(s.problems.length) : l10n.phoneStatusAllGood,
+                color: s.problems.isNotEmpty ? error : green,
+              ),
         const SizedBox(height: 4),
         for (final check in s.checks)
           if (!r.fromOldApp || s.state(check) != CheckState.unknown) PhoneCheckRow(status: s, check: check),

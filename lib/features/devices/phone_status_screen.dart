@@ -37,9 +37,10 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
   String _search = '';
   bool _problemsOnly = false;
 
-  /// Only phones with one of these turned off (user 2026-11-02): GPS,
-  /// internet, battery optimization. Empty = no filter.
-  final Set<PhoneCheck> _off = {};
+  /// Only phones with one of these problems (user 2026-11-02: GPS,
+  /// internet, battery optimization; 2026-11-08: every problem a card can
+  /// show, e.g. "App closed by the phone"). Empty = no filter.
+  final Set<PhoneIssue> _off = {};
   Timer? _tick;
 
   @override
@@ -94,16 +95,15 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
                 company,
                 driver: u.role.isDriver,
                 recordOnly: u.recordsGps,
+                officeHours: u.role.tracksOfficeHours,
                 days: u.workSchedule?.days,
               ),
           now: now,
         ),
     };
     final stoppedCount = reports.values.where((r) => r.stopped).length;
-    bool hasProblem(AppUser u, Set<PhoneCheck> checks) {
-      final st = reports[u.id]!.status;
-      return st != null && checks.any((c) => st.state(c) == CheckState.problem);
-    }
+    final issues = {for (final u in everyone) u.id: phoneIssues(reports[u.id]!)};
+    bool hasProblem(AppUser u, Set<PhoneIssue> wanted) => wanted.any(issues[u.id]!.contains);
 
     final people = [
       for (final u in everyone)
@@ -172,18 +172,30 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
                 selected: _problemsOnly,
                 onSelected: (v) => setState(() => _problemsOnly = v),
               ),
-              for (final (check, icon, label) in [
-                (PhoneCheck.gps, Icons.location_disabled, l10n.filterGpsOff),
-                (PhoneCheck.network, Icons.wifi_off, l10n.filterNoInternet),
-                (PhoneCheck.battery, Icons.battery_alert, l10n.filterBatteryOptimized),
+              // GPS / internet / battery always; the others only when some
+              // phone has them (or the chip is on).
+              for (final (issue, icon, label, always) in [
+                (PhoneIssue.gpsOff, Icons.location_disabled, l10n.filterGpsOff, true),
+                (PhoneIssue.noInternet, Icons.wifi_off, l10n.filterNoInternet, true),
+                (PhoneIssue.battery, Icons.battery_alert, l10n.filterBatteryOptimized, true),
+                (PhoneIssue.appClosed, Icons.phonelink_erase, l10n.filterAppClosed, false),
+                (PhoneIssue.notRecording, Icons.location_searching, l10n.filterNotRecording, false),
+                (PhoneIssue.noPermission, Icons.location_off_outlined, l10n.filterNoPermission, false),
+                (PhoneIssue.approximate, Icons.my_location, l10n.filterApproximate, false),
+                (PhoneIssue.background, Icons.layers_clear_outlined, l10n.filterBackground, false),
+                (PhoneIssue.notifications, Icons.notifications_off_outlined, l10n.filterNotificationsOff, false),
+                (PhoneIssue.neverSignedIn, Icons.no_cell_outlined, l10n.filterNeverSignedIn, false),
               ])
-                FilterChip(
-                  visualDensity: VisualDensity.compact,
-                  avatar: Icon(icon, size: 16),
-                  label: Text('$label (${everyone.where((u) => (companyId == null || u.companyId == companyId) && hasProblem(u, {check})).length})'),
-                  selected: _off.contains(check),
-                  onSelected: (v) => setState(() => v ? _off.add(check) : _off.remove(check)),
-                ),
+                if (always ||
+                    _off.contains(issue) ||
+                    everyone.any((u) => (companyId == null || u.companyId == companyId) && hasProblem(u, {issue})))
+                  FilterChip(
+                    visualDensity: VisualDensity.compact,
+                    avatar: Icon(icon, size: 16),
+                    label: Text('$label (${everyone.where((u) => (companyId == null || u.companyId == companyId) && hasProblem(u, {issue})).length})'),
+                    selected: _off.contains(issue),
+                    onSelected: (v) => setState(() => v ? _off.add(issue) : _off.remove(issue)),
+                  ),
               CompanyFilterButton(value: companyId, onChanged: ref.read(peopleCompanyProvider.notifier).set),
               if (stoppedCount > 0)
                 Text(
@@ -306,7 +318,14 @@ class _PhoneCard extends StatelessWidget {
                 fontWeight: r.stopped ? FontWeight.bold : null,
               ),
             ),
-            if (s != null)
+            // Stopped: the checks are the phone's last report, not now
+            // (2026-11-07, user saw "all on" for a phone silent for an hour).
+            if (s != null && r.stopped && heard != null)
+              Text(
+                l10n.phoneChecksFromLastReport(heard),
+                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline, fontStyle: FontStyle.italic),
+              )
+            else if (s != null)
               Text(
                 s.problems.isNotEmpty ? l10n.phoneStatusProblems(s.problems.length) : l10n.phoneStatusAllGood,
                 style: theme.textTheme.labelMedium?.copyWith(

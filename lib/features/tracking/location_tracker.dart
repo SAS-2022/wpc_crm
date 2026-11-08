@@ -11,6 +11,7 @@ import 'work_hours.dart';
 import 'motion.dart';
 import 'device_health.dart';
 import 'tracking_schedule.dart';
+import '../../core/app_user.dart';
 import '../settings/app_settings.dart';
 import '../devices/device_status.dart' show reportDeviceStatus;
 
@@ -41,7 +42,13 @@ const heartbeatInterval = Duration(minutes: 2);
 /// history during the recording hours — no live map position, no presence,
 /// heartbeat or alerts.
 class LocationTracker {
-  LocationTracker(this.uid, {this.onDutyChanged, this.onStandby, this.recordOnly = false, this.recordDays});
+  LocationTracker(this.uid, {this.onDutyChanged, this.onStandby, this.recordOnly = false, this.recordDays, this.restartedBy});
+
+  /// Started again after the phone closed the app (2026-11-08): 'watchdog'
+  /// (Android WorkManager) or 'ios' (relaunch). Stamped once in presence
+  /// (`restartedAt`, `restartBy`), the server logs "restarted".
+  final String? restartedBy;
+  var _restartStamped = false;
 
   final String uid;
   final bool recordOnly;
@@ -79,6 +86,7 @@ class LocationTracker {
   /// their own schedule (user decision 2026-10-20). Read from RTDB
   /// `roles/{uid}`, which the background service can read too.
   bool _driver = false;
+  bool _officeHours = false;
 
   /// null until first checked.
   bool? _onDuty;
@@ -122,9 +130,14 @@ class LocationTracker {
 
   Future<void> _startSharing() async {
     if (!recordOnly) _watchPresence();
+    if (restartedBy != null && !recordOnly && !_restartStamped) {
+      _restartStamped = true;
+      await _presence.update({'restartedAt': ServerValue.timestamp, 'restartBy': restartedBy}).catchError((_) {});
+    }
     _subscriptions.add(
       FirebaseDatabase.instance.ref('roles/$uid').onValue.listen((event) {
         _driver = event.snapshot.value == 'driver';
+        _officeHours = UserRole.fromValue(event.snapshot.value as String? ?? '').tracksOfficeHours;
         _loaded.add('role');
         _applyDuty();
       }, onError: (_) => _loaded.add('role')),
@@ -194,7 +207,8 @@ class LocationTracker {
 
   Future<void> _applyDutyNow() async {
     if (_loaded.length < 3 || !_active) return;
-    final on = _schedule.isOn(DateTime.now(), _hours, driver: _driver, recordOnly: recordOnly, days: recordDays);
+    final on = _schedule.isOn(DateTime.now(), _hours,
+        driver: _driver, recordOnly: recordOnly, officeHours: _officeHours, days: recordDays);
     if (on == _onDuty) return;
     _onDuty = on;
     await _positions?.cancel();

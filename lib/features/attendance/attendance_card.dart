@@ -21,6 +21,7 @@ import 'absence.dart';
 import 'absence_sheet.dart';
 import 'at_site_prompt.dart';
 import 'attendance_repository.dart';
+import 'overtime_days.dart';
 import 'attendance_rules.dart';
 import 'break_request.dart';
 import 'early_checkout.dart';
@@ -478,6 +479,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     final sites = {for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) s.id: s};
     final record = ref.watch(myAttendanceTodayProvider).value;
     final day = record?.best(me, company);
+    final otToday = ref.watch(myOvertimeDayTodayProvider).value;
     final siteName = sites[day?.siteId]?.name ?? '';
     final health = ref.watch(phoneHealthProvider).value;
     // "Not coming to work" reported for today / tomorrow (2026-10-22).
@@ -588,6 +590,14 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                         child: Text(l10n.cancelRequest),
                       )
                     : null,
+              ),
+            // A manager allowed overtime for today (2026-11-08).
+            if (otToday != null)
+              ListTile(
+                dense: true,
+                leading: Icon(Icons.more_time, color: Colors.green.shade700),
+                title: Text(l10n.overtimeDayToday(byId[otToday.byId]?.name ?? '')),
+                subtitle: otToday.note.isEmpty ? null : Text('“${otToday.note}”'),
               ),
             if (lastBreak != null)
               ListTile(

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../core/app_user.dart';
+import '../../core/city_areas.dart';
 import '../../core/map_controls.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -42,6 +43,9 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
 
   /// People hidden with the legend chips.
   final _hidden = <String>{};
+
+  /// Region buttons (user request 2026-11-05): only the stops inside it.
+  SaudiRegion? _region;
 
   @override
   void dispose() {
@@ -85,11 +89,19 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
       routes[uid] = inRouteOrder(tasks, numbers).where((t) => numbers.containsKey(t.id)).toList();
       missing += tasks.length - routes[uid]!.length;
     }
-    final people = routes.keys.toList()..sort((a, b) => team[a]!.name.compareTo(team[b]!.name));
+    // Stops kept by the region (numbers stay those of the whole day's route).
+    final stops = <String, List<(int, PlanTask)>>{
+      for (final MapEntry(key: uid, value: tasks) in routes.entries)
+        uid: [
+          for (final (i, t) in tasks.indexed)
+            if (_region == null || _region!.contains(planStop(t, clients)!.lat, planStop(t, clients)!.lng)) (i + 1, t),
+        ],
+    }..removeWhere((_, list) => list.isEmpty);
+    final people = stops.keys.toList()..sort((a, b) => team[a]!.name.compareTo(team[b]!.name));
     // The picked location of each stop, else the client's main one.
     LatLng at(PlanTask t) => LatLng(planStop(t, clients)!.lat, planStop(t, clients)!.lng);
     final shown = [for (final uid in people) if (!_hidden.contains(uid)) uid];
-    final points = [for (final uid in shown) for (final t in routes[uid]!) at(t)];
+    final points = [for (final uid in shown) for (final (_, t) in stops[uid]!) at(t)];
     Color colorOf(String uid) => (styles[uid] ?? unassignedStyle).color;
 
     if (_map != null && !_fitted && points.isNotEmpty) {
@@ -105,7 +117,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
           GoogleMap(
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
             mapType: ref.watch(mapTypeProvider),
-            padding: const EdgeInsets.only(top: 96),
+            padding: const EdgeInsets.only(top: 136),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -113,10 +125,10 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
             onMapCreated: (controller) => setState(() => _map = controller),
             polylines: {
               for (final uid in shown)
-                if (routes[uid]!.length > 1)
+                if (stops[uid]!.length > 1)
                   Polyline(
                     polylineId: PolylineId(uid),
-                    points: [for (final t in routes[uid]!) at(t)],
+                    points: [for (final (_, t) in stops[uid]!) at(t)],
                     color: colorOf(uid).withValues(alpha: 0.7),
                     width: 3,
                     patterns: [PatternItem.dash(14), PatternItem.gap(8)],
@@ -124,7 +136,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
             },
             markers: {
               for (final uid in shown)
-                for (final (i, t) in routes[uid]!.indexed)
+                for (final (n, t) in stops[uid]!)
                   Marker(
                     markerId: MarkerId(t.id),
                     position: at(t),
@@ -132,7 +144,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                     icon: _icons.circle(
                       context: context,
                       fill: colorOf(uid),
-                      text: '${i + 1}',
+                      text: '$n',
                       ring: t.done
                           ? statusRecentColor
                           : t.approval == TaskApproval.pending
@@ -141,7 +153,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                       ringWidth: t.done || t.approval == TaskApproval.pending ? 4 : 2,
                       size: 34,
                     ),
-                    onTap: () => _showItem(team[uid]!, t, clients[t.clientId]!, i + 1),
+                    onTap: () => _showItem(team[uid]!, t, clients[t.clientId]!, n),
                   ),
             },
           ),
@@ -162,6 +174,23 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      RegionChips(
+                        selected: _region,
+                        onSelected: (region) => setState(() {
+                          _region = region;
+                          if (region != null) {
+                            region.zoomTo(_map, MediaQuery.sizeOf(context), [
+                              for (final MapEntry(key: uid, value: tasks) in routes.entries)
+                                if (!_hidden.contains(uid))
+                                  for (final t in tasks)
+                                    if (region.contains(planStop(t, clients)!.lat, planStop(t, clients)!.lng)) at(t),
+                            ]);
+                          } else {
+                            _fitted = false; // back to everyone
+                          }
+                        }),
+                      ),
+                      const SizedBox(height: 6),
                       if (people.isEmpty)
                         Text(l10n.nothingPlanned)
                       else
@@ -177,7 +206,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                                     showCheckmark: false,
                                     avatar: Icon(Icons.circle, size: 12, color: colorOf(uid)),
                                     label: Text(
-                                      '${team[uid]!.name} (${routes[uid]!.where((t) => t.done).length}/${routes[uid]!.length})',
+                                      '${team[uid]!.name} (${stops[uid]!.where((s) => s.$2.done).length}/${stops[uid]!.length})',
                                     ),
                                     selected: !_hidden.contains(uid),
                                     onSelected: (on) => setState(() => on ? _hidden.remove(uid) : _hidden.add(uid)),

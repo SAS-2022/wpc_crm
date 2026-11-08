@@ -10,6 +10,7 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../firebase_options.dart';
 import '../../core/saving.dart';
+import 'user_log.dart';
 
 final usersProvider = StreamProvider<List<AppUser>>((ref) {
   return FirebaseFirestore.instance
@@ -86,6 +87,7 @@ class UsersRepository {
   Future<void> setOvertime(String uid, {required bool allowed, int? maxMin}) => saving(() => _users.doc(uid).update({
         'overtimeAllowed': allowed,
         'overtimeMaxMin': allowed ? maxMin : null,
+        ...userChangeStamp(),
       }));
 
   Future<void> setSupervised(String supervisorId, Set<String> ids, Iterable<AppUser> current, List<AppUser> users) =>
@@ -96,7 +98,7 @@ class UsersRepository {
         for (final u in users) {
           final to = ids.contains(u.id) ? supervisorId : (before.contains(u.id) ? null : u.supervisorId);
           if (to == u.supervisorId) continue;
-          batch.update(_users.doc(u.id), {'supervisorId': to});
+          batch.update(_users.doc(u.id), {'supervisorId': to, ...userChangeStamp()});
           changed[u] = to;
         }
         if (changed.isEmpty) return;
@@ -111,21 +113,21 @@ class UsersRepository {
   /// the form (it becomes active), or turned down.
   Future<int> approveRegistration(AppUser user) => saving(() async {
         final assigned = await _save(user.id, user);
-        await _users.doc(user.id).update({'approval': '', 'active': true});
+        await _users.doc(user.id).update({'approval': '', 'active': true, ...userChangeStamp()});
         return assigned;
       });
 
   /// A driver sets their own home location (2026-10-27); the rules allow it
   /// only while none is set — after that the user form changes it.
   Future<void> setOwnHomeLocation(String uid, double lat, double lng) =>
-      saving(() => _users.doc(uid).update({'homeLocation': {'lat': lat, 'lng': lng}}));
+      saving(() => _users.doc(uid).update({'homeLocation': {'lat': lat, 'lng': lng}, ...userChangeStamp()}));
 
   /// The person's own side menu order (web); null = back to the default.
   Future<void> setMenuOrder(String uid, List<String>? order) =>
       saving(() => _users.doc(uid).update({'menuOrder': order}));
 
   Future<void> rejectRegistration(String uid) =>
-      saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false}));
+      saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false, ...userChangeStamp()}));
 
   /// Deletes the user for good with the `deleteUser` Cloud Function: their
   /// login account (so the email can be used again), profile, role, push
@@ -148,7 +150,7 @@ class UsersRepository {
   // RTDB keeps a copy of the role because its rules cannot read Firestore.
   Future<int> _save(String uid, AppUser user) async {
     // Merged: keeps what the app writes itself (app versions, reminders).
-    await _users.doc(uid).set(user.toMap(), SetOptions(merge: true));
+    await _users.doc(uid).set({...user.toMap(), ...userChangeStamp()}, SetOptions(merge: true));
     await FirebaseDatabase.instance.ref('roles/$uid').set(user.role.value);
     // A driver's warehouse supervisor reads their tracking: RTDB rules use this copy.
     await FirebaseDatabase.instance

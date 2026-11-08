@@ -57,6 +57,39 @@ void main() {
         today: today,
       );
 
+  test('overtime split into approved / waiting / not approved (2026-11-08)', () {
+    DayResult ot(int d, int min) => DayResult(
+          checkInAt: DateTime(2026, 10, d, 8),
+          checkOutAt: DateTime(2026, 10, d, 19),
+          siteId: 'hq',
+          countedMin: 540 + min,
+          overtimeMin: min,
+          lateMin: 0,
+        );
+    final r = reportRow(
+      user: _user(),
+      schedule: WorkHours.defaults,
+      month: month,
+      results: {'2026-10-01': ot(1, 120), '2026-10-03': ot(3, 60), '2026-10-04': ot(4, 90), '2026-10-06': _day(6)},
+      holidays: const {},
+      leaveDays: const {},
+      // A manager cut the 1st to 100 min and turned the 4th down; the 3rd waits.
+      approvedOvertime: const {'2026-10-01': 100},
+      rejectedOvertime: const {'2026-10-04'},
+      today: today,
+    );
+    expect(r.hasOvertime, isTrue);
+    expect(r.overtimeDays(OvertimeState.approved).map((d) => d.date.day), [1]);
+    expect(r.overtimeMinOf(OvertimeState.approved), 100);
+    expect(r.overtimeDays(OvertimeState.pending).map((d) => d.date.day), [3]);
+    expect(r.overtimeMinOf(OvertimeState.pending), 60);
+    expect(r.overtimeDays(OvertimeState.rejected).map((d) => d.date.day), [4]);
+    expect(r.overtimeMinOf(OvertimeState.rejected), 90);
+    expect(r.approvedOvertimeMin, 100);
+    // No overtime at all.
+    expect(row(results: {'2026-10-06': _day(6)}).hasOvertime, isFalse);
+  });
+
   test('counts days, lateness, hours and time stayed after hours', () {
     final r = row(
       results: {'2026-10-01': _day(1, late: 12), '2026-10-03': _day(3, after: 40), '2026-10-04': _day(4, late: 20)},

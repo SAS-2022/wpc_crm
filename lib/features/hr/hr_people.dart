@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../clients/client_tags.dart';
 import '../users/users_repository.dart';
 import 'leave_repository.dart';
+import '../users/user_log.dart';
 import 'leave_rules.dart';
 
 // HR additions (user request 2026-10-24): joining date (leave years run from
@@ -48,7 +49,7 @@ Future<void> saveAnnualCarryOver(bool on) =>
 /// HR sets a person's joining date / department (rules: the HR area may
 /// change only these two fields of a user).
 Future<void> saveEmployeeHrFields(String uid, {required String? joiningDate, required String? department}) =>
-    saving(() => _db.collection('users').doc(uid).update({'joiningDate': joiningDate, 'department': department}));
+    saving(() => _db.collection('users').doc(uid).update({'joiningDate': joiningDate, 'department': department, ...userChangeStamp()}));
 
 /// [uid]'s balances in leave year [year]: their joining date, HR's numbers
 /// and what was carried from the year before.
@@ -58,6 +59,7 @@ Map<String, LeaveBalance> personLeaveBalances(
   required int year,
   required List<LeaveType> types,
   required List<LeaveUse> requests,
+  DateTime? asOf,
 }) {
   final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
   return leaveBalances(
@@ -68,6 +70,7 @@ Map<String, LeaveBalance> personLeaveBalances(
     adjustments: record.forBalance,
     carried: record.carried,
     requests: requests,
+    asOf: asOf,
   );
 }
 

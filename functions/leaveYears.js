@@ -48,6 +48,37 @@ function leaveYearRange(joining, year) {
   return { from: anniversary(joining, year), to: end };
 }
 
+/** Annual leave after SENIOR_AFTER_YEARS of service (2026-11-07): 30 days a year. */
+const SENIOR_AFTER_YEARS = 5;
+const SENIOR_ANNUAL_DAYS = 30;
+
+/**
+ * Annual leave earned month by month (user 2026-11-07): each completed
+ * month from the joining date adds a twelfth of the year's days (1.75 of
+ * 21; 2.5 of 30 after 5 years of service). [asOf] 'yyyy-MM-dd'. Same as
+ * `annualAccrual` in leave_rules.dart.
+ */
+function annualAccrual({ joining, year, asOf, baseYearly = 21, override }) {
+  const service = validDay(joining) ? year - Number(joining.slice(0, 4)) : null;
+  const yearly = typeof override === 'number' ? override
+    : (service !== null && service >= SENIOR_AFTER_YEARS ? SENIOR_ANNUAL_DAYS : baseYearly);
+  const monthly = yearly / 12;
+  const { from } = leaveYearRange(joining, year);
+  const [y0, m0] = from.split('-').map(Number);
+  const day = validDay(joining) ? Number(joining.slice(8, 10)) : 1;
+  let months = 0;
+  if (service === null || service >= 0) {
+    while (months < 12) {
+      const total = m0 - 1 + months + 1;
+      const y = y0 + Math.floor(total / 12), m = (total % 12) + 1;
+      if (asOf < key(y, m, Math.min(day, daysInMonth(y, m)))) break;
+      months++;
+    }
+  }
+  const earned = months === 12 ? yearly : Math.round(monthly * months * 100) / 100;
+  return { yearly, monthly, months, earned, serviceYears: service };
+}
+
 /**
  * The closed year's numbers: per type that keeps a balance, entitled (HR's
  * number or the type's, plus adjustments), carried in, used (approved
@@ -63,7 +94,11 @@ function closeYear({ types, balance = {}, requests, joining, year, carryOver }) 
     const adjustments = (balance.adjustments || [])
       .filter((a) => a?.typeId === t.id && typeof a.days === 'number')
       .reduce((s, a) => s + a.days, 0);
-    const entitled = (typeof override === 'number' ? override : t.yearlyDays) + adjustments;
+    // Annual leave: the whole year's days once it's over (30 after 5 years of service).
+    const yearly = t.id === ANNUAL
+      ? annualAccrual({ joining, year, asOf: leaveYearRange(joining, year + 1).from, baseYearly: t.yearlyDays, override }).earned
+      : (typeof override === 'number' ? override : t.yearlyDays);
+    const entitled = yearly + adjustments;
     const carried = typeof balance.carried?.[t.id] === 'number' ? balance.carried[t.id] : 0;
     const used = requests
       .filter((r) => r.typeId === t.id && r.status === 'approved' && inYear(r))
@@ -74,4 +109,4 @@ function closeYear({ types, balance = {}, requests, joining, year, carryOver }) 
   return { ...leaveYearRange(joining, year), types: out, carriedOut: left < 0 ? left : (carryOver ? left : 0) };
 }
 
-module.exports = { leaveYearOf, leaveYearRange, closeYear, DEFAULT_TYPES, ANNUAL };
+module.exports = { leaveYearOf, leaveYearRange, closeYear, annualAccrual, DEFAULT_TYPES, ANNUAL };

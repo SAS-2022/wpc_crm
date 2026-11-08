@@ -35,11 +35,20 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         createOvertimeChannel()
+        createCommentChannel()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "wpc/device").setMethodCallHandler { call, result ->
             when (call.method) {
                 "info" -> result.success(info())
                 "openBackgroundSettings" -> result.success(openBackgroundSettings())
                 "openBatterySettings" -> result.success(openBatterySettings())
+                "scheduleWatchdog" -> {
+                    TrackingWatchdogWorker.schedule(applicationContext)
+                    result.success(true)
+                }
+                "cancelWatchdog" -> {
+                    TrackingWatchdogWorker.cancel(applicationContext)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -71,6 +80,34 @@ class MainActivity : FlutterFragmentActivity() {
             )
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    /**
+     * Visit comments and replies (2026-11-05): their own sound
+     * (res/raw/comment_alert). The server sends them with channel "comments"
+     * (functions/index.js COMMENT_PUSH).
+     */
+    private fun createCommentChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel("comments") != null) return
+        val arabic = Locale.getDefault().language == "ar"
+        val channel = NotificationChannel(
+            "comments",
+            if (arabic) "التعليقات على الزيارات" else "Visit comments",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = if (arabic) "تعليق أو رد على زيارة" else "A comment or reply on a visit"
+            setSound(
+                Uri.parse("android.resource://$packageName/raw/comment_alert"),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            enableVibration(true)
         }
         manager.createNotificationChannel(channel)
     }

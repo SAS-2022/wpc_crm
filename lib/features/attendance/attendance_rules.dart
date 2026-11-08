@@ -35,11 +35,15 @@ String eventTypeKey(AttendanceEventType t) => switch (t) {
     };
 
 class AttendanceEvent {
-  const AttendanceEvent(this.type, this.at, {this.siteId, this.check = false});
+  const AttendanceEvent(this.type, this.at, {this.siteId, this.check = false, this.source});
 
   final AttendanceEventType type;
   final DateTime at;
   final String? siteId;
+
+  /// 'gps' = added by the server from the GPS fixes (an `out` then means
+  /// outside every site), 'hr', or null (the phone).
+  final String? source;
 
   /// Recorded by a site check (an `out` then means "found gone").
   final bool check;
@@ -170,10 +174,16 @@ class DayResult {
       );
 }
 
+/// [overtimeDayOff]: an overtime day a manager allowed (2026-11-08,
+/// `overtime_days`; null = none): true = a day off / holiday, the whole stay
+/// (arrival → leaving) is overtime, no cap, time out and back not counted;
+/// false = a work day, the time after the end counts without "Start
+/// overtime". Same as `deriveDay` in functions/attendance.js.
 DayResult deriveDay(
   List<AttendanceEvent> events, {
   DateTime? start,
   required DateTime end,
+  bool? overtimeDayOff,
   required DateTime closeAll,
   required DateTime now,
   required bool leavesSite,
@@ -186,6 +196,14 @@ DayResult deriveDay(
   List<BreakSlot> breaks = const [],
   int? breakAllowanceMin,
 }) {
+  final otDay = overtimeDayOff != null;
+  final otDayOff = overtimeDayOff == true;
+  if (otDayOff) {
+    // Day off: the work day "ends" at midnight, so everything is after it.
+    start = null;
+    end = DateTime(closeAll.year, closeAll.month, closeAll.day);
+    overtimeMaxMin = 24 * 60;
+  }
   DateTime? checkInAt, lastExitAt, checkOutAt, checkInEventAt;
   String? source, siteId, outType;
   var inside = false;
@@ -227,12 +245,21 @@ DayResult deriveDay(
     }
     outSince = null;
   }
+  // Leaving before the work day starts isn't leaving work (2026-11-07:
+  // workers moved from one site to another at 07:59): away time counts from the start.
+  DateTime fromStart(DateTime t) => start != null && t.isBefore(start) ? start : t;
+  // The site the person is in ('*' = unknown): an exit from another site
+  // while inside one isn't leaving (2026-11-07: the phone's first report for
+  // a site 20 km away said "exit"). Same as `strayExit` in attendance.js.
+  String? inSite;
+  void enter(AttendanceEvent e) => inSite = e.siteId == null || e.siteId!.isEmpty ? '*' : e.siteId;
+  bool strayExit(AttendanceEvent e) => isStrayExit(e, inside: inside, inSite: inSite);
   // Last time the person was seen at the site (arrival / check-in events, GPS).
   var seenAt = lastSeenAt;
   // Not allowed to leave, left before the end and away longer than the grace time at [t].
   bool awayTooLong(DateTime t) =>
       !leavesSite && checkInAt != null && !closed && !inside &&
-      lastExitAt != null && lastExitAt.isBefore(end) && !t.isBefore(lastExitAt.add(grace + allowance));
+      lastExitAt != null && lastExitAt.isBefore(end) && !t.isBefore(fromStart(lastExitAt).add(grace + allowance));
 
   DateTime later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
   // Overtime started ("Start overtime") / declined.
@@ -272,14 +299,18 @@ DayResult deriveDay(
         } else if (closed) {
           // A manual check-in reopens the day; so does arriving before the
           // end after being checked out for leaving the site.
-          final back = e.type != AttendanceEventType.in_ || (outType == 'leftSite' && e.at.isBefore(end));
+          final back = e.type != AttendanceEventType.in_ ||
+              (outType == 'leftSite' && e.at.isBefore(end)) ||
+              (otDayOff && outType == 'left');
           if (!back) {
             inside = true;
+            enter(e);
             continue;
           }
           reopen(e.at);
         }
         inside = true;
+        enter(e);
         lastExitAt = null;
       case AttendanceEventType.otStart:
         if (checkInAt != null && !closed) confirmedAt ??= e.at;
@@ -290,11 +321,14 @@ DayResult deriveDay(
         if (seenAt == null || e.at.isAfter(seenAt)) seenAt = e.at;
         if (checkInAt != null && !closed) {
           inside = true;
+          enter(e);
           lastExitAt = null;
         }
       case AttendanceEventType.out:
+        if (strayExit(e)) continue;
         final wasInside = inside;
         inside = false;
+        inSite = null;
         if (checkInAt == null || closed) continue;
         // Already away when the end came (allowed to leave): the day closed at
         // the end; a later exit (e.g. geofences registered again) doesn't move it.
@@ -311,7 +345,7 @@ DayResult deriveDay(
         } else {
           final slot = takeBreak(at);
           allowance = slot != null && slot.status == BreakStatus.approved ? Duration(minutes: slot.minutes) : Duration.zero;
-          if (wasInside) outSince = at;
+          if (wasInside) outSince = fromStart(at);
         }
       case AttendanceEventType.checkOut || AttendanceEventType.hrOut:
         if (checkInAt != null && !closed) close(e.at, e.type == AttendanceEventType.hrOut ? 'hr' : 'manual');
@@ -320,7 +354,7 @@ DayResult deriveDay(
   }
   // Still out and the day still open (not checked out below for it): counts up to now.
   if (outSince != null && !closed && now.isBefore(end) && !awayTooLong(now)) backIn(now);
-  final overtimeOn = overtimeAllowed && (drive != null || confirmedAt != null);
+  final overtimeOn = otDay || (overtimeAllowed && (drive != null || confirmedAt != null));
   if (drive != null && checkInAt != null && !closed) {
     // Driving: open until the server finds the arrival (or the cap).
     final endAt = drive.endAt;
@@ -485,6 +519,13 @@ bool geofenceEventConfirmed({required bool enter, required double distance, requ
 /// Attendance page should show that someone left and came back).
 typedef SiteTrip = ({DateTime leftAt, DateTime backAt});
 
+/// An exit from another site while the person is inside [inSite] (a site
+/// id; '*' = unknown): not leaving (2026-11-07). GPS exits (outside every
+/// site) and site-check exits always count. `strayExit` in attendance.js.
+bool isStrayExit(AttendanceEvent e, {required bool inside, required String? inSite}) =>
+    inside && inSite != null && inSite != '*' && e.source != 'gps' && !e.check &&
+    e.siteId != null && e.siteId!.isNotEmpty && e.siteId != inSite;
+
 /// Trips shorter than this are taken as geofence jitter at the edge.
 const minSiteTripMin = 3;
 
@@ -498,6 +539,7 @@ List<SiteTrip> siteTrips(List<AttendanceEvent> events) {
   final sorted = [...events]..sort((a, b) => a.at.compareTo(b.at));
   final trips = <SiteTrip>[];
   var inside = false;
+  String? inSite;
   DateTime? leftAt;
   for (final e in sorted) {
     switch (e.type) {
@@ -506,10 +548,13 @@ List<SiteTrip> siteTrips(List<AttendanceEvent> events) {
           trips.add((leftAt: leftAt, backAt: e.at));
         }
         inside = true;
+        inSite = e.siteId == null || e.siteId!.isEmpty ? '*' : e.siteId;
         leftAt = null;
       case AttendanceEventType.out:
+        if (isStrayExit(e, inside: inside, inSite: inSite)) continue;
         if (inside) leftAt = e.at;
         inside = false;
+        inSite = null;
       case AttendanceEventType.checkOut || AttendanceEventType.hrOut:
         inside = false;
         leftAt = null;
@@ -598,10 +643,15 @@ class ExitCheck {
   }
 }
 
-/// The day's exits before [end] (trips out and back, plus the exit they're
+/// The day's exits between [start] and [end] (trips out and back, plus the exit they're
 /// still away on or were checked out for), each with its break.
-List<ExitCheck> checkExits(List<({DateTime leftAt, DateTime? backAt})> exits, List<BreakSlot> breaks, DateTime end) {
-  final sorted = [for (final e in exits) if (e.leftAt.isBefore(end)) e]..sort((a, b) => a.leftAt.compareTo(b.leftAt));
+/// Exits before [start] (the work day hadn't begun) are left out (2026-11-07).
+List<ExitCheck> checkExits(List<({DateTime leftAt, DateTime? backAt})> exits, List<BreakSlot> breaks, DateTime end,
+    {DateTime? start}) {
+  final sorted = [
+    for (final e in exits)
+      if (e.leftAt.isBefore(end) && (start == null || !e.leftAt.isBefore(start))) e
+  ]..sort((a, b) => a.leftAt.compareTo(b.leftAt));
   final take = breakTaker(breaks);
   return [for (final e in sorted) ExitCheck(leftAt: e.leftAt, backAt: e.backAt, slot: take(e.leftAt))];
 }

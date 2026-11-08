@@ -80,3 +80,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Tracking watchdog (TrackingWatchdog.kt); same version native_geofence uses.
+    implementation("androidx.work:work-runtime-ktx:2.10.2")
+}

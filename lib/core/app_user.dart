@@ -73,7 +73,11 @@ enum UserRole {
   /// Location shared during work hours (live map, route history): the sales
   /// field staff and drivers (user request 2026-10-20; drivers are shown
   /// apart, see [isDriver]).
-  bool get isLocationTracked => isTracked || this == driver;
+  bool get isLocationTracked => isTracked || this == driver || this == salesManager;
+
+  /// Shared 08:00–18:00 on work days instead of the company work hours
+  /// (user 2026-11-07: the sales manager is tracked but works no overtime).
+  bool get tracksOfficeHours => this == salesManager;
 
   /// Office staff whose GPS is recorded (not shared live) during the
   /// recording hours when they check attendance (2026-10-28, see
@@ -217,6 +221,12 @@ enum UserRole {
 /// deletion by mistake does great harm). Same list as USER_DELETERS in
 /// functions/index.js, which enforces it.
 const userDeleterEmails = {'wissam.b@woodpanelsco.com'};
+
+/// The SM who also develops the app (2026-11-08, user): may test HR
+/// features on their own record (e.g. past leave), which others can't.
+/// Same list as `isDeveloper()` in firestore.rules.
+const developerEmails = {'wissam.b@woodpanelsco.com'};
+bool isDeveloper(AppUser? u) => u != null && u.active && developerEmails.contains(u.email.toLowerCase());
 
 class AppUser {
   const AppUser({

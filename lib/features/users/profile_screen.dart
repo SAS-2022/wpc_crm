@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'users_repository.dart';
 import '../../core/app_version.dart';
+import 'user_log.dart';
 import 'package:flutter/foundation.dart';
 
 /// The signed-in user's own page: name and phone, password change (with the
@@ -54,6 +55,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await FirebaseFirestore.instance.collection('users').doc(me.id).update({
         'name': _name.text.trim(),
         'phone': saudiMobile(_phone.text) ?? '',
+        ...userChangeStamp(),
       });
       messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
     } catch (e) {
