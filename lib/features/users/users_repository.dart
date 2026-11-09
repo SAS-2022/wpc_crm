@@ -126,6 +126,10 @@ class UsersRepository {
   Future<void> setMenuOrder(String uid, List<String>? order) =>
       saving(() => _users.doc(uid).update({'menuOrder': order}));
 
+  /// The person's own bottom tabs (null = default; More → Bottom tabs).
+  Future<void> setBottomTabs(String uid, List<String>? tabs) =>
+      saving(() => _users.doc(uid).update({'bottomTabs': tabs}));
+
   Future<void> rejectRegistration(String uid) =>
       saving(() => _users.doc(uid).update({'approval': 'rejected', 'active': false, ...userChangeStamp()}));
 

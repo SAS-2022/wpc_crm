@@ -18,8 +18,8 @@ import 'visit_rules.dart';
 Color clientColor(Client c, VisitRules rules, DateTime now) => !c.isActive
     ? Colors.blueGrey.shade700
     : c.hasLocation
-        ? visitStatusColor(visitStatus(c, rules, now))
-        : Colors.grey;
+    ? visitStatusColor(visitStatus(c, rules, now))
+    : Colors.grey;
 
 /// Clients on today's plan (approved visit tasks not yet done) → plan owner.
 final plannedTodayProvider = Provider<Map<String, String>>((ref) {
@@ -46,37 +46,56 @@ final clientOwnersProvider = Provider<List<AppUser>>((ref) {
 
 /// Salesperson filter for KAM / managers (hidden for sales executives):
 /// tick one or several people; none ticked = everyone.
+///
+/// [ownerIds]: only these people (and Unassigned only when it's in the set),
+/// e.g. those with clients in the map's region; people already ticked stay so
+/// they can be unticked. [onPicked]: one person at a time — a tap picks only
+/// that person (or everyone) and calls it (the map's sheet then closes).
 class SalesFilterChips extends ConsumerWidget {
-  const SalesFilterChips({super.key});
+  const SalesFilterChips({super.key, this.ownerIds, this.onPicked});
+
+  final Set<String>? ownerIds;
+  final VoidCallback? onPicked;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final owners = ref.watch(clientOwnersProvider);
     final selected = ref.watch(salesFilterProvider);
+    final limit = ownerIds;
+    final owners = [
+      for (final u in ref.watch(clientOwnersProvider))
+        if (limit == null || limit.contains(u.id) || selected.contains(u.id)) u,
+    ];
+    final showUnassigned = limit == null || limit.contains(unassignedFilter) || selected.contains(unassignedFilter);
     final filter = ref.read(salesFilterProvider.notifier);
+    void pick(String? id) {
+      if (onPicked == null) {
+        id == null ? filter.clear() : filter.toggle(id);
+      } else {
+        filter.only(id);
+        onPicked!();
+      }
+    }
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        ChoiceChip(
-          label: Text(l10n.allSalespeople),
-          selected: selected.isEmpty,
-          onSelected: (_) => filter.clear(),
-        ),
+        ChoiceChip(label: Text(l10n.allSalespeople), selected: selected.isEmpty, onSelected: (_) => pick(null)),
         for (final u in owners)
           FilterChip(
             avatar: PersonBadge(userId: u.id, name: u.name, size: 20),
             label: Text(u.role == UserRole.salesExec ? u.name : '${u.name} (${u.role.label(l10n)})'),
             selected: selected.contains(u.id),
             showCheckmark: false,
-            onSelected: (_) => filter.toggle(u.id),
+            onSelected: (_) => pick(u.id),
           ),
-        FilterChip(
-          label: Text(l10n.unassigned),
-          selected: selected.contains(unassignedFilter),
-          onSelected: (_) => filter.toggle(unassignedFilter),
-        ),
+        if (showUnassigned)
+          FilterChip(
+            label: Text(l10n.unassigned),
+            selected: selected.contains(unassignedFilter),
+            onSelected: (_) => pick(unassignedFilter),
+          ),
       ],
     );
   }
@@ -92,23 +111,23 @@ class CategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [BoxShadow(blurRadius: 2, color: Colors.black26)],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          category,
-          style: TextStyle(
-            // Dark letter on yellow, white on the darker colours.
-            color: color == statusDueSoonColor ? Colors.black87 : Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.45,
-          ),
-        ),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: color,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white, width: 2),
+      boxShadow: const [BoxShadow(blurRadius: 2, color: Colors.black26)],
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      category,
+      style: TextStyle(
+        // Dark letter on yellow, white on the darker colours.
+        color: color == statusDueSoonColor ? Colors.black87 : Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: size * 0.45,
+      ),
+    ),
+  );
 }

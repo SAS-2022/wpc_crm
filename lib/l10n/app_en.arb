@@ -350,6 +350,12 @@
   "importFillOnly": "Only fill missing fields",
   "importFillOnlyHint": "Contact person, Company / Individual and Company ID of existing clients, only where empty. Nothing else changes and no clients are added.",
   "filters": "Filters",
+  "advancedFilters": "Advanced filters",
+  "fewerFilters": "Fewer filters",
+  "showMoreFilters": "Show more",
+  "showLessFilters": "Show less",
+  "salespeopleInRegion": "Salespeople with clients in {region}",
+  "@salespeopleInRegion": {"placeholders": {"region": {"type": "String"}}},
   "clearFilters": "Clear all",
   "clientTags": "Client tags",
   "tagFilterAny": "Shows clients with any of the selected tags.",
@@ -3336,5 +3342,14 @@
   "otStateRejected": "Not approved",
   "reportOvertimePendingHours": "Overtime waiting (hours)",
   "reportOvertimeRejectedHours": "Overtime not approved (hours)",
-  "reportOvertimeStatus": "Overtime status"
+  "reportOvertimeStatus": "Overtime status",
+  "bottomTabs": "Bottom tabs",
+  "bottomTabsHint": "Choose up to 4 tabs for the bar at the bottom of the screen on phones. More is always the last tab. Drag to change the order.",
+  "bottomTabsYours": "Your tabs",
+  "bottomTabsAdd": "Add a tab",
+  "bottomTabsFull": "5 tabs is the most. Remove one to add another.",
+  "bottomTabsSaved": "Bottom tabs saved",
+  "bottomTabsMoreFixed": "Always the last tab",
+  "bottomTabsKeepOne": "Keep at least one tab besides More.",
+  "bottomTabsPhonesOnly": "Used on phones. On the web the side menu is used instead (Edit menu at its bottom)."
 }

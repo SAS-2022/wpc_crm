@@ -48,10 +48,10 @@ enum SaudiRegion {
   bool contains(double lat, double lng) => of(lat, lng) == this;
 
   String label(AppLocalizations l10n) => switch (this) {
-        eastern => l10n.regionEastern,
-        central => l10n.regionCentral,
-        western => l10n.regionWestern,
-      };
+    eastern => l10n.regionEastern,
+    central => l10n.regionCentral,
+    western => l10n.regionWestern,
+  };
 
   /// Moves [map] (of [size] logical pixels, less what covers it) to the
   /// region's [points], or to the whole region when there are none.
@@ -62,23 +62,54 @@ enum SaudiRegion {
       return;
     }
     final (s, w, n, e) = box;
-    map.animateCamera(CameraUpdate.newLatLngZoom(
-      LatLng((s + n) / 2, (w + e) / 2),
-      zoomForBounds(box, math.max(size.width - 48, 160), math.max(size.height - 200, 160)),
-    ));
+    map.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        LatLng((s + n) / 2, (w + e) / 2),
+        zoomForBounds(box, math.max(size.width - 48, 160), math.max(size.height - 200, 160)),
+      ),
+    );
   }
 }
 
 /// The region buttons in a row; [selected] null = everywhere.
 class RegionChips extends StatelessWidget {
-  const RegionChips({super.key, required this.selected, required this.onSelected});
+  const RegionChips({super.key, required this.selected, required this.onSelected, this.fill = false});
 
   final SaudiRegion? selected;
   final ValueChanged<SaudiRegion?> onSelected;
 
+  /// The three buttons share the whole width, no sideways scrolling (clients
+  /// map on phones, user 2026-11-08).
+  final bool fill;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (fill) {
+      return PointerInterceptor(
+        child: Row(
+          children: [
+            for (final (i, r) in SaudiRegion.values.indexed) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Expanded(
+                child: ChoiceChip(
+                  visualDensity: VisualDensity.compact,
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  label: SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text(r.label(l10n), maxLines: 1)),
+                  ),
+                  selected: selected == r,
+                  onSelected: (on) => onSelected(on ? r : null),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     return PointerInterceptor(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,

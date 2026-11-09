@@ -8,6 +8,8 @@ import '../attendance/at_site_prompt.dart';
 import '../attendance/overtime_widgets.dart' show OvertimePromptGate;
 import '../settings/page_access.dart';
 import '../users/users_repository.dart';
+import 'bottom_tabs.dart';
+import 'bottom_tabs_screen.dart';
 import 'menu_order.dart';
 
 /// Below this width: bottom tabs (phones). From it: a side menu (web,
@@ -21,12 +23,7 @@ List<int> visibleBranches(WidgetRef ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null || me.role.isBackOffice) return const [0, 3];
   final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
-  return [
-    0,
-    if (access.allowsUser(me, AppPage.clients)) 1,
-    if (access.allowsUser(me, AppPage.visits)) 2,
-    3,
-  ];
+  return [0, if (access.allowsUser(me, AppPage.clients)) 1, if (access.allowsUser(me, AppPage.visits)) 2, 3];
 }
 
 /// Bottom tabs: Home · Clients · Visits · More. Each tab keeps its own
@@ -43,24 +40,31 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     if (MediaQuery.sizeOf(context).width >= wideLayoutWidth) return _wide(context, ref, l10n);
-    // HR, accounting, procurement: Home and More only (branches 0 and 3);
-    // Clients / Visits also go when turned off (App settings → Page access).
-    final branches = visibleBranches(ref);
+    // The person's own tabs (More → Bottom tabs, 2026-11-08), else Home,
+    // Clients, Visits as allowed (back-office roles: Home only; Page access).
+    // More is always last.
+    final tabs = myBottomTabs(ref, l10n);
+    final paths = [for (final t in tabs) t.path];
     return Scaffold(
       // "Start overtime?" / "Overtime started" pop-ups (2026-10-25); "You're
       // at the work site – check in" (2026-10-28).
       body: AtSitePromptGate(child: OvertimePromptGate(child: shell)),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: branches.contains(shell.currentIndex) ? branches.indexOf(shell.currentIndex) : 0,
-        // Tapping the current tab again goes back to its first screen.
-        onDestinationSelected: (i) =>
-            shell.goBranch(branches[i], initialLocation: branches[i] == shell.currentIndex),
+        selectedIndex: tabIndexFor(location, paths),
+        onDestinationSelected: (i) {
+          final path = i < paths.length ? paths[i] : '/more';
+          // A tab's own branch keeps its back stack; tapping the current
+          // tab again goes back to its first screen.
+          final branch = branchRoots[path];
+          if (branch != null) {
+            shell.goBranch(branch, initialLocation: branch == shell.currentIndex);
+          } else {
+            context.go(path);
+          }
+        },
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.dashboard_outlined), selectedIcon: const Icon(Icons.dashboard), label: l10n.home),
-          if (branches.contains(1))
-            NavigationDestination(icon: const Icon(Icons.store_outlined), selectedIcon: const Icon(Icons.store), label: l10n.clients),
-          if (branches.contains(2))
-            NavigationDestination(icon: const Icon(Icons.event_note_outlined), selectedIcon: const Icon(Icons.event_note), label: l10n.visits),
+          for (final t in tabs)
+            NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.label),
           NavigationDestination(icon: const Icon(Icons.menu), label: l10n.more),
         ],
       ),
@@ -83,14 +87,24 @@ class AppShell extends ConsumerWidget {
       if (supervisor) ...[
         (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),
         (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),
-        (path: '/transfers', icon: Icons.swap_horiz_outlined, selected: Icons.swap_horiz, label: l10n.transferredClients),
+        (
+          path: '/transfers',
+          icon: Icons.swap_horiz_outlined,
+          selected: Icons.swap_horiz,
+          label: l10n.transferredClients,
+        ),
         (path: '/catalogs', icon: Icons.style_outlined, selected: Icons.style, label: l10n.catalogsPage),
         (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
         (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],
       // Employee map (2026-11-04): employees only, apart from the client map.
       if (me?.seesEmployeesMap ?? false)
-        (path: '/attendance/map', icon: Icons.person_pin_circle_outlined, selected: Icons.person_pin_circle, label: l10n.employeesMap),
+        (
+          path: '/attendance/map',
+          icon: Icons.person_pin_circle_outlined,
+          selected: Icons.person_pin_circle,
+          label: l10n.employeesMap,
+        ),
       if (ref.watch(currentUserProvider).value?.seesTeamAttendance ?? false)
         (path: '/attendance', icon: Icons.how_to_reg_outlined, selected: Icons.how_to_reg, label: l10n.attendance),
       // Shown again on the web 2026-10-22 (hidden since 2026-10-18): absences to decide live there.
@@ -134,7 +148,9 @@ class _SideMenuState extends ConsumerState<_SideMenu> {
 
   List<_MenuItem> _ordered(List<String>? saved) {
     final byPath = {for (final i in widget.items) i.path: i};
-    return [for (final p in orderMenu([for (final i in widget.items) i.path], saved)) byPath[p]!];
+    return [
+      for (final p in orderMenu([for (final i in widget.items) i.path], saved)) byPath[p]!,
+    ];
   }
 
   Future<void> _save(List<_MenuItem> order) async {
@@ -287,11 +303,7 @@ class _SideMenuState extends ConsumerState<_SideMenu> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FilledButton.icon(
-                  icon: const Icon(Icons.check),
-                  label: Text(l10n.done),
-                  onPressed: () => _save(draft),
-                ),
+                FilledButton.icon(icon: const Icon(Icons.check), label: Text(l10n.done), onPressed: () => _save(draft)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -302,10 +314,7 @@ class _SideMenuState extends ConsumerState<_SideMenu> {
                       ),
                     ),
                     Expanded(
-                      child: TextButton(
-                        onPressed: () => setState(() => _draft = null),
-                        child: Text(l10n.cancel),
-                      ),
+                      child: TextButton(onPressed: () => setState(() => _draft = null), child: Text(l10n.cancel)),
                     ),
                   ],
                 ),
@@ -369,9 +378,10 @@ class _BranchPagerState extends ConsumerState<BranchPager> {
     if (MediaQuery.sizeOf(context).width >= wideLayoutWidth) {
       return IndexedStack(index: shell.currentIndex, children: widget.children);
     }
-    // Swiping only when all four tabs are there (back-office roles have no
-    // Clients / Visits tabs; a role may have them turned off).
-    final allTabs = visibleBranches(ref).length == 4;
+    // Swiping only when the tabs are the four branches in order (back-office
+    // roles have no Clients / Visits tabs, a role may have them turned off,
+    // a person may have chosen other tabs).
+    final allTabs = canSwipeTabs([for (final t in myBottomTabs(ref, AppLocalizations.of(context))) t.path]);
     final atRoot = allTabs && _tabRoots.contains(shell.shellRouteContext.routerState.uri.path);
     // Switches tab once the swipe has settled, so the gesture isn't cut off
     // halfway by the other tab's screen.

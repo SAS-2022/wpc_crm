@@ -152,6 +152,9 @@ describe('sales team keeps its access', () => {
     await assertSucceeds(updateDoc(doc(fs('exec'), 'users/exec'), { menuOrder: ['/visits', '/'] }));
     await assertSucceeds(updateDoc(doc(fs('hr'), 'users/hr'), { menuOrder: null }));
     await assertFails(updateDoc(doc(fs('exec'), 'users/kam'), { menuOrder: ['/'] }));
+    await assertSucceeds(updateDoc(doc(fs('exec'), 'users/exec'), { bottomTabs: ['/map', '/visits'] }));
+    await assertSucceeds(updateDoc(doc(fs('hr'), 'users/hr'), { bottomTabs: null }));
+    await assertFails(updateDoc(doc(fs('exec'), 'users/kam'), { bottomTabs: ['/'] }));
   });
 
   test('sales exec asks to close own client, never sets the status or asks as someone else', async () => {

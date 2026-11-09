@@ -612,6 +612,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filters => 'الفلاتر';
 
   @override
+  String get advancedFilters => 'فلاتر متقدمة';
+
+  @override
+  String get fewerFilters => 'فلاتر أقل';
+
+  @override
+  String get showMoreFilters => 'عرض المزيد';
+
+  @override
+  String get showLessFilters => 'عرض أقل';
+
+  @override
+  String salespeopleInRegion(String region) {
+    return 'مندوبو المبيعات الذين لديهم عملاء في $region';
+  }
+
+  @override
   String get clearFilters => 'مسح الكل';
 
   @override
@@ -6988,4 +7005,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportOvertimeStatus => 'حالة العمل الإضافي';
+
+  @override
+  String get bottomTabs => 'الأزرار السفلية';
+
+  @override
+  String get bottomTabsHint =>
+      'اختر حتى 4 أزرار للشريط أسفل الشاشة على الهاتف. «المزيد» هو دائماً الزر الأخير. اسحب لتغيير الترتيب.';
+
+  @override
+  String get bottomTabsYours => 'أزرارك';
+
+  @override
+  String get bottomTabsAdd => 'إضافة زر';
+
+  @override
+  String get bottomTabsFull => 'الحد الأقصى 5 أزرار. احذف زراً لإضافة آخر.';
+
+  @override
+  String get bottomTabsSaved => 'تم حفظ الأزرار السفلية';
+
+  @override
+  String get bottomTabsMoreFixed => 'دائماً الزر الأخير';
+
+  @override
+  String get bottomTabsKeepOne => 'أبقِ زراً واحداً على الأقل غير «المزيد».';
+
+  @override
+  String get bottomTabsPhonesOnly =>
+      'تُستخدم على الهاتف. على الويب تُستخدم القائمة الجانبية (تعديل القائمة في أسفلها).';
 }

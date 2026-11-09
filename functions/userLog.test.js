@@ -39,7 +39,7 @@ test('old stamp kept = not this writer; own fields = the person', () => {
 
 test('only ignored fields: nothing logged; values made plain', () => {
   const before = { name: 'A', appVersions: { android: { build: 1 } } };
-  assert.strictEqual(userLogEntry(before, { ...before, appVersions: { android: { build: 2 } }, menuOrder: ['/'] }, 'u'), null);
+  assert.strictEqual(userLogEntry(before, { ...before, appVersions: { android: { build: 2 } }, menuOrder: ['/'], bottomTabs: ['/map'] }, 'u'), null);
   const e = userLogEntry({ workSchedule: null, joined: null }, {
     workSchedule: { days: [1, 2], start: 480, end: 1020 }, joined: ts(Date.UTC(2026, 0, 1)), changedBy: 'hr', changedAt: ts(3),
   }, 'u');

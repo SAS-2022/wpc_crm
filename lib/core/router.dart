@@ -14,6 +14,7 @@ import '../features/clients/client_edit_screen.dart';
 import '../features/clients/clients_map_screen.dart';
 import '../features/clients/clients_screen.dart';
 import '../features/clients/visit_rules_screen.dart';
+import '../features/home/bottom_tabs_screen.dart';
 import '../features/home/app_shell.dart';
 import '../features/home/home_screen.dart';
 import '../features/home/more_screen.dart';
@@ -91,7 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (const ['/splash', '/login', '/register', '/no-access'].contains(loc)) return '/';
       // HR, accounting, procurement: no sales pages (clients, visits, plans, maps).
       if (me.role.isBackOffice &&
-          !const ['/', '/more', '/profile', '/notifications'].contains(loc) &&
+          !const ['/', '/more', '/profile', '/notifications', '/bottom-tabs'].contains(loc) &&
           !loc.startsWith('/leave') &&
           !loc.startsWith('/absence/') &&
           !loc.startsWith('/hr') &&
@@ -217,6 +218,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(preload: true, routes: [
             GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
             GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+            GoRoute(path: '/bottom-tabs', builder: (_, _) => const BottomTabsScreen()),
             GoRoute(
               path: '/leave',
               builder: (_, _) => const MyLeaveScreen(),

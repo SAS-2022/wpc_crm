@@ -77,9 +77,9 @@ service cloud.firestore {
         && request.resource.data.approval == 'pending';
       // Profile page: everyone edits their own name and phone; the app saves
       // the version it runs (`appVersions`) and their side menu order
-      // (`menuOrder`, 2026-11-04). Update reminders are admin-only.
+      // (`menuOrder`, 2026-11-04) and bottom tabs (`bottomTabs`, 2026-11-08). Update reminders are admin-only.
       allow update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions', 'menuOrder', 'changedBy', 'changedAt']) && stampOk();
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions', 'menuOrder', 'bottomTabs', 'changedBy', 'changedAt']) && stampOk();
       // A driver sets their own home location (2026-10-27, it decides their
       // overtime) only while none is set; after that the user form changes it.
       allow update: if request.auth != null && request.auth.uid == uid && resource.data.role == 'driver'

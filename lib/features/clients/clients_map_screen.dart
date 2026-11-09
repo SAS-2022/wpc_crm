@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +29,6 @@ import 'clients_repository.dart';
 import 'person_style.dart';
 import 'visit_rules.dart';
 import '../../core/app_user.dart';
-import '../../core/place_search.dart';
 import '../tracking/live_data.dart';
 import '../tracking/live_map_screen.dart' show timeAgo;
 
@@ -67,61 +65,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     setState(() {}); // the clear button
   }
 
-  /// Search box mode: clients (default) or an area / place to zoom to
-  /// (user request 2026-10-23; searched on Enter, see place_search.dart).
-  bool _areaMode = false;
-  List<PlaceResult> _places = const [];
-  bool _placeBusy = false;
-  String? _placeError;
-
-  /// Switches the search box between clients and area. [keepText]: the
-  /// client search found nothing, search the same text as an area.
-  void _setAreaMode(bool area, {bool keepText = false}) {
-    if (area == _areaMode) return;
-    _searchDelay?.cancel();
-    if (!keepText) _search.clear();
-    setState(() {
-      _areaMode = area;
-      _query = ClientQuery('');
-      _places = const [];
-      _placeError = null;
-    });
-    if (area && keepText) _searchArea();
-  }
-
-  Future<void> _searchArea() async {
-    final l10n = AppLocalizations.of(context);
-    final q = _search.text.trim();
-    if (q.isEmpty || _placeBusy) return;
-    setState(() {
-      _placeBusy = true;
-      _placeError = null;
-    });
-    try {
-      final places = await searchPlaces(q, lang: Localizations.localeOf(context).languageCode);
-      if (!mounted) return;
-      setState(() {
-        _places = places;
-        _placeError = places.isEmpty ? l10n.areaNotFound(q) : null;
-      });
-      if (places.isNotEmpty) _zoomToPlace(places.first);
-    } catch (_) {
-      if (mounted) setState(() => _placeError = l10n.areaSearchFailed);
-    } finally {
-      if (mounted) setState(() => _placeBusy = false);
-    }
-  }
-
-  /// Centre of the place at the zoom that shows its area (not the map's
-  /// fit-to-bounds call, which zoomed out). The search card and buttons
-  /// cover part of the map, so less than the whole screen counts.
-  void _zoomToPlace(PlaceResult p) {
-    final b = p.bounds;
-    final size = MediaQuery.sizeOf(context);
-    final zoom = b == null ? 15.0 : zoomForBounds(b, math.max(size.width - 96, 160), math.max(size.height - 360, 160));
-    final centre = b == null ? LatLng(p.lat, p.lng) : LatLng((b.$1 + b.$3) / 2, (b.$2 + b.$4) / 2);
-    _map?.animateCamera(CameraUpdate.newLatLngZoom(centre, zoom));
-  }
+  /// The filter card: compact (search, regions, Filters) or full with the
+  /// colour choice, active filters and status / salesperson chips (user
+  /// 2026-11-08; the arrow switches).
+  bool _cardOpen = false;
 
   /// KAM / managers: pins coloured by salesperson instead of visit status.
   bool _byPerson = false;
@@ -142,12 +89,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   /// This pin is the picked one: for a client with several locations only
   /// the location tapped, not all of its pins.
   bool _isPicked(Client c, ClientLocation loc) =>
-      _selected.contains(c.id) &&
-      (c.locations.length == 1 || (_selectedAt[c.id] ?? ClientLocation.mainId) == loc.id);
+      _selected.contains(c.id) && (c.locations.length == 1 || (_selectedAt[c.id] ?? ClientLocation.mainId) == loc.id);
 
   /// Each picked client onto its salesperson's plan for a chosen day.
   Future<void> _planSelected(List<Client> all) async {
-    final picked = [for (final c in all) if (_selected.contains(c.id)) c];
+    final picked = [
+      for (final c in all)
+        if (_selected.contains(c.id)) c,
+    ];
     setState(() => _moving = true);
     final done = await addSelectionToPlans(context, ref, picked, locations: _selectedAt);
     if (!mounted) return;
@@ -158,7 +107,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
   }
 
   Future<void> _moveSelected(List<Client> all) async {
-    final picked = [for (final c in all) if (_selected.contains(c.id)) c];
+    final picked = [
+      for (final c in all)
+        if (_selected.contains(c.id)) c,
+    ];
     setState(() => _moving = true);
     final moved = await showTransferDialog(context, ref, picked);
     if (!mounted) return;
@@ -222,7 +174,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     // inside it, and the counts / legend of the clients there.
     final city = _city;
     bool inRegion(double lat, double lng) => city == null || city.contains(lat, lng);
-    final regional = [for (final c in located) if (c.locations.any((l) => inRegion(l.lat, l.lng))) c];
+    final regional = [
+      for (final c in located)
+        if (c.locations.any((l) => inRegion(l.lat, l.lng))) c,
+    ];
     // Salesperson legend: everyone with clients on the map, most clients first.
     final perPerson = <String?, int>{};
     for (final c in regional) {
@@ -241,6 +196,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
         for (final l in c.locations)
           if (inRegion(l.lat, l.lng)) LatLng(l.lat, l.lng),
     ];
+    // The Filters sheet lists only the salespeople with clients in the
+    // region (user 2026-11-08).
+    final regionOwners = city == null
+        ? null
+        : {
+            for (final c in ref.watch(clientsProvider).value ?? const <Client>[])
+              if (c.locations.any((l) => city.contains(l.lat, l.lng))) c.assignedTo ?? unassignedFilter,
+          };
     final types = ref.watch(locationTypesByIdProvider);
     // Moving clients from the map: web dashboard, KAM / managers.
     final canSelect = kIsWeb && (me?.role.isSupervisor ?? false);
@@ -289,11 +252,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             inCompany(u))
           u,
     ];
-    final staffIds = showStaff ? (users.values.where((u) => u.recordsGps && inCompany(u)).map((u) => u.id).toList()..sort()) : const <String>[];
+    final staffIds = showStaff
+        ? (users.values.where((u) => u.recordsGps && inCompany(u)).map((u) => u.id).toList()..sort())
+        : const <String>[];
     final recorded = staffIds.isEmpty
         ? const <String, LiveLocation>{}
         : ref.watch(recordedLocationsProvider((DateFormat('yyyy-MM-dd').format(now), staffIds.join(',')))).value ??
-            const <String, LiveLocation>{};
+              const <String, LiveLocation>{};
 
     // Re-centre on the visible clients when a filter changes (not on first
     // load, which starts at the user's location, and not when the data
@@ -327,8 +292,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             mapType: ref.watch(mapTypeProvider),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
             // Keeps the Google logo and fitted markers clear of the filter card.
-            // + 44: the Clients | Area switch.
-            padding: EdgeInsets.only(top: ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52 + 44),
+            padding: EdgeInsets.only(top: _cardOpen ? ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52 + 44 : 112),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -377,10 +341,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                               null,
                               canSelect
                                   ? () => setState(() {
-                                        _selecting = true;
-                                        _selected.add(c.id);
-                                        if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
-                                      })
+                                      _selecting = true;
+                                      _selected.add(c.id);
+                                      if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+                                    })
                                   : null,
                               c.locations.length > 1 ? loc : null,
                             ),
@@ -398,8 +362,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     icon: _icons.circle(
                       context: context,
                       // The sales manager in blue (user 2026-11-07).
-                      fill: (u.role == UserRole.salesManager ? managerPinColor : salespersonPinColor)
-                          .withValues(alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45),
+                      fill: (u.role == UserRole.salesManager ? managerPinColor : salespersonPinColor).withValues(
+                        alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45,
+                      ),
                       text: styles[u.id]?.initials ?? initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
@@ -463,240 +428,207 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Clients or an area: an explicit choice, so a place
-                      // name isn't taken for a client search (2026-10-23).
-                      // City buttons next to it (user request 2026-11-01).
-                      Row(children: [
-                        SegmentedButton<bool>(
-                          style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(value: false, icon: const Icon(Icons.store_outlined, size: 18), label: Text(l10n.clients)),
-                            ButtonSegment(value: true, icon: const Icon(Icons.travel_explore, size: 18), label: Text(l10n.searchArea)),
-                          ],
-                          selected: {_areaMode},
-                          onSelectionChanged: (v) => _setAreaMode(v.first),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: RegionChips(
-                            selected: city,
-                            onSelected: (c) {
-                              setState(() => _city = c);
-                              if (c != null) {
-                                c.zoomTo(_map, MediaQuery.sizeOf(context), [
-                                  for (final cl in located)
-                                    for (final l in cl.locations)
-                                      if (c.contains(l.lat, l.lng)) LatLng(l.lat, l.lng),
-                                ]);
-                              } else {
-                                _fit([for (final c in located) for (final l in c.locations) LatLng(l.lat, l.lng)]);
-                              }
-                            },
-                          ),
-                        ),
-                      ]),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _search,
-                        onChanged: _areaMode ? (_) => setState(() {}) : _onSearch,
-                        onSubmitted: _areaMode ? (_) => _searchArea() : null,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          prefixIcon: Icon(_areaMode ? Icons.travel_explore : Icons.search),
-                          hintText: _areaMode ? l10n.searchAreaHint : l10n.searchClientsHint,
-                          // Clients: how many matched, or none. Area: not found / failed.
-                          helperText: _areaMode
-                              ? _placeError ?? l10n.searchAreaHelp
-                              : _query.isEmpty
-                                  ? null
-                                  : clients.isEmpty
-                                      ? l10n.noClientsFound
-                                      : l10n.searchResultsOnMap(clients.length),
-                          helperMaxLines: 2,
-                          suffixIcon: _search.text.isEmpty
-                              ? null
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_areaMode)
-                                      IconButton(
-                                        icon: _placeBusy
-                                            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                            : const Icon(Icons.arrow_forward),
-                                        tooltip: l10n.searchAreaGo,
-                                        onPressed: _placeBusy ? null : _searchArea,
+                      // Search: clients only (user 2026-11-08, the area search
+                      // was removed), Filters and the arrow that opens the card.
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _search,
+                              onChanged: _onSearch,
+                              textInputAction: TextInputAction.search,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                prefixIcon: const Icon(Icons.search),
+                                hintText: l10n.searchClientsHint,
+                                helperText: _query.isEmpty
+                                    ? null
+                                    : clients.isEmpty
+                                    ? l10n.noClientsFound
+                                    : l10n.searchResultsOnMap(clients.length),
+                                helperMaxLines: 2,
+                                suffixIcon: _search.text.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        icon: const Icon(Icons.close),
+                                        tooltip: l10n.clear,
+                                        onPressed: () {
+                                          _search.clear();
+                                          _onSearch('');
+                                        },
                                       ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close),
-                                      tooltip: l10n.clear,
-                                      onPressed: () {
-                                        _search.clear();
-                                        _areaMode ? setState(() => _places = const []) : _onSearch('');
-                                      },
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      // No client matches: maybe it's a place.
-                      if (!_areaMode && !_query.isEmpty && clients.isEmpty)
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: TextButton.icon(
-                            onPressed: () => _setAreaMode(true, keepText: true),
-                            icon: const Icon(Icons.travel_explore, size: 18),
-                            label: Text(l10n.searchAsArea(_search.text.trim())),
-                          ),
-                        ),
-                      // Several places with that name: zoomed to the first, pick another.
-                      if (_areaMode && _places.length > 1)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 160),
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: [
-                              for (final p in _places)
-                                ListTile(
-                                  dense: true,
-                                  visualDensity: VisualDensity.compact,
-                                  leading: const Icon(Icons.place_outlined, size: 20),
-                                  title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  onTap: () => _zoomToPlace(p),
-                                ),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(height: 6),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            const ClientFiltersButton(),
-                            if (canSelect) ...[
-                              const SizedBox(width: 4),
-                              IconButton(
-                                tooltip: l10n.selectClientsToMove,
-                                isSelected: _selecting,
-                                icon: const Icon(Icons.checklist),
-                                onPressed: () => setState(() {
-                                  _selecting = !_selecting;
-                                  _selected.clear();
-                                }),
                               ),
-                            ],
-                            if (me?.role.isSupervisor ?? false) ...[
-                              const SizedBox(width: 12),
-                              Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
-                              const SizedBox(width: 8),
-                              // Two segments when there's room (web); on phones a
-                              // menu button, since the segments' labels wrapped.
-                              Expanded(
-                                child: LayoutBuilder(builder: (context, c) {
-                                  void choose(bool person) => setState(() {
-                                        _byPerson = person;
-                                        // The status filter's chips are hidden in this mode.
-                                        _status = _Status.all;
-                                      });
-                                  if (c.maxWidth >= 260) {
-                                    return SegmentedButton<bool>(
-                                      showSelectedIcon: false,
-                                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                                      segments: [
-                                        ButtonSegment(value: false, label: Text(l10n.visitStatus)),
-                                        ButtonSegment(value: true, label: Text(l10n.salesperson)),
-                                      ],
-                                      selected: {byPerson},
-                                      onSelectionChanged: (s) => choose(s.first),
-                                    );
-                                  }
-                                  return Align(
-                                    alignment: AlignmentDirectional.centerStart,
-                                    child: PopupMenuButton<bool>(
-                                      tooltip: l10n.colourBy,
-                                      initialValue: byPerson,
-                                      // Root navigator: the menu scrolls to the ticked
-                                      // item, which also scrolled the tab pager to Visits.
-                                      useRootNavigator: true,
-                                      onSelected: choose,
-                                      itemBuilder: (_) => [
-                                        PopupMenuItem(value: false, child: Text(l10n.visitStatus)),
-                                        PopupMenuItem(value: true, child: Text(l10n.salesperson)),
-                                      ],
-                                      child: InputDecorator(
-                                        decoration: const InputDecoration(
-                                          isDense: true,
-                                          border: OutlineInputBorder(),
-                                          contentPadding: EdgeInsetsDirectional.fromSTEB(12, 8, 4, 8),
-                                        ),
-                                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                          Flexible(
-                                            child: Text(
-                                              byPerson ? l10n.salesperson : l10n.visitStatus,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          ClientFiltersButton(quick: true, iconOnly: true, ownerIds: regionOwners, region: city),
+                          IconButton(
+                            tooltip: _cardOpen ? l10n.showLessFilters : l10n.showMoreFilters,
+                            icon: Icon(_cardOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                            onPressed: () => setState(() => _cardOpen = !_cardOpen),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Regions across the whole width, no scrolling (user 2026-11-08).
+                      RegionChips(
+                        fill: true,
+                        selected: city,
+                        onSelected: (c) {
+                          setState(() => _city = c);
+                          if (c != null) {
+                            c.zoomTo(_map, MediaQuery.sizeOf(context), [
+                              for (final cl in located)
+                                for (final l in cl.locations)
+                                  if (c.contains(l.lat, l.lng)) LatLng(l.lat, l.lng),
+                            ]);
+                          } else {
+                            _fit([
+                              for (final c in located)
+                                for (final l in c.locations) LatLng(l.lat, l.lng),
+                            ]);
+                          }
+                        },
+                      ),
+                      if (_cardOpen) ...[
+                        const SizedBox(height: 6),
+                        if (canSelect || supervisor)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                if (canSelect) ...[
+                                  IconButton(
+                                    tooltip: l10n.selectClientsToMove,
+                                    isSelected: _selecting,
+                                    icon: const Icon(Icons.checklist),
+                                    onPressed: () => setState(() {
+                                      _selecting = !_selecting;
+                                      _selected.clear();
+                                    }),
+                                  ),
+                                ],
+                                if (me?.role.isSupervisor ?? false) ...[
+                                  if (canSelect) const SizedBox(width: 12),
+                                  Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
+                                  const SizedBox(width: 8),
+                                  // Two segments when there's room (web); on phones a
+                                  // menu button, since the segments' labels wrapped.
+                                  Expanded(
+                                    child: LayoutBuilder(
+                                      builder: (context, c) {
+                                        void choose(bool person) => setState(() {
+                                          _byPerson = person;
+                                          // The status filter's chips are hidden in this mode.
+                                          _status = _Status.all;
+                                        });
+                                        if (c.maxWidth >= 260) {
+                                          return SegmentedButton<bool>(
+                                            showSelectedIcon: false,
+                                            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                                            segments: [
+                                              ButtonSegment(value: false, label: Text(l10n.visitStatus)),
+                                              ButtonSegment(value: true, label: Text(l10n.salesperson)),
+                                            ],
+                                            selected: {byPerson},
+                                            onSelectionChanged: (s) => choose(s.first),
+                                          );
+                                        }
+                                        return Align(
+                                          alignment: AlignmentDirectional.centerStart,
+                                          child: PopupMenuButton<bool>(
+                                            tooltip: l10n.colourBy,
+                                            initialValue: byPerson,
+                                            // Root navigator: the menu scrolls to the ticked
+                                            // item, which also scrolled the tab pager to Visits.
+                                            useRootNavigator: true,
+                                            onSelected: choose,
+                                            itemBuilder: (_) => [
+                                              PopupMenuItem(value: false, child: Text(l10n.visitStatus)),
+                                              PopupMenuItem(value: true, child: Text(l10n.salesperson)),
+                                            ],
+                                            child: InputDecorator(
+                                              decoration: const InputDecoration(
+                                                isDense: true,
+                                                border: OutlineInputBorder(),
+                                                contentPadding: EdgeInsetsDirectional.fromSTEB(12, 8, 4, 8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      byPerson ? l10n.salesperson : l10n.visitStatus,
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const Icon(Icons.arrow_drop_down),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                          const Icon(Icons.arrow_drop_down),
-                                        ]),
-                                      ),
+                                        );
+                                      },
                                     ),
-                                  );
-                                }),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const Padding(padding: EdgeInsets.only(bottom: 4), child: ActiveClientFilters(compact: true)),
-                      // Salesperson colours: legend chips, tap to show one person.
-                      if (byPerson)
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (final MapEntry(key: uid, value: n) in legend)
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(end: 6),
-                                  child: FilterChip(
-                                    showCheckmark: false,
-                                    visualDensity: VisualDensity.compact,
-                                    avatar: Icon(Icons.circle, size: 12, color: (styles[uid] ?? unassignedStyle).color),
-                                    label: Text('${uid == null ? l10n.unassigned : users[uid]?.name ?? '?'} ($n)'),
-                                    selected: filter.contains(uid ?? unassignedFilter),
-                                    onSelected: (_) => ref.read(salesFilterProvider.notifier).toggle(uid ?? unassignedFilter),
                                   ),
-                                ),
-                            ],
+                                ],
+                              ],
+                            ),
                           ),
-                        )
-                      // Status filter; the coloured dots double as the map legend.
-                      else
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (final (st, label, color) in [
-                                (_Status.all, l10n.statusAll, null),
-                                (_Status.recent, l10n.statusRecent, statusRecentColor),
-                                (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
-                                (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
-                                (_Status.planned, l10n.plannedToday, plannedColor),
-                              ])
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(end: 6),
-                                  child: ChoiceChip(
-                                    visualDensity: VisualDensity.compact,
-                                    avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
-                                    label: Text('$label (${count(st)})'),
-                                    selected: _status == st,
-                                    onSelected: (_) => setState(() => _status = st),
+                        const Padding(padding: EdgeInsets.only(bottom: 4), child: ActiveClientFilters(compact: true)),
+                        // Salesperson colours: legend chips, tap to show one person.
+                        if (byPerson)
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                for (final MapEntry(key: uid, value: n) in legend)
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(end: 6),
+                                    child: FilterChip(
+                                      showCheckmark: false,
+                                      visualDensity: VisualDensity.compact,
+                                      avatar: Icon(
+                                        Icons.circle,
+                                        size: 12,
+                                        color: (styles[uid] ?? unassignedStyle).color,
+                                      ),
+                                      label: Text('${uid == null ? l10n.unassigned : users[uid]?.name ?? '?'} ($n)'),
+                                      selected: filter.contains(uid ?? unassignedFilter),
+                                      onSelected: (_) =>
+                                          ref.read(salesFilterProvider.notifier).toggle(uid ?? unassignedFilter),
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
+                          )
+                        // Status filter; the coloured dots double as the map legend.
+                        else
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                for (final (st, label, color) in [
+                                  (_Status.all, l10n.statusAll, null),
+                                  (_Status.recent, l10n.statusRecent, statusRecentColor),
+                                  (_Status.dueSoon, l10n.statusDueSoon, statusDueSoonColor),
+                                  (_Status.overdue, l10n.statusOverdue, statusOverdueColor),
+                                  (_Status.planned, l10n.plannedToday, plannedColor),
+                                ])
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(end: 6),
+                                    child: ChoiceChip(
+                                      visualDensity: VisualDensity.compact,
+                                      avatar: color == null ? null : Icon(Icons.circle, size: 12, color: color),
+                                      label: Text('$label (${count(st)})'),
+                                      selected: _status == st,
+                                      onSelected: (_) => setState(() => _status = st),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -21,6 +21,7 @@ import '../devices/quiet_reason_text.dart';
 import '../tracking/device_health.dart' show phoneBrand;
 import '../tracking/phone_setup_guide.dart';
 import '../home/app_shell.dart' show wideLayoutWidth;
+import '../../core/short_name.dart';
 import '../hr/leave_repository.dart';
 import '../hr/leave_rules.dart';
 import '../notifications/notifications.dart' show peopleUnder;
@@ -90,44 +91,44 @@ class _Person {
   final WorkHours schedule;
 
   _Filter get filter => switch (day?.status) {
-        null => _Filter.noAttendance,
-        DayStatus.onSite => _Filter.onSite,
-        DayStatus.away => _Filter.away,
-        DayStatus.checkedOut => _Filter.checkedOut,
-        DayStatus.notIn || DayStatus.absent || DayStatus.onLeave => _Filter.notIn,
-      };
+    null => _Filter.noAttendance,
+    DayStatus.onSite => _Filter.onSite,
+    DayStatus.away => _Filter.away,
+    DayStatus.checkedOut => _Filter.checkedOut,
+    DayStatus.notIn || DayStatus.absent || DayStatus.onLeave => _Filter.notIn,
+  };
 }
 
 Color _statusColor(BuildContext context, _Person p) => switch (p.day?.status) {
-      null => Colors.blueGrey,
-      DayStatus.onSite => Colors.green.shade700,
-      DayStatus.away => Colors.orange.shade800,
-      DayStatus.checkedOut => Colors.indigo,
-      DayStatus.absent => Colors.deepOrange,
-      DayStatus.onLeave => Colors.blue.shade400,
-      // Not in yet after their start (+ grace): red.
-      DayStatus.notIn => p.day!.notInYet ? Theme.of(context).colorScheme.error : Colors.grey.shade600,
-    };
+  null => Colors.blueGrey,
+  DayStatus.onSite => Colors.green.shade700,
+  DayStatus.away => Colors.orange.shade800,
+  DayStatus.checkedOut => Colors.indigo,
+  DayStatus.absent => Colors.deepOrange,
+  DayStatus.onLeave => Colors.blue.shade400,
+  // Not in yet after their start (+ grace): red.
+  DayStatus.notIn => p.day!.notInYet ? Theme.of(context).colorScheme.error : Colors.grey.shade600,
+};
 
 String _statusLabel(AppLocalizations l10n, _Person p) => switch (p.day?.status) {
-      null => l10n.notOnAttendance,
-      DayStatus.onSite => l10n.onSite,
-      DayStatus.away => l10n.leftTheSite,
-      DayStatus.checkedOut => l10n.checkedOutTitle,
-      DayStatus.absent => l10n.reportedAbsent,
-      DayStatus.onLeave => l10n.dayOnLeave,
-      DayStatus.notIn => l10n.notCheckedIn,
-    };
+  null => l10n.notOnAttendance,
+  DayStatus.onSite => l10n.onSite,
+  DayStatus.away => l10n.leftTheSite,
+  DayStatus.checkedOut => l10n.checkedOutTitle,
+  DayStatus.absent => l10n.reportedAbsent,
+  DayStatus.onLeave => l10n.dayOnLeave,
+  DayStatus.notIn => l10n.notCheckedIn,
+};
 
 IconData _statusIcon(_Person p) => switch (p.day?.status) {
-      null => Icons.person_outline,
-      DayStatus.onSite => Icons.how_to_reg,
-      DayStatus.away => Icons.directions_walk,
-      DayStatus.checkedOut => Icons.logout,
-      DayStatus.absent => Icons.sick_outlined,
-      DayStatus.onLeave => Icons.beach_access,
-      DayStatus.notIn => p.day!.notInYet ? Icons.hourglass_bottom : Icons.person_off_outlined,
-    };
+  null => Icons.person_outline,
+  DayStatus.onSite => Icons.how_to_reg,
+  DayStatus.away => Icons.directions_walk,
+  DayStatus.checkedOut => Icons.logout,
+  DayStatus.absent => Icons.sick_outlined,
+  DayStatus.onLeave => Icons.beach_access,
+  DayStatus.notIn => p.day!.notInYet ? Icons.hourglass_bottom : Icons.person_off_outlined,
+};
 
 /// Everyone [me] may see on the map (the Attendance page's people: HR area
 /// everyone, other managers the people under them) whose phone shares or
@@ -152,7 +153,10 @@ List<_Person> _people(WidgetRef ref, DateTime now) {
   final siteNames = {for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) s.id: s.name};
   final live = ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{};
   final presence = ref.watch(presenceProvider).value ?? const <String, Presence>{};
-  final recordedIds = [for (final u in users) if (!u.role.isLocationTracked && u.recordsGps) u.id]..sort();
+  final recordedIds = [
+    for (final u in users)
+      if (!u.role.isLocationTracked && u.recordsGps) u.id,
+  ]..sort();
   final recorded = recordedIds.isEmpty
       ? const <String, LiveLocation>{}
       : ref.watch(recordedLocationsProvider((dayKey, recordedIds.join(',')))).value ?? const <String, LiveLocation>{};
@@ -205,7 +209,8 @@ List<_Person> _people(WidgetRef ref, DateTime now) {
             liveAt: live[u.id]?.updatedAt,
             recordedAt: recorded[u.id]?.updatedAt,
             versions: u.appVersions,
-            shouldShare: (tracked || u.recordsGps) &&
+            shouldShare:
+                (tracked || u.recordsGps) &&
                 (schedules[u.id] ?? const TrackingSchedule.standard()).isOn(
                   now,
                   company,
@@ -240,6 +245,12 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
   String? _siteId;
   final _filters = <_Filter>{};
   String _query = '';
+
+  /// The filter card's companies and sites rows (arrow, user 2026-11-08).
+  bool _cardOpen = false;
+
+  /// Phones: the list sheet's minimized height = grab handle + search field.
+  static const _sheetMinPx = 84.0;
 
   /// The person shown in the right pane (web).
   String? _selected;
@@ -292,14 +303,20 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
     // A region (2026-11-04, user): its work sites only, and the companies of
     // the people there. A person is in it by their position, else (no
     // position yet) by a work site of theirs inside it.
-    final activeSites = [for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[]) if (s.active) s];
+    final activeSites = [
+      for (final s in ref.watch(workSitesProvider).value ?? const <WorkSite>[])
+        if (s.active) s,
+    ];
     bool personIn(SaudiRegion? r, _Person p) =>
         r == null ||
         (p.loc != null
             ? r.contains(p.loc!.lat, p.loc!.lng)
             : activeSites.any((s) => p.user.workSiteIds.contains(s.id) && r.contains(s.lat, s.lng)));
     bool inRegion(_Person p) => personIn(region, p);
-    final sites = [for (final s in activeSites) if (region == null || region.contains(s.lat, s.lng)) s];
+    final sites = [
+      for (final s in activeSites)
+        if (region == null || region.contains(s.lat, s.lng)) s,
+    ];
     final site = sites.where((s) => s.id == _siteId).firstOrNull;
     final companyId = ref.watch(peopleCompanyProvider);
     final q = foldSearch(_query);
@@ -331,14 +348,20 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
           p,
     ];
     final counts = {for (final f in _Filter.values) f: scoped.where((p) => p.filter == f).length};
-    final shown = [for (final p in scoped) if (_filters.isEmpty || _filters.contains(p.filter)) p];
+    final shown = [
+      for (final p in scoped)
+        if (_filters.isEmpty || _filters.contains(p.filter)) p,
+    ];
     // Located first, then by status, then by name.
     shown.sort((a, b) {
       if ((a.loc == null) != (b.loc == null)) return a.loc == null ? 1 : -1;
       if (a.filter != b.filter) return a.filter.index.compareTo(b.filter.index);
       return a.user.name.compareTo(b.user.name);
     });
-    final located = [for (final p in shown) if (p.loc != null) p];
+    final located = [
+      for (final p in shown)
+        if (p.loc != null) p,
+    ];
     final points = [for (final p in located) LatLng(p.loc!.lat, p.loc!.lng)];
 
     if (_map != null && !_fitted && points.isNotEmpty) {
@@ -399,157 +422,184 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
 
     // Search, company, site and status filters (pane on the web, sheet on phones).
     List<Widget> filters() => [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              decoration: InputDecoration(
-                isDense: true,
-                prefixIcon: const Icon(Icons.search),
-                hintText: l10n.searchByName,
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (v) => setState(() {
-                _query = v;
-                _refit();
-              }),
-            ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: TextField(
+          decoration: InputDecoration(
+            isDense: true,
+            prefixIcon: const Icon(Icons.search),
+            hintText: l10n.searchByName,
+            border: const OutlineInputBorder(),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                for (final (f, color, label) in [
-                  (_Filter.onSite, Colors.green.shade700, l10n.onSite),
-                  (_Filter.away, Colors.orange.shade800, l10n.leftTheSite),
-                  (_Filter.notIn, Colors.grey.shade600, l10n.notCheckedIn),
-                  (_Filter.checkedOut, Colors.indigo, l10n.checkedOutTitle),
-                  (_Filter.noAttendance, Colors.blueGrey, l10n.notOnAttendance),
-                ])
-                  if (counts[f]! > 0 || _filters.contains(f))
-                    FilterChip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: Icon(Icons.circle, size: 12, color: color),
-                      label: Text('$label (${counts[f]})'),
-                      selected: _filters.contains(f),
-                      showCheckmark: false,
-                      onSelected: (on) => setState(() {
-                        on ? _filters.add(f) : _filters.remove(f);
-                        _refit();
-                      }),
-                    ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Text(
-              [l10n.employeesCount(shown.length), l10n.employeesMapNote].join(' · '),
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-        ];
+          onChanged: (v) => setState(() {
+            _query = v;
+            _refit();
+          }),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            for (final (f, color, label) in [
+              (_Filter.onSite, Colors.green.shade700, l10n.onSite),
+              (_Filter.away, Colors.orange.shade800, l10n.leftTheSite),
+              (_Filter.notIn, Colors.grey.shade600, l10n.notCheckedIn),
+              (_Filter.checkedOut, Colors.indigo, l10n.checkedOutTitle),
+              (_Filter.noAttendance, Colors.blueGrey, l10n.notOnAttendance),
+            ])
+              if (counts[f]! > 0 || _filters.contains(f))
+                FilterChip(
+                  visualDensity: VisualDensity.compact,
+                  avatar: Icon(Icons.circle, size: 12, color: color),
+                  label: Text('$label (${counts[f]})'),
+                  selected: _filters.contains(f),
+                  showCheckmark: false,
+                  onSelected: (on) => setState(() {
+                    on ? _filters.add(f) : _filters.remove(f);
+                    _refit();
+                  }),
+                ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Text(
+          [l10n.employeesCount(shown.length), l10n.employeesMapNote].join(' · '),
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
+    ];
 
     List<Widget> rows(bool wide) => [
-          if (shown.isEmpty) ListTile(title: Text(l10n.noOneMatches)),
-          for (final p in shown)
-            ListTile(
-              selected: p.user.id == _selected,
-              leading: _Avatar(name: p.user.name, color: _statusColor(context, p), faded: !p.live),
-              title: Text(p.user.name),
-              subtitle: Text(
-                [_rowLine(context, l10n, p), p.siteName].where((s) => s.isNotEmpty).join(' · '),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: p.report.problemCount > 0
-                  ? Tooltip(
-                      message: p.report.quiet != null
-                          ? quietLine(context, p.report.quiet!, p.report.lastPosition, DateTime.now())
-                          : l10n.phoneStatusProblems(p.report.problemCount),
-                      child: Icon(Icons.phonelink_erase, color: theme.colorScheme.error, size: 20),
-                    )
-                  : null,
-              onTap: () => _open(p, wide),
-            ),
-        ];
+      if (shown.isEmpty) ListTile(title: Text(l10n.noOneMatches)),
+      for (final p in shown)
+        ListTile(
+          selected: p.user.id == _selected,
+          leading: _Avatar(name: p.user.name, color: _statusColor(context, p), faded: !p.live),
+          title: Text(p.user.name),
+          subtitle: Text(
+            [_rowLine(context, l10n, p), p.siteName].where((s) => s.isNotEmpty).join(' · '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: p.report.problemCount > 0
+              ? Tooltip(
+                  message: p.report.quiet != null
+                      ? quietLine(context, p.report.quiet!, p.report.lastPosition, DateTime.now())
+                      : l10n.phoneStatusProblems(p.report.problemCount),
+                  child: Icon(Icons.phonelink_erase, color: theme.colorScheme.error, size: 20),
+                )
+              : null,
+          onTap: () => _open(p, wide),
+        ),
+    ];
 
-    // Over the map, top left (user 2026-11-04): regions, then companies,
-    // then work sites, each row under a separator.
+    // Companies and work sites for the filter card's rows.
     final allCompanies = ref.watch(companiesProvider).value ?? const <Company>[];
-    final regionCompanyIds = {for (final p in everyone) if (inRegion(p)) p.user.companyId};
+    final regionCompanyIds = {
+      for (final p in everyone)
+        if (inRegion(p)) p.user.companyId,
+    };
     final companies = [
       for (final c in allCompanies)
         if (region == null || regionCompanyIds.contains(c.id) || c.id == companyId) c,
     ];
     void pickSite(WorkSite? s) => setState(() {
-          _siteId = s?.id;
-          if (s == null) {
-            _refit();
-          } else {
-            _fitted = true;
-            _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(s.lat, s.lng), 16));
-          }
-        });
-    Widget chipRow(IconData icon, List<Widget> chips) => Row(children: [
-          Icon(icon, size: 18, color: theme.colorScheme.outline),
-          const SizedBox(width: 6),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [
-                for (final c in chips) Padding(padding: const EdgeInsetsDirectional.only(end: 6), child: c),
-              ]),
+      _siteId = s?.id;
+      if (s == null) {
+        _refit();
+      } else {
+        _fitted = true;
+        _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(s.lat, s.lng), 16));
+      }
+    });
+    Widget chipRow(IconData icon, List<Widget> chips) => Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.outline),
+        const SizedBox(width: 6),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [for (final c in chips) Padding(padding: const EdgeInsetsDirectional.only(end: 6), child: c)],
             ),
           ),
-        ]);
+        ),
+      ],
+    );
     Widget choice(String label, bool selected, VoidCallback onTap) => ChoiceChip(
-          visualDensity: VisualDensity.compact,
-          label: Text(label),
-          selected: selected,
-          showCheckmark: false,
-          onSelected: (_) => onTap(),
-        );
+      visualDensity: VisualDensity.compact,
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => onTap(),
+    );
+    void pickRegion(SaudiRegion? next) {
+      // A site or company with nothing in the new region would leave the
+      // map empty: drop it.
+      final siteNow = activeSites.where((s) => s.id == _siteId).firstOrNull;
+      if (next != null && siteNow != null && !next.contains(siteNow.lat, siteNow.lng)) _siteId = null;
+      if (next != null &&
+          companyId != null &&
+          !everyone.any((p) => p.user.companyId == companyId && personIn(next, p))) {
+        ref.read(peopleCompanyProvider.notifier).set(null);
+      }
+      setState(() {
+        _region = next;
+        _refit();
+      });
+    }
+
+    // Short chip labels (user 2026-11-08): "Wood Panels Co" → WPC; the full
+    // name in the tooltip.
+    final companyShort = shortLabels({for (final c in allCompanies) c.id: c.name});
+    final siteShort = shortLabels({for (final s in activeSites) s.id: s.name});
+    Widget shortChoice(String short, String full, bool selected, VoidCallback onTap) =>
+        short == full ? choice(full, selected, onTap) : Tooltip(message: full, child: choice(short, selected, onTap));
+    final hasCompanies = allCompanies.length > 1 && companies.isNotEmpty;
+    // Over the map, across the top like the clients map (user 2026-11-08):
+    // regions across the whole width; the arrow opens companies and sites.
     final regionChips = PositionedDirectional(
       top: 8,
       start: 8,
-      end: 64,
+      end: 8,
       child: Align(
-        alignment: AlignmentDirectional.topStart,
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          // Wider (user 2026-11-07).
           constraints: const BoxConstraints(maxWidth: 720),
           child: PointerInterceptor(
-            child: Material(
-              elevation: 3,
-              color: theme.colorScheme.surface.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(12),
+            child: Card(
+              margin: EdgeInsets.zero,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    chipRow(Icons.explore_outlined, [
-                      for (final r in SaudiRegion.values)
-                        choice(r.label(l10n), region == r, () {
-                          final next = region == r ? null : r;
-                          // A site or company with nothing in the new region
-                          // would leave the map empty: drop it.
-                          final siteNow = activeSites.where((s) => s.id == _siteId).firstOrNull;
-                          if (next != null && siteNow != null && !next.contains(siteNow.lat, siteNow.lng)) _siteId = null;
-                          if (next != null &&
-                              companyId != null &&
-                              !everyone.any((p) => p.user.companyId == companyId && personIn(next, p))) {
-                            ref.read(peopleCompanyProvider.notifier).set(null);
-                          }
-                          setState(() {
-                            _region = next;
-                            _refit();
-                          });
-                        }),
-                    ]),
-                    if (allCompanies.length > 1 && companies.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: RegionChips(fill: true, selected: region, onSelected: pickRegion),
+                        ),
+                        if (hasCompanies || sites.isNotEmpty)
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            tooltip: _cardOpen ? l10n.showLessFilters : l10n.showMoreFilters,
+                            icon: Badge(
+                              // Something picked while the rows are hidden.
+                              isLabelVisible: !_cardOpen && (companyId != null || site != null),
+                              smallSize: 8,
+                              child: Icon(_cardOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                            ),
+                            onPressed: () => setState(() => _cardOpen = !_cardOpen),
+                          ),
+                      ],
+                    ),
+                    if (_cardOpen && hasCompanies) ...[
                       const Divider(height: 10),
                       chipRow(Icons.business, [
                         choice(l10n.allCompanies, companyId == null, () {
@@ -557,17 +607,23 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
                           setState(_refit);
                         }),
                         for (final c in companies)
-                          choice(c.name, companyId == c.id, () {
+                          shortChoice(companyShort[c.id] ?? c.name, c.name, companyId == c.id, () {
                             ref.read(peopleCompanyProvider.notifier).set(companyId == c.id ? null : c.id);
                             setState(_refit);
                           }),
                       ]),
                     ],
-                    if (sites.isNotEmpty) ...[
+                    if (_cardOpen && sites.isNotEmpty) ...[
                       const Divider(height: 10),
                       chipRow(Icons.place_outlined, [
                         choice(l10n.allSites, site == null, () => pickSite(null)),
-                        for (final s in sites) choice(s.name, site?.id == s.id, () => pickSite(site?.id == s.id ? null : s)),
+                        for (final s in sites)
+                          shortChoice(
+                            siteShort[s.id] ?? s.name,
+                            s.name,
+                            site?.id == s.id,
+                            () => pickSite(site?.id == s.id ? null : s),
+                          ),
                       ]),
                     ],
                   ],
@@ -578,89 +634,104 @@ class _EmployeesMapScreenState extends ConsumerState<EmployeesMapScreen> {
         ),
       ),
     );
+    // Map type and "show everyone", bottom right (the filter card spans the top).
     Widget fitButton(double bottom) => PositionedDirectional(
-          end: 12,
-          bottom: bottom,
-          child: PointerInterceptor(
-            child: FloatingActionButton.small(
+      end: 12,
+      bottom: bottom,
+      child: PointerInterceptor(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const MapTypeButton(),
+            const SizedBox(height: 8),
+            FloatingActionButton.small(
               heroTag: 'employeesFit',
               tooltip: l10n.showEveryone,
               onPressed: points.isEmpty ? null : () => fitPoints(_map!, points, padding: 48),
               child: const Icon(Icons.zoom_out_map),
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.employeesMap)),
-      body: LayoutBuilder(builder: (context, c) {
-        final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
-        if (wide) {
-          final selected = everyone.any((p) => p.user.id == _selected) ? _selected : null;
-          return Row(
+      body: LayoutBuilder(
+        builder: (context, c) {
+          final wide = MediaQuery.sizeOf(context).width >= wideLayoutWidth;
+          if (wide) {
+            final selected = everyone.any((p) => p.user.id == _selected) ? _selected : null;
+            return Row(
+              children: [
+                Expanded(child: Stack(children: [map, regionChips, fitButton(16)])),
+                const VerticalDivider(width: 1),
+                SizedBox(
+                  width: c.maxWidth >= 1300 ? 420 : 360,
+                  child: selected != null
+                      ? _PersonDetails(
+                          key: ValueKey(selected),
+                          uid: selected,
+                          onClose: () => setState(() => _selected = null),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(top: 12, bottom: 24),
+                          children: [...filters(), const Divider(), ...rows(true)],
+                        ),
+                ),
+              ],
+            );
+          }
+          // Phones (user 2026-11-08): the list starts minimized to the search
+          // field and is dragged up for the rest.
+          final minSize = (_sheetMinPx / c.maxHeight).clamp(0.08, 0.4);
+          final sheetTop = c.maxHeight * minSize;
+          return Stack(
             children: [
-              Expanded(
-                child: Stack(children: [
-                  map,
-                  const PositionedDirectional(top: 8, end: 8, child: MapTypeButton()),
-                  regionChips,
-                  fitButton(16),
-                ]),
+              Padding(
+                padding: EdgeInsets.only(bottom: sheetTop - 16),
+                child: map,
               ),
-              const VerticalDivider(width: 1),
-              SizedBox(
-                width: c.maxWidth >= 1300 ? 420 : 360,
-                child: selected != null
-                    ? _PersonDetails(
-                        key: ValueKey(selected),
-                        uid: selected,
-                        onClose: () => setState(() => _selected = null),
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.only(top: 12, bottom: 24),
-                        children: [...filters(), const Divider(), ...rows(true)],
-                      ),
+              regionChips,
+              fitButton(sheetTop + 8),
+              DraggableScrollableSheet(
+                initialChildSize: minSize,
+                minChildSize: minSize,
+                maxChildSize: 0.85,
+                snap: true,
+                snapSizes: [if (0.45 > minSize) 0.45],
+                builder: (context, scroll) => PointerInterceptor(
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListView(
+                      controller: scroll,
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        ...filters(),
+                        const Divider(),
+                        ...rows(false),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           );
-        }
-        final sheetTop = c.maxHeight * 0.32;
-        return Stack(children: [
-          Padding(padding: EdgeInsets.only(bottom: sheetTop - 16), child: map),
-          const PositionedDirectional(top: 8, end: 8, child: MapTypeButton()),
-          regionChips,
-          fitButton(sheetTop + 8),
-          DraggableScrollableSheet(
-            initialChildSize: 0.32,
-            minChildSize: 0.12,
-            maxChildSize: 0.85,
-            builder: (context, scroll) => PointerInterceptor(
-              child: Material(
-                elevation: 8,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                clipBehavior: Clip.antiAlias,
-                child: ListView(
-                  controller: scroll,
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
-                      ),
-                    ),
-                    ...filters(),
-                    const Divider(),
-                    ...rows(false),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ]);
-      }),
+        },
+      ),
     );
   }
 }
@@ -707,36 +778,45 @@ class _PersonDetails extends ConsumerWidget {
     final workDay = p.schedule.days.contains(now.weekday);
 
     Widget section(String title, IconData icon, List<Widget> children) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(children: [
-                Icon(icon, size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
-              ]),
-              const SizedBox(height: 6),
-              ...children,
+              Icon(icon, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
             ],
           ),
-        );
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    );
     Widget line(String text, {Color? color, bool bold = false}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(text, style: theme.textTheme.bodyMedium?.copyWith(color: color, fontWeight: bold ? FontWeight.w600 : null)),
-        );
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(color: color, fontWeight: bold ? FontWeight.w600 : null),
+      ),
+    );
 
     // Attendance today.
     final attendance = <Widget>[
       if (day == null)
         line(l10n.notOnAttendance, color: theme.colorScheme.outline)
       else ...[
-        Row(children: [
-          Icon(_statusIcon(p), size: 20, color: color),
-          const SizedBox(width: 8),
-          Expanded(child: Text(_statusLabel(l10n, p), style: theme.textTheme.titleMedium?.copyWith(color: color))),
-          if (day.workedMin > 0) Text(formatMinutes(day.workedMin), style: theme.textTheme.titleSmall),
-        ]),
+        Row(
+          children: [
+            Icon(_statusIcon(p), size: 20, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(_statusLabel(l10n, p), style: theme.textTheme.titleMedium?.copyWith(color: color)),
+            ),
+            if (day.workedMin > 0) Text(formatMinutes(day.workedMin), style: theme.textTheme.titleSmall),
+          ],
+        ),
         if (p.siteName.isNotEmpty) line(l10n.siteName(p.siteName)),
         if (workDay) line(l10n.startAt(time.format(midnight.add(Duration(minutes: p.schedule.startMinute))))),
         if (d?.checkInAt != null) ...[
@@ -750,15 +830,20 @@ class _PersonDetails extends ConsumerWidget {
               line(exitCheckLine(l10n, time, c, today: true), color: exitCheckColor(context, c, today: true))
           else
             for (final t in p.record?.trips ?? const <SiteTrip>[])
-              line(l10n.siteTripLine(
-              time.format(t.leftAt),
-              time.format(t.backAt),
-              formatMinutes(t.backAt.difference(t.leftAt).inMinutes),
-            )),
+              line(
+                l10n.siteTripLine(
+                  time.format(t.leftAt),
+                  time.format(t.backAt),
+                  formatMinutes(t.backAt.difference(t.leftAt).inMinutes),
+                ),
+              ),
           if (d.checkOutAt != null && d.closed)
-            line([l10n.checkedOutAt(time.format(d.checkOutAt!)), checkOutTypeLabel(l10n, d.checkOutType)]
-                .where((s) => s.isNotEmpty)
-                .join(' · ')),
+            line(
+              [
+                l10n.checkedOutAt(time.format(d.checkOutAt!)),
+                checkOutTypeLabel(l10n, d.checkOutType),
+              ].where((s) => s.isNotEmpty).join(' · '),
+            ),
           if (day.workedMin > 0) line('${l10n.workedSoFar}: ${formatMinutes(day.workedMin)}'),
         ] else if (day.notInYet)
           line(l10n.lateByLong(formatMinutes(day.lateMin)), color: error, bold: true),
@@ -790,8 +875,10 @@ class _PersonDetails extends ConsumerWidget {
     final loc = p.loc;
     final location = <Widget>[
       if (loc == null)
-        line(u.role.isLocationTracked ? l10n.noLocationYet : l10n.noPositionRecordedToday,
-            color: theme.colorScheme.outline)
+        line(
+          u.role.isLocationTracked ? l10n.noLocationYet : l10n.noPositionRecordedToday,
+          color: theme.colorScheme.outline,
+        )
       else ...[
         line(
           p.live
@@ -810,8 +897,7 @@ class _PersonDetails extends ConsumerWidget {
     final s = r.status;
     final heard = r.lastHeard == null ? null : timeAgo(context, r.lastHeard, now);
     final phone = <Widget>[
-      if (r.quiet != null)
-        line(quietLine(context, r.quiet!, r.lastPosition, now), color: error, bold: true),
+      if (r.quiet != null) line(quietLine(context, r.quiet!, r.lastPosition, now), color: error, bold: true),
       line(
         switch (r.signal) {
           PhoneSignal.noPhone => l10n.phoneStatusNoPhone,
@@ -856,10 +942,14 @@ class _PersonDetails extends ConsumerWidget {
             ),
           ),
       ] else if (u.appVersions.isNotEmpty)
-        line(l10n.phoneStatusApp(u.appVersions.values.map((v) => v.label).join(', ')), color: theme.colorScheme.outline),
+        line(
+          l10n.phoneStatusApp(u.appVersions.values.map((v) => v.label).join(', ')),
+          color: theme.colorScheme.outline,
+        ),
     ];
 
-    final canRoute = me != null &&
+    final canRoute =
+        me != null &&
         access.allowsUser(me, AppPage.routeHistory) &&
         (me.role.isSupervisor || (me.role.seesDrivers && u.role.isDriver));
 
@@ -942,15 +1032,18 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: faded ? Colors.grey.shade300 : Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: color, width: 4),
-          boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
-        ),
-        alignment: Alignment.center,
-        child: Text(initialsOf(name), style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
-      );
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: faded ? Colors.grey.shade300 : Colors.white,
+      shape: BoxShape.circle,
+      border: Border.all(color: color, width: 4),
+      boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      initialsOf(name),
+      style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13),
+    ),
+  );
 }

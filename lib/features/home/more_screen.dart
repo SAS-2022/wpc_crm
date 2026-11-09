@@ -69,6 +69,8 @@ class MoreScreen extends ConsumerWidget {
         if (role.seesCompanyDocs) item(Icons.folder_copy_outlined, l10n.companyDocs, '/documents'),
       ]),
       (l10n.moreSectionSettings, [
+        // Everyone picks their own bottom tabs (2026-11-08).
+        item(Icons.space_dashboard_outlined, l10n.bottomTabs, '/bottom-tabs'),
         // Work hours, visit frequency, tags, work sites … are all in App
         // settings (user request 2026-10-21).
         if (role.isAdmin) ...[

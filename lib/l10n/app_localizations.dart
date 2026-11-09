@@ -1172,6 +1172,36 @@ abstract class AppLocalizations {
   /// **'Filters'**
   String get filters;
 
+  /// No description provided for @advancedFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced filters'**
+  String get advancedFilters;
+
+  /// No description provided for @fewerFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer filters'**
+  String get fewerFilters;
+
+  /// No description provided for @showMoreFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get showMoreFilters;
+
+  /// No description provided for @showLessFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLessFilters;
+
+  /// No description provided for @salespeopleInRegion.
+  ///
+  /// In en, this message translates to:
+  /// **'Salespeople with clients in {region}'**
+  String salespeopleInRegion(String region);
+
   /// No description provided for @clearFilters.
   ///
   /// In en, this message translates to:
@@ -11376,6 +11406,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overtime status'**
   String get reportOvertimeStatus;
+
+  /// No description provided for @bottomTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom tabs'**
+  String get bottomTabs;
+
+  /// No description provided for @bottomTabsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to 4 tabs for the bar at the bottom of the screen on phones. More is always the last tab. Drag to change the order.'**
+  String get bottomTabsHint;
+
+  /// No description provided for @bottomTabsYours.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tabs'**
+  String get bottomTabsYours;
+
+  /// No description provided for @bottomTabsAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a tab'**
+  String get bottomTabsAdd;
+
+  /// No description provided for @bottomTabsFull.
+  ///
+  /// In en, this message translates to:
+  /// **'5 tabs is the most. Remove one to add another.'**
+  String get bottomTabsFull;
+
+  /// No description provided for @bottomTabsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom tabs saved'**
+  String get bottomTabsSaved;
+
+  /// No description provided for @bottomTabsMoreFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Always the last tab'**
+  String get bottomTabsMoreFixed;
+
+  /// No description provided for @bottomTabsKeepOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one tab besides More.'**
+  String get bottomTabsKeepOne;
+
+  /// No description provided for @bottomTabsPhonesOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Used on phones. On the web the side menu is used instead (Edit menu at its bottom).'**
+  String get bottomTabsPhonesOnly;
 }
 
 class _AppLocalizationsDelegate

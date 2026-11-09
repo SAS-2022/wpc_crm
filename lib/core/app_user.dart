@@ -258,6 +258,7 @@ class AppUser {
     this.department,
     this.homeLocation,
     this.menuOrder,
+    this.bottomTabs,
   });
 
   final String id;
@@ -379,6 +380,10 @@ class AppUser {
   /// default). Set by the person only, from the menu's "Edit menu".
   final List<String>? menuOrder;
 
+  /// Their own bottom tabs on phones (paths, More not included, at most 4;
+  /// 2026-11-08; null = the default). Set by the person in More → Bottom tabs.
+  final List<String>? bottomTabs;
+
   /// Attendance page for the people under them (2026-10-23): managers and
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
   /// The employee map with the people under them (department heads,
@@ -446,6 +451,10 @@ class AppUser {
         _ => null,
       },
       menuOrder: switch (d['menuOrder']) {
+        final List l when l.isNotEmpty => [for (final p in l) if (p is String) p],
+        _ => null,
+      },
+      bottomTabs: switch (d['bottomTabs']) {
         final List l when l.isNotEmpty => [for (final p in l) if (p is String) p],
         _ => null,
       },

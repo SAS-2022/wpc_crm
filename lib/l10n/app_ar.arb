@@ -179,6 +179,11 @@
   "importFillOnly": "تعبئة الحقول الناقصة فقط",
   "importFillOnlyHint": "الشخص المسؤول، شركة / فرد، ورقم السجل التجاري للعملاء الحاليين، فقط إذا كانت فارغة. لا يتغير أي شيء آخر ولا يُضاف عملاء جدد.",
   "filters": "الفلاتر",
+  "advancedFilters": "فلاتر متقدمة",
+  "fewerFilters": "فلاتر أقل",
+  "showMoreFilters": "عرض المزيد",
+  "showLessFilters": "عرض أقل",
+  "salespeopleInRegion": "مندوبو المبيعات الذين لديهم عملاء في {region}",
   "clearFilters": "مسح الكل",
   "clientTags": "تصنيفات العملاء",
   "tagFilterAny": "يعرض العملاء الذين لديهم أي من التصنيفات المختارة.",
@@ -1876,5 +1881,14 @@
   "otStateRejected": "غير معتمد",
   "reportOvertimePendingHours": "عمل إضافي بانتظار الاعتماد (ساعات)",
   "reportOvertimeRejectedHours": "عمل إضافي غير معتمد (ساعات)",
-  "reportOvertimeStatus": "حالة العمل الإضافي"
+  "reportOvertimeStatus": "حالة العمل الإضافي",
+  "bottomTabs": "الأزرار السفلية",
+  "bottomTabsHint": "اختر حتى 4 أزرار للشريط أسفل الشاشة على الهاتف. «المزيد» هو دائماً الزر الأخير. اسحب لتغيير الترتيب.",
+  "bottomTabsYours": "أزرارك",
+  "bottomTabsAdd": "إضافة زر",
+  "bottomTabsFull": "الحد الأقصى 5 أزرار. احذف زراً لإضافة آخر.",
+  "bottomTabsSaved": "تم حفظ الأزرار السفلية",
+  "bottomTabsMoreFixed": "دائماً الزر الأخير",
+  "bottomTabsKeepOne": "أبقِ زراً واحداً على الأقل غير «المزيد».",
+  "bottomTabsPhonesOnly": "تُستخدم على الهاتف. على الويب تُستخدم القائمة الجانبية (تعديل القائمة في أسفلها)."
 }

@@ -617,6 +617,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filters => 'Filters';
 
   @override
+  String get advancedFilters => 'Advanced filters';
+
+  @override
+  String get fewerFilters => 'Fewer filters';
+
+  @override
+  String get showMoreFilters => 'Show more';
+
+  @override
+  String get showLessFilters => 'Show less';
+
+  @override
+  String salespeopleInRegion(String region) {
+    return 'Salespeople with clients in $region';
+  }
+
+  @override
   String get clearFilters => 'Clear all';
 
   @override
@@ -6971,4 +6988,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportOvertimeStatus => 'Overtime status';
+
+  @override
+  String get bottomTabs => 'Bottom tabs';
+
+  @override
+  String get bottomTabsHint =>
+      'Choose up to 4 tabs for the bar at the bottom of the screen on phones. More is always the last tab. Drag to change the order.';
+
+  @override
+  String get bottomTabsYours => 'Your tabs';
+
+  @override
+  String get bottomTabsAdd => 'Add a tab';
+
+  @override
+  String get bottomTabsFull => '5 tabs is the most. Remove one to add another.';
+
+  @override
+  String get bottomTabsSaved => 'Bottom tabs saved';
+
+  @override
+  String get bottomTabsMoreFixed => 'Always the last tab';
+
+  @override
+  String get bottomTabsKeepOne => 'Keep at least one tab besides More.';
+
+  @override
+  String get bottomTabsPhonesOnly =>
+      'Used on phones. On the web the side menu is used instead (Edit menu at its bottom).';
 }
