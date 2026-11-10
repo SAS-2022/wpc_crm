@@ -120,13 +120,17 @@ service cloud.firestore {
     match /clients/{clientId} {
       allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid);
       // KAM / managers add any client; a sales exec adds clients for themselves.
-      allow create: if isSupervisor()
+      // Clients added in the app need a name (two were saved without one,
+      // 2026-11: the form skipped the name field once scrolled out of view).
+      allow create: if (request.resource.data.get('source', '') != 'manual' || hasClientName())
+        && (isSupervisor()
         || (isSales() && request.resource.data.assignedTo == request.auth.uid
-            && request.resource.data.source == 'manual');
+            && request.resource.data.source == 'manual'));
       allow delete: if isAdmin();
       // `givenLog` (`given` = older summary): catalogs / stands handed over, at
       // visits or recorded on the client page. `statusRequest`: see below.
-      allow update: if isSupervisor()
+      allow update: if (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['name']) || hasClientName())
+        && (isSupervisor()
         || (active() && resource.data.assignedTo == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
@@ -136,7 +140,11 @@ service cloud.firestore {
             // or withdraws it; KAM / managers approve and set `status`.
             && (!('statusRequest' in request.resource.data)
                 || request.resource.data.statusRequest == null
-                || request.resource.data.statusRequest.byId == request.auth.uid));
+                || request.resource.data.statusRequest.byId == request.auth.uid)));
+
+      function hasClientName() {
+        return request.resource.data.name is string && request.resource.data.name.trim().size() > 0;
+      }
 
       match /attachments/{attachmentId} {
         allow read, create: if isSupervisor() || ownsClient(clientId);

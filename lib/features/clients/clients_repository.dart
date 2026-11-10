@@ -187,6 +187,7 @@ class ClientsRepository {
 
   /// Adds a client by hand (not from Odoo); returns its id.
   Future<String> create(Map<String, dynamic> data, {required String createdBy}) => saving(() async {
+    if (((data['name'] as String?) ?? '').trim().isEmpty) throw ArgumentError('A client needs a name');
     final ref = await _clients.add({
       ...data,
       'nameKey': Client.normalizeName(data['name'] as String),
@@ -202,8 +203,12 @@ class ClientsRepository {
     return ref.id;
   });
 
-  Future<void> update(String clientId, Map<String, dynamic> data) => saving(() =>
-      _clients.doc(clientId).update({...data, 'updatedAt': FieldValue.serverTimestamp()}));
+  Future<void> update(String clientId, Map<String, dynamic> data) => saving(() {
+    if (data.containsKey('name') && ((data['name'] as String?) ?? '').trim().isEmpty) {
+      throw ArgumentError('A client needs a name');
+    }
+    return _clients.doc(clientId).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+  });
 
   /// KAM / managers hide a client from lists and statistics, or show it again.
   Future<void> setHidden(String clientId, {required bool hidden, required String by}) => saving(() =>

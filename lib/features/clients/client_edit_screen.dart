@@ -51,6 +51,7 @@ class ClientEditScreen extends ConsumerStatefulWidget {
 class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _nameFocus = FocusNode();
   final _phone = TextEditingController();
   final _mobile = TextEditingController();
   final _address = TextEditingController();
@@ -113,6 +114,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     for (final c in _controllers) {
       c.dispose();
     }
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -237,7 +239,14 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   }
 
   Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+    // Checked here too: a form field scrolled out of view used to be skipped
+    // by validate() (two clients were saved without a name, 2026-11-05 / 11-10).
+    final valid = _form.currentState!.validate();
+    if (_name.text.trim().isEmpty) {
+      _nameFocus.requestFocus();
+      return;
+    }
+    if (!valid) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final me = ref.read(currentUserProvider).value!;
@@ -383,8 +392,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       String? Function(String?)? validator,
       TextInputType? type,
       int maxLines = 1,
+      FocusNode? focusNode,
     }) => TextFormField(
       controller: c,
+      focusNode: focusNode,
       keyboardType: type,
       maxLines: maxLines,
       minLines: 1,
@@ -407,12 +418,17 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       appBar: AppBar(title: Text(_isNew ? l10n.addClient : l10n.editClient)),
       body: Form(
         key: _form,
-        child: ListView(
+        // Not a ListView: it drops fields scrolled out of view, and the Form
+        // then doesn't validate them (empty name saved after scrolling down).
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             field(
               _name,
               l10n.clientName,
+              focusNode: _nameFocus,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l10n.required : null,
             ),
@@ -608,6 +624,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
               child: BusyLabel(busy: _busy, child: Text(l10n.save)),
             ),
           ],
+          ),
         ),
       ),
     );
