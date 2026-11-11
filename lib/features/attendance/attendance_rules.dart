@@ -395,6 +395,7 @@ DayResult deriveDay(
     final extra = outAt.difference(later(end, inAt)) - awayAfter;
     final extraMin = _minutes(extra);
     overtime = overtimeOn ? (extraMin < overtimeMaxMin ? extraMin : overtimeMaxMin) : 0;
+    if (overtime < minOvertimeMin) overtime = 0;
     afterHours = extraMin - overtime;
     counted = overtimeOn
         ? (worked - afterHours < 0 ? 0 : worked - afterHours)
@@ -467,6 +468,11 @@ var awayGraceMin = 30;
 /// decision 2026-11-05: 9 hours with 1 hour of break). Editable in App
 /// settings; `BREAK_ALLOWANCE_MIN` in attendance.js.
 var breakAllowanceMin = 60;
+
+/// Overtime shorter than this many minutes counts as none: the time is
+/// after-hours (recorded, not counted) instead (user decision 2026-11-10).
+/// Editable in App settings; `MIN_OVERTIME_MIN` in attendance.js.
+var minOvertimeMin = 29;
 
 /// Most overtime counted a day unless the user form sets more (user
 /// decision 2026-10-24; `OVERTIME_MAX_MIN` in attendance.js).

@@ -1,5 +1,5 @@
-// Clients added or renamed in the app must have a name (two were saved
-// empty in Nov 2026 when the form skipped the scrolled-away name field).
+// Clients added in the app need a name, a type (tag), a contact person, a
+// phone or mobile and a location; a name can't be cleared later.
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
@@ -26,7 +26,10 @@ beforeEach(async () => {
 });
 
 const fs = (uid) => env.authenticatedContext(uid).firestore();
-const client = (name, assignedTo = 'exec') => ({ name, assignedTo, source: 'manual' });
+const client = (name, more = {}) => ({
+  name, assignedTo: 'exec', source: 'manual', tagIds: ['factory'], contactPerson: 'Abu Ahmed',
+  phone: '', mobile: '0505904368', lat: 24.8, lng: 46.6, ...more,
+});
 
 test('a client added in the app needs a name', async () => {
   for (const uid of ['kam', 'exec']) {
@@ -34,7 +37,23 @@ test('a client added in the app needs a name', async () => {
     await assertFails(setDoc(doc(fs(uid), `clients/s_${uid}`), client('   ')));
     await assertFails(setDoc(doc(fs(uid), `clients/m_${uid}`), { assignedTo: 'exec', source: 'manual' }));
     await assertSucceeds(setDoc(doc(fs(uid), `clients/ok_${uid}`), client('Master Craft')));
+    await assertSucceeds(setDoc(doc(fs(uid), `clients/ph_${uid}`), client('A', { phone: '011 435 9633', mobile: '' })));
   }
+});
+
+test('type, contact person, phone and location are required', async () => {
+  const missing = [
+    { tagIds: [] }, { tagIds: null }, { contactPerson: ' ' }, { phone: '', mobile: '' },
+    { lat: null }, { lng: null }, { lat: '24.8' },
+  ];
+  for (const [i, m] of missing.entries()) {
+    await assertFails(setDoc(doc(fs('exec'), `clients/x${i}`), client('Master Craft', m)));
+    await assertFails(setDoc(doc(fs('kam'), `clients/k${i}`), client('Master Craft', m)));
+  }
+});
+
+test('a sales exec may set the type of their own client', async () => {
+  await assertSucceeds(updateDoc(doc(fs('exec'), 'clients/c1'), { tagIds: ['showroom'] }));
 });
 
 test('imports may still create clients', async () => {

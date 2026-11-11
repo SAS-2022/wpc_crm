@@ -7,7 +7,7 @@ const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
   gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap, BREAK_ALLOWANCE_MIN,
-  LATE_GRACE_MIN, AWAY_GRACE_MIN,
+  LATE_GRACE_MIN, AWAY_GRACE_MIN, MIN_OVERTIME_MIN,
 } = require('./attendance');
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
@@ -1176,7 +1176,7 @@ async function askOvertime(data, siteId, endMs, remind) {
 const OVERTIME_NOTICE_MS = 2 * 3600 * 1000;
 
 /** Works the day out from its events (see attendance.js) and saves the result when it changed. */
-async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin, breakAllowanceMin }) {
+async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin, breakAllowanceMin, minOvertimeMin }) {
   if (!data?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(data.date || '')) return;
   const user = (await admin.firestore().doc(`users/${data.uid}`).get()).data() || {};
   const mine = scheduleOf(user, hours);
@@ -1200,6 +1200,7 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
     overtimeMaxMin: overtimeCap(user.overtimeMaxMin),
     graceMin,
     awayGraceMin,
+    minOvertimeMin,
     driver: user.role === 'driver',
     // Driver overtime (driverOvertime below): running or done.
     drive: ['running', 'done'].includes(data.driveOvertime?.status) && ms(data.driveOvertime.startAt)
@@ -1289,12 +1290,13 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
 
 /** App settings the day rules use (same ranges as `AppSetting` in app_settings.dart). */
 async function attendanceSettings() {
-  const [graceMin, awayGraceMin, breakAllowanceMin] = await Promise.all([
+  const [graceMin, awayGraceMin, breakAllowanceMin, minOvertimeMin] = await Promise.all([
     appSetting('lateGraceMin', LATE_GRACE_MIN, 0, 60),
     appSetting('awayGraceMin', AWAY_GRACE_MIN, 5, 240),
     appSetting('breakAllowanceMin', BREAK_ALLOWANCE_MIN, 0, 240),
+    appSetting('minOvertimeMin', MIN_OVERTIME_MIN, 0, 120),
   ]);
-  return { graceMin, awayGraceMin, breakAllowanceMin };
+  return { graceMin, awayGraceMin, breakAllowanceMin, minOvertimeMin };
 }
 
 /** Recalculates a day whenever a phone adds an event. */

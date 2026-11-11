@@ -59,7 +59,9 @@ const fs = (uid) => env.authenticatedContext(uid).firestore();
 const rtdb = (uid) => env.authenticatedContext(uid).database();
 
 const visit = (uid) => ({ clientId: 'c1', clientName: 'Client', salesExecId: uid, checkedInAt: serverTimestamp() });
-const client = (uid) => ({ name: 'New', assignedTo: uid, source: 'manual' });
+const client = (uid) => ({
+  name: 'New', assignedTo: uid, source: 'manual', tagIds: ['factory'], contactPerson: 'Ali', mobile: '0500000000', lat: 24.7, lng: 46.7,
+});
 const task = (uid) => ({ ownerId: uid, createdBy: uid, approval: 'pending', date: '2026-10-17' });
 
 describe('back-office roles see and create no sales data', () => {

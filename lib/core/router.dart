@@ -36,8 +36,7 @@ import '../features/plan/plan_map_screen.dart';
 import '../features/plan/plan_screen.dart';
 import '../features/plan/team_plans_screen.dart';
 import '../features/reports/reports_screen.dart';
-import '../features/reports/route_history_screen.dart';
-import '../features/tracking/live_map_screen.dart';
+import '../features/tracking/people_map_screen.dart';
 import '../features/tracking/work_hours_screen.dart';
 import '../features/visits/add_visit_screen.dart';
 import '../features/visits/visit_detail_screen.dart';
@@ -52,7 +51,6 @@ import '../features/auth/register_screen.dart';
 import '../features/attendance/attendance_person_month_screen.dart';
 import '../features/attendance/attendance_report_screen.dart';
 import '../features/attendance/attendance_screen.dart';
-import '../features/attendance/employees_map_screen.dart';
 import '../features/attendance/overtime_permission_screen.dart';
 import '../features/attendance/work_sites_screen.dart';
 import '../features/users/companies_screen.dart';
@@ -248,7 +246,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(
               path: '/live',
-              builder: (_, state) => LiveMapScreen(
+              builder: (_, state) => PeopleMapScreen(
+                mode: PeopleMapMode.live,
                 onlyIds: state.uri.queryParameters['ids']?.split(',').where((id) => id.isNotEmpty).toSet(),
               ),
             ),
@@ -257,8 +256,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             // Drivers only (sales manager, GM, logistics manager).
             GoRoute(
               path: '/drivers',
-              builder: (_, state) => LiveMapScreen(
-                driversOnly: true,
+              builder: (_, state) => PeopleMapScreen(
+                mode: PeopleMapMode.drivers,
                 onlyIds: state.uri.queryParameters['ids']?.split(',').where((id) => id.isNotEmpty).toSet(),
               ),
             ),
@@ -308,8 +307,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(
               path: '/history',
-              builder: (_, state) => RouteHistoryScreen(
-                userId: state.uri.queryParameters['uid'],
+              // Everyone on the people map; `uid` opens that person's route.
+              builder: (_, state) => PeopleMapScreen(
+                mode: PeopleMapMode.history,
+                personId: state.uri.queryParameters['uid'],
                 date: state.uri.queryParameters['date'],
               ),
             ),
@@ -336,7 +337,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/attendance',
               builder: (_, state) => AttendanceScreen(initialDate: DateTime.tryParse(state.uri.queryParameters['date'] ?? '')),
             ),
-            GoRoute(path: '/attendance/map', builder: (_, _) => const EmployeesMapScreen()),
+            GoRoute(path: '/attendance/map', builder: (_, _) => const PeopleMapScreen(mode: PeopleMapMode.employees)),
             GoRoute(path: '/attendance/overtime', builder: (_, _) => const OvertimePermissionScreen()),
             GoRoute(path: '/attendance/report', builder: (_, _) => const AttendanceReportScreen()),
             GoRoute(

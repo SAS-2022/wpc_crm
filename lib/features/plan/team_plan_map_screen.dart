@@ -19,6 +19,7 @@ import '../users/users_repository.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
 import 'route_order.dart';
+import 'team_plans_screen.dart' show teamPlanRegionProvider;
 
 /// Every team member's planned visits for one day on one map (user request
 /// 2026-10-19): pins in the person's colour numbered in their shortest order,
@@ -45,7 +46,8 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
   final _hidden = <String>{};
 
   /// Region buttons (user request 2026-11-05): only the stops inside it.
-  SaudiRegion? _region;
+  /// Shared with Team plans (2026-11-11), so the map opens with its region.
+  SaudiRegion? get _region => ref.watch(teamPlanRegionProvider);
 
   @override
   void dispose() {
@@ -177,7 +179,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                       RegionChips(
                         selected: _region,
                         onSelected: (region) => setState(() {
-                          _region = region;
+                          ref.read(teamPlanRegionProvider.notifier).set(region);
                           if (region != null) {
                             region.zoomTo(_map, MediaQuery.sizeOf(context), [
                               for (final MapEntry(key: uid, value: tasks) in routes.entries)

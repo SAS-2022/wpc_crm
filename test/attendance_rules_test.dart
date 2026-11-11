@@ -204,7 +204,7 @@ void main() {
   test('a site check that finds them gone checks out at the last time seen', () {
     final gone = AttendanceEvent(out, t(17, 32), check: true);
     final d = run([e(inn, t(8)), e(seenT, t(17, 2)), gone], overtime: true, now: t(17, 40));
-    expect([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 2, false]);
+    expect([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 0, false]); // 2 min: under the 29-min minimum
     final early = run([e(inn, t(8)), AttendanceEvent(out, t(17, 2), check: true)], overtime: true, now: t(17, 5));
     expect([early.checkOutAt, early.overtimeMin], [t(17), 0]);
     expect(run([e(inn, t(8)), e(out, t(18))], now: t(19)).checkOutAt, t(18));
@@ -237,6 +237,16 @@ void main() {
     );
     expect([after.overtimeConfirmedAt, after.overtimeMin], [null, 0]);
     expect(run(events, now: t(19)).overtimeMin, 0);
+  });
+
+  test('overtime under 29 minutes counts as none (after hours instead)', () {
+    final short = run([e(inn, t(8)), e(out, t(17, 28))], overtime: true, now: t(19));
+    expect([short.overtimeMin, short.afterHoursMin, short.countedMin], [0, 28, 540]);
+    final enough = run([e(inn, t(8)), e(out, t(17, 29))], overtime: true, now: t(19));
+    expect([enough.overtimeMin, enough.afterHoursMin, enough.countedMin], [29, 0, 569]);
+    minOvertimeMin = 0; // App setting
+    expect(run([e(inn, t(8)), e(out, t(17, 10))], overtime: true, now: t(19)).overtimeMin, 10);
+    minOvertimeMin = 29;
   });
 
   test('"Not today" then "Start overtime" (pressed by mistake) → overtime counts from the end', () {

@@ -11460,6 +11460,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Used on phones. On the web the side menu is used instead (Edit menu at its bottom).'**
   String get bottomTabsPhonesOnly;
+
+  /// No description provided for @clientTypeTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get clientTypeTags;
+
+  /// No description provided for @clientTypeTagsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'What the client is – pick at least one'**
+  String get clientTypeTagsHelp;
+
+  /// No description provided for @pickClientType.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least one type'**
+  String get pickClientType;
+
+  /// No description provided for @phoneOrMobileRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a phone or mobile number'**
+  String get phoneOrMobileRequired;
+
+  /// No description provided for @clientLocationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the location: Use my location, Pick on map or Paste Maps link'**
+  String get clientLocationRequired;
+
+  /// No description provided for @fillRequiredFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the required fields marked *'**
+  String get fillRequiredFields;
+
+  /// No description provided for @settingMinOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortest overtime'**
+  String get settingMinOvertime;
+
+  /// No description provided for @settingMinOvertimeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime shorter than this isn\'t counted or shown for approval; the time is kept as after hours'**
+  String get settingMinOvertimeHelp;
+
+  /// No description provided for @shortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Short name'**
+  String get shortName;
+
+  /// No description provided for @shortNameHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown on the map filters. Leave empty to use {auto}'**
+  String shortNameHelp(String auto);
+
+  /// No description provided for @siteCompanyHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking this company on the maps shows only its sites'**
+  String get siteCompanyHelp;
+
+  /// No description provided for @editCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit company'**
+  String get editCompany;
+
+  /// No description provided for @routeHistoryPickPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a person to see their route history'**
+  String get routeHistoryPickPerson;
+
+  /// No description provided for @routeHistoryAllPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get routeHistoryAllPeople;
 }
 
 class _AppLocalizationsDelegate

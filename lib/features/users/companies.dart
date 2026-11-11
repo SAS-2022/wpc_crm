@@ -8,16 +8,20 @@ import '../../core/saving.dart';
 /// the sales manager / GM manage the list at More → Companies. Readable
 /// without signing in, so the registration form can list them.
 class Company {
-  const Company({required this.id, required this.name, required this.active});
+  const Company({required this.id, required this.name, required this.active, this.shortName = ''});
 
   final String id;
   final String name;
   final bool active;
 
+  /// Label on the map filter chips (user 2026-11-11); '' = made from the name.
+  final String shortName;
+
   factory Company.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) => Company(
         id: doc.id,
         name: doc.data()?['name'] as String? ?? '',
         active: doc.data()?['active'] != false,
+        shortName: doc.data()?['shortName'] as String? ?? '',
       );
 }
 
@@ -32,6 +36,11 @@ final companyNamesProvider = Provider<Map<String, String>>(
   (ref) => {for (final c in ref.watch(companiesProvider).value ?? const <Company>[]) c.id: c.name},
 );
 
-Future<void> saveCompany({String? id, required String name, bool active = true}) => saving(
-      () => (id == null ? _companies.doc() : _companies.doc(id)).set({'name': name.trim(), 'active': active}),
+/// [shortName] null = left as it is.
+Future<void> saveCompany({String? id, required String name, bool active = true, String? shortName}) => saving(
+      () => (id == null ? _companies.doc() : _companies.doc(id)).set({
+        'name': name.trim(),
+        'active': active,
+        if (shortName != null) 'shortName': shortName.trim(),
+      }, SetOptions(merge: true)),
     );

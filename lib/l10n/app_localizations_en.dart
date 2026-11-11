@@ -7017,4 +7017,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bottomTabsPhonesOnly =>
       'Used on phones. On the web the side menu is used instead (Edit menu at its bottom).';
+
+  @override
+  String get clientTypeTags => 'Type';
+
+  @override
+  String get clientTypeTagsHelp => 'What the client is – pick at least one';
+
+  @override
+  String get pickClientType => 'Pick at least one type';
+
+  @override
+  String get phoneOrMobileRequired => 'Enter a phone or mobile number';
+
+  @override
+  String get clientLocationRequired =>
+      'Set the location: Use my location, Pick on map or Paste Maps link';
+
+  @override
+  String get fillRequiredFields => 'Fill in the required fields marked *';
+
+  @override
+  String get settingMinOvertime => 'Shortest overtime';
+
+  @override
+  String get settingMinOvertimeHelp =>
+      'Overtime shorter than this isn\'t counted or shown for approval; the time is kept as after hours';
+
+  @override
+  String get shortName => 'Short name';
+
+  @override
+  String shortNameHelp(String auto) {
+    return 'Shown on the map filters. Leave empty to use $auto';
+  }
+
+  @override
+  String get siteCompanyHelp =>
+      'Picking this company on the maps shows only its sites';
+
+  @override
+  String get editCompany => 'Edit company';
+
+  @override
+  String get routeHistoryPickPerson =>
+      'Tap a person to see their route history';
+
+  @override
+  String get routeHistoryAllPeople => 'Everyone';
 }

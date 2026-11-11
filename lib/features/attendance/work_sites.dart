@@ -16,6 +16,8 @@ class WorkSite {
     required this.lng,
     this.radius = defaultSiteRadius,
     this.active = true,
+    this.shortName = '',
+    this.companyId,
   });
 
   final String id;
@@ -27,6 +29,13 @@ class WorkSite {
   final double radius;
   final bool active;
 
+  /// Label on the map filter chips (user 2026-11-11); '' = made from the name.
+  final String shortName;
+
+  /// The company the site belongs to (picking a company on the maps narrows
+  /// the sites to its own); null = none.
+  final String? companyId;
+
   factory WorkSite.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return WorkSite(
@@ -36,10 +45,20 @@ class WorkSite {
       lng: (d['lng'] as num?)?.toDouble() ?? 0,
       radius: (d['radius'] as num?)?.toDouble() ?? defaultSiteRadius,
       active: d['active'] != false,
+      shortName: d['shortName'] as String? ?? '',
+      companyId: (d['companyId'] as String?)?.isEmpty ?? true ? null : d['companyId'] as String,
     );
   }
 
-  Map<String, Object> toMap() => {'name': name, 'lat': lat, 'lng': lng, 'radius': radius, 'active': active};
+  Map<String, Object?> toMap() => {
+    'name': name,
+    'lat': lat,
+    'lng': lng,
+    'radius': radius,
+    'active': active,
+    'shortName': shortName,
+    'companyId': companyId,
+  };
 }
 
 /// 100 m (user's spec); the phones' geofences need at least about this much.

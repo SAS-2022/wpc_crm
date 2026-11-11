@@ -120,9 +120,10 @@ service cloud.firestore {
     match /clients/{clientId} {
       allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid);
       // KAM / managers add any client; a sales exec adds clients for themselves.
-      // Clients added in the app need a name (two were saved without one,
-      // 2026-11: the form skipped the name field once scrolled out of view).
-      allow create: if (request.resource.data.get('source', '') != 'manual' || hasClientName())
+      // Clients added in the app need a name, a type (client tag), a contact
+      // person, a phone or mobile and a location (user decision 2026-11-10;
+      // = `missingClientFields` in client_required.dart). Imports aren't checked.
+      allow create: if (request.resource.data.get('source', '') != 'manual' || hasRequiredFields())
         && (isSupervisor()
         || (isSales() && request.resource.data.assignedTo == request.auth.uid
             && request.resource.data.source == 'manual'));
@@ -135,7 +136,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
               'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given', 'givenLog',
-              'statusRequest'])
+              'statusRequest', 'tagIds'])
             // Asks for a status change (closed / not working) as themselves,
             // or withdraws it; KAM / managers approve and set `status`.
             && (!('statusRequest' in request.resource.data)
@@ -144,6 +145,15 @@ service cloud.firestore {
 
       function hasClientName() {
         return request.resource.data.name is string && request.resource.data.name.trim().size() > 0;
+      }
+      function filled(key) {
+        return request.resource.data.get(key, '') is string && request.resource.data.get(key, '').trim().size() > 0;
+      }
+      function hasRequiredFields() {
+        let d = request.resource.data;
+        return hasClientName() && filled('contactPerson') && (filled('phone') || filled('mobile'))
+          && d.get('lat', null) is number && d.get('lng', null) is number
+          && d.get('tagIds', []) is list && d.get('tagIds', []).size() > 0;
       }
 
       match /attachments/{attachmentId} {

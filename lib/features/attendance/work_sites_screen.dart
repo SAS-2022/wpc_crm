@@ -6,7 +6,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../core/app_user.dart';
 import '../../core/place_buttons.dart';
 import '../../core/saving.dart';
+import '../../core/short_name.dart';
 import '../../l10n/app_localizations.dart';
+import '../users/companies.dart';
 import '../users/users_repository.dart';
 import 'work_sites.dart';
 
@@ -20,6 +22,7 @@ class WorkSitesScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
     final users = ref.watch(usersProvider).value ?? const <AppUser>[];
+    final companyNames = ref.watch(companyNamesProvider);
     void open(WorkSite? site) => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => WorkSiteEditor(site: site)));
     return Scaffold(
       appBar: AppBar(title: Text(l10n.workSites)),
@@ -61,9 +64,10 @@ class WorkSitesScreen extends ConsumerWidget {
                                 SiteSnapshot(point: LatLng(s.lat, s.lng), radius: s.radius),
                                 ListTile(
                                   leading: Icon(Icons.apartment, color: s.active ? null : Theme.of(context).disabledColor),
-                                  title: Text(s.name),
+                                  title: Text(s.shortName.isEmpty ? s.name : '${s.name} (${s.shortName})'),
                                   subtitle: Text(
                                     [
+                                      ?companyNames[s.companyId],
                                       l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
                                       l10n.radiusMeters(s.radius.round()),
                                       if (!s.active) l10n.inactive,
@@ -98,6 +102,8 @@ class WorkSiteEditor extends ConsumerStatefulWidget {
 
 class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
   late final _name = TextEditingController(text: widget.site?.name ?? '');
+  late final _short = TextEditingController(text: widget.site?.shortName ?? '');
+  late String? _companyId = widget.site?.companyId;
   late LatLng? _point = widget.site == null ? null : LatLng(widget.site!.lat, widget.site!.lng);
   late double _radius = widget.site?.radius ?? defaultSiteRadius;
   late bool _active = widget.site?.active ?? true;
@@ -107,6 +113,7 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
   @override
   void dispose() {
     _name.dispose();
+    _short.dispose();
     super.dispose();
   }
 
@@ -121,7 +128,16 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
     setState(() => _busy = true);
     try {
       final id = await saveWorkSite(
-        WorkSite(id: '', name: _name.text.trim(), lat: _point!.latitude, lng: _point!.longitude, radius: _radius, active: _active),
+        WorkSite(
+          id: '',
+          name: _name.text.trim(),
+          lat: _point!.latitude,
+          lng: _point!.longitude,
+          radius: _radius,
+          active: _active,
+          shortName: _short.text.trim(),
+          companyId: _companyId,
+        ),
         id: widget.site?.id,
       );
       final before = {
@@ -174,6 +190,7 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
       for (final u in ref.watch(usersProvider).value ?? const <AppUser>[])
         if (u.active) u,
     ]..sort((a, b) => a.name.compareTo(b.name));
+    final companies = ref.watch(companiesProvider).value ?? const <Company>[];
     final id = widget.site?.id;
     final people =
         _people ??
@@ -197,6 +214,31 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
             controller: _name,
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(labelText: l10n.name, hintText: l10n.workSiteNameHint),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          // Chip label on the maps (user 2026-11-11: edit it, not only "WPSC").
+          TextField(
+            controller: _short,
+            maxLength: 12,
+            decoration: InputDecoration(
+              labelText: l10n.shortName,
+              helperText: l10n.shortNameHelp(abbreviate(_name.text.trim())),
+              helperMaxLines: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // The company it belongs to: picking that company on the maps
+          // shows only its sites.
+          DropdownButtonFormField<String>(
+            initialValue: companies.any((c) => c.id == _companyId) ? _companyId : '',
+            decoration: InputDecoration(labelText: l10n.company, helperText: l10n.siteCompanyHelp, helperMaxLines: 2),
+            items: [
+              DropdownMenuItem(value: '', child: Text(l10n.docNoCompany)),
+              for (final c in companies)
+                if (c.active || c.id == _companyId) DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ],
+            onChanged: (v) => setState(() => _companyId = (v == null || v.isEmpty) ? null : v),
           ),
           const SizedBox(height: 12),
           ListTile(

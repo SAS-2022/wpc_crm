@@ -108,6 +108,10 @@ class AttendanceRecord {
 
   factory AttendanceRecord.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
+    // Overtime under [minOvertimeMin] counts as none, also on days the server
+    // saved before that rule (2026-11-10): after-hours time, nothing to approve.
+    final storedOvertime = (d['overtimeMin'] as num?)?.toInt();
+    final short = storedOvertime != null && storedOvertime > 0 && storedOvertime < minOvertimeMin ? storedOvertime : 0;
     DateTime? time(String k) => (d[k] as Timestamp?)?.toDate();
     return AttendanceRecord(
       uid: d['uid'] as String? ?? '',
@@ -142,6 +146,7 @@ class AttendanceRecord {
         _ => null,
       },
       review: switch (d['overtimeReview']) {
+        _ when short > 0 => null,
         {'minutes': final num minutes} && final Map v => OvertimeReview(
             minutes: minutes.toInt(),
             byId: v['byId'] as String? ?? '',
@@ -151,7 +156,7 @@ class AttendanceRecord {
           ),
         _ => null,
       },
-      overtimeStatus: d['overtimeStatus'] as String?,
+      overtimeStatus: short > 0 ? null : d['overtimeStatus'] as String?,
       overtimeDay: switch (d['overtimeDay']) {
         final Map v => OvertimeDayInfo(
             byId: v['byId'] as String? ?? '',
@@ -182,14 +187,20 @@ class AttendanceRecord {
               checkOutAt: time('checkOutAt'),
               checkOutType: d['checkOutType'] as String?,
               workedMin: (d['workedMin'] as num?)?.toInt(),
-              countedMin: (d['countedMin'] as num?)?.toInt(),
-              overtimeMin: (d['overtimeMin'] as num?)?.toInt(),
+              countedMin: switch ((d['countedMin'] as num?)?.toInt()) {
+                final m? when short > 0 => m - short < 0 ? 0 : m - short,
+                final m => m,
+              },
+              overtimeMin: short > 0 ? 0 : storedOvertime,
               // Days stored before the grace period: within it = on time.
               lateMin: switch ((d['lateMin'] as num?)?.toInt()) {
                 final m? when m <= lateGraceMin => 0,
                 final m => m,
               },
-              afterHoursMin: (d['afterHoursMin'] as num?)?.toInt(),
+              afterHoursMin: switch ((d['afterHoursMin'] as num?)?.toInt()) {
+                final m when short > 0 => (m ?? 0) + short,
+                final m => m,
+              },
               awayMin: (d['awayMin'] as num?)?.toInt(),
               breakMin: (d['breakMin'] as num?)?.toInt(),
               breakOverMin: (d['breakOverMin'] as num?)?.toInt(),
@@ -310,7 +321,12 @@ final overtimeToApproveProvider = StreamProvider<List<AttendanceRecord>>((ref) {
       .collection('attendance')
       .where('overtimeStatus', isEqualTo: 'pending')
       .snapshots()
-      .map((s) => [for (final d in s.docs) AttendanceRecord.fromDoc(d)]..sort((a, b) => b.date.compareTo(a.date)));
+      .map((s) => [
+            for (final d in s.docs)
+              // Days stored 'pending' before the shortest-overtime rule
+              // (fromDoc clears their status) are no longer overtime.
+              if (AttendanceRecord.fromDoc(d) case final r when r.overtimeWaiting) r,
+          ]..sort((a, b) => b.date.compareTo(a.date)));
 });
 
 /// Back to what the phone recorded.

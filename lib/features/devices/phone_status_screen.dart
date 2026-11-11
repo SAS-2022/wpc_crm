@@ -13,7 +13,7 @@ import '../settings/page_access.dart';
 import '../tracking/device_health.dart' show phoneBrand;
 import '../tracking/live_data.dart';
 import '../tracking/phone_setup_guide.dart';
-import '../tracking/live_map_screen.dart' show timeAgo;
+import '../../core/time_ago.dart';
 import '../tracking/tracking_schedule.dart';
 import '../tracking/work_hours.dart';
 import '../users/companies.dart';

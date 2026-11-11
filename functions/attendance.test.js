@@ -31,6 +31,15 @@ test('leaving after 5 pm checks out at that time; overtime counts only when allo
   assert.deepEqual([yes.countedMin, yes.overtimeMin], [630, 90]);
 });
 
+test('overtime under 29 minutes counts as none (after hours instead)', () => {
+  const short = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 28) }], { now: t(19), overtimeAllowed: true });
+  assert.deepEqual([short.overtimeMin, short.afterHoursMin, short.countedMin], [0, 28, 540]);
+  const enough = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 29) }], { now: t(19), overtimeAllowed: true });
+  assert.deepEqual([enough.overtimeMin, enough.afterHoursMin, enough.countedMin], [29, 0, 569]);
+  const setting = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 10) }], { now: t(19), overtimeAllowed: true, minOvertimeMin: 0 });
+  assert.equal(setting.overtimeMin, 10);
+});
+
 test('office: left at 2:40 pm and away over 30 min → checked out at 2:40', () => {
   const events = [{ type: 'in', at: t(8) }, { type: 'out', at: t(14, 40) }];
   assert.equal(run(events, { now: t(15, 5) }).closed, false); // could still come back
@@ -197,7 +206,7 @@ test('site checks answered "still here": overtime up to the last one', () => {
 test('a site check that finds them gone checks out at the last time seen', () => {
   const events = [{ type: 'in', at: t(8) }, { type: 'seen', at: t(17, 2) }, { type: 'out', at: t(17, 32), check: true }];
   const d = run(events, { overtimeAllowed: true, now: t(17, 40) });
-  assert.deepEqual([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 2, false]);
+  assert.deepEqual([d.checkOutAt, d.checkOutType, d.overtimeMin, d.overtimeEndUnknown], [t(17, 2), 'left', 0, false]); // 2 min: under the 29-min minimum
   // Not seen since the end: the end of the work day.
   const early = run([{ type: 'in', at: t(8) }, { type: 'out', at: t(17, 2), check: true }], { overtimeAllowed: true, now: t(17, 5) });
   assert.deepEqual([early.checkOutAt, early.overtimeMin], [t(17), 0]);

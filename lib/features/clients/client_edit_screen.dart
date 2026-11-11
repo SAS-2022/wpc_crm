@@ -15,6 +15,7 @@ import 'client.dart';
 import 'client_documents.dart';
 import 'client_documents_section.dart';
 import 'client_locations_section.dart';
+import 'client_required.dart';
 import 'client_tags.dart';
 import 'clients_repository.dart';
 import 'duplicate_check.dart';
@@ -51,7 +52,13 @@ class ClientEditScreen extends ConsumerStatefulWidget {
 class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _nameFocus = FocusNode();
+  // Required fields in form order, to scroll to the first one missing.
+  final _nameKey = GlobalKey<FormFieldState<String>>();
+  final _typeKey = GlobalKey<FormFieldState<Set<String>>>();
+  final _contactKey = GlobalKey<FormFieldState<String>>();
+  final _phoneKey = GlobalKey<FormFieldState<String>>();
+  final _latKey = GlobalKey<FormFieldState<String>>();
+  final _lngKey = GlobalKey<FormFieldState<String>>();
   final _phone = TextEditingController();
   final _mobile = TextEditingController();
   final _address = TextEditingController();
@@ -114,7 +121,6 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     for (final c in _controllers) {
       c.dispose();
     }
-    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -239,16 +245,19 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   }
 
   Future<void> _save() async {
-    // Checked here too: a form field scrolled out of view used to be skipped
-    // by validate() (two clients were saved without a name, 2026-11-05 / 11-10).
-    final valid = _form.currentState!.validate();
-    if (_name.text.trim().isEmpty) {
-      _nameFocus.requestFocus();
-      return;
-    }
-    if (!valid) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    if (!_form.currentState!.validate()) {
+      // Show the first field that needs filling in (the form is long).
+      final first = [_nameKey, _typeKey, _contactKey, _phoneKey, _latKey, _lngKey]
+          .where((k) => k.currentState?.hasError ?? false)
+          .firstOrNull;
+      if (first?.currentContext case final ctx?) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), alignment: 0.2);
+      }
+      messenger.showSnackBar(SnackBar(content: Text(l10n.fillRequiredFields)));
+      return;
+    }
     final me = ref.read(currentUserProvider).value!;
     final manage = me.role.isSupervisor;
     final data = <String, dynamic>{
@@ -267,7 +276,8 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       if (manage || _isNew) 'companyId': _companyId.text.replaceAll(RegExp(r'\s'), ''),
       if (manage || _isNew) 'clientType': _clientType,
       if (manage || _isNew) 'category': _category,
-      if (manage) 'tagIds': _tagIds.toList(),
+      // The client's type: required, set by whoever adds or edits the client.
+      'tagIds': _tagIds.toList(),
       // A sales exec's new client is theirs. A changed assignment of an
       // existing client is saved as a transfer below.
       if (_isNew) 'assignedTo': manage ? _assignedTo : me.id,
@@ -277,6 +287,11 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
     final existing = ref.read(allClientsProvider).value?.where((c) => c.id == widget.clientId).firstOrNull;
     if (data['lat'] == null && existing != null && existing.extraLocations.isNotEmpty) {
       data.addAll(locationsUpdate(existing.extraLocations));
+    }
+    // Last check (the validators above should already have caught it).
+    if (missingClientFields(data).isNotEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.fillRequiredFields)));
+      return;
     }
 
     if (_isNew) {
@@ -392,10 +407,10 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       String? Function(String?)? validator,
       TextInputType? type,
       int maxLines = 1,
-      FocusNode? focusNode,
+      Key? key,
     }) => TextFormField(
+      key: key,
       controller: c,
-      focusNode: focusNode,
       keyboardType: type,
       maxLines: maxLines,
       minLines: 1,
@@ -405,6 +420,11 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       decoration: InputDecoration(labelText: label),
       validator: validator,
     );
+    String? requiredText(String? v) => (v == null || v.trim().isEmpty) ? l10n.required : null;
+    final hasExtraLocation = _original?.extraLocations.isNotEmpty ?? false;
+    String? requiredCoordinate(String? v, double max) =>
+        (v == null || v.trim().isEmpty) && !hasExtraLocation ? l10n.clientLocationRequired : coordinate(v, max);
+    final lang = Localizations.localeOf(context).languageCode;
     Widget section(String title) => Padding(
       padding: const EdgeInsets.only(top: 20, bottom: 4),
       child: Text(
@@ -425,12 +445,37 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            field(
-              _name,
-              l10n.clientName,
-              focusNode: _nameFocus,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l10n.required : null,
+            field(_name, '${l10n.clientName} *', key: _nameKey, validator: requiredText),
+            // Type = client tags (factory, showroom, …): at least one.
+            FormField<Set<String>>(
+              key: _typeKey,
+              initialValue: _tagIds,
+              validator: (_) => _tagIds.isEmpty ? l10n.pickClientType : null,
+              builder: (state) => InputDecorator(
+                decoration: InputDecoration(
+                  labelText: '${l10n.clientTypeTags} *',
+                  helperText: l10n.clientTypeTagsHelp,
+                  errorText: state.errorText,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.only(top: 8, bottom: 4),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final t in ref.watch(clientTagsProvider).value ?? defaultClientTags)
+                      FilterChip(
+                        label: Text(t.label(lang)),
+                        selected: _tagIds.contains(t.id),
+                        onSelected: (on) {
+                          setState(() => on ? _tagIds.add(t.id) : _tagIds.remove(t.id));
+                          state.didChange(_tagIds);
+                          if (state.hasError) state.validate();
+                        },
+                      ),
+                  ],
+                ),
+              ),
             ),
             if (manage || _isNew) ...[
               DropdownButtonFormField<String>(
@@ -454,8 +499,14 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
               suggest: (f) => _suggest(f, l10n, manage || _isNew),
             ),
             section(l10n.contact),
-            field(_contactPerson, l10n.contactPerson),
-            field(_phone, l10n.phone, type: TextInputType.phone),
+            field(_contactPerson, '${l10n.contactPerson} *', key: _contactKey, validator: requiredText),
+            field(
+              _phone,
+              '${l10n.phone} *',
+              key: _phoneKey,
+              type: TextInputType.phone,
+              validator: (_) => _phone.text.trim().isEmpty && _mobile.text.trim().isEmpty ? l10n.phoneOrMobileRequired : null,
+            ),
             field(_mobile, l10n.mobile, type: TextInputType.phone),
             field(
               _email,
@@ -490,24 +541,26 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
                 Expanded(
                   child: field(
                     _lat,
-                    l10n.latitude,
+                    '${l10n.latitude} *',
+                    key: _latKey,
                     type: const TextInputType.numberWithOptions(
                       decimal: true,
                       signed: true,
                     ),
-                    validator: (v) => coordinate(v, 90),
+                    validator: (v) => requiredCoordinate(v, 90),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: field(
                     _lng,
-                    l10n.longitude,
+                    '${l10n.longitude} *',
+                    key: _lngKey,
                     type: const TextInputType.numberWithOptions(
                       decimal: true,
                       signed: true,
                     ),
-                    validator: (v) => coordinate(v, 180),
+                    validator: (v) => requiredCoordinate(v, 180),
                   ),
                 ),
               ],
@@ -588,21 +641,6 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
                     ),
                   );
                 },
-              ),
-              const SizedBox(height: 16),
-              Text(l10n.clientTags, style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final t in ref.watch(clientTagsProvider).value ?? defaultClientTags)
-                    FilterChip(
-                      label: Text(t.label(Localizations.localeOf(context).languageCode)),
-                      selected: _tagIds.contains(t.id),
-                      onSelected: (on) => setState(() => on ? _tagIds.add(t.id) : _tagIds.remove(t.id)),
-                    ),
-                ],
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String?>(

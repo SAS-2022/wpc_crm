@@ -3351,5 +3351,20 @@
   "bottomTabsSaved": "Bottom tabs saved",
   "bottomTabsMoreFixed": "Always the last tab",
   "bottomTabsKeepOne": "Keep at least one tab besides More.",
-  "bottomTabsPhonesOnly": "Used on phones. On the web the side menu is used instead (Edit menu at its bottom)."
+  "bottomTabsPhonesOnly": "Used on phones. On the web the side menu is used instead (Edit menu at its bottom).",
+  "clientTypeTags": "Type",
+  "clientTypeTagsHelp": "What the client is – pick at least one",
+  "pickClientType": "Pick at least one type",
+  "phoneOrMobileRequired": "Enter a phone or mobile number",
+  "clientLocationRequired": "Set the location: Use my location, Pick on map or Paste Maps link",
+  "fillRequiredFields": "Fill in the required fields marked *",
+  "settingMinOvertime": "Shortest overtime",
+  "settingMinOvertimeHelp": "Overtime shorter than this isn't counted or shown for approval; the time is kept as after hours",
+  "shortName": "Short name",
+  "shortNameHelp": "Shown on the map filters. Leave empty to use {auto}",
+  "@shortNameHelp": {"placeholders": {"auto": {"type": "String"}}},
+  "siteCompanyHelp": "Picking this company on the maps shows only its sites",
+  "editCompany": "Edit company",
+  "routeHistoryPickPerson": "Tap a person to see their route history",
+  "routeHistoryAllPeople": "Everyone"
 }

@@ -1890,5 +1890,19 @@
   "bottomTabsSaved": "تم حفظ الأزرار السفلية",
   "bottomTabsMoreFixed": "دائماً الزر الأخير",
   "bottomTabsKeepOne": "أبقِ زراً واحداً على الأقل غير «المزيد».",
-  "bottomTabsPhonesOnly": "تُستخدم على الهاتف. على الويب تُستخدم القائمة الجانبية (تعديل القائمة في أسفلها)."
+  "bottomTabsPhonesOnly": "تُستخدم على الهاتف. على الويب تُستخدم القائمة الجانبية (تعديل القائمة في أسفلها).",
+  "clientTypeTags": "النوع",
+  "clientTypeTagsHelp": "نوع العميل – اختر نوعًا واحدًا على الأقل",
+  "pickClientType": "اختر نوعًا واحدًا على الأقل",
+  "phoneOrMobileRequired": "أدخل رقم هاتف أو جوال",
+  "clientLocationRequired": "حدد الموقع: موقعي الحالي أو الاختيار على الخريطة أو لصق رابط الخرائط",
+  "fillRequiredFields": "املأ الحقول المطلوبة المعلّمة بـ *",
+  "settingMinOvertime": "أقل مدة للعمل الإضافي",
+  "settingMinOvertimeHelp": "العمل الإضافي الأقصر من هذه المدة لا يُحتسب ولا يظهر للموافقة، ويُسجَّل الوقت كوقت بعد الدوام",
+  "shortName": "الاسم المختصر",
+  "shortNameHelp": "يظهر في فلاتر الخرائط. اتركه فارغًا لاستخدام {auto}",
+  "siteCompanyHelp": "عند اختيار هذه الشركة في الخرائط تظهر مواقعها فقط",
+  "editCompany": "تعديل الشركة",
+  "routeHistoryPickPerson": "اضغط على شخص لعرض سجل مساره",
+  "routeHistoryAllPeople": "الجميع"
 }

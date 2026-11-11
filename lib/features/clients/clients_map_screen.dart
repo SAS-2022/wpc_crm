@@ -30,7 +30,7 @@ import 'person_style.dart';
 import 'visit_rules.dart';
 import '../../core/app_user.dart';
 import '../tracking/live_data.dart';
-import '../tracking/live_map_screen.dart' show timeAgo;
+import '../../core/time_ago.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
 /// precedence over the visit status colour.

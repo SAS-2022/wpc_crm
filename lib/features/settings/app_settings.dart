@@ -36,6 +36,11 @@ enum AppSetting {
   /// the rest comes off the counted hours (user decision 2026-11-05).
   breakAllowanceMin(60, 0, 240),
 
+  /// Overtime shorter than this isn't overtime: not shown, not to approve,
+  /// not counted (user decision 2026-11-10: under 29 minutes; also applied to
+  /// days saved before). `MIN_OVERTIME_MIN` in functions/attendance.js.
+  minOvertimeMin(29, 0, 120),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90),
 
@@ -89,6 +94,7 @@ class AppSettings {
     attendance.lateGraceMin = this[AppSetting.lateGraceMin];
     attendance.awayGraceMin = this[AppSetting.awayGraceMin];
     attendance.breakAllowanceMin = this[AppSetting.breakAllowanceMin];
+    attendance.minOvertimeMin = this[AppSetting.minOvertimeMin];
     vehicle.renewalDueSoonDays = this[AppSetting.vehicleRenewalDays];
     vehicle.oilDueSoonKm = this[AppSetting.oilDueSoonKm];
     docs.docDueSoonDays = this[AppSetting.docRenewalDays];

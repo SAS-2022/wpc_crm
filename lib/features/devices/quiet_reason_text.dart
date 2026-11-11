@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../tracking/live_map_screen.dart' show timeAgo;
+import '../../core/time_ago.dart';
 import 'device_status.dart';
 
 /// The reason a phone sends no location, in words (2026-11-04; replaces a

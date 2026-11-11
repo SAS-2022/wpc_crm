@@ -72,6 +72,9 @@ const LATE_GRACE_MIN = 15;
 const BREAK_ALLOWANCE_MIN = 60;
 const AWAY_GRACE_MIN = 30;
 
+/** Overtime shorter than this counts as none (App setting `minOvertimeMin`, user decision 2026-11-10). */
+const MIN_OVERTIME_MIN = 29;
+
 /** Most overtime counted a day unless the user form sets more (user decision 2026-10-24). */
 const OVERTIME_MAX_MIN = 180;
 
@@ -283,7 +286,9 @@ function deriveDay(events, o) {
   if (s.closed) {
     workedMin = Math.max(0, Math.round((s.checkOutAt - s.checkInAt - awayBefore - awayAfter) / MINUTE));
     const extra = Math.max(0, s.checkOutAt - Math.max(o.endMs, s.checkInAt) - awayAfter);
-    const overtime = overtimeOn ? Math.min(extra, capMs) : 0;
+    let overtime = overtimeOn ? Math.min(extra, capMs) : 0;
+    // Shorter than the minimum: not overtime, the time is after-hours instead.
+    if (Math.round(overtime / MINUTE) < (o.minOvertimeMin ?? MIN_OVERTIME_MIN)) overtime = 0;
     overtimeMin = Math.round(overtime / MINUTE);
     afterHoursMin = Math.round((extra - overtime) / MINUTE);
     countedMin = overtimeOn
@@ -549,5 +554,5 @@ function driveEnd({ points, startAt, now, capMs, places }) {
 
 module.exports = {
   gpsPresence, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
-  deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN, BREAK_ALLOWANCE_MIN, breakTaker,
+  deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN, BREAK_ALLOWANCE_MIN, MIN_OVERTIME_MIN, breakTaker,
 };

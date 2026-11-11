@@ -7034,4 +7034,51 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get bottomTabsPhonesOnly =>
       'تُستخدم على الهاتف. على الويب تُستخدم القائمة الجانبية (تعديل القائمة في أسفلها).';
+
+  @override
+  String get clientTypeTags => 'النوع';
+
+  @override
+  String get clientTypeTagsHelp => 'نوع العميل – اختر نوعًا واحدًا على الأقل';
+
+  @override
+  String get pickClientType => 'اختر نوعًا واحدًا على الأقل';
+
+  @override
+  String get phoneOrMobileRequired => 'أدخل رقم هاتف أو جوال';
+
+  @override
+  String get clientLocationRequired =>
+      'حدد الموقع: موقعي الحالي أو الاختيار على الخريطة أو لصق رابط الخرائط';
+
+  @override
+  String get fillRequiredFields => 'املأ الحقول المطلوبة المعلّمة بـ *';
+
+  @override
+  String get settingMinOvertime => 'أقل مدة للعمل الإضافي';
+
+  @override
+  String get settingMinOvertimeHelp =>
+      'العمل الإضافي الأقصر من هذه المدة لا يُحتسب ولا يظهر للموافقة، ويُسجَّل الوقت كوقت بعد الدوام';
+
+  @override
+  String get shortName => 'الاسم المختصر';
+
+  @override
+  String shortNameHelp(String auto) {
+    return 'يظهر في فلاتر الخرائط. اتركه فارغًا لاستخدام $auto';
+  }
+
+  @override
+  String get siteCompanyHelp =>
+      'عند اختيار هذه الشركة في الخرائط تظهر مواقعها فقط';
+
+  @override
+  String get editCompany => 'تعديل الشركة';
+
+  @override
+  String get routeHistoryPickPerson => 'اضغط على شخص لعرض سجل مساره';
+
+  @override
+  String get routeHistoryAllPeople => 'الجميع';
 }

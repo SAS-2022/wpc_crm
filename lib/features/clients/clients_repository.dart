@@ -9,6 +9,7 @@ import '../import/location_import.dart';
 import '../notifications/notifications.dart';
 import '../plan/plan_task.dart';
 import 'client.dart';
+import 'client_required.dart';
 import 'given_items.dart';
 import 'duplicates.dart';
 import 'merge.dart';
@@ -187,7 +188,8 @@ class ClientsRepository {
 
   /// Adds a client by hand (not from Odoo); returns its id.
   Future<String> create(Map<String, dynamic> data, {required String createdBy}) => saving(() async {
-    if (((data['name'] as String?) ?? '').trim().isEmpty) throw ArgumentError('A client needs a name');
+    final missing = missingClientFields(data);
+    if (missing.isNotEmpty) throw ArgumentError('Client is missing: ${missing.map((f) => f.name).join(', ')}');
     final ref = await _clients.add({
       ...data,
       'nameKey': Client.normalizeName(data['name'] as String),
