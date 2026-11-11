@@ -31,7 +31,7 @@ import '../../core/search_text.dart';
 Future<bool> addClientToTodayPlan(WidgetRef ref, AppUser me, Client client, {AppUser? owner, String? locationId}) async {
   final today = dayKey(DateTime.now());
   final to = owner ?? me;
-  final approved = me.role.isSupervisor;
+  final approved = me.can.isSupervisor;
   await ref.read(planRepositoryProvider).addMany(
         ownerId: to.id,
         date: today,
@@ -114,7 +114,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
         clientId: null,
         initialName: _typed.trim(),
         // A KAM / manager planning for a sales exec adds the client for them.
-        initialAssignedTo: me.role.isSupervisor && widget.owner.role == UserRole.salesExec ? widget.owner.id : null,
+        initialAssignedTo: me.can.isSupervisor && widget.owner.role == UserRole.salesExec ? widget.owner.id : null,
         pickFor: widget.owner,
       ),
     ));
@@ -137,7 +137,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     }
     setState(() => _busy = true);
     try {
-      final approved = me.role.isSupervisor;
+      final approved = me.can.isSupervisor;
       await ref.read(planRepositoryProvider).addMany(
             ownerId: widget.owner.id,
             date: widget.date,
@@ -321,7 +321,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (!(me?.role.isSupervisor ?? false))
+                  if (!(me?.can.isSupervisor ?? false))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(l10n.needsApprovalHint, style: Theme.of(context).textTheme.bodySmall),

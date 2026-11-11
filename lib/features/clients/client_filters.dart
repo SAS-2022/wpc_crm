@@ -95,7 +95,7 @@ class _FiltersSheetState extends ConsumerState<_FiltersSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final supervisor = ref.watch(currentUserProvider).value?.role.isSupervisor ?? false;
+    final supervisor = ref.watch(currentUserProvider).value?.can.isSupervisor ?? false;
     final type = ref.watch(clientTypeFilterProvider);
     final tagFilter = ref.watch(tagFilterProvider);
     final tags = ref.watch(clientTagsProvider).value ?? defaultClientTags;

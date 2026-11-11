@@ -196,7 +196,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     // Supervisors: the period's visits from the database (the default list is
     // only the latest 500); "All time" and sales execs use the full list.
     final range = _queryRange();
-    final visits = (me?.role.isSupervisor ?? false) && range != null
+    final visits = (me?.can.isSupervisor ?? false) && range != null
         ? ref.watch(visitsBetweenProvider(range))
         : ref.watch(visitsProvider);
     final hidden = ref.watch(hiddenClientIdsProvider);
@@ -249,7 +249,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
           final withKam = list.where((v) => v.kamId != null).length;
 
           // By salesperson (KAM / managers), not by date.
-          final byPerson = me?.role.isSupervisor ?? false;
+          final byPerson = me?.can.isSupervisor ?? false;
           final items = visitListItems(
             list,
             now: now,
@@ -308,7 +308,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                   ),
                 ),
               ),
-              if ((me?.role.isSupervisor ?? false) && visitors.isNotEmpty)
+              if ((me?.can.isSupervisor ?? false) && visitors.isNotEmpty)
                 SliverToBoxAdapter(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,

@@ -182,7 +182,7 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
   void _showItem(AppUser? me, AppUser? owner, PlanTask t, Client c, int number) {
     final l10n = AppLocalizations.of(context);
     final repo = ref.read(planRepositoryProvider);
-    final canManage = me?.role.isSupervisor ?? false;
+    final canManage = me?.can.isSupervisor ?? false;
     Future<void> notify(NotificationType type) => me == null || owner == null
         ? Future.value()
         : sendNotifications(

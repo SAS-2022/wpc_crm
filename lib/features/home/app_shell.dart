@@ -21,7 +21,7 @@ const wideLayoutWidth = 900.0;
 /// and Visits left out when turned off for the role (Page access).
 List<int> visibleBranches(WidgetRef ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || me.role.isBackOffice) return const [0, 3];
+  if (me == null || me.can.isBackOffice) return const [0, 3];
   final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
   return [0, if (access.allowsUser(me, AppPage.clients)) 1, if (access.allowsUser(me, AppPage.visits)) 2, 3];
 }
@@ -73,7 +73,7 @@ class AppShell extends ConsumerWidget {
 
   Widget _wide(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final me = ref.watch(currentUserProvider).value;
-    final role = me?.role;
+    final role = me?.can;
     final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     final supervisor = role?.isSupervisor ?? false;
     final backOffice = role?.isBackOffice ?? false;

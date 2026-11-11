@@ -19,6 +19,7 @@ import '../clients/client_status_widgets.dart';
 import '../../core/app_version.dart';
 import '../hr/employee_record.dart' show IdType;
 import '../hr/employee_record_widgets.dart' show idTypeLabel;
+import '../attendance/team_alerts.dart' show TeamAlertKind;
 
 /// Bell with the unread count; opens the notifications list.
 class NotificationsBell extends ConsumerWidget {
@@ -75,10 +76,22 @@ class NotificationsScreen extends ConsumerWidget {
     ].join(' · ');
   }
 
+  String _teamAlert(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String owner) {
+    if (n.fromId == n.ownerId) return l10n.notifTeamAlertFirst(owner, _clock(context, n.time));
+    final what = switch (TeamAlertKind.fromKey(n.issue)) {
+      TeamAlertKind.late => l10n.alertLate(_clock(context, n.time)),
+      TeamAlertKind.breakRequest => l10n.alertBreakAsked,
+      TeamAlertKind.earlyCheckout => l10n.alertEarlyCheckout,
+      TeamAlertKind.absence => l10n.alertAbsence,
+    };
+    return l10n.notifTeamAlertEscalated(n.count, owner, what, from);
+  }
+
   String _text(BuildContext context, AppLocalizations l10n, AppNotification n, String from, String owner, String day, String meId) =>
       switch (n.type) {
         NotificationType.attendanceCheckedIn => _checkIn(context, l10n, n, from, meId),
         NotificationType.attendanceLate => l10n.notifAttendanceLate(_clock(context, n.time)),
+        NotificationType.teamAlert => _teamAlert(context, l10n, n, from, owner),
         NotificationType.attendanceAtSite => l10n.notifAtSite(n.siteName, _clock(context, n.time)),
         NotificationType.overtimeStarted => switch (n.issue) {
             'driving' => n.ownerId == meId
@@ -226,6 +239,7 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.registrationRequested => Icons.person_add_alt,
                     NotificationType.attendanceCheckedIn => Icons.how_to_reg,
                     NotificationType.attendanceLate => Icons.alarm,
+                    NotificationType.teamAlert => Icons.assignment_late_outlined,
                     NotificationType.attendanceAtSite => Icons.warning_amber_rounded,
                     NotificationType.overtimeStarted || NotificationType.overtimeAsk => Icons.more_time,
                     NotificationType.absenceReported => absenceReasonIcon(AbsenceReason.fromKey(n.issue)),
@@ -250,7 +264,7 @@ class NotificationsScreen extends ConsumerWidget {
                         'notificationsOff' => Icons.notifications_off,
                         _ => Icons.location_off,
                       },
-                  }, color: n.type == NotificationType.trackingIssue ? Theme.of(context).colorScheme.error : null),
+                  }, color: n.type == NotificationType.trackingIssue || n.type == NotificationType.teamAlert ? Theme.of(context).colorScheme.error : null),
                   title: Text(_text(context, l10n, n, users[n.fromId]?.name ?? '', users[n.ownerId]?.name ?? '', day, meId)),
                   subtitle: n.createdAt == null ? null : Text(DateFormat.MMMd(locale).add_jm().format(n.createdAt!)),
                   onTap: () {
@@ -308,6 +322,8 @@ class NotificationsScreen extends ConsumerWidget {
                         context.go('/');
                       case NotificationType.hrActionAccepted:
                         if (n.ref.isNotEmpty) context.push('/hr/action/${n.ref}');
+                      case NotificationType.teamAlert:
+                        context.push(n.ref.isEmpty ? '/team-alerts' : '/team-alerts/${n.ref}');
                       case NotificationType.registrationRequested:
                         context.push('/users/${n.ownerId}');
                       default:

@@ -17,7 +17,7 @@ typedef TabOption = ({String path, IconData icon, IconData selected, String labe
 List<TabOption> bottomTabOptions(WidgetRef ref, AppLocalizations l10n) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return const [];
-  final role = me.role;
+  final role = me.can;
   final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
   final backOffice = role.isBackOffice;
   final supervisor = role.isSupervisor;

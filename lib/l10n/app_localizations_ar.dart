@@ -7081,4 +7081,227 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routeHistoryAllPeople => 'الجميع';
+
+  @override
+  String get orgChart => 'الهيكل التنظيمي';
+
+  @override
+  String get orgChartTree => 'عرض كشجرة';
+
+  @override
+  String get orgChartList => 'عرض كقائمة';
+
+  @override
+  String get orgChartReset => 'العودة إلى البداية';
+
+  @override
+  String get orgChartFoldAll => 'طي كل الفرق';
+
+  @override
+  String get orgChartUnfoldAll => 'فتح كل الفرق';
+
+  @override
+  String orgChartTeam(int direct, int total) {
+    return '$direct يتبعون مباشرة · $total في الفريق';
+  }
+
+  @override
+  String orgChartAlsoUnder(String names) {
+    return 'يتبع أيضاً: $names';
+  }
+
+  @override
+  String get orgChartOpenUser => 'فتح المستخدم';
+
+  @override
+  String get teamAlerts => 'متابعات الفريق';
+
+  @override
+  String teamAlertsWaiting(int count) {
+    return 'بانتظار الإجراء ($count)';
+  }
+
+  @override
+  String teamAlertsHandled(int count) {
+    return 'تمت معالجتها ($count)';
+  }
+
+  @override
+  String teamAlertsCardTitle(int count) {
+    return 'بانتظار إجرائك ($count)';
+  }
+
+  @override
+  String get teamAlertsViewAll => 'عرض الكل';
+
+  @override
+  String alertLate(String time) {
+    return 'لم يسجّل حضوره – بدأ يوم العمل الساعة $time';
+  }
+
+  @override
+  String alertBreak(int minutes) {
+    return 'طلب استراحة لمدة $minutes دقيقة';
+  }
+
+  @override
+  String get alertBreakAsked => 'طلب استراحة';
+
+  @override
+  String get alertEarlyCheckout => 'طلب الانصراف مبكراً';
+
+  @override
+  String get alertAbsence => 'أبلغ أنه لن يحضر إلى العمل';
+
+  @override
+  String get alertWaitingForYou => 'بانتظارك';
+
+  @override
+  String alertSentUp(String names) {
+    return 'أُرسلت إلى $names';
+  }
+
+  @override
+  String get alertHandled => 'تمت المعالجة';
+
+  @override
+  String get alertNoActionTaken => 'لم يُتخذ إجراء';
+
+  @override
+  String alertLevel(int level) {
+    return 'المستوى $level';
+  }
+
+  @override
+  String get alertActionTitle => 'الإجراء المتخذ';
+
+  @override
+  String get alertNotFound => 'لم يتم العثور على هذه المتابعة';
+
+  @override
+  String get alertOpenRequest => 'فتح الطلب';
+
+  @override
+  String get alertStepsTitle => 'من تم إبلاغه';
+
+  @override
+  String get alertTopReached =>
+      'وصلت إلى أعلى مستوى – لا يوجد من يُبلَّغ بعد ذلك';
+
+  @override
+  String get alertDayOver => 'انتهى اليوم – لا مزيد من التذكيرات';
+
+  @override
+  String alertNextLevelAt(String time) {
+    return 'إذا لم يُسجَّل إجراء، يُبلَّغ المستوى التالي الساعة $time';
+  }
+
+  @override
+  String get alertOnlyTold => 'يمكن فقط لمن تم إبلاغهم تسجيل الإجراء.';
+
+  @override
+  String get alertWhatDone => 'ماذا فعلت؟';
+
+  @override
+  String get alertTaken => 'تم اتخاذ إجراء';
+
+  @override
+  String get alertPickAction => 'اختر الإجراء المتخذ';
+
+  @override
+  String get alertNoteRequired => 'اكتب ما تم القيام به';
+
+  @override
+  String get alertNoteLabel => 'تفاصيل (اختياري)';
+
+  @override
+  String get alertNoteNoAction => 'سبب عدم اتخاذ إجراء (اختياري)';
+
+  @override
+  String get alertSaved => 'تم الحفظ';
+
+  @override
+  String get alertDecideOnHome =>
+      'للموافقة على الطلب نفسه أو رفضه، استخدم بطاقته في الصفحة الرئيسية – وهذا يغلق هذه المتابعة أيضاً.';
+
+  @override
+  String get alertAutoApproved => 'تمت الموافقة على الطلب';
+
+  @override
+  String get alertAutoRejected => 'تم رفض الطلب';
+
+  @override
+  String get alertAutoCancelled => 'سحب الموظف الطلب – لا يلزم شيء';
+
+  @override
+  String get presetCalled => 'اتصلت بالموظف';
+
+  @override
+  String get presetToldInAdvance => 'أبلغني مسبقاً';
+
+  @override
+  String get presetReminded => 'ذكّرته';
+
+  @override
+  String get presetTalked => 'تحدثت معه';
+
+  @override
+  String get presetAskedDocument => 'طلبت مستنداً (مثل تقرير طبي)';
+
+  @override
+  String get presetToHr => 'أحلته إلى الموارد البشرية';
+
+  @override
+  String get presetApproved => 'وافقت عليه';
+
+  @override
+  String get presetRejected => 'رفضته';
+
+  @override
+  String get presetOther => 'أخرى';
+
+  @override
+  String notifTeamAlertFirst(String name, String time) {
+    return 'لم يسجّل $name حضوره بعد – بدأ يوم عمله الساعة $time. اضغط لتسجيل الإجراء المتخذ.';
+  }
+
+  @override
+  String notifTeamAlertEscalated(
+    int minutes,
+    String name,
+    String what,
+    String first,
+  ) {
+    return 'لم يُتخذ إجراء بعد ($minutes دقيقة): $name – $what. أُبلغ $first أولاً. اضغط لاتخاذ إجراء.';
+  }
+
+  @override
+  String get settingAlertEscalate => 'تصعيد المتابعات';
+
+  @override
+  String get settingAlertEscalateHelp =>
+      'عندما يتأخر موظف أو يطلب استراحة أو انصرافاً مبكراً أو يبلغ عن غياب، يُبلَّغ من يتبع لهم. إذا لم يسجّل أي منهم إجراءً خلال هذه المدة، يُبلَّغ من فوقهم، وهكذا حتى أعلى مستوى.';
+
+  @override
+  String get alertNothingWaiting => 'لا يوجد شيء هنا';
+
+  @override
+  String get alertAutoCheckedIn =>
+      'سجّل حضوره – تتابعه الموارد البشرية من خلال الحضور';
+
+  @override
+  String get alertLateClosesOnCheckIn =>
+      'إذا سجّل حضوره، تُغلق هذه المتابعة تلقائياً ولا يُبلَّغ من هم أعلى – تتابع الموارد البشرية التأخير من خلال الحضور.';
+
+  @override
+  String alertWaitingFor(String names) {
+    return 'بانتظار $names';
+  }
+
+  @override
+  String get extraRoles => 'لديه أيضاً هذه الأدوار';
+
+  @override
+  String get extraRolesHelp =>
+      'كل دور إضافي يضيف صفحاته وصلاحياته وإشعاراته. الدور الرئيسي أعلاه يحدد الصفحة الرئيسية وتتبع الموقع والحضور ولمن يتبع.';
 }

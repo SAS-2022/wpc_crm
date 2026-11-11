@@ -164,7 +164,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
           };
     final styles = ref.watch(personStylesProvider);
     PersonStyle styleOf(Client c) => styles[c.assignedTo] ?? unassignedStyle;
-    final byPerson = _byPerson && (me?.role.isSupervisor ?? false);
+    final byPerson = _byPerson && (me?.can.isSupervisor ?? false);
     Color colorOf(Client c) => byPerson
         ? styleOf(c).color
         : planned.contains(c.id)
@@ -206,14 +206,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
           };
     final types = ref.watch(locationTypesByIdProvider);
     // Moving clients from the map: web dashboard, KAM / managers.
-    final canSelect = kIsWeb && (me?.role.isSupervisor ?? false);
+    final canSelect = kIsWeb && (me?.can.isSupervisor ?? false);
     final lang = Localizations.localeOf(context).languageCode;
     // The sales team's live positions (KAM / managers; RTDB rules): the KAM's
     // own team, the people ticked in the salesperson filter.
-    final supervisor = me?.role.isSupervisor ?? false;
+    final supervisor = me?.can.isSupervisor ?? false;
     // Drivers and the other employees too (sales manager / GM, user request
     // 2026-11-01); KAMs their team only.
-    final admin = me?.role.isAdmin ?? false;
+    final admin = me?.can.isAdmin ?? false;
     final kinds = supervisor ? ref.watch(mapPeopleProvider) : const <MapPeople>{};
     final showSales = kinds.contains(MapPeople.sales);
     final showDrivers = admin && kinds.contains(MapPeople.drivers);
@@ -238,7 +238,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             live.containsKey(u.id) &&
             inRegion(live[u.id]!.lat, live[u.id]!.lng) &&
             inCompany(u) &&
-            (me!.role != UserRole.kam || u.id == me.id || u.kamId == me.id) &&
+            (!me!.kamOnly || u.id == me.id || u.kamId == me.id) &&
             (filter.isEmpty || filter.contains(u.id)))
           u,
     ];
@@ -292,7 +292,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             mapType: ref.watch(mapTypeProvider),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
             // Keeps the Google logo and fitted markers clear of the filter card.
-            padding: EdgeInsets.only(top: _cardOpen ? ((me?.role.isSupervisor ?? false) ? 120 : 64) + 52 + 44 : 112),
+            padding: EdgeInsets.only(top: _cardOpen ? ((me?.can.isSupervisor ?? false) ? 120 : 64) + 52 + 44 : 112),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -507,7 +507,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                                     }),
                                   ),
                                 ],
-                                if (me?.role.isSupervisor ?? false) ...[
+                                if (me?.can.isSupervisor ?? false) ...[
                                   if (canSelect) const SizedBox(width: 12),
                                   Text(l10n.colourBy, style: Theme.of(context).textTheme.labelMedium),
                                   const SizedBox(width: 8),

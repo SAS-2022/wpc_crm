@@ -5,24 +5,28 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
     function active() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().active == true; }
-    function isGm() { return active() && me().role == 'gm'; }
-    function isAdmin() { return active() && me().role in ['sales_manager', 'gm']; }
-    function isSupervisor() { return active() && me().role in ['kam', 'sales_manager', 'gm']; }
+    // Main role + extra roles (user request 2026-11-11, `users.extraRoles`):
+    // every role check below accepts any of them.
+    function myRoles() { return [me().role].concat(me().get('extraRoles', [])); }
+    function hasRole(list) { return myRoles().hasAny(list); }
+    function isGm() { return active() && hasRole(['gm']); }
+    function isAdmin() { return active() && hasRole(['sales_manager', 'gm']); }
+    function isSupervisor() { return active() && hasRole(['kam', 'sales_manager', 'gm']); }
     // The sales team; HR, accounting and procurement are not (no clients, visits, plans).
-    function isSales() { return active() && me().role in ['sales_exec', 'kam', 'sales_manager', 'gm']; }
+    function isSales() { return active() && hasRole(['sales_exec', 'kam', 'sales_manager', 'gm']); }
     // HR, GM and (for now, to test) the sales manager see the HR area.
     // Edits leave types, holidays, balances and request details: HR and GM,
     // and the sales manager for now (testing, user decision 2026-10-17).
-    function managesHr() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+    function managesHr() { return active() && hasRole(['hr', 'gm', 'sales_manager']); }
     // The SM who also develops the app (2026-11-08): tests HR features on
     // their own record. Same list as `developerEmails` in app_user.dart.
     function isDeveloper() { return active() && request.auth.token.email == 'wissam.b@woodpanelsco.com'; }
-    function isHrArea() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+    function isHrArea() { return active() && hasRole(['hr', 'gm', 'sales_manager']); }
     // Managers (2026-10-23): manager roles, people marked "Is a manager" and
     // warehouse supervisors. They read attendance and reported absences;
     // the app shows only the people under them.
     function isManagerUser() {
-      return active() && (me().role in ['kam', 'sales_manager', 'gm', 'logistics_manager', 'warehouse_supervisor', 'factory_manager']
+      return active() && (hasRole(['kam', 'sales_manager', 'gm', 'logistics_manager', 'warehouse_supervisor', 'factory_manager'])
         || me().get('isManager', false) == true);
     }
     function ownsClient(clientId) {
@@ -42,9 +46,9 @@ service cloud.firestore {
         'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
     }
     function managedRoles() {
-      return me().role == 'logistics_manager' ? ['worker', 'driver', 'warehouse_supervisor']
-        : me().role == 'factory_manager' ? ['worker', 'engineer', 'operator']
-        : me().role == 'hr' ? hrRoles() : [];
+      return (hasRole(['logistics_manager']) ? ['worker', 'driver', 'warehouse_supervisor'] : [])
+        .concat(hasRole(['factory_manager']) ? ['worker', 'engineer', 'operator'] : [])
+        .concat(hasRole(['hr']) ? hrRoles() : []);
     }
     // A person's department (users.department, else by role; same as
     // AppUser.defaultDepartmentOf).
@@ -63,9 +67,17 @@ service cloud.firestore {
           || (request.resource.data.changedBy == request.auth.uid && request.resource.data.changedAt == request.time);
       }
       allow read: if request.auth.uid == uid || active();
-      allow create, update: if isAdmin() && stampOk();
-      allow create: if active() && request.resource.data.role in managedRoles() && stampOk();
-      allow update: if active() && stampOk()
+      // Extra roles: only the sales manager / GM, and only a GM gives the GM role.
+      function extraRolesOk() {
+        return !request.resource.data.get('extraRoles', []).hasAny(['gm']) || isGm()
+          || request.resource.data.get('extraRoles', []) == (resource == null ? [] : resource.data.get('extraRoles', []));
+      }
+      function extraRolesKept() {
+        return request.resource.data.get('extraRoles', []) == (resource == null ? [] : resource.data.get('extraRoles', []));
+      }
+      allow create, update: if isAdmin() && stampOk() && extraRolesOk();
+      allow create: if active() && request.resource.data.role in managedRoles() && stampOk() && extraRolesKept();
+      allow update: if active() && stampOk() && extraRolesKept()
         && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
       // Self-registration: a new account creates its own profile, inactive
@@ -219,7 +231,7 @@ service cloud.firestore {
     // Vehicles (2026-10-24): the sales manager, GM, logistics manager and
     // (2026-11-02) HR keep them (details, drivers, renewals, odometer
     // readings). Drivers' GPS km per day are written by Cloud Functions only.
-    function managesVehicles() { return active() && me().role in ['sales_manager', 'gm', 'logistics_manager', 'hr']; }
+    function managesVehicles() { return active() && hasRole(['sales_manager', 'gm', 'logistics_manager', 'hr']); }
     match /vehicles/{vehicleId} {
       allow read, write: if managesVehicles();
     }
@@ -235,10 +247,10 @@ service cloud.firestore {
     // Services that expire ('expiring') and subscriptions (2026-11-03) are
     // management only (GM / SM / HR) and HR edits them.
     function companyDocWriter(section) {
-      return isAdmin() || (active() && me().role == 'hr' && section in ['expiring', 'subscription']);
+      return isAdmin() || (active() && hasRole(['hr']) && section in ['expiring', 'subscription']);
     }
     match /company_docs/{docId} {
-      allow read: if isAdmin() || (active() && me().role == 'hr')
+      allow read: if isAdmin() || (active() && hasRole(['hr']))
         || (isSales() && resource.data.restricted == false && resource.data.section in ['official', 'product']);
       allow create: if companyDocWriter(request.resource.data.section)
         && request.resource.data.section in ['official', 'expiring', 'subscription', 'product']
@@ -266,7 +278,7 @@ service cloud.firestore {
     // employee. Only HR (role hr) adds / changes / deletes them, never on
     // their own record (user decision); GM / SM read. The employee reads the
     // ones sent to them and only sets acceptedAt ("Agreed and Accepted") once.
-    function hrOnly() { return active() && me().role == 'hr'; }
+    function hrOnly() { return active() && hasRole(['hr']); }
     match /hr_actions/{actionId} {
       function ownSent() {
         return active() && resource.data.uid == request.auth.uid && resource.data.get('sent', false) == true;
@@ -307,9 +319,9 @@ service cloud.firestore {
     match /day_timelines/{id} {
       // Logistics manager: drivers; warehouse supervisor: their own drivers.
       allow read: if isSupervisor() || (active() && resource.data.uid == request.auth.uid)
-        || (active() && me().role == 'logistics_manager'
+        || (active() && hasRole(['logistics_manager'])
             && get(/databases/$(database)/documents/users/$(resource.data.uid)).data.role == 'driver')
-        || (active() && me().role == 'warehouse_supervisor'
+        || (active() && hasRole(['warehouse_supervisor'])
             && get(/databases/$(database)/documents/users/$(resource.data.uid)).data.get('supervisorId', '') == request.auth.uid);
       allow write: if false;
     }
@@ -399,9 +411,28 @@ service cloud.firestore {
       allow delete: if active() && resource.data.uid == request.auth.uid && resource.data.status == 'pending';
     }
 
+    // Team follow-ups (2026-11-11, functions/teamAlerts.js): written by the
+    // Cloud Functions. Everyone told so far (`allIds`) reads it and may record
+    // the action once while it's open: status → done, `action` by
+    // themselves at the server time; never the employee it is about.
+    match /team_alerts/{alertId} {
+      allow read: if isHrArea() || (active() && request.auth.uid in resource.data.allIds);
+      allow update: if active() && request.auth.uid in resource.data.allIds
+        && request.auth.uid != resource.data.uid
+        && resource.data.status == 'open'
+        && request.resource.data.status == 'done'
+        && request.resource.data.action.keys().hasOnly(['taken', 'note', 'byId', 'at', 'preset'])
+        && request.resource.data.action.byId == request.auth.uid
+        && request.resource.data.action.at == request.time
+        && request.resource.data.action.taken is bool
+        && request.resource.data.action.note is string && request.resource.data.action.note.size() <= 1000
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'action', 'nextAt']);
+      allow create, delete: if false;
+    }
+
     match /absences/{absenceId} {
       // sales_manager: acts as HR until HR has an account (user request 2026-10-22, testing).
-      function decidesAbsences() { return active() && me().role in ['hr', 'gm', 'sales_manager']; }
+      function decidesAbsences() { return active() && hasRole(['hr', 'gm', 'sales_manager']); }
       // `managerIds` is written by the absenceReported function (2026-10-31);
       // the person may keep it but never change it.
       function validReport() {
@@ -488,13 +519,14 @@ service cloud.firestore {
       function ownsRequest() { return active() && resource.data.uid == request.auth.uid; }
       function awaitsMe() {
         return resource.data.awaitingKey == 'uid:' + request.auth.uid
-          || resource.data.awaitingKey == 'role:' + me().role;
+          || (resource.data.get('awaitingKey', '') is string && resource.data.get('awaitingKey', '').matches('role:.+')
+              && hasRole([resource.data.awaitingKey.split(':')[1]]));
       }
       // Managers too (2026-10-23): their people's leave on the Attendance
       // page and report; the app shows only the people under them. KAMs
       // keep to their own team (`kamId`).
       // The direct manager approving (by uid) reads it from then on (2026-10-30).
-      allow read: if ownsRequest() || isHrArea() || (isManagerUser() && me().role != 'kam')
+      allow read: if ownsRequest() || isHrArea() || (isManagerUser() && (me().role != 'kam' || isAdmin()))
         || (active() && resource.data.kamId == request.auth.uid)
         || (active() && (resource.data.get('managerId', null) == request.auth.uid
             || request.auth.uid in resource.data.get('watcherIds', [])
@@ -507,7 +539,7 @@ service cloud.firestore {
         // no HR account exists, the sales manager stand in (smActsAsHr).
         && request.resource.data.steps[request.resource.data.steps.size() - 1].role in ['hr', 'gm', 'sales_manager']
         // HR / GM accepting someone's reported absence as leave: approved at once.
-        || (active() && me().role in ['hr', 'gm', 'sales_manager'] && request.resource.data.uid != request.auth.uid
+        || (active() && hasRole(['hr', 'gm', 'sales_manager']) && request.resource.data.uid != request.auth.uid
             && request.resource.data.status == 'approved'
             && request.resource.data.absenceId is string
             && exists(/databases/$(database)/documents/absences/$(request.resource.data.absenceId)))

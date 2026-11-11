@@ -12,6 +12,27 @@ const {
 
 const SALES_ROLES = ['sales_exec', 'kam', 'sales_manager', 'gm'];
 
+/**
+ * A user's main role + extra roles (2026-11-11, `users.extraRoles`): extra
+ * roles add capabilities and notices (who receives what, what a caller may
+ * do); the main role alone describes the person (tracked, driver, …).
+ * [u]: a DocumentSnapshot or a plain data object.
+ */
+function rolesOf(u) {
+  const get = (k) => (u && typeof u.get === 'function' ? u.get(k) : u?.[k]);
+  const extra = get('extraRoles');
+  return [get('role'), ...(Array.isArray(extra) ? extra : [])].filter(Boolean);
+}
+function hasRole(u, ...roles) {
+  const mine = rolesOf(u);
+  return roles.flat().some((r) => mine.includes(r));
+}
+/** Active users having any of [roles] (main or extra), as DocumentSnapshots. */
+async function activeWithRoles(roles) {
+  const all = await admin.firestore().collection('users').where('active', '==', true).get();
+  return all.docs.filter((d) => hasRole(d, roles));
+}
+
 admin.initializeApp();
 
 // Only Google Maps short links are followed, so this can't be used to fetch arbitrary URLs.
@@ -65,7 +86,7 @@ exports.resolvePins = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (re
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
   const me = await admin.firestore().doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
-  const max = ['sales_manager', 'gm'].includes(me.get('role')) ? 50 : 5;
+  const max = hasRole(me, 'sales_manager', 'gm') ? 50 : 5;
   const urls = Array.isArray(req.data?.urls) ? req.data.urls.filter((u) => typeof u === 'string').slice(0, max) : [];
   const results = {};
   await Promise.all(urls.map(async (url) => {
@@ -84,7 +105,7 @@ exports.findClientDuplicates = onCall({ maxInstances: 5 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
   const db = admin.firestore();
   const me = await db.doc(`users/${req.auth.uid}`).get();
-  if (!me.exists || me.get('active') !== true || !SALES_ROLES.includes(me.get('role'))) {
+  if (!me.exists || me.get('active') !== true || !hasRole(me, SALES_ROLES)) {
     throw new HttpsError('permission-denied', 'Sales users only');
   }
   const d = req.data || {};
@@ -173,6 +194,16 @@ const TEXTS = {
     earlyCheckoutApproved: (n) => `${n} approved your early check-out – you can check out now`,
     earlyCheckoutRejected: (n, c, d, o, x) => `${n} didn't approve your early check-out${x.note ? ` – ${x.note}` : ''}`,
     breakRequested: (n, c, d, o, x) => `${o} asks for a ${c} min break${x.note ? ` – ${x.note}` : ''}`,
+    // Team follow-ups (2026-11-11): first notice (late only) / escalation.
+    teamAlert: (n, c, d, o, x) => (x.first
+      ? `${o} hasn't checked in yet – their work day started at ${x.time}. Tap to record the action taken.`
+      : `No action yet (${c} min): ${o} ${x.alertWhat}. ${n} was told first. Tap to take action.`),
+    alertWhat: {
+      late: (x) => `hasn't checked in (work day started at ${x.time})`,
+      break: () => 'asked for a break',
+      earlyCheckout: () => 'asked to leave early',
+      absence: () => "reported they won't come to work",
+    },
     breakApproved: (n, c) => `${n} approved your ${c} min break – you may leave the site`,
     overtimeDayAllowed: (n, c, d, o, x) => `${n} allowed you overtime on ${d} – your time at the site counts as overtime${x.note ? ` – ${x.note}` : ''}`,
     breakRejected: (n, c, d, o, x) => `${n} didn't approve your break${x.note ? ` – ${x.note}` : ''}`,
@@ -245,6 +276,15 @@ const TEXTS = {
     earlyCheckoutApproved: (n) => `وافق ${n} على انصرافك المبكر – يمكنك تسجيل الانصراف الآن`,
     earlyCheckoutRejected: (n, c, d, o, x) => `لم يوافق ${n} على انصرافك المبكر${x.note ? ` – ${x.note}` : ''}`,
     breakRequested: (n, c, d, o, x) => `يطلب ${o} استراحة لمدة ${c} دقيقة${x.note ? ` – ${x.note}` : ''}`,
+    teamAlert: (n, c, d, o, x) => (x.first
+      ? `لم يسجّل ${o} حضوره بعد – بدأ يوم عمله الساعة ${x.time}. اضغط لتسجيل الإجراء المتخذ.`
+      : `لم يُتخذ إجراء بعد (${c} دقيقة): ${o} ${x.alertWhat}. أُبلغ ${n} أولاً. اضغط لاتخاذ إجراء.`),
+    alertWhat: {
+      late: (x) => `لم يسجّل حضوره (بدأ يوم العمل الساعة ${x.time})`,
+      break: () => 'طلب استراحة',
+      earlyCheckout: () => 'طلب الانصراف مبكراً',
+      absence: () => 'أبلغ أنه لن يحضر إلى العمل',
+    },
     breakApproved: (n, c) => `وافق ${n} على استراحتك (${c} دقيقة) – يمكنك مغادرة الموقع`,
     overtimeDayAllowed: (n, c, d, o, x) => `سمح لك ${n} بالعمل الإضافي يوم ${d} – يُحتسب وقتك في الموقع عملاً إضافياً${x.note ? ` – ${x.note}` : ''}`,
     breakRejected: (n, c, d, o, x) => `لم يوافق ${n} على استراحتك${x.note ? ` – ${x.note}` : ''}`,
@@ -314,7 +354,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
   const db = admin.firestore();
   // For client transfers ownerId is the other sales executive (empty = unassigned);
   // for leave requests it is the person who asked.
-  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested', 'breakRequested', 'hrActionAccepted'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
+  const other = ['clientsTransferredOut', 'leaveRequested', 'leaveReminder', 'leaveUpdate', 'registrationRequested', 'absenceReported', 'teamOnLeave', 'earlyCheckoutRequested', 'breakRequested', 'hrActionAccepted', 'teamAlert'].includes(n.type) && n.ownerId ? `users/${n.ownerId}` : null;
   const [to, from, devices, otherUser] = await Promise.all([
     db.doc(`users/${n.toId}`).get(),
     db.doc(`users/${n.fromId}`).get(),
@@ -344,8 +384,10 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       idType: lang === 'ar' ? (n.issue === 'nationalId' ? 'الهوية الوطنية' : 'الإقامة') : (n.issue === 'nationalId' ? 'national ID' : 'Iqama'),
       reply: n.issue === 'reply',
       hrKind: t.hrKind[n.issue] || t.hrKind.note,
+      first: n.fromId === n.ownerId,
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
+    extra.alertWhat = n.type === 'teamAlert' ? (t.alertWhat[n.issue] || t.alertWhat.late)(extra) : '';
     const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
@@ -359,6 +401,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type === 'overtimeStarted' ? '/'
           : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
           : n.type === 'visitComment' && n.ref ? `/visits/${n.ref}`
+          : n.type === 'teamAlert' && n.ref ? `/team-alerts/${n.ref}`
           // The app covers the screen with it until accepted.
           : n.type === 'hrActionIssued' ? '/'
           : n.type === 'hrActionAccepted' && n.ref ? `/hr/action/${n.ref}`
@@ -493,8 +536,8 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
 
   // Drivers: also the logistics managers (2026-10-20).
   const managerRoles = role === 'driver' ? ['sales_manager', 'gm', 'logistics_manager'] : ['sales_manager', 'gm'];
-  const managers = await db.collection('users').where('role', 'in', managerRoles).where('active', '==', true).get();
-  const to = new Set(managers.docs.map((d) => d.id));
+  const managers = await activeWithRoles(managerRoles);
+  const to = new Set(managers.map((d) => d.id));
   const kamId = role === 'sales_exec' ? user.get('kamId') : null;
   if (kamId) {
     const kam = await db.doc(`users/${kamId}`).get();
@@ -628,7 +671,7 @@ exports.offlineAlerts = onSchedule(
     const phones = deviceSnap.val() || {};
     const alerts = alertsSnap.val() || {};
     const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const active = (role) => users.filter((u) => u.role === role && u.active === true).map((u) => u.id);
+    const active = (role) => users.filter((u) => hasRole(u, role) && u.active === true).map((u) => u.id);
 
     const updates = {};
     const batch = db.batch();
@@ -788,7 +831,7 @@ exports.hrActionWritten = onDocumentWritten({ document: 'hr_actions/{id}', maxIn
     });
   }
   if (accepted) {
-    const hr = (await db.collection('users').where('role', '==', 'hr').where('active', '==', true).get()).docs.map((d) => d.id);
+    const hr = (await activeWithRoles(['hr'])).map((d) => d.id);
     const to = new Set([...hr, ...(after.createdBy ? [after.createdBy] : [])]);
     to.delete(after.uid);
     for (const toId of to) {
@@ -915,10 +958,10 @@ async function computeRoute(points, token) {
  * team, the logistics manager every driver, a warehouse supervisor their
  * own drivers (`supervisorId`, 2026-10-23).
  */
-function followsPerson(role, callerId, target) {
-  return (role === 'kam' && target.get('kamId') === callerId)
-    || (role === 'logistics_manager' && target.get('role') === 'driver')
-    || (role === 'warehouse_supervisor' && target.get('role') === 'driver' && target.get('supervisorId') === callerId);
+function followsPerson(caller, callerId, target) {
+  return (hasRole(caller, 'kam') && target.get('kamId') === callerId)
+    || (hasRole(caller, 'logistics_manager') && target.get('role') === 'driver')
+    || (hasRole(caller, 'warehouse_supervisor') && target.get('role') === 'driver' && target.get('supervisorId') === callerId);
 }
 
 /**
@@ -939,10 +982,9 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   const db = admin.firestore();
   const me = await db.doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
-  const role = me.get('role');
-  if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
+  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
     const target = await db.doc(`users/${uid}`).get();
-    if (!followsPerson(role, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
+    if (!followsPerson(me, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
   }
 
   const rtdb = admin.database();
@@ -1007,9 +1049,9 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
   const u = event.data?.data();
   if (!u || u.approval !== 'pending') return;
   const db = admin.firestore();
-  const admins = await db.collection('users').where('role', 'in', ['gm', 'sales_manager']).get();
+  const admins = await activeWithRoles(['gm', 'sales_manager']);
   const batch = db.batch();
-  for (const a of admins.docs) {
+  for (const a of admins) {
     if (a.get('active') !== true) continue;
     batch.set(db.collection('notifications').doc(), {
       toId: a.id, fromId: event.params.uid, ownerId: event.params.uid, type: 'registrationRequested',
@@ -1056,8 +1098,12 @@ const CHECK_IN_NOTICE_MS = 3 * 3600 * 1000;
 async function announceCheckIn(data, d, user, now) {
   const db = admin.firestore();
   const site = d.siteId ? (await db.doc(`work_sites/${d.siteId}`).get()).get('name') || '' : '';
-  const gms = await db.collection('users').where('role', '==', 'gm').get();
-  const to = new Set([data.uid, ...gms.docs.filter((g) => g.get('active') === true).map((g) => g.id)]);
+  // The employee and the people they report to (user decision 2026-11-11,
+  // replaces "every GM"): direct managers + their warehouse supervisor; the
+  // GM only for people who report to the GM.
+  const users = (await db.collection('users').where('active', '==', true).get()).docs
+    .map((x) => ({ id: x.id, ...x.data() }));
+  const to = new Set([data.uid, ...lateManagers({ ...user, id: data.uid }, data.uid, users)]);
   await Promise.all([...to].map((toId) => db.doc(`notifications/checkIn_${data.uid}_${data.date}_${toId}`).create({
     toId, fromId: data.uid, ownerId: data.uid, type: 'attendanceCheckedIn', date: data.date,
     count: d.lateMin || 0, siteName: site, time: saudiClock(d.checkInAt), read: false,
@@ -1303,6 +1349,11 @@ async function attendanceSettings() {
 exports.attendanceUpdated = onDocumentWritten('attendance/{id}', async (event) => {
   const after = event.data?.after;
   if (!after?.exists) return;
+  // Checked in: their late follow-up ends, nobody above is told (2026-11-11).
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  if (!teamAlerts.checkedIn(before) && teamAlerts.checkedIn(after.data())) {
+    await closeTeamAlert(teamAlerts.alertId('late', event.params.id), teamAlerts.checkedInAction());
+  }
   const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
   await updateAttendance(after.ref, after.data(), hours, Date.now(), await attendanceSettings());
 });
@@ -1317,6 +1368,7 @@ exports.attendanceUpdated = onDocumentWritten('attendance/{id}', async (event) =
 exports.breakRequestWritten = onDocumentWritten('break_requests/{id}', async (event) => {
   const d = event.data?.after?.data() || event.data?.before?.data();
   if (!d?.uid || !/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return;
+  await followRequest('break', event, (r) => ({ toIds: r.approverIds || [], note: r.reason, count: r.minutes || 0 }));
   const db = admin.firestore();
   const ref = db.doc(`attendance/${d.uid}_${d.date}`);
   const [day, list] = await Promise.all([
@@ -1470,11 +1522,11 @@ function directManagers(person, uid, users) {
   // Chosen on the user form (2026-10-23).
   const chosen = users.find((u) => u.id === person.managerId && u.active === true && u.id !== uid);
   if (chosen) return [chosen.id];
-  const withRole = (r) => users.filter((u) => u.active === true && u.role === r && u.id !== uid).map((u) => u.id);
+  const withRole = (r) => users.filter((u) => u.active === true && hasRole(u, r) && u.id !== uid).map((u) => u.id);
   if (person.role === 'gm') return [];
   let found = [];
   if (person.role === 'sales_exec') {
-    found = users.filter((u) => u.id === person.kamId && u.active === true && u.role === 'kam').map((u) => u.id);
+    found = users.filter((u) => u.id === person.kamId && u.active === true && hasRole(u, 'kam')).map((u) => u.id);
     if (found.length === 0) found = withRole('sales_manager');
   } else if (person.role === 'kam') {
     found = withRole('sales_manager');
@@ -1509,7 +1561,7 @@ function departmentHeads(person, uid, users) {
   const dept = departmentOf(person);
   if (!dept) return [];
   const managers = new Set(users.filter((u) => u.active === true && departmentOf(u) === dept
-    && (MANAGER_ROLES.includes(u.role) || u.isManager === true)).map((u) => u.id));
+    && (hasRole(u, MANAGER_ROLES) || u.isManager === true)).map((u) => u.id));
   return users.filter((u) => managers.has(u.id) && u.id !== uid
     && !directManagers(u, u.id, users).some((id) => managers.has(id))).map((u) => u.id);
 }
@@ -1561,13 +1613,15 @@ exports.absenceReported = onDocumentCreated('absences/{id}', async (event) => {
   const users = (await db.collection('users').where('active', '==', true).get()).docs
     .map((d) => ({ id: d.id, ...d.data() }));
   const person = users.find((u) => u.id === a.uid) || {};
-  const deciders = users.filter((u) => u.role === 'hr' || u.role === 'gm' || (SM_ACTS_AS_HR && u.role === 'sales_manager')).map((u) => u.id);
+  const deciders = users.filter((u) => hasRole(u, 'hr', 'gm') || (SM_ACTS_AS_HR && hasRole(u, 'sales_manager'))).map((u) => u.id);
   // The direct manager approves first (2026-10-31): those who don't decide
   // absences themselves; HR is told once one of them approves (app side).
   const managers = directManagers(person, a.uid, users).filter((id) => !deciders.includes(id));
   if (managers.length) await event.data.ref.update({ managerIds: managers });
   const to = new Set(managers.length ? managers : deciders);
   to.delete(a.uid);
+  // Follow-up (2026-11-11): told people must act, else it goes up.
+  await openTeamAlert({ kind: 'absence', uid: a.uid, date: a.date, ref: event.params.id, note: a.note, toIds: [...to] });
   const batch = db.batch();
   for (const toId of to) {
     batch.set(db.collection('notifications').doc(), {
@@ -1641,7 +1695,9 @@ exports.attendanceReminders = onSchedule(
     const holidays = (await db.doc('settings/holidays').get()).get('dates') || [];
     if (holidays.includes(today)) return;
     const hours = workHours((await rtdb.ref('settings/workHours').get()).val());
-    const users = (await db.collection('users').where('active', '==', true).get()).docs
+    const activeDocs = (await db.collection('users').where('active', '==', true).get()).docs;
+    const everyone = activeDocs.map((d) => ({ id: d.id, ...d.data() }));
+    const users = activeDocs
       .filter((d) => checksAttendance(d.data()))
       .filter((d) => {
         const h = scheduleOf(d.data(), hours);
@@ -1667,18 +1723,22 @@ exports.attendanceReminders = onSchedule(
 
     const batch = db.batch();
     const marks = {};
+    const lateAlerts = [];
     for (const u of users) {
       if (sent[u.id] === today || checkedIn.has(u.id) || onLeave.has(u.id) || absent.has(u.id)) continue;
       const h = scheduleOf(u.data(), hours);
       marks[u.id] = today;
+      const time = `${String(Math.floor(h.start / 60)).padStart(2, '0')}:${String(h.start % 60).padStart(2, '0')}`;
       batch.set(db.collection('notifications').doc(), {
         toId: u.id, fromId: u.id, ownerId: u.id, type: 'attendanceLate', date: today, count: 0,
-        time: `${String(Math.floor(h.start / 60)).padStart(2, '0')}:${String(h.start % 60).padStart(2, '0')}`,
-        read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        time, read: false, createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      lateAlerts.push({ kind: 'late', uid: u.id, date: today, ref: `${u.id}_${today}`, time, toIds: lateManagers(u.data(), u.id, everyone) });
     }
     if (Object.keys(marks).length === 0) return;
     await batch.commit();
+    // Their managers are told and must record the action taken (2026-11-11).
+    for (const a of lateAlerts) await openTeamAlert(a, { notify: true });
     await rtdb.ref('attendance_reminders').update(marks);
   },
 );
@@ -1887,10 +1947,9 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
   const db = admin.firestore();
   const me = await db.doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
-  const role = me.get('role');
   const target = uid === req.auth.uid ? me : await db.doc(`users/${uid}`).get();
-  if (uid !== req.auth.uid && !['sales_manager', 'gm'].includes(role)) {
-    if (!followsPerson(role, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
+  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
+    if (!followsPerson(me, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
   }
   const { hours, sites } = await timelineContext();
   const places = target.exists && target.get('role') === 'driver' ? await clientPlaces() : null;
@@ -1979,11 +2038,11 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   if (uid === callerId) throw new HttpsError('invalid-argument', 'Change your own password on the Profile page.');
   const target = (await db.doc(`users/${uid}`).get()).data();
   const allowed = caller?.active === true && (
-    caller.role === 'gm' ||
-    (caller.role === 'sales_manager' && !['gm', 'sales_manager'].includes(target?.role)) ||
-    (caller.role === 'logistics_manager' && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)) ||
-    (caller.role === 'factory_manager' && ['worker', 'engineer', 'operator'].includes(target?.role)) ||
-    (caller.role === 'hr' && HR_MANAGED_ROLES.includes(target?.role)));
+    hasRole(caller, 'gm') ||
+    (hasRole(caller, 'sales_manager') && !['gm', 'sales_manager'].includes(target?.role)) ||
+    (hasRole(caller, 'logistics_manager') && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)) ||
+    (hasRole(caller, 'factory_manager') && ['worker', 'engineer', 'operator'].includes(target?.role)) ||
+    (hasRole(caller, 'hr') && HR_MANAGED_ROLES.includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
   await logUserEvent({ action: 'passwordSet', targetId: uid, targetName: target?.name || '', actorId: callerId, changes: [] });
@@ -2104,7 +2163,7 @@ exports.driverKm = onSchedule(
 exports.refreshDriverKm = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in first');
   const me = await admin.firestore().doc(`users/${req.auth.uid}`).get();
-  if (me.get('active') !== true || !['sales_manager', 'gm', 'logistics_manager', 'hr'].includes(me.get('role'))) {
+  if (me.get('active') !== true || !hasRole(me, 'sales_manager', 'gm', 'logistics_manager', 'hr')) {
     throw new HttpsError('permission-denied', 'Not allowed');
   }
   const { uids, from } = req.data || {};
@@ -2132,11 +2191,11 @@ exports.vehicleRenewals = onSchedule(
     const today = saudiDay(Date.now());
     const [vehicles, managers, dueSoonDays, oilSoonKm] = await Promise.all([
       db.collection('vehicles').get(),
-      db.collection('users').where('role', 'in', ['logistics_manager', 'sales_manager', 'gm']).where('active', '==', true).get(),
+      activeWithRoles(['logistics_manager', 'sales_manager', 'gm']),
       appSetting('vehicleRenewalDays', DUE_SOON_DAYS, 1, 90),
       appSetting('oilDueSoonKm', OIL_DUE_SOON_KM, 100, 5000),
     ]);
-    if (managers.empty) return;
+    if (managers.length === 0) return;
     // Oil changes (2026-10-26): odometer estimate from the drivers' GPS km
     // (yesterday's were built at 00:45), one driver_km range read for all.
     const oilCars = vehicles.docs.filter((v) => v.get('oilIntervalKm') > 0 && (v.get('oilLog') || []).length && lastReading(v.data()));
@@ -2151,7 +2210,7 @@ exports.vehicleRenewals = onSchedule(
       if (!alerts.length && !oil.length) continue;
       const batch = db.batch();
       for (const a of oil) {
-        for (const m of managers.docs) {
+        for (const m of managers) {
           batch.set(db.collection('notifications').doc(), {
             toId: m.id, fromId: m.id, ownerId: '', type: 'vehicleOilDue', date: today,
             count: a.kmLeft, note: String(a.nextKm), ref: v.id, vehicleName: v.get('plate') || '',
@@ -2160,7 +2219,7 @@ exports.vehicleRenewals = onSchedule(
         }
       }
       for (const a of alerts) {
-        for (const m of managers.docs) {
+        for (const m of managers) {
           batch.set(db.collection('notifications').doc(), {
             toId: m.id, fromId: m.id, ownerId: '', type: 'vehicleRenewalDue', issue: a.item,
             date: a.expiry, count: a.days, ref: v.id, vehicleName: v.get('plate') || '',
@@ -2200,7 +2259,7 @@ exports.companyDocReminders = onSchedule(
       db.collection('users').where('active', '==', true).get(),
       appSetting('docRenewalDays', DOC_DUE_SOON_DAYS, 1, 120),
     ]);
-    const recipients = people.docs.filter((u) => ['hr', 'sales_manager', 'gm'].includes(u.get('role')));
+    const recipients = people.docs.filter((u) => hasRole(u, 'hr', 'sales_manager', 'gm'));
     if (!recipients.length) return;
     const names = Object.fromEntries(people.docs.map((u) => [u.id, u.get('name') || '']));
     const notify = (batch, fields) => {
@@ -2322,3 +2381,157 @@ exports.userChanged = onDocumentWritten({ document: 'users/{uid}', maxInstances:
   if (!e) return;
   await logUserEvent({ ...e, targetId: event.params.uid, targetName: after?.name || before?.name || '' });
 });
+
+// ---------------------------------------------------------------------------
+// Team follow-ups (user request 2026-11-11, logic teamAlerts.js): the people
+// an employee reports to must act on a late arrival, break request, request
+// to leave early or absence report; not handled within `alertEscalateMin`
+// (App setting, 30) → the people above them are told, up to the top.
+
+const teamAlerts = require('./teamAlerts');
+
+const alertDelayMin = () => appSetting('alertEscalateMin', 30, 5, 240);
+
+/** Who is told when [person] is late: direct managers + their warehouse supervisor. */
+function lateManagers(person, uid, users) {
+  const ids = new Set(directManagers(person, uid, users));
+  const sup = users.find((u) => u.id === person.supervisorId && u.active === true && u.id !== uid);
+  if (sup) ids.add(sup.id);
+  return [...ids];
+}
+
+/** Firestore form of the ms numbers in an alert (nextAt, steps[].at). */
+function alertForStore(a) {
+  const out = { ...a };
+  if (typeof a.nextAt === 'number') out.nextAt = admin.firestore.Timestamp.fromMillis(a.nextAt);
+  if (a.nextAt === null) out.nextAt = admin.firestore.FieldValue.delete();
+  if (Array.isArray(a.steps)) {
+    out.steps = a.steps.map((s) => (typeof s.at === 'number' ? { ...s, at: admin.firestore.Timestamp.fromMillis(s.at) } : s));
+  }
+  if (typeof a.createdAt === 'number') out.createdAt = admin.firestore.Timestamp.fromMillis(a.createdAt);
+  return out;
+}
+
+/**
+ * Opens the follow-up for one event (never twice: fixed id). With [notify]
+ * the told people get a `teamAlert` (late: nothing else tells them; the
+ * other kinds already sent their own request notice).
+ */
+async function openTeamAlert(spec, { notify = false } = {}) {
+  const db = admin.firestore();
+  const now = Date.now();
+  const a = teamAlerts.newAlert(spec, now, await alertDelayMin());
+  if (a.toIds.length === 0) return;
+  const ref = db.doc(`team_alerts/${teamAlerts.alertId(spec.kind, spec.ref)}`);
+  try {
+    await ref.create(alertForStore(a));
+  } catch (e) {
+    if (e.code === 6 || /already exists/i.test(String(e.message))) return;
+    throw e;
+  }
+  if (!notify) return;
+  const batch = db.batch();
+  for (const toId of a.toIds) {
+    batch.set(db.collection('notifications').doc(), {
+      toId, fromId: a.uid, ownerId: a.uid, type: 'teamAlert', issue: a.kind, date: a.date, count: 0,
+      time: a.time || '', note: a.note || '', ref: ref.id, read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  await batch.commit();
+}
+
+/** Closes an open follow-up with [action] (a decision on the request). */
+async function closeTeamAlert(id, action) {
+  const ref = admin.firestore().doc(`team_alerts/${id}`);
+  await admin.firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.get('status') !== 'open') return;
+    tx.update(ref, {
+      status: 'done', nextAt: admin.firestore.FieldValue.delete(),
+      action: { ...action, at: admin.firestore.FieldValue.serverTimestamp() },
+    });
+  });
+}
+
+/** Break / leaving-early request written: opens its follow-up when sent, closes it when decided or taken back. */
+async function followRequest(kind, event, specOf) {
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  if (!before && after?.status === 'pending' && after.uid && after.date) {
+    await openTeamAlert({ kind, uid: after.uid, date: after.date, ref: event.params.id, ...specOf(after) });
+    return;
+  }
+  const action = teamAlerts.autoAction(kind, before, after);
+  if (action) await closeTeamAlert(teamAlerts.alertId(kind, event.params.id), action);
+}
+
+exports.earlyCheckoutWritten = onDocumentWritten('checkout_requests/{id}', (event) =>
+  followRequest('earlyCheckout', event, (r) => ({ toIds: r.approverIds || [], note: r.reason })));
+
+/** Absence decided by a manager / HR, or taken back: its follow-up is closed. */
+exports.absenceWritten = onDocumentWritten('absences/{id}', async (event) => {
+  const before = event.data?.before?.exists ? event.data.before.data() : null;
+  const after = event.data?.after?.exists ? event.data.after.data() : null;
+  const action = teamAlerts.autoAction('absence', before, after);
+  if (action) await closeTeamAlert(teamAlerts.alertId('absence', event.params.id), action);
+});
+
+/**
+ * Every 5 minutes: follow-ups nobody acted on within the delay go one
+ * level up (the managers of the people told now get a `teamAlert`, count =
+ * minutes since the first notice, fromId = one who was told before). At
+ * the top, or after the alert's day, they stay open without more notices.
+ */
+exports.escalateTeamAlerts = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'Asia/Riyadh', maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const now = Date.now();
+    const today = saudiDay(now);
+    const due = (await db.collection('team_alerts').where('nextAt', '<=', admin.firestore.Timestamp.fromMillis(now)).get()).docs;
+    if (due.length === 0) return;
+    const users = (await db.collection('users').where('active', '==', true).get()).docs
+      .map((d) => ({ id: d.id, ...d.data() }));
+    const delay = await alertDelayMin();
+    for (const doc of due) {
+      const a = { ...doc.data(), nextAt: doc.get('nextAt')?.toMillis?.() ?? null };
+      const step = teamAlerts.escalationStep(a, now, today);
+      if (step === 'wait') {
+        if (a.status !== 'open') await doc.ref.update({ nextAt: admin.firestore.FieldValue.delete() });
+        continue;
+      }
+      if (step === 'stop') {
+        await doc.ref.update({ nextAt: admin.firestore.FieldValue.delete(), dayOver: true });
+        continue;
+      }
+      // Late but checked in meanwhile: closed, not escalated (2026-11-11).
+      if (a.kind === 'late' && teamAlerts.checkedIn((await db.doc(`attendance/${a.ref}`).get()).data())) {
+        await closeTeamAlert(doc.id, teamAlerts.checkedInAction());
+        continue;
+      }
+      const targets = teamAlerts.escalationTargets(a, users, directManagers);
+      const change = teamAlerts.escalated(a, targets, now, delay);
+      // Only if still open (someone may have acted meanwhile).
+      const sent = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(doc.ref);
+        if (fresh.get('status') !== 'open') return false;
+        tx.update(doc.ref, alertForStore(change));
+        return true;
+      });
+      if (!sent || targets.length === 0) continue;
+      const created = doc.get('createdAt')?.toMillis?.() ?? now;
+      const batch = db.batch();
+      for (const toId of targets) {
+        batch.set(db.collection('notifications').doc(), {
+          toId, fromId: (a.toIds || [])[0] || a.uid, ownerId: a.uid, type: 'teamAlert', issue: a.kind,
+          date: a.date || '', count: Math.max(1, Math.round((now - created) / 60000)),
+          time: a.time || '', note: a.note || '', ref: doc.id, read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+  },
+);
+

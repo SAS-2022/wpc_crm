@@ -302,7 +302,7 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
     final userList = ref.watch(usersProvider).value ?? const <AppUser>[];
     final users = {for (final u in userList) u.id: u};
     // HR keeps vehicles but doesn't see route history.
-    final seesRoutes = ref.watch(currentUserProvider).value?.role.seesDrivers == true;
+    final seesRoutes = ref.watch(currentUserProvider).value?.can.seesDrivers == true;
     final from = firstKmDay([v]);
     final km = from == null ? const <DriverDayKm>[] : ref.watch(driverKmProvider(from)).value ?? const <DriverDayKm>[];
     final mileage = vehicleMileage(v, km);

@@ -10,7 +10,7 @@ CollectionReference<Map<String, dynamic>> get _records => FirebaseFirestore.inst
 
 /// Every employee record by uid: the HR area (HR, GM, SM) only.
 final employeeRecordsProvider = StreamProvider<Map<String, EmployeeRecord>>((ref) {
-  final hr = ref.watch(currentUserProvider.select((u) => u.value?.active == true && u.value!.role.canSeeHr));
+  final hr = ref.watch(currentUserProvider.select((u) => u.value?.active == true && u.value!.can.canSeeHr));
   if (!hr) return Stream.value(const {});
   return _records.snapshots().map((s) => {for (final d in s.docs) d.id: EmployeeRecord.fromMap(d.id, d.data())});
 });

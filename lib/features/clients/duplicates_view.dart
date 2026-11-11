@@ -159,7 +159,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
                     label: Text(l10n.notDuplicates),
                   ),
                   // Merging edits visits and deletes clients: sales manager / GM.
-                  if (me?.role.isAdmin ?? false)
+                  if (me?.can.isAdmin ?? false)
                     FilledButton.icon(
                       onPressed: _busy ? null : () => _merge(me!),
                       icon: busyIcon(_busy, const Icon(Icons.merge)),

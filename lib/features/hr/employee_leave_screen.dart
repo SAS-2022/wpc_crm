@@ -110,7 +110,7 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
     final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
     final record = ref.watch(leaveBalanceRecordProvider((uid, year))).value ?? LeaveBalanceRecord.empty;
     final types = {for (final t in ref.watch(leaveTypesProvider).value ?? LeaveType.defaults) t.id: t};
-    final canEdit = me?.role.canManageHr ?? false;
+    final canEdit = me?.can.canManageHr ?? false;
 
     return Scaffold(
       appBar: AppBar(title: Text(person?.name ?? '')),

@@ -136,7 +136,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
-    final supervisor = me?.role.isSupervisor ?? false;
+    final supervisor = me?.can.isSupervisor ?? false;
     final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
     final hidden = supervisor ? ref.watch(filteredHiddenClientsProvider) : const <Client>[];
     if (hidden.isEmpty) _showHidden = false;
@@ -247,7 +247,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   onPressed: list.isEmpty ? null : () => showClientExportDialog(context, ref, list),
                 ),
               IconButton(icon: const Icon(Icons.map), tooltip: l10n.clientMap, onPressed: () => context.go('/map')),
-              if (me?.role.isAdmin ?? false)
+              if (me?.can.isAdmin ?? false)
                 IconButton(
                   icon: const Icon(Icons.upload_file),
                   tooltip: l10n.importClients,

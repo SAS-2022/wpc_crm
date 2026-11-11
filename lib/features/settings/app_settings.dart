@@ -41,6 +41,10 @@ enum AppSetting {
   /// days saved before). `MIN_OVERTIME_MIN` in functions/attendance.js.
   minOvertimeMin(29, 0, 120),
 
+  /// Team follow-ups (2026-11-11): nobody records an action within this
+  /// many minutes → the people above are told (`escalateTeamAlerts`).
+  alertEscalateMin(30, 5, 240),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90),
 

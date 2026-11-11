@@ -123,7 +123,7 @@ class ClientDetailScreen extends ConsumerWidget {
     final now = DateTime.now();
     final status = visitStatus(client, rules, now);
     final rule = rules.of(client.category);
-    final canEdit = (me?.role.isSupervisor ?? false) || client.assignedTo == me?.id;
+    final canEdit = (me?.can.isSupervisor ?? false) || client.assignedTo == me?.id;
     final phone = client.mobile.isNotEmpty ? client.mobile : client.phone;
     final usersById = {for (final u in users) u.id: u};
     final canTransfer = me != null && canTransferFrom(me, client.assignedTo, usersById);
@@ -207,7 +207,7 @@ class ClientDetailScreen extends ConsumerWidget {
               tooltip: l10n.editClient,
               onPressed: () => context.push('/clients/$clientId/edit'),
             ),
-          if (canTransfer || canChangeStatus || (me?.role.isSupervisor ?? false))
+          if (canTransfer || canChangeStatus || (me?.can.isSupervisor ?? false))
             PopupMenuButton<VoidCallback>(
               onSelected: (action) => action(),
               itemBuilder: (_) => [
@@ -224,7 +224,7 @@ class ClientDetailScreen extends ConsumerWidget {
                       title: Text(l10n.changeClientStatus),
                     ),
                   ),
-                if (me?.role.isSupervisor ?? false)
+                if (me?.can.isSupervisor ?? false)
                   PopupMenuItem(
                     value: () => _setHidden(context, ref, hidden: !client.hidden),
                     child: ListTile(
@@ -232,7 +232,7 @@ class ClientDetailScreen extends ConsumerWidget {
                       title: Text(client.hidden ? l10n.unhideClient : l10n.hideClient),
                     ),
                   ),
-                if (me?.role.isAdmin ?? false)
+                if (me?.can.isAdmin ?? false)
                   PopupMenuItem(
                     value: () => _delete(context, ref, client),
                     child: ListTile(
@@ -255,7 +255,7 @@ class ClientDetailScreen extends ConsumerWidget {
               child: ListTile(
                 leading: const Icon(Icons.visibility_off),
                 title: Text(l10n.clientHiddenBanner),
-                trailing: (me?.role.isSupervisor ?? false)
+                trailing: (me?.can.isSupervisor ?? false)
                     ? TextButton(
                         onPressed: () => _setHidden(context, ref, hidden: false),
                         child: Text(l10n.unhideClient),
@@ -377,7 +377,7 @@ class ClientDetailScreen extends ConsumerWidget {
               ),
           ]),
           section(l10n.linkedClients, [
-            ClientLinksSection(client: client, canEdit: me?.role.isSupervisor ?? false),
+            ClientLinksSection(client: client, canEdit: me?.can.isSupervisor ?? false),
           ]),
           section(l10n.clientStatusHistory, [
             if (client.statusLog.isNotEmpty) ClientStatusHistory(client: client),
@@ -396,7 +396,7 @@ class ClientDetailScreen extends ConsumerWidget {
           AttachmentsSection(
             owner: (parent: AttachmentParent.clients, id: clientId),
             canAdd: canEdit,
-            canDelete: me?.role.isSupervisor ?? false,
+            canDelete: me?.can.isSupervisor ?? false,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

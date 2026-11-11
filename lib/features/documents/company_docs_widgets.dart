@@ -622,7 +622,7 @@ class CompanyDocRenewalsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider).value;
-    if (me == null || !me.role.seesAllCompanyDocs) return const SizedBox.shrink();
+    if (me == null || !me.can.seesAllCompanyDocs) return const SizedBox.shrink();
     if (!(ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.companyDocs)) {
       return const SizedBox.shrink();
     }

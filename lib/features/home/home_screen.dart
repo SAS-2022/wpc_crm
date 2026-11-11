@@ -28,6 +28,7 @@ import 'stats.dart';
 import 'stats_widgets.dart';
 import '../attendance/absence_screen.dart' show PendingAbsencesCard;
 import '../attendance/overtime_widgets.dart' show OvertimeApprovalsCard;
+import '../attendance/team_alerts_screen.dart' show TeamAlertsCard;
 import '../attendance/early_checkout_card.dart';
 import '../settings/page_access.dart';
 import '../attendance/attendance_card.dart';
@@ -95,7 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Who the numbers are about.
     final usersAsync = ref.watch(usersProvider);
     final users = usersAsync.value ?? const <AppUser>[];
-    final team = me.role.isSupervisor
+    final team = me.can.isSupervisor
         ? [if (me.role.isTracked) me, ...teamOf(me, users)]
         : [me];
     if (_person != null && !team.any((u) => u.id == _person)) _person = null;
@@ -103,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final ids = {for (final u in people) u.id};
 
     // Sales execs may only query their own documents.
-    final key = (me.role.isSupervisor ? null : me.id, _range.months.join(','));
+    final key = (me.can.isSupervisor ? null : me.id, _range.months.join(','));
     // Hidden clients are left out of every number.
     final hidden = ref.watch(hiddenClientIdsProvider);
     final visitsAsync = ref.watch(rangeVisitsProvider(key));
@@ -154,6 +155,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const TrackingCard(),
           // Assigned to a work site: today's check-in / check-out.
           AttendanceCard(me: me),
+          // Team follow-ups waiting for this person's action (hidden when none).
+          const TeamAlertsCard(),
           // Leave requests waiting for this person's approval (hidden when none).
           const LeaveApprovalsCard(),
           // HR / GM: reported absences to decide (hidden when none).
@@ -186,12 +189,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   selected: _kind == kind,
                   onSelected: (_) => _setKind(kind),
                 ),
-              if (me.role.isSupervisor && team.length > 1)
+              if (me.can.isSupervisor && team.length > 1)
                 DropdownButton<String?>(
                   value: _person,
                   underline: const SizedBox.shrink(),
                   items: [
-                    DropdownMenuItem(value: null, child: Text(me.role == UserRole.kam ? l10n.myTeam : l10n.everyone)),
+                    DropdownMenuItem(value: null, child: Text(me.kamOnly ? l10n.myTeam : l10n.everyone)),
                     for (final u in team) DropdownMenuItem(value: u.id, child: Text(u.name)),
                   ],
                   onChanged: (v) => setState(() => _person = v),
@@ -337,7 +340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }),
           ],
           const SizedBox(height: 12),
-          if (me.role.isSupervisor) ...[
+          if (me.can.isSupervisor) ...[
             ApprovalsCard(me: me),
             TeamPlansCard(me: me),
           ],
@@ -429,6 +432,7 @@ class _BackOfficeHome extends ConsumerWidget {
           // Managers / HR: what waits for their decision comes first, above
           // their own check-in and calendar (2026-11-03: the factory and
           // logistics managers never scrolled down to it). Hidden when none.
+          const TeamAlertsCard(),
           const LeaveApprovalsCard(),
           const PendingAbsencesCard(),
           const EarlyCheckoutRequestsCard(),
@@ -457,7 +461,7 @@ class _BackOfficeHome extends ConsumerWidget {
             ),
           ),
           // Logistics manager / warehouse supervisor: the drivers' live map.
-          if (me.role.seesDrivers &&
+          if (me.can.seesDrivers &&
               (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.drivers)) ...[
             const SizedBox(height: 12),
             Card(
@@ -470,7 +474,7 @@ class _BackOfficeHome extends ConsumerWidget {
               ),
             ),
           ],
-          if (me.role.managesVehicles &&
+          if (me.can.managesVehicles &&
               (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.vehicles)) ...[
             const SizedBox(height: 12),
             Card(
@@ -483,7 +487,7 @@ class _BackOfficeHome extends ConsumerWidget {
               ),
             ),
           ],
-          if (me.role.canSeeHr) ...[
+          if (me.can.canSeeHr) ...[
             const SizedBox(height: 12),
             Card(
               margin: EdgeInsets.zero,
@@ -496,7 +500,7 @@ class _BackOfficeHome extends ConsumerWidget {
             ),
           ],
           // HR: company documents (renewals of the expiring ones).
-          if (me.role.seesCompanyDocs &&
+          if (me.can.seesCompanyDocs &&
               (ref.watch(pageAccessProvider).value ?? PageAccess.defaults).allowsUser(me, AppPage.companyDocs)) ...[
             const SizedBox(height: 12),
             Card(

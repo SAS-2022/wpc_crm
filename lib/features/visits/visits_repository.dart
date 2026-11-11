@@ -16,7 +16,7 @@ final clientVisitsProvider = StreamProvider.family<List<Visit>, String>((ref, cl
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
   var query = FirebaseFirestore.instance.collection('visits').where('clientId', isEqualTo: clientId);
-  if (!me.role.isSupervisor) query = query.where('salesExecId', isEqualTo: me.id);
+  if (!me.can.isSupervisor) query = query.where('salesExecId', isEqualTo: me.id);
   return query.snapshots().map(_newestFirst);
 });
 
@@ -32,7 +32,7 @@ final visitsProvider = StreamProvider<List<Visit>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
   final visits = FirebaseFirestore.instance.collection('visits');
-  final query = me.role.isSupervisor
+  final query = me.can.isSupervisor
       ? visits.orderBy('checkedInAt', descending: true).limit(500)
       : visits.where('salesExecId', isEqualTo: me.id);
   return query.snapshots().map(_newestFirst);

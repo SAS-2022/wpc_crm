@@ -263,7 +263,7 @@ class AddToTodayButtonState extends ConsumerState<AddToTodayButton> {
     final owner = users[widget.client.assignedTo];
     final targets = [
       // The client's salesperson, when a KAM / manager may plan for them.
-      if (me.role.isSupervisor &&
+      if (me.can.isSupervisor &&
           owner != null &&
           owner.id != me.id &&
           owner.active &&

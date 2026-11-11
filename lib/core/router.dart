@@ -31,6 +31,8 @@ import '../features/hr/my_leave_screen.dart';
 import '../features/users/profile_screen.dart';
 import '../features/users/user_form_screen.dart';
 import '../features/users/user_log_screen.dart';
+import '../features/users/org_chart_screen.dart';
+import '../features/attendance/team_alerts_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plan/plan_map_screen.dart';
 import '../features/plan/plan_screen.dart';
@@ -89,42 +91,43 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (me == null || !me.active || me.role == UserRole.unknown) return goTo('/no-access');
       if (const ['/splash', '/login', '/register', '/no-access'].contains(loc)) return '/';
       // HR, accounting, procurement: no sales pages (clients, visits, plans, maps).
-      if (me.role.isBackOffice &&
+      if (me.can.isBackOffice &&
           !const ['/', '/more', '/profile', '/notifications', '/bottom-tabs'].contains(loc) &&
           !loc.startsWith('/leave') &&
           !loc.startsWith('/absence/') &&
+          !loc.startsWith('/team-alerts') &&
           !loc.startsWith('/hr') &&
           !loc.startsWith('/attendance') &&
-          !(me.role.canManageHr && loc == '/departments') &&
+          !(me.can.canManageHr && loc == '/departments') &&
           // Logistics manager: the drivers' live map and route history; logistics
           // and factory managers: the Users page for their people.
-          !(me.role.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
-          !(me.role.managesVehicles && loc.startsWith('/vehicles')) &&
-          !(me.role.seesPhoneStatus && loc == '/phone-status') &&
-          !(me.role.seesCompanyDocs && loc.startsWith('/documents')) &&
-          !(me.role.managesUsers && loc.startsWith('/users'))) {
+          !(me.can.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
+          !(me.can.managesVehicles && loc.startsWith('/vehicles')) &&
+          !(me.can.seesPhoneStatus && loc == '/phone-status') &&
+          !(me.can.seesCompanyDocs && loc.startsWith('/documents')) &&
+          !(me.can.managesUsers && loc.startsWith('/users'))) {
         return '/';
       }
-      if (loc == '/drivers' && !me.role.seesDrivers) return '/';
-      if (loc == '/phone-status' && !me.role.seesPhoneStatus) return '/';
-      if (loc.startsWith('/vehicles') && !me.role.managesVehicles) return '/';
-      if (loc.startsWith('/documents') && !me.role.seesCompanyDocs) return '/';
-      if (loc.startsWith('/hr') && !me.role.canSeeHr) return '/';
+      if (loc == '/drivers' && !me.can.seesDrivers) return '/';
+      if (loc == '/phone-status' && !me.can.seesPhoneStatus) return '/';
+      if (loc.startsWith('/vehicles') && !me.can.managesVehicles) return '/';
+      if (loc.startsWith('/documents') && !me.can.seesCompanyDocs) return '/';
+      if (loc.startsWith('/hr') && !me.can.canSeeHr) return '/';
       // Departments: HR edits them too (HR area → Leave types tab).
-      if (loc == '/departments' && !me.role.canManageHr) return '/';
+      if (loc == '/departments' && !me.can.canManageHr) return '/';
       // Managers and warehouse supervisors: the attendance of the people under them.
       if (loc.startsWith('/attendance') && !me.seesTeamAttendance) return '/';
       if (loc == '/attendance/map' && !me.seesEmployeesMap) return '/';
       // "My leave" is greyed out until finished; requests to approve still open.
       if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
-      if (loc.startsWith('/users') && !me.role.managesUsers) return '/';
-      if ((loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.role.isAdmin) return '/';
+      if (loc.startsWith('/users') && !me.can.managesUsers) return '/';
+      if ((loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.can.isAdmin) return '/';
       if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers', '/catalogs'].contains(loc) &&
-          !me.role.isSupervisor &&
-          !(me.role.seesDrivers && loc == '/history')) {
+          !me.can.isSupervisor &&
+          !(me.can.seesDrivers && loc == '/history')) {
         return '/';
       }
-      if (loc.startsWith('/plan/') && !me.role.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
+      if (loc.startsWith('/plan/') && !me.can.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';
       // Pages turned off for the role (App settings → Page access).
       if (!(ref.read(pageAccessProvider).value ?? PageAccess.defaults).allowsLocation(me, loc)) return '/';
       return null;
@@ -224,6 +227,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 // Before ':id' so "new" isn't read as a request id.
                 GoRoute(path: 'new', builder: (_, _) => const LeaveRequestForm()),
                 GoRoute(path: ':id', builder: (_, state) => LeaveRequestScreen(id: state.pathParameters['id']!)),
+              ],
+            ),
+            // Team follow-ups (2026-11-11): whoever was told (the data rules decide).
+            GoRoute(
+              path: '/team-alerts',
+              builder: (_, _) => const TeamAlertsScreen(),
+              routes: [
+                GoRoute(path: ':id', builder: (_, state) => TeamAlertScreen(id: state.pathParameters['id']!)),
               ],
             ),
             GoRoute(path: '/absence/:id', builder: (_, state) => AbsenceScreen(id: state.pathParameters['id']!)),
@@ -358,6 +369,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(path: 'new', builder: (_, _) => const UserFormScreen(userId: null)),
                 GoRoute(path: 'log', builder: (_, state) => UserLogScreen(userId: state.uri.queryParameters['uid'])),
+                GoRoute(path: 'chart', builder: (_, _) => const OrgChartScreen()),
                 GoRoute(
                   path: ':id',
                   builder: (_, state) => UserFormScreen(userId: state.pathParameters['id']),

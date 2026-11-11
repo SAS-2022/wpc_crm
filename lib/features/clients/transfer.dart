@@ -34,9 +34,9 @@ class ClientTransfer {
 List<AppUser> transferTargets(AppUser me, List<AppUser> users) => [
       for (final u in users)
         if (u.active &&
-            (me.role.isAdmin
-                ? u.role == UserRole.salesExec || u.role == UserRole.kam
-                : me.role == UserRole.kam && (u.id == me.id || (u.role == UserRole.salesExec && u.kamId == me.id))))
+            (me.can.isAdmin
+                ? u.hasRole(UserRole.salesExec) || u.hasRole(UserRole.kam)
+                : me.hasRole(UserRole.kam) && (u.id == me.id || (u.role == UserRole.salesExec && u.kamId == me.id))))
           u,
     ];
 
@@ -48,13 +48,13 @@ String transferTargetName(AppUser u, String kamLabel) => u.role == UserRole.kam 
 /// decision 2026-10-19), from themselves (clients Odoo lists under the KAM)
 /// or from a member of their team.
 bool canTransferFrom(AppUser me, String? ownerId, Map<String, AppUser> users) {
-  if (me.role.isAdmin) return true;
-  if (me.role != UserRole.kam) return false;
+  if (me.can.isAdmin) return true;
+  if (!me.hasRole(UserRole.kam)) return false;
   return ownerId == null || ownerId == me.id || users[ownerId]?.kamId == me.id;
 }
 
 /// Whether [me] may move clients to the unassigned pool.
-bool canUnassign(AppUser me) => me.role.isAdmin;
+bool canUnassign(AppUser me) => me.can.isAdmin;
 
 /// The plan items a transfer removes: items of the previous owner
 /// ([previousOwner] by client id) for the moved clients, dated [today] or

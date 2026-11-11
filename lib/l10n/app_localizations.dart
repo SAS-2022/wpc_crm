@@ -11544,6 +11544,383 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Everyone'**
   String get routeHistoryAllPeople;
+
+  /// No description provided for @orgChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee chart'**
+  String get orgChart;
+
+  /// No description provided for @orgChartTree.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as a tree'**
+  String get orgChartTree;
+
+  /// No description provided for @orgChartList.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as a list'**
+  String get orgChartList;
+
+  /// No description provided for @orgChartReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the start'**
+  String get orgChartReset;
+
+  /// No description provided for @orgChartFoldAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Fold all teams'**
+  String get orgChartFoldAll;
+
+  /// No description provided for @orgChartUnfoldAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Open all teams'**
+  String get orgChartUnfoldAll;
+
+  /// No description provided for @orgChartTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'{direct} report directly · {total} in the team'**
+  String orgChartTeam(int direct, int total);
+
+  /// No description provided for @orgChartAlsoUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Also reports to: {names}'**
+  String orgChartAlsoUnder(String names);
+
+  /// No description provided for @orgChartOpenUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open user'**
+  String get orgChartOpenUser;
+
+  /// No description provided for @teamAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Team follow-ups'**
+  String get teamAlerts;
+
+  /// No description provided for @teamAlertsWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting ({count})'**
+  String teamAlertsWaiting(int count);
+
+  /// No description provided for @teamAlertsHandled.
+  ///
+  /// In en, this message translates to:
+  /// **'Handled ({count})'**
+  String teamAlertsHandled(int count);
+
+  /// No description provided for @teamAlertsCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your action ({count})'**
+  String teamAlertsCardTitle(int count);
+
+  /// No description provided for @teamAlertsViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get teamAlertsViewAll;
+
+  /// No description provided for @alertLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked in – work day started at {time}'**
+  String alertLate(String time);
+
+  /// No description provided for @alertBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked for a {minutes} min break'**
+  String alertBreak(int minutes);
+
+  /// No description provided for @alertBreakAsked.
+  ///
+  /// In en, this message translates to:
+  /// **'asked for a break'**
+  String get alertBreakAsked;
+
+  /// No description provided for @alertEarlyCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked to leave early'**
+  String get alertEarlyCheckout;
+
+  /// No description provided for @alertAbsence.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported they won\'t come to work'**
+  String get alertAbsence;
+
+  /// No description provided for @alertWaitingForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for you'**
+  String get alertWaitingForYou;
+
+  /// No description provided for @alertSentUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent up to {names}'**
+  String alertSentUp(String names);
+
+  /// No description provided for @alertHandled.
+  ///
+  /// In en, this message translates to:
+  /// **'Handled'**
+  String get alertHandled;
+
+  /// No description provided for @alertNoActionTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'No action taken'**
+  String get alertNoActionTaken;
+
+  /// No description provided for @alertLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {level}'**
+  String alertLevel(int level);
+
+  /// No description provided for @alertActionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Action taken'**
+  String get alertActionTitle;
+
+  /// No description provided for @alertNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This follow-up was not found'**
+  String get alertNotFound;
+
+  /// No description provided for @alertOpenRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the request'**
+  String get alertOpenRequest;
+
+  /// No description provided for @alertStepsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Who was told'**
+  String get alertStepsTitle;
+
+  /// No description provided for @alertTopReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached the top – there is nobody above to tell'**
+  String get alertTopReached;
+
+  /// No description provided for @alertDayOver.
+  ///
+  /// In en, this message translates to:
+  /// **'The day is over – no more reminders'**
+  String get alertDayOver;
+
+  /// No description provided for @alertNextLevelAt.
+  ///
+  /// In en, this message translates to:
+  /// **'If no action is recorded, the next level is told at {time}'**
+  String alertNextLevelAt(String time);
+
+  /// No description provided for @alertOnlyTold.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the people who were told can record the action.'**
+  String get alertOnlyTold;
+
+  /// No description provided for @alertWhatDone.
+  ///
+  /// In en, this message translates to:
+  /// **'What did you do?'**
+  String get alertWhatDone;
+
+  /// No description provided for @alertTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Action taken'**
+  String get alertTaken;
+
+  /// No description provided for @alertPickAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the action taken'**
+  String get alertPickAction;
+
+  /// No description provided for @alertNoteRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Write what was done'**
+  String get alertNoteRequired;
+
+  /// No description provided for @alertNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get alertNoteLabel;
+
+  /// No description provided for @alertNoteNoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Why no action (optional)'**
+  String get alertNoteNoAction;
+
+  /// No description provided for @alertSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get alertSaved;
+
+  /// No description provided for @alertDecideOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'To approve or reject the request itself, use its card on Home – that closes this follow-up too.'**
+  String get alertDecideOnHome;
+
+  /// No description provided for @alertAutoApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was approved'**
+  String get alertAutoApproved;
+
+  /// No description provided for @alertAutoRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was rejected'**
+  String get alertAutoRejected;
+
+  /// No description provided for @alertAutoCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The employee took the request back – nothing to do'**
+  String get alertAutoCancelled;
+
+  /// No description provided for @presetCalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Called the employee'**
+  String get presetCalled;
+
+  /// No description provided for @presetToldInAdvance.
+  ///
+  /// In en, this message translates to:
+  /// **'They told me in advance'**
+  String get presetToldInAdvance;
+
+  /// No description provided for @presetReminded.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminded them'**
+  String get presetReminded;
+
+  /// No description provided for @presetTalked.
+  ///
+  /// In en, this message translates to:
+  /// **'Talked to them'**
+  String get presetTalked;
+
+  /// No description provided for @presetAskedDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked for a document (e.g. medical report)'**
+  String get presetAskedDocument;
+
+  /// No description provided for @presetToHr.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed it to HR'**
+  String get presetToHr;
+
+  /// No description provided for @presetApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved it'**
+  String get presetApproved;
+
+  /// No description provided for @presetRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected it'**
+  String get presetRejected;
+
+  /// No description provided for @presetOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get presetOther;
+
+  /// No description provided for @notifTeamAlertFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} hasn\'t checked in yet – their work day started at {time}. Tap to record the action taken.'**
+  String notifTeamAlertFirst(String name, String time);
+
+  /// No description provided for @notifTeamAlertEscalated.
+  ///
+  /// In en, this message translates to:
+  /// **'No action yet ({minutes} min): {name} – {what}. {first} was told first. Tap to take action.'**
+  String notifTeamAlertEscalated(
+    int minutes,
+    String name,
+    String what,
+    String first,
+  );
+
+  /// No description provided for @settingAlertEscalate.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up escalation'**
+  String get settingAlertEscalate;
+
+  /// No description provided for @settingAlertEscalateHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'When an employee is late, asks for a break, asks to leave early or reports an absence, the people they report to are told. If none of them records an action within this time, the people above them are told, and so on up to the top.'**
+  String get settingAlertEscalateHelp;
+
+  /// No description provided for @alertNothingWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here'**
+  String get alertNothingWaiting;
+
+  /// No description provided for @alertAutoCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked in – HR follows it up through attendance'**
+  String get alertAutoCheckedIn;
+
+  /// No description provided for @alertLateClosesOnCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'If they check in, this closes by itself and nobody above is told – HR follows up the late arrival through attendance.'**
+  String get alertLateClosesOnCheckIn;
+
+  /// No description provided for @alertWaitingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {names}'**
+  String alertWaitingFor(String names);
+
+  /// No description provided for @extraRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Also has these roles'**
+  String get extraRoles;
+
+  /// No description provided for @extraRolesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Each extra role adds its pages, permissions and notices. The main role above decides Home, location tracking, attendance and who they report to.'**
+  String get extraRolesHelp;
 }
 
 class _AppLocalizationsDelegate

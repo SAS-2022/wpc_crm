@@ -67,7 +67,7 @@ Future<bool> addSelectionToPlans(
   final messenger = ScaffoldMessenger.of(context);
   final locale = Localizations.localeOf(context).toString();
   final me = ref.read(currentUserProvider).value;
-  if (me == null || !me.role.isSupervisor || selected.isEmpty) return false;
+  if (me == null || !me.can.isSupervisor || selected.isEmpty) return false;
   final users = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
 
   final clients = [...selected];

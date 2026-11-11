@@ -98,7 +98,7 @@ class PlanChecklist extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (canEdit && !item.done && (me?.role.isSupervisor == true || item.addedBy == me?.id))
+                  if (canEdit && !item.done && (me?.can.isSupervisor == true || item.addedBy == me?.id))
                     IconButton(
                       icon: const Icon(Icons.close, size: 18),
                       tooltip: l10n.remove,

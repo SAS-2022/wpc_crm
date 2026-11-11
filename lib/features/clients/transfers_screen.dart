@@ -61,7 +61,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     ];
     final visits = ref.watch(rangeVisitsProvider((null, months.join(',')))).value ?? const <Visit>[];
     final clients = ref.watch(clientsProvider).value ?? const [];
-    final team = me.role.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
+    final team = me.can.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
     final all = transferWatchRows(clients: clients, visits: visits, since: since, now: now, people: team);
     final archivedCount = all.where((r) => r.archived).length;
     final shown = [

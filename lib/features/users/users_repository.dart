@@ -32,7 +32,7 @@ final usersRepositoryProvider = Provider((ref) => UsersRepository());
 /// a missing one (e.g. a role changed in the console) blocked a KAM's live map.
 final roleMirrorProvider = Provider<void>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.isAdmin) return;
+  if (me == null || !me.can.isAdmin) return;
   final users = ref.watch(usersProvider).value;
   if (users == null || users.isEmpty) return;
   FirebaseDatabase.instance
@@ -40,7 +40,14 @@ final roleMirrorProvider = Provider<void>((ref) {
       // Unknown roles (from a newer app version) are left as they are.
       .update({for (final u in users) if (u.role != UserRole.unknown) u.id: u.role.value})
       .catchError((Object e) => debugPrint('Role mirror failed: $e'));
+  // Extra roles (2026-11-11): RTDB `role_extras/{uid}` {role: true}.
+  FirebaseDatabase.instance
+      .ref('role_extras')
+      .set({for (final u in users) if (u.extraRoles.isNotEmpty) u.id: _extrasMap(u)})
+      .catchError((Object e) => debugPrint('Extra roles mirror failed: $e'));
 });
+
+Map<String, bool> _extrasMap(AppUser u) => {for (final r in u.extraRoles) r.value: true};
 
 class UsersRepository {
   final _users = FirebaseFirestore.instance.collection('users');
@@ -156,6 +163,12 @@ class UsersRepository {
     // Merged: keeps what the app writes itself (app versions, reminders).
     await _users.doc(uid).set({...user.toMap(), ...userChangeStamp()}, SetOptions(merge: true));
     await FirebaseDatabase.instance.ref('roles/$uid').set(user.role.value);
+    // Extra roles for the RTDB rules. Only the sales manager / GM may write it
+    // (and change extra roles): others' saves leave it as it is.
+    await FirebaseDatabase.instance
+        .ref('role_extras/$uid')
+        .set(user.extraRoles.isEmpty ? null : _extrasMap(user))
+        .catchError((Object e) => debugPrint('Extra roles not saved: $e'));
     // A driver's warehouse supervisor reads their tracking: RTDB rules use this copy.
     await FirebaseDatabase.instance
         .ref('driver_supervisors/$uid')

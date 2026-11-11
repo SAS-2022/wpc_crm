@@ -164,6 +164,13 @@ enum NotificationType {
 
   /// `ownerId` accepted an HR record (to HR and whoever recorded it).
   hrActionAccepted,
+
+  /// Team follow-up (2026-11-11, `team_alerts`): [AppNotification.issue] =
+  /// kind (late | break | earlyCheckout | absence), [AppNotification.ref] =
+  /// alert id. `fromId == ownerId` = the first notice (late); else it was
+  /// escalated: `fromId` = one of the people told before who didn't act,
+  /// [AppNotification.count] = minutes since the first notice.
+  teamAlert,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud
@@ -271,10 +278,10 @@ final unreadCountProvider = Provider<int>(
 List<String> directManagersOf(AppUser person, List<AppUser> users) {
   final chosen = [for (final u in users) if (u.id == person.managerId && u.active && u.id != person.id) u.id];
   if (chosen.isNotEmpty) return chosen;
-  List<String> withRole(UserRole r) => [for (final u in users) if (u.active && u.role == r && u.id != person.id) u.id];
+  List<String> withRole(UserRole r) => [for (final u in users) if (u.active && u.hasRole(r) && u.id != person.id) u.id];
   final found = switch (person.role) {
     UserRole.salesExec => [
-        for (final u in users) if (u.id == person.kamId && u.active && u.role == UserRole.kam) u.id,
+        for (final u in users) if (u.id == person.kamId && u.active && u.hasRole(UserRole.kam)) u.id,
       ].ifEmpty(() => withRole(UserRole.salesManager)),
     UserRole.kam => withRole(UserRole.salesManager),
     // Drivers and warehouse supervisors: the logistics manager (2026-10-23).
@@ -322,7 +329,7 @@ List<AppUser> peopleUnder(AppUser me, List<AppUser> users) => [
 /// GM, their own for a warehouse supervisor.
 List<AppUser> driversOf(AppUser me, List<AppUser> users) => [
       for (final u in users)
-        if (u.active && u.role.isDriver && (me.role.managesDrivers || (me.role.seesDrivers && u.supervisorId == me.id))) u,
+        if (u.active && u.role.isDriver && (me.can.managesDrivers || (me.can.seesDrivers && u.supervisorId == me.id))) u,
     ];
 
 extension on List<String> {
@@ -337,7 +344,7 @@ enum LeaveUpdate { sent, stepApproved, approved, rejected, cancelled }
 List<String> reviewersOf(AppUser owner, List<AppUser> users) {
   final kam = users.where((u) => u.id == owner.kamId && u.active).firstOrNull;
   if (kam != null) return [kam.id];
-  return [for (final u in users) if (u.active && u.role.isAdmin) u.id];
+  return [for (final u in users) if (u.active && u.can.isAdmin) u.id];
 }
 
 Future<void> sendNotifications({

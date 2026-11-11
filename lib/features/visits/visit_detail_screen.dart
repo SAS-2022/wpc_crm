@@ -106,7 +106,7 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
     final error = Theme.of(context).colorScheme.error;
     final far = visit.distanceMeters != null && visit.distanceMeters! > visitRadiusMeters;
     final repo = ref.read(visitsRepositoryProvider);
-    final isKam = me.role == UserRole.kam;
+    final isKam = me.hasRole(UserRole.kam);
     final ownVisit = visit.salesExecId == me.id;
 
     Widget kamSection;
@@ -144,7 +144,7 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
       appBar: AppBar(
         title: Text(visit.clientName),
         actions: [
-          if (me.role.isAdmin)
+          if (me.can.isAdmin)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.deleteVisitTitle,
@@ -219,8 +219,8 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
                 ],
                 AttachmentsSection(
                   owner: (parent: AttachmentParent.visits, id: visit.id),
-                  canAdd: me.role.isSupervisor || ownVisit,
-                  canDelete: me.role.isSupervisor,
+                  canAdd: me.can.isSupervisor || ownVisit,
+                  canDelete: me.can.isSupervisor,
                 ),
                 kamSection,
                 // Not for a client that was deleted (its visits are kept).
@@ -251,7 +251,7 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
             ),
           ),
           // KAM / managers and the visit's author can comment.
-          if (me.role.isSupervisor || ownVisit)
+          if (me.can.isSupervisor || ownVisit)
             SafeArea(
               top: false,
               child: Padding(

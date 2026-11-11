@@ -218,7 +218,7 @@ class AnnualCarryOverTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final canEdit = ref.watch(currentUserProvider).value?.role.canManageHr ?? false;
+    final canEdit = ref.watch(currentUserProvider).value?.can.canManageHr ?? false;
     final on = ref.watch(annualCarryOverProvider).value ?? false;
     return SwitchListTile(
       secondary: const Icon(Icons.redo),

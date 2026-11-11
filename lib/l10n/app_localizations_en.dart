@@ -7065,4 +7065,230 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeHistoryAllPeople => 'Everyone';
+
+  @override
+  String get orgChart => 'Employee chart';
+
+  @override
+  String get orgChartTree => 'Show as a tree';
+
+  @override
+  String get orgChartList => 'Show as a list';
+
+  @override
+  String get orgChartReset => 'Back to the start';
+
+  @override
+  String get orgChartFoldAll => 'Fold all teams';
+
+  @override
+  String get orgChartUnfoldAll => 'Open all teams';
+
+  @override
+  String orgChartTeam(int direct, int total) {
+    return '$direct report directly · $total in the team';
+  }
+
+  @override
+  String orgChartAlsoUnder(String names) {
+    return 'Also reports to: $names';
+  }
+
+  @override
+  String get orgChartOpenUser => 'Open user';
+
+  @override
+  String get teamAlerts => 'Team follow-ups';
+
+  @override
+  String teamAlertsWaiting(int count) {
+    return 'Waiting ($count)';
+  }
+
+  @override
+  String teamAlertsHandled(int count) {
+    return 'Handled ($count)';
+  }
+
+  @override
+  String teamAlertsCardTitle(int count) {
+    return 'Waiting for your action ($count)';
+  }
+
+  @override
+  String get teamAlertsViewAll => 'View all';
+
+  @override
+  String alertLate(String time) {
+    return 'Not checked in – work day started at $time';
+  }
+
+  @override
+  String alertBreak(int minutes) {
+    return 'Asked for a $minutes min break';
+  }
+
+  @override
+  String get alertBreakAsked => 'asked for a break';
+
+  @override
+  String get alertEarlyCheckout => 'Asked to leave early';
+
+  @override
+  String get alertAbsence => 'Reported they won\'t come to work';
+
+  @override
+  String get alertWaitingForYou => 'Waiting for you';
+
+  @override
+  String alertSentUp(String names) {
+    return 'Sent up to $names';
+  }
+
+  @override
+  String get alertHandled => 'Handled';
+
+  @override
+  String get alertNoActionTaken => 'No action taken';
+
+  @override
+  String alertLevel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String get alertActionTitle => 'Action taken';
+
+  @override
+  String get alertNotFound => 'This follow-up was not found';
+
+  @override
+  String get alertOpenRequest => 'Open the request';
+
+  @override
+  String get alertStepsTitle => 'Who was told';
+
+  @override
+  String get alertTopReached =>
+      'Reached the top – there is nobody above to tell';
+
+  @override
+  String get alertDayOver => 'The day is over – no more reminders';
+
+  @override
+  String alertNextLevelAt(String time) {
+    return 'If no action is recorded, the next level is told at $time';
+  }
+
+  @override
+  String get alertOnlyTold =>
+      'Only the people who were told can record the action.';
+
+  @override
+  String get alertWhatDone => 'What did you do?';
+
+  @override
+  String get alertTaken => 'Action taken';
+
+  @override
+  String get alertPickAction => 'Pick the action taken';
+
+  @override
+  String get alertNoteRequired => 'Write what was done';
+
+  @override
+  String get alertNoteLabel => 'Details (optional)';
+
+  @override
+  String get alertNoteNoAction => 'Why no action (optional)';
+
+  @override
+  String get alertSaved => 'Saved';
+
+  @override
+  String get alertDecideOnHome =>
+      'To approve or reject the request itself, use its card on Home – that closes this follow-up too.';
+
+  @override
+  String get alertAutoApproved => 'The request was approved';
+
+  @override
+  String get alertAutoRejected => 'The request was rejected';
+
+  @override
+  String get alertAutoCancelled =>
+      'The employee took the request back – nothing to do';
+
+  @override
+  String get presetCalled => 'Called the employee';
+
+  @override
+  String get presetToldInAdvance => 'They told me in advance';
+
+  @override
+  String get presetReminded => 'Reminded them';
+
+  @override
+  String get presetTalked => 'Talked to them';
+
+  @override
+  String get presetAskedDocument =>
+      'Asked for a document (e.g. medical report)';
+
+  @override
+  String get presetToHr => 'Passed it to HR';
+
+  @override
+  String get presetApproved => 'Approved it';
+
+  @override
+  String get presetRejected => 'Rejected it';
+
+  @override
+  String get presetOther => 'Other';
+
+  @override
+  String notifTeamAlertFirst(String name, String time) {
+    return '$name hasn\'t checked in yet – their work day started at $time. Tap to record the action taken.';
+  }
+
+  @override
+  String notifTeamAlertEscalated(
+    int minutes,
+    String name,
+    String what,
+    String first,
+  ) {
+    return 'No action yet ($minutes min): $name – $what. $first was told first. Tap to take action.';
+  }
+
+  @override
+  String get settingAlertEscalate => 'Follow-up escalation';
+
+  @override
+  String get settingAlertEscalateHelp =>
+      'When an employee is late, asks for a break, asks to leave early or reports an absence, the people they report to are told. If none of them records an action within this time, the people above them are told, and so on up to the top.';
+
+  @override
+  String get alertNothingWaiting => 'Nothing here';
+
+  @override
+  String get alertAutoCheckedIn =>
+      'Checked in – HR follows it up through attendance';
+
+  @override
+  String get alertLateClosesOnCheckIn =>
+      'If they check in, this closes by itself and nobody above is told – HR follows up the late arrival through attendance.';
+
+  @override
+  String alertWaitingFor(String names) {
+    return 'Waiting for $names';
+  }
+
+  @override
+  String get extraRoles => 'Also has these roles';
+
+  @override
+  String get extraRolesHelp =>
+      'Each extra role adds its pages, permissions and notices. The main role above decides Home, location tracking, attendance and who they report to.';
 }

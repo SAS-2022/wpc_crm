@@ -125,9 +125,9 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
 
     // The map: the live map for KAM / managers, the drivers' map for the
     // logistics manager.
-    final mapPath = me.role.isSupervisor && access.allowsUser(me, AppPage.liveTracking)
+    final mapPath = me.can.isSupervisor && access.allowsUser(me, AppPage.liveTracking)
         ? '/live'
-        : me.role.seesDrivers && access.allowsUser(me, AppPage.drivers)
+        : me.can.seesDrivers && access.allowsUser(me, AppPage.drivers)
             ? '/drivers'
             : null;
 

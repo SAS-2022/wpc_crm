@@ -82,10 +82,11 @@ class PageAccess {
   bool allows(UserRole role, AppPage page) =>
       page.possible.contains(role) && (page.locked(role) || !(off[page]?.contains(role) ?? false));
 
-  /// [user] may open [page]. People marked "Is a manager" always see their
-  /// team's attendance (it follows the person, not the role).
+  /// [user] may open [page]: any of their roles allows it (main or extra,
+  /// 2026-11-11). People marked "Is a manager" always see their team's
+  /// attendance (it follows the person, not the role).
   bool allowsUser(AppUser user, AppPage page) =>
-      allows(user.role, page) ||
+      user.roles.any((r) => allows(r, page)) ||
       ((page == AppPage.attendance || page == AppPage.employeesMap) && user.markedManager);
 
   /// Whether [user] may open [location] (pages not listed here: yes).

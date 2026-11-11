@@ -288,24 +288,24 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       final presence = ref.watch(presenceProvider).value ?? const <String, Presence>{};
       final onlyIds = _onlyIds;
       // The logistics manager / warehouse supervisor see drivers only.
-      final driversOnly = widget.mode == PeopleMapMode.drivers || !(me?.role.isSupervisor ?? false);
+      final driversOnly = widget.mode == PeopleMapMode.drivers || !(me?.can.isSupervisor ?? false);
       final tracked = users.where((u) {
         if (!u.active || !u.role.isLocationTracked) return false;
         if (driversOnly && !u.role.isDriver) return false;
         if (onlyIds != null && !onlyIds.contains(u.id)) return false;
-        if (me?.role == UserRole.kam) return u.id == me!.id || u.kamId == me.id;
+        if (me?.kamOnly == true) return u.id == me!.id || u.kamId == me.id;
         // Warehouse supervisor: their own drivers.
         if (me?.role == UserRole.warehouseSupervisor) return u.supervisorId == me!.id;
         return true;
       }).toList();
       // Everyone else whose GPS is recorded for attendance (sales manager / GM).
-      final staffAll = driversOnly || !(me?.role.isAdmin ?? false)
+      final staffAll = driversOnly || !(me?.can.isAdmin ?? false)
           ? const <AppUser>[]
           : users.where((u) => u.recordsGps && (onlyIds == null || onlyIds.contains(u.id))).toList();
       final everyone = tracked.where(ofCompany).toList();
       final staff = staffAll.where(ofCompany).toList();
       final driverCount = everyone.where((u) => u.role.isDriver).length;
-      final showGroups = !driversOnly && (driverCount > 0 || (me?.role.isAdmin ?? false));
+      final showGroups = !driversOnly && (driverCount > 0 || (me?.can.isAdmin ?? false));
       if (onlyIds != null && !_groupPicked && users.isNotEmpty) {
         _groupPicked = true;
         if (everyone.length == driverCount && driverCount > 0) {
@@ -420,7 +420,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
               for (final (g, icon, label) in [
                 (_Group.sales, Icons.storefront_outlined, l10n.salesTeamCount(everyone.length - driverCount)),
                 (_Group.drivers, Icons.local_shipping_outlined, l10n.driversCount(driverCount)),
-                if (me?.role.isAdmin ?? false) (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
+                if (me?.can.isAdmin ?? false) (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
               ])
                 ChoiceChip(
                   avatar: Icon(icon, size: 18),

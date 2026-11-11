@@ -270,7 +270,7 @@ class ApprovalStep {
 /// the HR step isn't asked twice. Empty = nobody can approve yet.
 List<ApprovalStep> approvalChain(AppUser requester, List<AppUser> users) {
   bool anyone(UserRole role) => users.any((u) => u.active && u.role == role && u.id != requester.id);
-  final hasHr = users.any((u) => u.active && u.role == UserRole.hr);
+  final hasHr = users.any((u) => u.active && u.hasRole(UserRole.hr));
   final hrRole = hasHr
       ? (anyone(UserRole.hr) ? UserRole.hr : null)
       : [if (smActsAsHr) UserRole.salesManager, UserRole.gm].where(anyone).firstOrNull;
@@ -297,7 +297,7 @@ List<String> leaveWatchers(AppUser requester, List<ApprovalStep> chain, List<App
     for (final u in users)
       if (u.active &&
           u.id != requester.id &&
-          (u.role == UserRole.gm || (requester.role == UserRole.salesExec && u.role == UserRole.salesManager)) &&
+          (u.hasRole(UserRole.gm) || (requester.role == UserRole.salesExec && u.hasRole(UserRole.salesManager))) &&
           !approves(u))
         u.id,
   ];

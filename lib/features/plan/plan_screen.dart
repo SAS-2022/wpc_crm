@@ -130,7 +130,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final tasks = ref.watch(dayTasksProvider((owner.id, day)));
     final list = tasks.value ?? const <PlanTask>[];
     final isOwner = owner.id == me.id;
-    final canManage = me.role.isSupervisor;
+    final canManage = me.can.isSupervisor;
     final repo = ref.read(planRepositoryProvider);
     final pendingCount = list.where((t) => t.approval == TaskApproval.pending).length;
 

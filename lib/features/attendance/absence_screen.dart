@@ -239,7 +239,7 @@ class _AbsenceScreenState extends ConsumerState<AbsenceScreen> {
             canDeleteOwn: mine && a.pending,
           ),
           // HR area: the person's leave balance, to decide what it counts as.
-          if (me.role.canSeeHr)
+          if (me.can.canSeeHr)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: LeaveBalanceTable(uid: a.uid, day: a.date, highlightTypeId: absenceLeaveTypeOf(a)),

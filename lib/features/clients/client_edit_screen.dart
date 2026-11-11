@@ -259,7 +259,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
       return;
     }
     final me = ref.read(currentUserProvider).value!;
-    final manage = me.role.isSupervisor;
+    final manage = me.can.isSupervisor;
     final data = <String, dynamic>{
       'name': _name.text.trim(),
       'contactPerson': _contactPerson.text.trim(),
@@ -311,7 +311,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
         final choice = await showDuplicatesDialog(
           context,
           matches: matches,
-          canOverride: me.role.isAdmin,
+          canOverride: me.can.isAdmin,
           // Plan: a sales exec's plan holds only their own clients.
           canUse: (m) => pickFor == null
               ? manage || m.assignedTo == me.id
@@ -372,7 +372,7 @@ class _ClientEditScreenState extends ConsumerState<ClientEditScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final manage =
-        ref.watch(currentUserProvider).value?.role.isSupervisor ?? false;
+        ref.watch(currentUserProvider).value?.can.isSupervisor ?? false;
     final locationTypes = ref.watch(tagListProvider(TagList.locationTypes)).value ?? defaultLocationTypes;
     if (!_loaded && !_isNew) {
       final client = ref

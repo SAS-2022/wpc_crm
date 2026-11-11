@@ -220,7 +220,7 @@ class _CompanyDocsScreenState extends ConsumerState<CompanyDocsScreen> {
           doc: d,
           today: today,
           editable: editable,
-          showRestricted: me.role.seesAllCompanyDocs,
+          showRestricted: me.can.seesAllCompanyDocs,
           personName: personNames[d.personId],
           path: query.isEmpty ? null : [for (final f in docPath(all, d.parentId)) f.name].join(' › '),
           selecting: _selecting,
@@ -715,7 +715,7 @@ class CompanyDocScreen extends ConsumerWidget {
                   ),
                 if (doc.notes.isNotEmpty)
                   ListTile(leading: const Icon(Icons.notes), title: Text(l10n.notes), subtitle: Text(doc.notes)),
-                if (me.role.seesAllCompanyDocs && doc.section.salesVisible)
+                if (me.can.seesAllCompanyDocs && doc.section.salesVisible)
                   ListTile(
                     leading: Icon(doc.restricted ? Icons.lock_outline : Icons.groups_outlined),
                     title: Text(doc.restricted ? l10n.docManagementOnly : l10n.docSalesCanSee),

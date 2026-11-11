@@ -66,6 +66,7 @@ class AppSettingsScreen extends ConsumerWidget {
           number(Icons.directions_walk, AppSetting.awayGraceMin),
           number(Icons.free_breakfast_outlined, AppSetting.breakAllowanceMin),
           number(Icons.timer_outlined, AppSetting.minOvertimeMin),
+          number(Icons.assignment_late_outlined, AppSetting.alertEscalateMin),
           number(Icons.home_outlined, AppSetting.driveHomeGraceMin),
           header(l10n.settingsSectionHr),
           const AnnualCarryOverTile(),
@@ -89,6 +90,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.awayGraceMin => l10n.settingAwayGrace,
       AppSetting.breakAllowanceMin => l10n.settingBreakAllowance,
       AppSetting.minOvertimeMin => l10n.settingMinOvertime,
+      AppSetting.alertEscalateMin => l10n.settingAlertEscalate,
       AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGrace,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
@@ -104,6 +106,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.awayGraceMin => l10n.settingAwayGraceHelp,
       AppSetting.breakAllowanceMin => l10n.settingBreakAllowanceHelp,
       AppSetting.minOvertimeMin => l10n.settingMinOvertimeHelp,
+      AppSetting.alertEscalateMin => l10n.settingAlertEscalateHelp,
       AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGraceHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
@@ -115,7 +118,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
 String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.trackingIntervalSec => l10n.valueSeconds(v),
       AppSetting.offlineAlertMin || AppSetting.lateGraceMin || AppSetting.awayGraceMin || AppSetting.driveHomeGraceMin ||
-          AppSetting.breakAllowanceMin || AppSetting.minOvertimeMin =>
+          AppSetting.breakAllowanceMin || AppSetting.minOvertimeMin || AppSetting.alertEscalateMin =>
         l10n.valueMinutes(v),
       AppSetting.visitRadiusM => l10n.valueMeters(v),
       AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays || AppSetting.docRenewalDays => l10n.valueDays(v),

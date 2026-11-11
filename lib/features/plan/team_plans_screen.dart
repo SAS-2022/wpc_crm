@@ -188,8 +188,16 @@ class _PersonPlan extends ConsumerWidget {
     final pending = tasks.where((t) => t.approval == TaskApproval.pending).length;
     void open() => context.push('/plan/${user.id}?date=$day');
 
+    // A clear shadow separates the salespeople's cards (user request 2026-11-11).
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.35),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(

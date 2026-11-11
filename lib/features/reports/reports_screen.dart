@@ -138,7 +138,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       people: ids,
       range: _range,
       // Managers looking at everyone also see imports nobody owns yet.
-      includeUnowned: _person == null && me.role.isAdmin,
+      includeUnowned: _person == null && me.can.isAdmin,
     );
     // Measured against the whole team's benchmark, also when one person is shown.
     final teamRouting = routingReport(
@@ -267,7 +267,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   value: _person,
                   underline: const SizedBox.shrink(),
                   items: [
-                    DropdownMenuItem(value: null, child: Text(me.role == UserRole.kam ? l10n.myTeam : l10n.everyone)),
+                    DropdownMenuItem(value: null, child: Text(me.kamOnly ? l10n.myTeam : l10n.everyone)),
                     for (final u in team) DropdownMenuItem(value: u.id, child: Text(u.name)),
                   ],
                   onChanged: (v) => setState(() => _person = v),
@@ -359,7 +359,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 onShowAll: () => setState(() => _showAllUnvisited = true),
               ),
             );
-            if (!me.role.isAdmin) return unvisitedCard;
+            if (!me.can.isAdmin) return unvisitedCard;
             const imports = _ImportsCard();
             if (c.maxWidth < 900) return Column(children: [unvisitedCard, const SizedBox(height: 12), imports]);
             return Row(

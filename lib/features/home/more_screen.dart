@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../attendance/overtime.dart' show canSetOvertimeFor;
 import '../hr/leave_rules.dart' show myLeaveEnabled;
+import '../notifications/notifications.dart' show peopleUnder;
 import '../users/users_repository.dart';
 import '../settings/page_access.dart';
 import '../../core/login_name.dart';
@@ -26,7 +27,7 @@ class MoreScreen extends ConsumerWidget {
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
     final locale = ref.watch(localeProvider) ?? Localizations.localeOf(context);
-    final role = me.role;
+    final role = me.can;
     final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
     final users = ref.watch(usersProvider).value ?? const [];
     _Item item(IconData icon, String label, String path, {bool go = false}) =>
@@ -61,8 +62,12 @@ class MoreScreen extends ConsumerWidget {
         // the Attendance app-bar icon alone was missed by the user).
         if (users.any((u) => u.checksAttendance && canSetOvertimeFor(me, u, users)))
           item(Icons.more_time, l10n.overtimePermission, '/attendance/overtime'),
+        // Follow-ups on the team (2026-11-11): anyone with people under them.
+        if (me.isManager || role.canManageHr || peopleUnder(me, users).isNotEmpty)
+          item(Icons.assignment_late_outlined, l10n.teamAlerts, '/team-alerts'),
         if (role.canSeeHr) item(Icons.badge, l10n.hrArea, '/hr'),
         if (role.managesUsers) item(Icons.people, l10n.users, '/users'),
+        if (role.managesUsers) item(Icons.account_tree_outlined, l10n.orgChart, '/users/chart'),
       ]),
       // Company documents (2026-11-01): the sales team, GM, SM and HR.
       (l10n.moreSectionCompany, [
@@ -90,7 +95,7 @@ class MoreScreen extends ConsumerWidget {
             child: ListTile(
               leading: CircleAvatar(child: Text(me.name.isEmpty ? '?' : me.name.characters.first)),
               title: Text(me.name),
-              subtitle: Text('${role.label(l10n)} · ${loginNameOf(me.email)}'),
+              subtitle: Text('${[me.role, ...me.extraRoles].map((r) => r.label(l10n)).join(' + ')} · ${loginNameOf(me.email)}'),
               trailing: Tooltip(message: l10n.profile, child: const Icon(Icons.chevron_right)),
               onTap: () => context.push('/profile'),
             ),

@@ -33,7 +33,7 @@ class _UserLogScreenState extends ConsumerState<UserLogScreen> {
     final l10n = AppLocalizations.of(context);
     final me = ref.watch(currentUserProvider).value;
     if (me == null) return const SizedBox.shrink();
-    if (!me.role.canManageHr) {
+    if (!me.can.canManageHr) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }
     final async = widget.userId == null ? ref.watch(userLogProvider) : ref.watch(userLogForProvider(widget.userId!));

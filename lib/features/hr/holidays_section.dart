@@ -58,7 +58,7 @@ class _HolidaysSectionState extends ConsumerState<HolidaysSection> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
-    final canEdit = ref.watch(currentUserProvider).value?.role.canManageHr ?? false;
+    final canEdit = ref.watch(currentUserProvider).value?.can.canManageHr ?? false;
     final list = ref.watch(holidayListProvider).value ?? HolidayList.empty;
     final items = list.ofYear(_year);
     final loose = list.looseOfYear(_year);

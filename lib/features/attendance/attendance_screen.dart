@@ -137,7 +137,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final me = ref.watch(currentUserProvider).value;
     final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
     // HR area: everyone; other managers: the people under them (2026-10-23).
-    final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
+    final visible = me == null || me.can.canSeeHr ? allUsers : peopleUnder(me, allUsers);
     final everyone = [
       for (final u in visible)
         if (u.active && u.checksAttendance) u,
@@ -151,7 +151,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             r.from!.compareTo(dayKey) <= 0 && r.to!.compareTo(dayKey) >= 0)
           r.uid: r,
     };
-    final role = me?.role;
+    final role = me?.can;
     final canOpenUsers = role?.isAdmin ?? false;
     final canCorrect = role?.canManageHr ?? false;
 
@@ -178,7 +178,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       for (final u in everyone)
         if (searchHas(u.name, q) &&
             (_sites.isEmpty || u.workSiteIds.any(_sites.contains)) &&
-            (_roles.isEmpty || _roles.contains(u.role)) &&
+            (_roles.isEmpty || u.roles.any(_roles.contains)) &&
             (_companies.isEmpty || _companies.contains(u.companyId)))
           u,
     ];

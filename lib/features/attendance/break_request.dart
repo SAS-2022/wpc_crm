@@ -31,7 +31,7 @@ const breakMinuteChoices = [15, 30, 45, 60];
 List<String> breakApproversOf(AppUser person, List<AppUser> users) {
   final supervisor = [
     for (final u in users)
-      if (u.id == person.supervisorId && u.active && u.id != person.id && u.role == UserRole.warehouseSupervisor) u.id,
+      if (u.id == person.supervisorId && u.active && u.id != person.id && u.hasRole(UserRole.warehouseSupervisor)) u.id,
   ];
   final heads = departmentHeadsOf(person, users);
   return {...supervisor, ...(heads.isEmpty ? directManagersOf(person, users) : heads)}.toList();

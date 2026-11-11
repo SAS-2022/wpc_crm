@@ -126,7 +126,7 @@ class _CatalogsScreenState extends ConsumerState<CatalogsScreen> {
     String nameOf(String? id) => id == null || id.isEmpty ? l10n.unassigned : byId[id]?.name ?? l10n.deletedUser;
 
     // KAM: their team and themselves; managers: everyone.
-    final team = me.role.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
+    final team = me.can.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
     final allClients = ref.watch(clientsProvider).value ?? const <Client>[];
     final clients = team == null ? allClients : allClients.where((c) => team.contains(c.assignedTo)).toList();
 

@@ -26,7 +26,7 @@ final plannedTodayProvider = Provider<Map<String, String>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return const {};
   final today = dayKey(DateTime.now());
-  final tasks = me.role.isSupervisor
+  final tasks = me.can.isSupervisor
       ? ref.watch(teamDayTasksProvider(today)).value
       : ref.watch(dayTasksProvider((me.id, today))).value;
   return {

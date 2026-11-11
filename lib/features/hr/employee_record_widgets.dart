@@ -40,7 +40,7 @@ class EmployeeRecordCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider).value;
-    if (me == null || !me.role.canSeeHr) return const SizedBox.shrink();
+    if (me == null || !me.can.canSeeHr) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final records = ref.watch(employeeRecordsProvider);
@@ -49,7 +49,7 @@ class EmployeeRecordCard extends ConsumerWidget {
     final ins = insuranceOf(record, policies);
     final today = DateTime.now();
     final idState = docExpiryState(record.idExpiry, today);
-    final canEdit = me.role.canManageHr;
+    final canEdit = me.can.canManageHr;
     return Card(
       margin: margin,
       child: Padding(
@@ -335,7 +335,7 @@ class IdRenewalsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider).value;
-    if (me == null || !me.role.canSeeHr) return const SizedBox.shrink();
+    if (me == null || !me.can.canSeeHr) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final today = DateTime.now();
     final users = {
@@ -366,7 +366,7 @@ class IdRenewalsCard extends ConsumerWidget {
                   idExpiryText(context, r.idExpiry, today),
                   style: TextStyle(color: docExpiryColor(context, docExpiryState(r.idExpiry, today))),
                 ),
-                trailing: me.role.canManageHr
+                trailing: me.can.canManageHr
                     ? TextButton(onPressed: () => renewEmployeeIdDialog(context, r), child: Text(l10n.markRenewed))
                     : null,
                 onTap: () => context.push('/hr/employee/${r.uid}'),

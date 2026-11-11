@@ -16,7 +16,7 @@ import '../../core/app_user.dart';
 // accepted record asks the employee again.
 
 /// Only HR adds, edits, cancels or deletes records (user 2026-11-07; rules `hrOnly()`).
-bool canEditHrActions(AppUser? me) => me != null && me.active && me.role == UserRole.hr;
+bool canEditHrActions(AppUser? me) => me != null && me.active && me.hasRole(UserRole.hr);
 
 enum HrActionKind {
   warning,

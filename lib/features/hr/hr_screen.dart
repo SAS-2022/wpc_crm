@@ -310,7 +310,7 @@ class _TypesTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
-    final canEdit = ref.watch(currentUserProvider).value?.role.canManageHr ?? false;
+    final canEdit = ref.watch(currentUserProvider).value?.can.canManageHr ?? false;
     final types = ref.watch(leaveTypesProvider).value ?? LeaveType.defaults;
     final repo = ref.read(leaveRepositoryProvider);
 

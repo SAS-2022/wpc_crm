@@ -94,7 +94,7 @@ const readsAllLocations = {UserRole.kam, UserRole.salesManager, UserRole.gm, Use
 List<String>? locationReadIds(Ref ref, [Set<UserRole> all = readsAllLocations]) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return const [];
-  if (all.contains(me.role)) return null;
+  if (me.roles.any(all.contains)) return null;
   return [for (final u in peopleUnder(me, ref.watch(usersProvider).value ?? const <AppUser>[])) if (u.active) u.id]..sort();
 }
 

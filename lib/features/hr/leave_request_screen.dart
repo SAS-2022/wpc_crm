@@ -116,7 +116,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(r.typeName(lang)), actions: [
         // A past record HR entered (2026-11-08) can be removed again.
-        if (r.pastRecord && me.role.canManageHr)
+        if (r.pastRecord && me.can.canManageHr)
           IconButton(
             tooltip: l10n.delete,
             icon: const Icon(Icons.delete_outline),
@@ -170,7 +170,7 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
           if (r.reason.isNotEmpty)
             ListTile(leading: const Icon(Icons.notes), title: SelectableText(r.reason)),
           // HR area: the person's balance for the request's year.
-          if (r.isLeave && me.role.canSeeHr)
+          if (r.isLeave && me.can.canSeeHr)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: LeaveBalanceTable(uid: r.uid, day: r.from, highlightTypeId: r.typeId),
@@ -197,8 +197,8 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
             canAdd: (mine &&
                     (r.status == LeaveStatus.pending ||
                         (r.status == LeaveStatus.approved && (type?.documentLater ?? false)))) ||
-                me.role.canManageHr,
-            canDelete: me.role.canManageHr,
+                me.can.canManageHr,
+            canDelete: me.can.canManageHr,
             canDeleteOwn: mine && r.status == LeaveStatus.pending,
           ),
           Padding(

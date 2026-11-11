@@ -77,7 +77,7 @@ Future<void> declineOvertime(AppUser me) => recordAttendance(me.id, AttendanceEv
 /// managers for the people under them (direct reports and, for a
 /// department head, the whole department); never their own.
 bool canApproveOvertime(AppUser me, AppUser person, List<AppUser> users) =>
-    me.id != person.id && (me.role.canSeeHr || peopleUnder(me, users).any((u) => u.id == person.id));
+    me.id != person.id && (me.can.canSeeHr || peopleUnder(me, users).any((u) => u.id == person.id));
 
 /// Whether [me] decides if [person] earns overtime (user request
 /// 2026-11-05, Attendance → Overtime permission; off = time after the end of
@@ -87,8 +87,8 @@ bool canApproveOvertime(AppUser me, AppUser person, List<AppUser> users) =>
 /// the same (same department, chosen manager, or the roles they manage).
 bool canSetOvertimeFor(AppUser me, AppUser person, List<AppUser> users) {
   if (person.id == me.id || !person.active || !me.active) return false;
-  if (me.role.isAdmin) return true;
-  if (me.role == UserRole.hr) return UserRole.hrManagedRoles.contains(person.role);
+  if (me.can.isAdmin) return true;
+  if (me.hasRole(UserRole.hr)) return UserRole.hrManagedRoles.contains(person.role);
   if (!me.isManager) return false;
   return departmentHeadsOf(person, users).contains(me.id) || directManagersOf(person, users).contains(me.id);
 }

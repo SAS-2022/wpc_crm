@@ -100,7 +100,7 @@ class TodayPlanCard extends ConsumerWidget {
 /// The people [me] supervises: KAM → own team; managers / GM → all field staff.
 List<AppUser> teamOf(AppUser me, List<AppUser> users) => users
     .where((u) => u.active && u.role.isTracked && u.id != me.id)
-    .where((u) => me.role != UserRole.kam || u.kamId == me.id)
+    .where((u) => !me.kamOnly || u.kamId == me.id)
     .toList();
 
 /// Tasks waiting for [me]'s approval.

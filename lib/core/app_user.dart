@@ -217,6 +217,46 @@ enum UserRole {
       };
 }
 
+/// The capabilities of a set of roles (main + extra, [AppUser.can]): each
+/// is on when any of the roles has it — except [isBackOffice], which is a
+/// restriction and holds only when every role is back office.
+class RoleAccess {
+  const RoleAccess(this.roles);
+
+  final Set<UserRole> roles;
+
+  bool _any(bool Function(UserRole) test) => roles.any(test);
+
+  bool has(UserRole r) => roles.contains(r);
+  bool get isAdmin => _any((r) => r.isAdmin);
+  bool get isSupervisor => _any((r) => r.isSupervisor);
+  bool get isSales => _any((r) => r.isSales);
+
+  /// Owns clients, plans and targets (sales exec / KAM as any role).
+  bool get isTracked => _any((r) => r.isTracked);
+  bool get isHr => _any((r) => r.isHr);
+  bool get canSeeHr => _any((r) => r.canSeeHr);
+  bool get canManageHr => _any((r) => r.canManageHr);
+  bool get managesDrivers => _any((r) => r.managesDrivers);
+  bool get managesVehicles => _any((r) => r.managesVehicles);
+  bool get seesDrivers => _any((r) => r.seesDrivers);
+  bool get seesEmployeesMap => _any((r) => r.seesEmployeesMap);
+  bool get seesPhoneStatus => _any((r) => r.seesPhoneStatus);
+  bool get isManagerRole => _any((r) => r.isManagerRole);
+  bool get managesUsers => _any((r) => r.managesUsers);
+  bool get seesCompanyDocs => _any((r) => r.seesCompanyDocs);
+  bool get seesAllCompanyDocs => _any((r) => r.seesAllCompanyDocs);
+
+  /// Only back-office roles: no sales pages.
+  bool get isBackOffice => roles.every((r) => r.isBackOffice);
+
+  /// Every role any of them may give on the user form, in the usual order.
+  List<UserRole> get editableRoles {
+    final all = {for (final r in roles) ...r.editableRoles};
+    return [for (final r in UserRole.assignable) if (all.contains(r)) r];
+  }
+}
+
 /// The only accounts that may delete users (user decision 2026-10-23: a
 /// deletion by mistake does great harm). Same list as USER_DELETERS in
 /// functions/index.js, which enforces it.
@@ -237,6 +277,7 @@ class AppUser {
     required this.role,
     required this.kamId,
     required this.active,
+    this.extraRoles = const [],
     this.odooName = '',
     this.monthlyTarget = 0,
     this.appVersions = const {},
@@ -265,7 +306,28 @@ class AppUser {
   final String name;
   final String email;
   final String phone;
+
+  /// The main role: decides Home, location tracking / GPS recording,
+  /// attendance and who the person reports to.
   final UserRole role;
+
+  /// Extra roles (user request 2026-11-11, `users.extraRoles`): each adds its
+  /// pages, permissions and notices on top of [role] ([can]); never
+  /// [role] itself. Set by the sales manager / GM on the user form.
+  final List<UserRole> extraRoles;
+
+  /// The main role and the extra ones.
+  Set<UserRole> get roles => {role, ...extraRoles};
+
+  /// Has [r] as main or extra role.
+  bool hasRole(UserRole r) => role == r || extraRoles.contains(r);
+
+  /// A KAM who sees only their own team (not a KAM who is also a sales
+  /// manager / GM, who sees everyone).
+  bool get kamOnly => hasRole(UserRole.kam) && !can.isAdmin;
+
+  /// What the person may do: every capability of any of their roles.
+  RoleAccess get can => RoleAccess(roles);
 
   /// The KAM supervising this sales executive.
   final String? kamId;
@@ -363,7 +425,7 @@ class AppUser {
   final bool markedManager;
 
   /// Can be chosen as someone's direct manager.
-  bool get isManager => role.isManagerRole || markedManager;
+  bool get isManager => roles.any((r) => r.isManagerRole) || markedManager;
 
   /// A driver's or worker's warehouse supervisor (`users.supervisorId`,
   /// drivers 2026-10-23, workers 2026-11-04): sees their tracking,
@@ -417,6 +479,13 @@ class AppUser {
         _ => null,
       };
 
+  /// Stored extra roles: known roles only, without the main one, no repeats.
+  static List<UserRole> extraRolesFrom(Object? v, UserRole main) => [
+        if (v is List)
+          for (final r in {for (final x in v) UserRole.fromValue('$x')})
+            if (r != UserRole.unknown && r != main) r,
+      ];
+
   static bool defaultAttendance(UserRole role, List<String> workSiteIds) => !role.isSales || workSiteIds.isNotEmpty;
 
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -427,6 +496,7 @@ class AppUser {
       email: d['email'] as String? ?? '',
       phone: d['phone'] as String? ?? '',
       role: UserRole.fromValue(d['role'] as String?),
+      extraRoles: extraRolesFrom(d['extraRoles'], UserRole.fromValue(d['role'] as String?)),
       kamId: d['kamId'] as String?,
       active: d['active'] as bool? ?? false,
       odooName: d['odooName'] as String? ?? '',
@@ -474,9 +544,10 @@ class AppUser {
         'email': email,
         'phone': phone,
         'role': role.value,
+        'extraRoles': [for (final r in extraRoles) if (r != role && r != UserRole.unknown) r.value],
         'kamId': role == UserRole.salesExec ? kamId : null,
         'active': active,
-        'odooName': role.isTracked ? odooName : '',
+        'odooName': roles.any((r) => r.isTracked) ? odooName : '',
         'monthlyTarget': role.isTracked ? monthlyTarget : 0,
         'companyId': companyId,
         'position': position,
@@ -487,7 +558,7 @@ class AppUser {
         'leaveSiteAllowed': ?leaveSiteAllowed,
         'workSchedule': workSchedule?.toMap(),
         'managerId': managerId,
-        'isManager': role.isManagerRole ? false : markedManager,
+        'isManager': roles.any((r) => r.isManagerRole) ? false : markedManager,
         'supervisorId': role.supervisedByWarehouse ? supervisorId : null,
         'homeLocation': role == UserRole.driver && homeLocation != null
             ? {'lat': homeLocation!.lat, 'lng': homeLocation!.lng}

@@ -51,7 +51,7 @@ List<WorkSite> sitesOfCompany(List<WorkSite> sites, String? companyId) =>
 /// Only supervisors read every client; others get an empty map.
 final territoryRegionsProvider = Provider<Map<String, SaudiRegion>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.isSupervisor) return const {};
+  if (me == null || !me.can.isSupervisor) return const {};
   final counts = <String, Map<SaudiRegion, int>>{};
   for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) {
     final owner = c.assignedTo;

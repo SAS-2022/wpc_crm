@@ -125,7 +125,7 @@ List<EmployeeOnMap> employeePeople(WidgetRef ref, DateTime now) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return const [];
   final all = ref.watch(usersProvider).value ?? const <AppUser>[];
-  final visible = me.role.canSeeHr ? all : peopleUnder(me, all);
+  final visible = me.can.canSeeHr ? all : peopleUnder(me, all);
   final users = [
     for (final u in visible)
       if (u.active &&
@@ -340,8 +340,8 @@ class EmployeeDetails extends ConsumerWidget {
               record: p.record,
               result: d,
               absence: p.absence,
-              canCorrect: me?.role.canManageHr ?? false,
-              canOpenUser: me?.role.isAdmin ?? false,
+              canCorrect: me?.can.canManageHr ?? false,
+              canOpenUser: me?.can.isAdmin ?? false,
             ),
           ),
         ),
@@ -428,7 +428,7 @@ class EmployeeDetails extends ConsumerWidget {
     final canRoute =
         me != null &&
         access.allowsUser(me, AppPage.routeHistory) &&
-        (me.role.isSupervisor || (me.role.seesDrivers && u.role.isDriver));
+        (me.can.isSupervisor || (me.can.seesDrivers && u.role.isDriver));
 
     // Name, role and the close button are drawn by the people map's pane.
     return Column(

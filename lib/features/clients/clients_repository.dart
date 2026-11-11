@@ -25,7 +25,7 @@ final allClientsProvider = StreamProvider<List<Client>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
   Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('clients');
-  if (!me.role.isSupervisor) query = query.where('assignedTo', isEqualTo: me.id);
+  if (!me.can.isSupervisor) query = query.where('assignedTo', isEqualTo: me.id);
   return query.snapshots().map(
         (s) => s.docs.map(Client.fromDoc).toList()..sort((a, b) => a.name.compareTo(b.name)),
       );
@@ -168,7 +168,7 @@ final filteredHiddenClientsProvider = Provider<List<Client>>((ref) {
 /// salesperson filter, groups with at least one of their clients.
 final duplicateGroupsProvider = Provider<List<DuplicateGroup>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.isSupervisor) return const [];
+  if (me == null || !me.can.isSupervisor) return const [];
   final groups = ref.watch(_allDuplicateGroupsProvider);
   final filter = ref.watch(salesFilterProvider);
   return [

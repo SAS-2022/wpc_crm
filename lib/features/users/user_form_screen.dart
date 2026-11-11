@@ -84,6 +84,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   /// "Is a manager" for roles that aren't manager roles (e.g. the accounting manager).
   bool _markedManager = false;
 
+  /// Extra roles (2026-11-11): add their pages and permissions to the main role.
+  Set<UserRole> _extraRoles = {};
+
   /// A driver's warehouse supervisor.
   String? _supervisorId;
   ({double lat, double lng})? _home;
@@ -109,9 +112,9 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       !_isNew &&
       me != null &&
       widget.userId != me.id &&
-      (me.role == UserRole.gm ||
-          (me.role == UserRole.salesManager && _savedRole?.isAdmin != true) ||
-          ((me.role == UserRole.logisticsManager || me.role == UserRole.hr) && me.role.editableRoles.contains(_savedRole)));
+      (me.hasRole(UserRole.gm) ||
+          (me.hasRole(UserRole.salesManager) && _savedRole?.isAdmin != true) ||
+          ((me.hasRole(UserRole.logisticsManager) || me.hasRole(UserRole.hr)) && me.can.editableRoles.contains(_savedRole)));
 
   Future<void> _setPassword() async {
     final l10n = AppLocalizations.of(context);
@@ -158,6 +161,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _kamId = u.kamId;
     _managerId = u.managerId;
     _markedManager = u.markedManager;
+    _extraRoles = {...u.extraRoles};
     _supervisorId = u.supervisorId;
     _home = u.homeLocation;
     _joiningDate = u.joiningDate;
@@ -196,6 +200,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       email: _useUsername ? loginEmailFor(_username.text) : _email.text.trim(),
       phone: saudiMobile(_phone.text) ?? '',
       role: _role!,
+      extraRoles: [for (final r in UserRole.assignable) if (_extraRoles.contains(r) && r != _role) r],
       kamId: _kamId,
       active: _active,
       odooName: _odooName.text.trim(),
@@ -298,7 +303,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     final l10n = AppLocalizations.of(context);
     final users = ref.watch(usersProvider).value ?? const [];
     final me = ref.watch(currentUserProvider).value;
-    final roles = me?.role.editableRoles ?? const <UserRole>[];
+    final roles = me?.can.editableRoles ?? const <UserRole>[];
     if (_isNew && _role != null && !roles.contains(_role)) _role = null;
     // Only one role to choose from: already picked.
     if (_isNew && roles.length == 1) _role ??= roles.first;
@@ -315,12 +320,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     // enforced by the rules); the managers only the people under them.
     if (!_isNew &&
         me != null &&
-        !me.role.isAdmin &&
+        !me.can.isAdmin &&
         (!roles.contains(_savedRole) ||
-            (me.role != UserRole.hr && !peopleUnder(me, users).any((u) => u.id == widget.userId)))) {
+            (!me.hasRole(UserRole.hr) && !peopleUnder(me, users).any((u) => u.id == widget.userId)))) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }
-    final kams = users.where((u) => u.role == UserRole.kam && u.active).toList();
+    final kams = users.where((u) => u.hasRole(UserRole.kam) && u.active).toList();
     final companies = ref.watch(companiesProvider).value ?? const <Company>[];
     final company = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
     final sites = ref.watch(workSitesProvider).value ?? const <WorkSite>[];
@@ -335,7 +340,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       appBar: AppBar(
         title: Text(_isNew ? l10n.addUser : l10n.editUser),
         actions: [
-          if (!_isNew && me?.role.canManageHr == true)
+          if (!_isNew && me?.can.canManageHr == true)
             IconButton(
               icon: const Icon(Icons.history),
               tooltip: l10n.userLogHistory,
@@ -459,6 +464,38 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               validator: (r) => r == null ? l10n.required : null,
               onChanged: (r) => setState(() => _role = r),
             ),
+            // Extra roles (2026-11-11): sales manager / GM only; only a GM gives GM.
+            if (_role != null && me?.can.isAdmin == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: l10n.extraRoles,
+                    helperText: l10n.extraRolesHelp,
+                    helperMaxLines: 3,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final r in UserRole.assignable)
+                        if (r != _role && (r != UserRole.gm || me!.hasRole(UserRole.gm) || _extraRoles.contains(r)))
+                          FilterChip(
+                            label: Text(r.label(l10n)),
+                            selected: _extraRoles.contains(r),
+                            onSelected: (on) => setState(() => on ? _extraRoles.add(r) : _extraRoles.remove(r)),
+                          ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_extraRoles.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('${l10n.extraRoles}: ${[for (final r in _extraRoles) r.label(l10n)].join(', ')}'),
+              ),
             if (_role == UserRole.salesExec)
               DropdownButtonFormField<String?>(
                 initialValue: kams.any((k) => k.id == _kamId) ? _kamId : null,
@@ -471,7 +508,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               ),
             // Managers: by role, or marked here (e.g. the accounting manager).
             // Manager roles: shown on and locked, so the switch doesn't look missing.
-            if (_role != null && me?.role.isAdmin == true)
+            if (_role != null && me?.can.isAdmin == true)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.isManager),
@@ -507,7 +544,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             // (their direct manager stays the logistics manager).
             if (_role?.supervisedByWarehouse ?? false)
               Builder(builder: (context) {
-                final supervisors = [for (final u in users) if (u.active && u.role == UserRole.warehouseSupervisor) u];
+                final supervisors = [for (final u in users) if (u.active && u.hasRole(UserRole.warehouseSupervisor)) u];
                 return DropdownButtonFormField<String?>(
                   initialValue: supervisors.any((u) => u.id == _supervisorId) ? _supervisorId : null,
                   isExpanded: true,
@@ -540,7 +577,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               ),
             // When their location is shared; saved at once (App settings → Tracking schedules).
             // RTDB settings: sales manager / GM only.
-            if (_role?.isLocationTracked == true && !_isNew && _pending == null && me?.role.isAdmin == true)
+            if (_role?.isLocationTracked == true && !_isNew && _pending == null && me?.can.isAdmin == true)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.edit_calendar_outlined),

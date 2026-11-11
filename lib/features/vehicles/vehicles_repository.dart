@@ -12,7 +12,7 @@ CollectionReference<Map<String, dynamic>> get _vehicles => FirebaseFirestore.ins
 /// Every vehicle, by plate. Sales manager, GM and logistics manager only
 /// (rules); nobody else listens.
 final vehiclesProvider = StreamProvider<List<Vehicle>>((ref) {
-  final uid = ref.watch(currentUserProvider.select((u) => u.value?.active == true && u.value!.role.managesVehicles ? u.value!.id : null));
+  final uid = ref.watch(currentUserProvider.select((u) => u.value?.active == true && u.value!.can.managesVehicles ? u.value!.id : null));
   if (uid == null) return Stream.value(const []);
   return _vehicles.snapshots().map(
         (s) => s.docs.map(Vehicle.fromDoc).toList()..sort((a, b) => a.plate.compareTo(b.plate)),

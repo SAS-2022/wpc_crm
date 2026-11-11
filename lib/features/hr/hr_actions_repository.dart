@@ -11,7 +11,7 @@ final _actions = FirebaseFirestore.instance.collection('hr_actions');
 /// The latest 500 HR actions (HR area only; rules deny everyone else).
 final allHrActionsProvider = StreamProvider<List<HrAction>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.canSeeHr) return Stream.value(const []);
+  if (me == null || !me.can.canSeeHr) return Stream.value(const []);
   return _actions
       .orderBy('date', descending: true)
       .limit(500)
@@ -22,7 +22,7 @@ final allHrActionsProvider = StreamProvider<List<HrAction>>((ref) {
 /// One person's HR actions, newest first.
 final personHrActionsProvider = StreamProvider.family<List<HrAction>, String>((ref, uid) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.canSeeHr) return Stream.value(const []);
+  if (me == null || !me.can.canSeeHr) return Stream.value(const []);
   return _actions.where('uid', isEqualTo: uid).snapshots().map((s) {
     final list = [for (final d in s.docs) HrAction.fromDoc(d)];
     list.sort((a, b) => b.date.compareTo(a.date));

@@ -26,7 +26,7 @@ function awaitingUids(awaitingKey, requesterId, users) {
   if (!awaitingKey) return [];
   const [kind, value] = [awaitingKey.slice(0, awaitingKey.indexOf(':')), awaitingKey.slice(awaitingKey.indexOf(':') + 1)];
   return users
-    .filter((u) => u.active === true && u.id !== requesterId && (kind === 'uid' ? u.id === value : u.role === value))
+    .filter((u) => u.active === true && u.id !== requesterId && (kind === 'uid' ? u.id === value : u.role === value || (Array.isArray(u.extraRoles) && u.extraRoles.includes(value))))
     .map((u) => u.id);
 }
 

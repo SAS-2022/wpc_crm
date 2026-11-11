@@ -57,7 +57,7 @@ class UserFilter {
       UserStatusFilter.olderApp => u.active && outdated(u),
     };
     if (!ok) return false;
-    if (roles.isNotEmpty && !roles.contains(u.role)) return false;
+    if (roles.isNotEmpty && !u.roles.any(roles.contains)) return false;
     if (companyId != null && u.companyId != companyId) return false;
     if (siteId != null && !u.workSiteIds.contains(siteId)) return false;
     if (departments.isNotEmpty && !departments.contains(u.departmentId ?? '')) return false;

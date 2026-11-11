@@ -215,7 +215,7 @@ final absencesAwaitingMeProvider = StreamProvider<List<Absence>>((ref) {
 /// besides the notifications, user request 2026-10-22).
 final allAbsencesProvider = StreamProvider<List<Absence>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.canSeeHr) return Stream.value(const []);
+  if (me == null || !me.can.canSeeHr) return Stream.value(const []);
   return _absences.orderBy('date', descending: true).limit(500).snapshots().map((s) => [for (final d in s.docs) Absence.fromDoc(d)]);
 });
 

@@ -91,8 +91,8 @@ class StatusChange {
 /// GM always; a KAM for their team's and unassigned clients, but not for
 /// clients assigned to the KAM themselves (those go to the managers).
 bool _overseesClient(AppUser me, Client client, Map<String, AppUser> users) {
-  if (me.role.isAdmin) return true;
-  return me.role == UserRole.kam && client.assignedTo != me.id && canTransferFrom(me, client.assignedTo, users);
+  if (me.can.isAdmin) return true;
+  return me.hasRole(UserRole.kam) && client.assignedTo != me.id && canTransferFrom(me, client.assignedTo, users);
 }
 
 /// KAM / managers change the status without approval.
@@ -100,7 +100,7 @@ bool canSetStatusDirectly(AppUser me, Client client, Map<String, AppUser> users)
     _overseesClient(me, client, users);
 
 /// The salesperson the client is assigned to asks for a change.
-bool canRequestStatus(AppUser me, Client client) => me.role.isSales && client.assignedTo == me.id;
+bool canRequestStatus(AppUser me, Client client) => me.can.isSales && client.assignedTo == me.id;
 
 /// Whether [me] may approve / reject the pending request (never their own).
 bool canDecideStatus(AppUser me, Client client, Map<String, AppUser> users) {
@@ -114,7 +114,7 @@ List<String> statusApprovers(AppUser requester, List<AppUser> users) => [
       for (final u in users)
         if (u.active &&
             u.id != requester.id &&
-            (u.role.isAdmin || (u.role == UserRole.kam && requester.role == UserRole.salesExec && u.id == requester.kamId)))
+            (u.can.isAdmin || (u.hasRole(UserRole.kam) && requester.role == UserRole.salesExec && u.id == requester.kamId)))
           u.id,
     ];
 

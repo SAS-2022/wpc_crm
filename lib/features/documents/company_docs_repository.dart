@@ -20,9 +20,11 @@ String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 /// all; the sales team only Official and Product items that aren't
 /// management only (the query must say so, the rules check it).
 final companyDocsProvider = StreamProvider<List<CompanyDoc>>((ref) {
-  final me = ref.watch(currentUserProvider.select((u) => u.value?.active == true ? (id: u.value!.id, role: u.value!.role) : null));
-  if (me == null || !me.role.seesCompanyDocs) return Stream.value(const []);
-  final Query<Map<String, dynamic>> query = me.role.seesAllCompanyDocs
+  final me = ref.watch(currentUserProvider.select((u) => u.value?.active == true
+      ? (sees: u.value!.can.seesCompanyDocs, all: u.value!.can.seesAllCompanyDocs)
+      : null));
+  if (me == null || !me.sees) return Stream.value(const []);
+  final Query<Map<String, dynamic>> query = me.all
       ? _docs
       : _docs.where('restricted', isEqualTo: false).where('section', whereIn: [
           for (final s in DocSection.values)

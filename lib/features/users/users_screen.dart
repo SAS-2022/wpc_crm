@@ -93,15 +93,21 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     // Sales manager / GM: everyone; HR: everyone approved with the roles they
     // manage; logistics / factory manager: their approved people
     // ([peopleUnder]) with the roles they manage ([UserRole.editableRoles]).
-    final admin = me?.role.isAdmin == true;
-    final editable = me?.role.editableRoles ?? const <UserRole>[];
+    final admin = me?.can.isAdmin == true;
+    final editable = me?.can.editableRoles ?? const <UserRole>[];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.users),
         actions: [
+          // Employee chart: who reports to whom (2026-11-11).
+          IconButton(
+            icon: const Icon(Icons.account_tree_outlined),
+            tooltip: l10n.orgChart,
+            onPressed: () => context.push('/users/chart'),
+          ),
           // Who added / changed users (2026-11-08).
-          if (me?.role.canManageHr == true)
+          if (me?.can.canManageHr == true)
             IconButton(
               icon: const Icon(Icons.history),
               tooltip: l10n.userLogTitle,
@@ -121,7 +127,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           var list = admin
               ? all
               : [
-                  for (final u in me!.role == UserRole.hr ? all : peopleUnder(me, all))
+                  for (final u in me!.hasRole(UserRole.hr) ? all : peopleUnder(me, all))
                     if (!u.isPendingApproval && editable.contains(u.role)) u,
                 ];
           if (list.isEmpty) return Center(child: Text(l10n.noUsers));
@@ -263,7 +269,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                 u.requestedRole?.label(l10n) ?? positionLabel(positions, u.position, lang),
                                 loginNameOf(u.email),
                               ].where((s) => s.isNotEmpty).join(' · ')
-                            : '${u.role.label(l10n)} · ${loginNameOf(u.email)}'),
+                            : '${[u.role, ...u.extraRoles].map((r) => r.label(l10n)).join(' + ')} · ${loginNameOf(u.email)}'),
                         Text.rich(TextSpan(children: [
                           if (u.appVersions.isEmpty) TextSpan(text: l10n.noAppVersion),
                           for (final (j, MapEntry(key: platform, value: v)) in u.appVersions.entries.indexed) ...[

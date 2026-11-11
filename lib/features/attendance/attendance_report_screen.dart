@@ -233,7 +233,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
   final me = ref.watch(currentUserProvider).value;
   final allUsers = ref.watch(usersProvider).value ?? const <AppUser>[];
   // HR area: everyone; other managers: the people under them (2026-10-23).
-  final visible = me == null || me.role.canSeeHr ? allUsers : peopleUnder(me, allUsers);
+  final visible = me == null || me.can.canSeeHr ? allUsers : peopleUnder(me, allUsers);
   final people = [
     for (final u in visible)
       if (u.active && u.checksAttendance) u,

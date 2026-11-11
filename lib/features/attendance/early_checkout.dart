@@ -115,7 +115,7 @@ final earlyCheckoutsToDecideProvider = StreamProvider<List<EarlyCheckout>>((ref)
 /// when it isn't theirs to approve): the latest 500 requests, newest day first.
 final allEarlyCheckoutsProvider = StreamProvider<List<EarlyCheckout>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.active || !me.role.canSeeHr) return Stream.value(const []);
+  if (me == null || !me.active || !me.can.canSeeHr) return Stream.value(const []);
   return _requests
       .orderBy('date', descending: true)
       .limit(500)

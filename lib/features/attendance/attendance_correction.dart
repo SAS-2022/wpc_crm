@@ -17,6 +17,7 @@ import 'attendance_rules.dart';
 import 'break_widgets.dart';
 import 'overtime.dart' show canApproveOvertime;
 import 'overtime_widgets.dart' show showApproveOvertimeDialog;
+import 'team_alerts_screen.dart' show DayTeamAlerts;
 import 'work_sites.dart';
 
 /// Attendance page, tapping a person: their day (times, how it closed, a
@@ -111,6 +112,8 @@ Future<void> showAttendanceDaySheet(
                     Text(l10n.overtimeEndUnknownHelp, style: Theme.of(sheet).textTheme.bodySmall),
                   ],
                 ],
+                // Follow-ups and the action taken by their managers (2026-11-11).
+                DayTeamAlerts(uid: person.id, date: attendanceDay(day)),
                 if (c != null) ...[
                   const SizedBox(height: 8),
                   Text(

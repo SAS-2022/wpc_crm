@@ -43,7 +43,7 @@ final teamMonthVisitsProvider = StreamProvider.family<List<Visit>, String>((ref,
 /// Tasks waiting for approval (KAM / managers only).
 final pendingTasksProvider = StreamProvider<List<PlanTask>>((ref) {
   final me = ref.watch(currentUserProvider).value;
-  if (me == null || !me.role.isSupervisor) return Stream.value(const []);
+  if (me == null || !me.can.isSupervisor) return Stream.value(const []);
   return _tasks.where('approval', isEqualTo: TaskApproval.pending.name).snapshots().map(_sorted);
 });
 

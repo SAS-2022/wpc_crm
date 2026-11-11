@@ -171,7 +171,7 @@ final allLeaveRequestsProvider = StreamProvider<List<LeaveRequest>>((ref) {
   // Managers too: their people's leave on the Attendance page / report (2026-10-23).
   if (me == null || !me.seesTeamAttendance) return Stream.value(const []);
   // A KAM may read only their team's requests (rules).
-  if (me.role == UserRole.kam) {
+  if (me.kamOnly) {
     return _requests.where('kamId', isEqualTo: me.id).snapshots().map(_newestFirst);
   }
   return _requests.orderBy('createdAt', descending: true).limit(500).snapshots().map(_newestFirst);
@@ -187,7 +187,7 @@ final leaveAwaitingMeProvider = StreamProvider<List<LeaveRequest>>((ref) {
   if (me == null) return Stream.value(const []);
   final keys = ['uid:${me.id}', 'role:${me.role.value}'];
   final Query<Map<String, dynamic>> query;
-  if (me.role.canSeeHr) {
+  if (me.can.canSeeHr) {
     query = _requests.where('awaitingKey', whereIn: keys);
   } else {
     query = _requests.where('awaitingKey', isEqualTo: 'uid:${me.id}');
