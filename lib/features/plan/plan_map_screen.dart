@@ -17,6 +17,8 @@ import '../users/users_repository.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
 import 'route_order.dart';
+import '../attendance/site_markers.dart';
+import '../attendance/work_sites.dart';
 
 /// The clients of one day's plan as numbered markers: blue = planned,
 /// yellow = waiting for approval, green = visited. KAM / managers can
@@ -87,6 +89,7 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
       body: Stack(
         children: [
           GoogleMap(
+            onCameraMove: _icons.zoomChanged,
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
             mapType: ref.watch(mapTypeProvider),
             // Keeps the Google logo and fitted markers clear of the legend card.
@@ -108,6 +111,8 @@ class _PlanMapScreenState extends ConsumerState<PlanMapScreen> {
                 ),
             },
             markers: {
+              // Work sites as icons (2026-11-12).
+              ...siteMarkers(context, _icons, ref.watch(workSitesProvider).value ?? const <WorkSite>[]),
               for (final (i, t) in located.indexed)
                 Marker(
                   markerId: MarkerId(t.id),

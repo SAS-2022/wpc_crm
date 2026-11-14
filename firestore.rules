@@ -43,10 +43,10 @@ service cloud.firestore {
     // HR every non-sales, non-admin role (2026-11-02, UserRole.hrManagedRoles).
     function hrRoles() {
       return ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'driver',
-        'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
+        'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator', 'forklift_driver'];
     }
     function managedRoles() {
-      return (hasRole(['logistics_manager']) ? ['worker', 'driver', 'warehouse_supervisor'] : [])
+      return (hasRole(['logistics_manager']) ? ['worker', 'driver', 'forklift_driver', 'warehouse_supervisor'] : [])
         .concat(hasRole(['factory_manager']) ? ['worker', 'engineer', 'operator'] : [])
         .concat(hasRole(['hr']) ? hrRoles() : []);
     }
@@ -54,7 +54,7 @@ service cloud.firestore {
     // AppUser.defaultDepartmentOf).
     function deptOf(u) {
       return u.get('department', null) != null ? u.department
-        : {'sales_exec': 'sales', 'kam': 'sales', 'sales_manager': 'sales', 'driver': 'logistics',
+        : {'sales_exec': 'sales', 'kam': 'sales', 'sales_manager': 'sales', 'driver': 'logistics', 'forklift_driver': 'logistics',
            'logistics_manager': 'logistics', 'warehouse_supervisor': 'warehouse', 'factory_manager': 'production',
            'operator': 'production', 'engineer': 'production', 'gm': 'admin', 'hr': 'hr',
            'accounting': 'accounting', 'procurement': 'procurement'}.get(u.role, null);
@@ -270,8 +270,43 @@ service cloud.firestore {
     function payrollUser() {
       return active() && request.auth.token.email == 'wissam.b@woodpanelsco.com';
     }
+    // Employment contracts (2026-11-13): role HR fills the salary parts read
+    // from an employee's contract (never on their own record) but still can't
+    // read payroll; only these fields, and updatedBy must be them. Same as
+    // `canUploadContract` in hr/payroll.dart.
+    // Parts taken from a contract (`contractFields`) are locked (user decision
+    // 2026-11-13): nobody changes them, or the lock, except with a new
+    // contract (a new contractPath under employee_contracts/{uid}/).
+    function contractFields() {
+      return ['uid', 'basic', 'housing', 'transport', 'others', 'contractFields', 'contractPath', 'updatedBy', 'updatedAt', 'log'];
+    }
+    function hrFromContract(uid) {
+      return active() && hasRole(['hr']) && uid != request.auth.uid
+        && request.resource.data.uid == uid && request.resource.data.updatedBy == request.auth.uid;
+    }
+    function contractPathOk(uid) {
+      return request.resource.data.get('contractPath', '') is string
+        && request.resource.data.get('contractPath', '').matches('employee_contracts/' + uid + '/.+');
+    }
+    function newContract(uid) {
+      return contractPathOk(uid) && request.resource.data.contractPath != resource.data.get('contractPath', '');
+    }
+    function lockedUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(resource.data.get('contractFields', []).concat(['contractFields', 'contractPath']));
+    }
+    function lockOk() {
+      return !('contractFields' in request.resource.data) || request.resource.data.contractFields is list;
+    }
     match /payroll/{uid} {
-      allow read, write: if payrollUser();
+      allow read: if payrollUser();
+      allow create: if payrollUser() && lockOk()
+        && (!('contractFields' in request.resource.data) || contractPathOk(uid));
+      allow update: if payrollUser() && lockOk() && (lockedUnchanged() || newContract(uid));
+      allow delete: if payrollUser() && resource.data.get('contractFields', []).size() == 0;
+      allow create: if hrFromContract(uid) && request.resource.data.keys().hasOnly(contractFields()) && lockOk() && contractPathOk(uid);
+      allow update: if hrFromContract(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(contractFields())
+        && lockOk() && newContract(uid);
     }
 
     // HR actions (2026-11-07): warnings, deductions, rewards, notes on an

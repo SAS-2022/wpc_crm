@@ -94,9 +94,12 @@ class AppShell extends ConsumerWidget {
           label: l10n.transferredClients,
         ),
         (path: '/catalogs', icon: Icons.style_outlined, selected: Icons.style, label: l10n.catalogsPage),
-        (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
-        (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       ],
+      // Department heads too, with their own people (2026-11-14).
+      if (me?.seesRouteHistory ?? false)
+        (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
+      if (me?.seesLiveTracking ?? false)
+        (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
       // Employee map (2026-11-04): employees only, apart from the client map.
       if (me?.seesEmployeesMap ?? false)
         (

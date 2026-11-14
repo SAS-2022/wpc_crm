@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../users/users_repository.dart';
 import '../clients/client_tags.dart';
 import 'employee_record_widgets.dart';
+import 'employment_contract_card.dart';
 import 'hr_people.dart';
 import 'leave_repository.dart';
 import 'leave_rules.dart';
@@ -153,6 +154,8 @@ class _EmployeeLeaveScreenState extends ConsumerState<EmployeeLeaveScreen> {
           EmployeeRecordCard(uid: uid, margin: const EdgeInsets.fromLTRB(12, 8, 12, 0)),
           // Payroll account only (2026-11-07).
           if (person != null) PersonSalaryCard(user: person),
+          // HR and the payroll account (2026-11-13): its amounts fill the salary.
+          if (person != null) EmploymentContractCard(user: person, margin: const EdgeInsets.fromLTRB(12, 8, 12, 0)),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
             child: Row(children: [

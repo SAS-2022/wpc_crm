@@ -209,10 +209,15 @@ class PersonSalaryCard extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toString();
     final money = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 2);
     final s = ref.watch(salariesProvider).value?[user.id] ?? SalaryStructure.empty;
-    Widget line(String label, double v, {bool bold = false}) => Padding(
+    Widget line(String label, double v, {bool bold = false, bool locked = false}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(children: [
             Expanded(child: Text(label, style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null)),
+            if (locked)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 6),
+                child: Tooltip(message: l10n.salaryFromContract, child: const Icon(Icons.lock_outline, size: 14)),
+              ),
             Text(money.format(v), style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null),
           ]),
         );
@@ -233,10 +238,10 @@ class PersonSalaryCard extends ConsumerWidget {
             if (!s.isSet)
               Text(l10n.salaryNotSet, style: TextStyle(color: theme.colorScheme.error))
             else ...[
-              line(l10n.salaryBasic, s.basic),
-              line(l10n.salaryHousing, s.housing),
-              line(l10n.salaryTransport, s.transport),
-              for (final o in s.others) line(o.name, o.amount),
+              line(l10n.salaryBasic, s.basic, locked: s.isLocked('basic')),
+              line(l10n.salaryHousing, s.housing, locked: s.isLocked('housing')),
+              line(l10n.salaryTransport, s.transport, locked: s.isLocked('transport')),
+              for (final o in s.others) line(o.name, o.amount, locked: s.isLocked('others')),
               const Divider(),
               line(l10n.payrollGross, s.monthly, bold: true),
             ],
@@ -301,15 +306,24 @@ class _SalaryDialogState extends State<_SalaryDialog> {
     super.dispose();
   }
 
-  SalaryStructure get _value => SalaryStructure(
-        basic: _num(_basic),
-        housing: _num(_housing),
-        transport: _num(_transport),
-        others: [
-          for (final o in _others)
-            if (o.$1.text.trim().isNotEmpty && _num(o.$2) != 0) OtherAllowance(name: o.$1.text.trim(), amount: _num(o.$2)),
-        ],
-      );
+  /// From the employment contract: changed only by uploading a new one.
+  bool _locked(String part) => widget.current.isLocked(part);
+
+  SalaryStructure get _value {
+    final c = widget.current;
+    return SalaryStructure(
+      basic: _locked('basic') ? c.basic : _num(_basic),
+      housing: _locked('housing') ? c.housing : _num(_housing),
+      transport: _locked('transport') ? c.transport : _num(_transport),
+      others: _locked('others')
+          ? c.others
+          : [
+              for (final o in _others)
+                if (o.$1.text.trim().isNotEmpty && _num(o.$2) != 0) OtherAllowance(name: o.$1.text.trim(), amount: _num(o.$2)),
+            ],
+      contractFields: c.contractFields,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -318,15 +332,18 @@ class _SalaryDialogState extends State<_SalaryDialog> {
     final locale = Localizations.localeOf(context).toString();
     final money = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 2);
     const numbers = TextInputType.numberWithOptions(decimal: true);
-    Widget field(TextEditingController c, String label) => Padding(
+    final lockIcon = Tooltip(message: l10n.salaryFromContract, child: const Icon(Icons.lock_outline, size: 18));
+    Widget field(TextEditingController c, String label, String part) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: TextField(
             controller: c,
             keyboardType: numbers,
-            decoration: InputDecoration(labelText: label, suffixText: l10n.sar),
+            enabled: !_locked(part),
+            decoration: InputDecoration(labelText: label, suffixText: l10n.sar, suffixIcon: _locked(part) ? lockIcon : null),
             onChanged: (_) => setState(() {}),
           ),
         );
+    final othersLocked = _locked('others');
     return AlertDialog(
       title: Text(l10n.salaryOf(widget.name)),
       content: SizedBox(
@@ -336,79 +353,99 @@ class _SalaryDialogState extends State<_SalaryDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              field(_basic, l10n.salaryBasic),
-              field(_housing, l10n.salaryHousing),
-              field(_transport, l10n.salaryTransport),
-              Text(l10n.salaryOther, style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              for (final (i, o) in _others.indexed)
+              if (widget.current.contractFields.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Row(children: [
-                    Expanded(
-                      flex: 3,
-                      // Names used on other salaries are offered as you type.
-                      child: RawAutocomplete<String>(
-                        textEditingController: o.$1,
-                        focusNode: o.$3,
-                        optionsBuilder: (v) => widget.suggestions
-                            .where((s) => s != v.text && searchHas(s, v.text))
-                            .take(8),
-                        fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
-                          controller: controller,
-                          focusNode: focus,
-                          decoration: InputDecoration(isDense: true, labelText: l10n.allowanceName),
-                        ),
-                        optionsViewBuilder: (context, onSelected, options) => Align(
-                          alignment: AlignmentDirectional.topStart,
-                          child: Material(
-                            elevation: 4,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 240, maxWidth: 240),
-                              child: ListView(
-                                shrinkWrap: true,
-                                padding: EdgeInsets.zero,
-                                children: [
-                                  for (final s in options) ListTile(dense: true, title: Text(s), onTap: () => onSelected(s)),
-                                ],
+                    const Icon(Icons.lock_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(l10n.salaryLockedHint, style: theme.textTheme.bodySmall)),
+                  ]),
+                ),
+              field(_basic, l10n.salaryBasic, 'basic'),
+              field(_housing, l10n.salaryHousing, 'housing'),
+              field(_transport, l10n.salaryTransport, 'transport'),
+              Row(children: [
+                Expanded(child: Text(l10n.salaryOther, style: theme.textTheme.titleSmall)),
+                if (othersLocked) lockIcon,
+              ]),
+              const SizedBox(height: 8),
+              if (othersLocked)
+                for (final o in widget.current.others)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [Expanded(child: Text(o.name)), Text('${money.format(o.amount)} ${l10n.sar}')]),
+                  ),
+              if (!othersLocked)
+                for (final (i, o) in _others.indexed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      Expanded(
+                        flex: 3,
+                        // Names used on other salaries are offered as you type.
+                        child: RawAutocomplete<String>(
+                          textEditingController: o.$1,
+                          focusNode: o.$3,
+                          optionsBuilder: (v) => widget.suggestions
+                              .where((s) => s != v.text && searchHas(s, v.text))
+                              .take(8),
+                          fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
+                            controller: controller,
+                            focusNode: focus,
+                            decoration: InputDecoration(isDense: true, labelText: l10n.allowanceName),
+                          ),
+                          optionsViewBuilder: (context, onSelected, options) => Align(
+                            alignment: AlignmentDirectional.topStart,
+                            child: Material(
+                              elevation: 4,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxHeight: 240, maxWidth: 240),
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.zero,
+                                  children: [
+                                    for (final s in options) ListTile(dense: true, title: Text(s), onTap: () => onSelected(s)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: o.$2,
-                        keyboardType: numbers,
-                        decoration: InputDecoration(isDense: true, labelText: l10n.amountSarLabel),
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: o.$2,
+                          keyboardType: numbers,
+                          decoration: InputDecoration(isDense: true, labelText: l10n.amountSarLabel),
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: l10n.delete,
-                      onPressed: () => setState(() {
-                        final removed = _others.removeAt(i);
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          removed.$1.dispose();
-                          removed.$2.dispose();
-                          removed.$3.dispose();
-                        });
-                      }),
-                    ),
-                  ]),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: l10n.delete,
+                        onPressed: () => setState(() {
+                          final removed = _others.removeAt(i);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            removed.$1.dispose();
+                            removed.$2.dispose();
+                            removed.$3.dispose();
+                          });
+                        }),
+                      ),
+                    ]),
+                  ),
+              if (!othersLocked)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _others.add(_row())),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addAllowance),
+                  ),
                 ),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _others.add(_row())),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.addAllowance),
-                ),
-              ),
               const Divider(),
               Row(children: [
                 Expanded(child: Text(l10n.payrollGross, style: theme.textTheme.titleSmall)),

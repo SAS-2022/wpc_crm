@@ -287,7 +287,8 @@ List<String> directManagersOf(AppUser person, List<AppUser> users) {
     // Drivers and warehouse supervisors: the logistics manager (2026-10-23).
     UserRole.engineer || UserRole.operator => withRole(UserRole.factoryManager),
     UserRole.worker when person.department == 'production' => withRole(UserRole.factoryManager),
-    UserRole.driver || UserRole.warehouseSupervisor || UserRole.worker => withRole(UserRole.logisticsManager),
+    UserRole.driver || UserRole.warehouseSupervisor || UserRole.worker || UserRole.forkliftDriver =>
+        withRole(UserRole.logisticsManager),
     UserRole.gm => const <String>[],
     _ => withRole(UserRole.gm),
   };

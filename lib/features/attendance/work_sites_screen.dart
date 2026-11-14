@@ -10,6 +10,7 @@ import '../../core/short_name.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/companies.dart';
 import '../users/users_repository.dart';
+import 'site_markers.dart';
 import 'work_sites.dart';
 
 /// More → Work sites (sales manager / GM): places people check in at, with
@@ -63,10 +64,11 @@ class WorkSitesScreen extends ConsumerWidget {
                                 // Snapshot of the place and its check-in circle.
                                 SiteSnapshot(point: LatLng(s.lat, s.lng), radius: s.radius),
                                 ListTile(
-                                  leading: Icon(Icons.apartment, color: s.active ? null : Theme.of(context).disabledColor),
+                                  leading: Icon(siteKindIcon(s.kind), color: s.active ? siteKindColor(s.kind) : Theme.of(context).disabledColor),
                                   title: Text(s.shortName.isEmpty ? s.name : '${s.name} (${s.shortName})'),
                                   subtitle: Text(
                                     [
+                                      siteKindLabel(s.kind, l10n),
                                       ?companyNames[s.companyId],
                                       l10n.peopleCount(users.where((u) => u.active && u.workSiteIds.contains(s.id)).length),
                                       l10n.radiusMeters(s.radius.round()),
@@ -105,7 +107,8 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
   late final _short = TextEditingController(text: widget.site?.shortName ?? '');
   late String? _companyId = widget.site?.companyId;
   late LatLng? _point = widget.site == null ? null : LatLng(widget.site!.lat, widget.site!.lng);
-  late double _radius = widget.site?.radius ?? defaultSiteRadius;
+  late double _radius = siteRadiusSteps[siteRadiusStep(widget.site?.radius ?? defaultSiteRadius)];
+  late SiteKind _kind = widget.site?.kind ?? SiteKind.office;
   late bool _active = widget.site?.active ?? true;
   Set<String>? _people;
   bool _busy = false;
@@ -137,6 +140,7 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
           active: _active,
           shortName: _short.text.trim(),
           companyId: _companyId,
+          kind: _kind,
         ),
         id: widget.site?.id,
       );
@@ -241,6 +245,23 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
             onChanged: (v) => setState(() => _companyId = (v == null || v.isEmpty) ? null : v),
           ),
           const SizedBox(height: 12),
+          // Its icon on the maps (2026-11-12).
+          Text(l10n.siteKind, style: theme.textTheme.labelLarge),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final k in SiteKind.values)
+                ChoiceChip(
+                  avatar: Icon(siteKindIcon(k), size: 18, color: siteKindColor(k)),
+                  label: Text(siteKindLabel(k, l10n)),
+                  selected: _kind == k,
+                  onSelected: (_) => setState(() => _kind = k),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.place, color: _point == null ? theme.colorScheme.error : theme.colorScheme.primary),
@@ -259,15 +280,21 @@ class _WorkSiteEditorState extends ConsumerState<WorkSiteEditor> {
             const SizedBox(height: 12),
           ],
           Text(l10n.radiusMeters(_radius.round()), style: theme.textTheme.labelLarge),
+          // 25, 50, 75, then 100–500 in steps of 50 (2026-11-12, user).
           Slider(
-            value: _radius,
-            min: 100,
-            max: 500,
-            divisions: 8,
+            value: siteRadiusStep(_radius).toDouble(),
+            min: 0,
+            max: siteRadiusSteps.length - 1.0,
+            divisions: siteRadiusSteps.length - 1,
             label: '${_radius.round()} m',
-            onChanged: (v) => setState(() => _radius = v),
+            onChanged: (v) => setState(() => _radius = siteRadiusSteps[v.round()]),
           ),
           Text(l10n.radiusHelp, style: theme.textTheme.bodySmall),
+          if (_radius < minGeofenceRadius)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l10n.radiusSmallNote, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary)),
+            ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.active),
@@ -320,7 +347,7 @@ class SiteSnapshot extends StatelessWidget {
       height: height,
       child: IgnorePointer(
         child: GoogleMap(
-          initialCameraPosition: CameraPosition(target: point, zoom: radius <= 200 ? 16.5 : 15.5),
+          initialCameraPosition: CameraPosition(target: point, zoom: radius <= 75 ? 18 : radius <= 200 ? 16.5 : 15.5),
           mapType: MapType.hybrid,
           liteModeEnabled: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
           zoomControlsEnabled: false,

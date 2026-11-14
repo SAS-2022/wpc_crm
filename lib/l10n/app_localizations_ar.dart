@@ -7304,4 +7304,129 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get extraRolesHelp =>
       'كل دور إضافي يضيف صفحاته وصلاحياته وإشعاراته. الدور الرئيسي أعلاه يحدد الصفحة الرئيسية وتتبع الموقع والحضور ولمن يتبع.';
+
+  @override
+  String get siteKind => 'نوع المكان';
+
+  @override
+  String get siteKindOffice => 'مكتب';
+
+  @override
+  String get siteKindWarehouse => 'مستودع';
+
+  @override
+  String get siteKindShowroom => 'صالة عرض';
+
+  @override
+  String get siteKindFactory => 'مصنع';
+
+  @override
+  String get radiusSmallNote =>
+      'تحت 100 م يرصد الجوال الوصول عند نحو 100 م، ويبقى تسجيل الحضور بحاجة إلى موقع GPS داخل نصف القطر.';
+
+  @override
+  String get registeredFrom => 'سُجّل من';
+
+  @override
+  String get registeredFromUnknown =>
+      'غير مسجّل: تم التسجيل قبل 12 نوفمبر 2026 أو من إصدار أقدم للتطبيق.';
+
+  @override
+  String registeredFromIp(String ip) {
+    return 'عنوان IP ‏$ip';
+  }
+
+  @override
+  String get registeredFromEmulator => 'محاكي وليس جوالاً حقيقياً';
+
+  @override
+  String registeredFromApp(String version) {
+    return 'التطبيق $version';
+  }
+
+  @override
+  String get registeredFromWeb => 'متصفح الويب';
+
+  @override
+  String get employmentContract => 'عقد العمل';
+
+  @override
+  String get contractNone => 'لم يُرفع عقد بعد.';
+
+  @override
+  String get contractUpload => 'رفع العقد';
+
+  @override
+  String get contractReplace => 'استبدال';
+
+  @override
+  String get contractOpen => 'فتح';
+
+  @override
+  String contractUploadedOn(String date) {
+    return 'رُفع في $date';
+  }
+
+  @override
+  String get contractCardHint =>
+      'عند رفع العقد تُقرأ منه الرواتب والبدلات إلى كشف الرواتب وتُقفل: لا يغيّرها إلا عقد جديد.';
+
+  @override
+  String get contractReading => 'جارٍ قراءة العقد…';
+
+  @override
+  String contractReviewTitle(String name) {
+    return 'الراتب من العقد · $name';
+  }
+
+  @override
+  String get contractReviewHint =>
+      'المبالغ المحددة تحدّث الراتب. راجعها مع العقد قبل الحفظ.';
+
+  @override
+  String get contractNothingFound =>
+      'تعذّرت قراءة أي مبالغ من هذا العقد. أدخلها أدناه أو احفظ الملف فقط.';
+
+  @override
+  String get contractUnreadable =>
+      'تعذّرت قراءة نص من هذا الملف (الصور والصفحات الممسوحة تُقرأ في تطبيق الجوال فقط). أدخل المبالغ أدناه أو احفظ الملف فقط.';
+
+  @override
+  String contractTotalMismatch(String total, String parts) {
+    return 'إجمالي العقد ($total) لا يطابق المبالغ المقروءة ($parts).';
+  }
+
+  @override
+  String get contractYearly => 'مكتوب كمبلغ سنوي، مقسوم على 12';
+
+  @override
+  String get contractPercent => 'نسبة من الراتب الأساسي';
+
+  @override
+  String contractNow(String amount) {
+    return 'حالياً $amount';
+  }
+
+  @override
+  String get contractOthersReplace =>
+      'البدلات الأخرى المحددة تحل محل البدلات الحالية.';
+
+  @override
+  String get contractAddOther => 'إضافة بدل';
+
+  @override
+  String get contractSaved => 'حُفظ العقد وحُدّث الراتب';
+
+  @override
+  String get contractSavedFileOnly => 'حُفظ العقد';
+
+  @override
+  String get salaryFromContract => 'من عقد العمل';
+
+  @override
+  String get salaryLockedHint =>
+      'المبالغ المقفلة مأخوذة من عقد العمل. ارفع عقداً جديداً لتغييرها.';
+
+  @override
+  String get roleForkliftDriver => 'سائق رافعة شوكية';
 }

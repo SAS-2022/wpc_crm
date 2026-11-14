@@ -18,6 +18,7 @@ class WorkSite {
     this.active = true,
     this.shortName = '',
     this.companyId,
+    this.kind = SiteKind.office,
   });
 
   final String id;
@@ -36,6 +37,9 @@ class WorkSite {
   /// the sites to its own); null = none.
   final String? companyId;
 
+  /// What the place is; sets its icon on the maps (user 2026-11-12).
+  final SiteKind kind;
+
   factory WorkSite.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return WorkSite(
@@ -47,6 +51,7 @@ class WorkSite {
       active: d['active'] != false,
       shortName: d['shortName'] as String? ?? '',
       companyId: (d['companyId'] as String?)?.isEmpty ?? true ? null : d['companyId'] as String,
+      kind: SiteKind.fromValue(d['kind'] as String?),
     );
   }
 
@@ -58,11 +63,38 @@ class WorkSite {
     'active': active,
     'shortName': shortName,
     'companyId': companyId,
+    'kind': kind.name,
   };
+}
+
+/// Kind of work site (2026-11-12): its icon on every map. Missing = office.
+enum SiteKind {
+  office,
+  warehouse,
+  showroom,
+  factory;
+
+  static SiteKind fromValue(String? v) => values.where((k) => k.name == v).firstOrNull ?? office;
 }
 
 /// 100 m (user's spec); the phones' geofences need at least about this much.
 const defaultSiteRadius = 100.0;
+
+/// Radius choices in the site editor (25–75 m added 2026-11-12, user).
+const siteRadiusSteps = [25.0, 50.0, 75.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0];
+
+/// The OS geofence never goes below this (Android / iOS miss smaller
+/// circles); arrivals are then confirmed by GPS against the real radius.
+const minGeofenceRadius = 100.0;
+
+/// Index in [siteRadiusSteps] nearest to [radius].
+int siteRadiusStep(double radius) {
+  var best = 0;
+  for (var i = 1; i < siteRadiusSteps.length; i++) {
+    if ((siteRadiusSteps[i] - radius).abs() < (siteRadiusSteps[best] - radius).abs()) best = i;
+  }
+  return best;
+}
 
 CollectionReference<Map<String, dynamic>> get _sites => FirebaseFirestore.instance.collection('work_sites');
 

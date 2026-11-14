@@ -143,17 +143,46 @@ Future<void> fitPoints(GoogleMapController map, List<LatLng> points, {double pad
   }
 }
 
+/// How much pins shrink when zoomed out (user 2026-11-12: zoomed out, client
+/// and salespeople pins covered the map). Steps, so only a few sizes are drawn.
+double markerScaleForZoom(double zoom) => zoom >= 13
+    ? 1.0
+    : zoom >= 11
+        ? 0.8
+        : zoom >= 9
+            ? 0.62
+            : 0.48;
+
+/// Pins drawn smaller than this leave out their letter / initials.
+const _minTextSize = 17.0;
+
 /// Round marker images (letter, number or initials on a coloured circle),
 /// drawn once per look and reused. Until an image is ready the marker shows
 /// a default pin, and [onReady] is called so the map can rebuild.
+///
+/// Sizes follow the map's zoom: pass [zoomChanged] to the map's
+/// `onCameraMove` and the pins shrink when zoomed out ([markerScaleForZoom]).
 class MarkerIcons {
-  MarkerIcons(this.onReady);
+  MarkerIcons(this.onReady, {double zoom = 15}) : _scale = markerScaleForZoom(zoom);
 
   final VoidCallback onReady;
   final _cache = <String, BitmapDescriptor>{};
   final _pending = <String>{};
+  double _scale;
+
+  /// Current size factor of the pins.
+  double get scale => _scale;
+
+  /// For `GoogleMap.onCameraMove`; rebuilds the map only when the size step changes.
+  void zoomChanged(CameraPosition position) {
+    final next = markerScaleForZoom(position.zoom);
+    if (next == _scale) return;
+    _scale = next;
+    onReady();
+  }
 
   /// [fill] circle with [text] in [textColor], inside a [ring] of [ringWidth].
+  /// [size] is the size at street level; [scaled] false keeps it at any zoom.
   BitmapDescriptor circle({
     required BuildContext context,
     required Color fill,
@@ -162,22 +191,45 @@ class MarkerIcons {
     Color ring = Colors.white,
     double ringWidth = 2,
     double size = 30,
+    bool scaled = true,
   }) {
-    final key = '${fill.toARGB32()}|$text|${textColor.toARGB32()}|${ring.toARGB32()}|$ringWidth|$size';
+    final factor = scaled ? _scale : 1.0;
+    final drawn = size * factor;
+    final shown = drawn < _minTextSize ? '' : text;
+    final ringDrawn = factor == 1 ? ringWidth : math.max(1.0, ringWidth * factor);
+    final key = 'c|${fill.toARGB32()}|$shown|${textColor.toARGB32()}|${ring.toARGB32()}|$ringDrawn|$drawn';
+    return _get(key, context, (ratio) => _drawCircle(fill, shown, textColor, ring, ringDrawn, drawn, ratio),
+        () => BitmapDescriptor.defaultMarkerWithHue(HSVColor.fromColor(fill).hue));
+  }
+
+  /// Rounded square with a white [icon] on [fill] (work sites, 2026-11-12).
+  BitmapDescriptor badge({required BuildContext context, required IconData icon, required Color fill, double size = 30}) {
+    final drawn = math.max(18.0, size * _scale);
+    final key = 'b|${icon.codePoint}|${icon.fontFamily}|${fill.toARGB32()}|$drawn';
+    return _get(key, context, (ratio) => _drawBadge(icon, fill, drawn, ratio),
+        () => BitmapDescriptor.defaultMarkerWithHue(HSVColor.fromColor(fill).hue));
+  }
+
+  BitmapDescriptor _get(
+    String key,
+    BuildContext context,
+    Future<BitmapDescriptor> Function(double ratio) draw,
+    BitmapDescriptor Function() placeholder,
+  ) {
     final cached = _cache[key];
     if (cached != null) return cached;
     if (_pending.add(key)) {
       final ratio = MediaQuery.devicePixelRatioOf(context);
-      _draw(fill, text, textColor, ring, ringWidth, size, ratio).then((icon) {
+      draw(ratio).then((icon) {
         _cache[key] = icon;
         _pending.remove(key);
         onReady();
       });
     }
-    return BitmapDescriptor.defaultMarkerWithHue(HSVColor.fromColor(fill).hue);
+    return placeholder();
   }
 
-  static Future<BitmapDescriptor> _draw(
+  static Future<BitmapDescriptor> _drawCircle(
     Color fill,
     String text,
     Color textColor,
@@ -201,18 +253,55 @@ class MarkerIcons {
     );
     canvas.drawCircle(center, radius, Paint()..color = ring);
     canvas.drawCircle(center, radius - ringWidth, Paint()..color = fill);
+    if (text.isNotEmpty) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: size * (text.length > 1 ? 0.38 : 0.45),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    }
+    return _toDescriptor(recorder, full, ratio);
+  }
+
+  static Future<BitmapDescriptor> _drawBadge(IconData icon, Color fill, double size, double ratio) async {
+    const shadow = 2.0;
+    final full = size + shadow * 2;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(ratio);
+    final rect = Rect.fromLTWH(shadow, shadow, size, size);
+    final corner = Radius.circular(size * 0.22);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.translate(0, 1), corner),
+      Paint()
+        ..color = Colors.black26
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, shadow),
+    );
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, corner), Paint()..color = Colors.white);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), Radius.circular(size * 0.18)), Paint()..color = fill);
     final painter = TextPainter(
       text: TextSpan(
-        text: text,
+        text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.bold,
-          fontSize: size * (text.length > 1 ? 0.38 : 0.45),
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: size * 0.62,
+          color: Colors.white,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    painter.paint(canvas, rect.center - Offset(painter.width / 2, painter.height / 2));
+    return _toDescriptor(recorder, full, ratio);
+  }
+
+  static Future<BitmapDescriptor> _toDescriptor(ui.PictureRecorder recorder, double full, double ratio) async {
     final px = (full * ratio).ceil();
     final image = await recorder.endRecording().toImage(px, px);
     final png = await image.toByteData(format: ui.ImageByteFormat.png);

@@ -965,6 +965,17 @@ function followsPerson(caller, callerId, target) {
 }
 
 /**
+ * [followsPerson], or the caller is one of the target's location viewers
+ * (`location_viewers/{uid}/{caller}`: direct manager, department head,
+ * warehouse supervisor) — department heads' Route history (2026-11-14).
+ */
+async function followsOrViews(caller, callerId, target) {
+  if (followsPerson(caller, callerId, target)) return true;
+  const v = await admin.database().ref(`location_viewers/${target.id}/${callerId}`).get();
+  return v.val() === true;
+}
+
+/**
  * Snaps one person's day of `location_history` to roads with the Routes API
  * and saves it in RTDB `route_snapped/{uid}/{day}` {n: history points handled,
  * legs: {"<fromT>_<toT>": {p: encoded polyline, m: meters} | {s: true, m}}}.
@@ -984,7 +995,7 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
   if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
     const target = await db.doc(`users/${uid}`).get();
-    if (!followsPerson(me, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
+    if (!(await followsOrViews(me, req.auth.uid, target))) throw new HttpsError('permission-denied', 'Not your team');
   }
 
   const rtdb = admin.database();
@@ -1061,9 +1072,30 @@ exports.registrationRequested = onDocumentCreated('users/{uid}', async (event) =
   await batch.commit();
 });
 
+const { registrationRecord } = require('./registration');
+
+/**
+ * Called by the app right after a self-registration (2026-11-12, user: an
+ * account kept being registered and nobody could tell by whom): saves the
+ * phone / browser details plus the IP once on `users/{uid}.registeredFrom`,
+ * shown on the user form. Only for the caller's own pending account.
+ */
+exports.noteRegistration = onCall({ maxInstances: 2 }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const ref = admin.firestore().doc(`users/${uid}`);
+  const snap = await ref.get();
+  if (!snap.exists || snap.get('approval') !== 'pending' || snap.get('registeredFrom')) return { saved: false };
+  const raw = req.rawRequest;
+  await ref.update({
+    registeredFrom: { ...registrationRecord(req.data, raw?.headers, raw?.ip), at: admin.firestore.FieldValue.serverTimestamp() },
+  });
+  return { saved: true };
+});
+
 const LEAVES_SITE_ROLES = ['sales_exec', 'kam', 'driver'];
 // Request breaks before leaving the site (UserRole.asksForBreaks, 2026-11-05).
-const BREAK_ROLES = ['worker', 'operator', 'warehouse_supervisor'];
+const BREAK_ROLES = ['worker', 'operator', 'warehouse_supervisor', 'forklift_driver'];
 const DERIVED = ['breakMin', 'breakOverMin', 'checkInAt', 'checkInSource', 'siteId', 'inside', 'lastExitAt', 'checkOutAt', 'checkOutType',
   'closed', 'workedMin', 'countedMin', 'overtimeMin', 'lateMin', 'afterHoursMin', 'awayMin', 'lastSeenAt',
   'overtimeOn', 'overtimeConfirmedAt', 'overtimeDeclined', 'overtimeEndUnknown', 'overtimeStatus', 'checkInEventAt'];
@@ -1533,7 +1565,8 @@ function directManagers(person, uid, users) {
   } else if (person.role === 'engineer' || person.role === 'operator'
     || (person.role === 'worker' && person.department === 'production')) {
     found = withRole('factory_manager');
-  } else if (person.role === 'driver' || person.role === 'warehouse_supervisor' || person.role === 'worker') {
+  } else if (person.role === 'driver' || person.role === 'warehouse_supervisor' || person.role === 'worker'
+    || person.role === 'forklift_driver') {
     found = withRole('logistics_manager');
   } else {
     found = withRole('gm');
@@ -1546,7 +1579,8 @@ const MANAGER_ROLES = ['gm', 'sales_manager', 'kam', 'logistics_manager', 'facto
 function departmentOf(u) {
   if (u.department) return u.department;
   return {
-    sales_exec: 'sales', kam: 'sales', sales_manager: 'sales', driver: 'logistics', logistics_manager: 'logistics',
+    sales_exec: 'sales', kam: 'sales', sales_manager: 'sales', driver: 'logistics', forklift_driver: 'logistics',
+    logistics_manager: 'logistics',
     warehouse_supervisor: 'warehouse', factory_manager: 'production', operator: 'production', engineer: 'production',
     gm: 'admin', hr: 'hr', accounting: 'accounting', procurement: 'procurement',
   }[u.role] || null;
@@ -1744,7 +1778,7 @@ exports.attendanceReminders = onSchedule(
 );
 
 /** Office staff whose GPS is recorded 08:00–18:00, not shared live (2026-10-28; `UserRole.recordsGps`). */
-const GPS_RECORDED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
+const GPS_RECORDED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator', 'forklift_driver'];
 
 /**
  * Every 5 minutes (2026-10-28, after Driver Number Two's 27 Oct: at the
@@ -1949,7 +1983,7 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
   const target = uid === req.auth.uid ? me : await db.doc(`users/${uid}`).get();
   if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
-    if (!followsPerson(me, req.auth.uid, target)) throw new HttpsError('permission-denied', 'Not your team');
+    if (!(await followsOrViews(me, req.auth.uid, target))) throw new HttpsError('permission-denied', 'Not your team');
   }
   const { hours, sites } = await timelineContext();
   const places = target.exists && target.get('role') === 'driver' ? await clientPlaces() : null;
@@ -2025,7 +2059,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
  * with the current password).
  */
 const HR_MANAGED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'driver',
-  'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator'];
+  'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator', 'forklift_driver'];
 exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const callerId = req.auth?.uid;
   if (!callerId) throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -2040,7 +2074,7 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const allowed = caller?.active === true && (
     hasRole(caller, 'gm') ||
     (hasRole(caller, 'sales_manager') && !['gm', 'sales_manager'].includes(target?.role)) ||
-    (hasRole(caller, 'logistics_manager') && ['worker', 'driver', 'warehouse_supervisor'].includes(target?.role)) ||
+    (hasRole(caller, 'logistics_manager') && ['worker', 'driver', 'forklift_driver', 'warehouse_supervisor'].includes(target?.role)) ||
     (hasRole(caller, 'factory_manager') && ['worker', 'engineer', 'operator'].includes(target?.role)) ||
     (hasRole(caller, 'hr') && HR_MANAGED_ROLES.includes(target?.role)));
   if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');

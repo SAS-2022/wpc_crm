@@ -123,9 +123,9 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
 
     people.sort((a, b) => rank(a) != rank(b) ? rank(a).compareTo(rank(b)) : a.name.compareTo(b.name));
 
-    // The map: the live map for KAM / managers, the drivers' map for the
-    // logistics manager.
-    final mapPath = me.can.isSupervisor && access.allowsUser(me, AppPage.liveTracking)
+    // The map: the live map for KAM / managers / department heads, else the
+    // drivers' map (warehouse supervisor).
+    final mapPath = me.seesLiveTracking && access.allowsUser(me, AppPage.liveTracking)
         ? '/live'
         : me.can.seesDrivers && access.allowsUser(me, AppPage.drivers)
             ? '/drivers'

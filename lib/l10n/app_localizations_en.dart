@@ -7291,4 +7291,129 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get extraRolesHelp =>
       'Each extra role adds its pages, permissions and notices. The main role above decides Home, location tracking, attendance and who they report to.';
+
+  @override
+  String get siteKind => 'Type of place';
+
+  @override
+  String get siteKindOffice => 'Office';
+
+  @override
+  String get siteKindWarehouse => 'Warehouse';
+
+  @override
+  String get siteKindShowroom => 'Showroom';
+
+  @override
+  String get siteKindFactory => 'Factory';
+
+  @override
+  String get radiusSmallNote =>
+      'Under 100 m the phone notices arriving at about 100 m; check-in still needs GPS within the radius.';
+
+  @override
+  String get registeredFrom => 'Registered from';
+
+  @override
+  String get registeredFromUnknown =>
+      'Not recorded: registered before 12 Nov 2026 or from an older app version.';
+
+  @override
+  String registeredFromIp(String ip) {
+    return 'IP address $ip';
+  }
+
+  @override
+  String get registeredFromEmulator => 'Emulator / simulator, not a real phone';
+
+  @override
+  String registeredFromApp(String version) {
+    return 'App $version';
+  }
+
+  @override
+  String get registeredFromWeb => 'Web browser';
+
+  @override
+  String get employmentContract => 'Employment contract';
+
+  @override
+  String get contractNone => 'No contract uploaded yet.';
+
+  @override
+  String get contractUpload => 'Upload contract';
+
+  @override
+  String get contractReplace => 'Replace';
+
+  @override
+  String get contractOpen => 'Open';
+
+  @override
+  String contractUploadedOn(String date) {
+    return 'Uploaded $date';
+  }
+
+  @override
+  String get contractCardHint =>
+      'Uploading a contract reads its salary and allowances into the payroll and locks them: only a new contract can change them.';
+
+  @override
+  String get contractReading => 'Reading the contract…';
+
+  @override
+  String contractReviewTitle(String name) {
+    return 'Salary from the contract · $name';
+  }
+
+  @override
+  String get contractReviewHint =>
+      'Ticked amounts update the salary. Check them against the contract before saving.';
+
+  @override
+  String get contractNothingFound =>
+      'No amounts could be read from this contract. Enter them below, or save just the file.';
+
+  @override
+  String get contractUnreadable =>
+      'No text could be read from this file (photos and scanned pages are read only in the phone app). Enter the amounts below, or save just the file.';
+
+  @override
+  String contractTotalMismatch(String total, String parts) {
+    return 'The contract\'s total ($total) doesn\'t match the amounts found ($parts).';
+  }
+
+  @override
+  String get contractYearly => 'Written as a yearly amount, divided by 12';
+
+  @override
+  String get contractPercent => 'Percentage of the basic salary';
+
+  @override
+  String contractNow(String amount) {
+    return 'Now $amount';
+  }
+
+  @override
+  String get contractOthersReplace =>
+      'Ticked other allowances replace the current ones.';
+
+  @override
+  String get contractAddOther => 'Add allowance';
+
+  @override
+  String get contractSaved => 'Contract saved and salary updated';
+
+  @override
+  String get contractSavedFileOnly => 'Contract saved';
+
+  @override
+  String get salaryFromContract => 'From the employment contract';
+
+  @override
+  String get salaryLockedHint =>
+      'Locked amounts come from the employment contract. Upload a new contract to change them.';
+
+  @override
+  String get roleForkliftDriver => 'Forklift driver';
 }

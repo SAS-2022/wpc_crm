@@ -22,8 +22,8 @@ enum AppPage {
   reports(['/reports'], {_kam, _sm, _gm}),
   transfers(['/transfers'], {_kam, _sm, _gm}),
   catalogs(['/catalogs'], {_kam, _sm, _gm}),
-  liveTracking(['/live'], {_kam, _sm, _gm}),
-  routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws}),
+  liveTracking(['/live'], {_kam, _sm, _gm, _lm, _fm}),
+  routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws, _fm}),
   drivers(['/drivers'], {_sm, _gm, _lm, _ws}),
   phoneStatus(['/phone-status'], {_kam, _sm, _gm, _lm, _fm}),
   vehicles(['/vehicles'], {_sm, _gm, _lm, _hr}),
@@ -84,10 +84,18 @@ class PageAccess {
 
   /// [user] may open [page]: any of their roles allows it (main or extra,
   /// 2026-11-11). People marked "Is a manager" always see their team's
-  /// attendance (it follows the person, not the role).
+  /// attendance, the employee map, live tracking, route history and phone
+  /// status of their people (it follows the person, not the role; 2026-11-14).
   bool allowsUser(AppUser user, AppPage page) =>
-      user.roles.any((r) => allows(r, page)) ||
-      ((page == AppPage.attendance || page == AppPage.employeesMap) && user.markedManager);
+      user.roles.any((r) => allows(r, page)) || (_managerPages.contains(page) && user.markedManager);
+
+  static const _managerPages = {
+    AppPage.attendance,
+    AppPage.employeesMap,
+    AppPage.liveTracking,
+    AppPage.routeHistory,
+    AppPage.phoneStatus,
+  };
 
   /// Whether [user] may open [location] (pages not listed here: yes).
   bool allowsLocation(AppUser user, String location) {

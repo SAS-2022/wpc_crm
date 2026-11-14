@@ -54,7 +54,11 @@ class MoreScreen extends ConsumerWidget {
         // No Drivers tile (user request 2026-11-01): the live map has a
         // Drivers switch; the logistics manager / warehouse supervisor open
         // it from their Home card.
-        if (role.seesPhoneStatus) item(Icons.phonelink_setup, l10n.phoneStatus, '/phone-status'),
+        // Department heads: Live tracking and Route history of their own
+        // people (2026-11-14; KAM / SM / GM have them under Sales).
+        if (!role.isSupervisor && me.seesLiveTracking) item(Icons.my_location, l10n.liveTracking, '/live'),
+        if (!role.isSupervisor && me.seesRouteHistory) item(Icons.route, l10n.routeHistory, '/history'),
+        if (me.seesPhoneStatus) item(Icons.phonelink_setup, l10n.phoneStatus, '/phone-status'),
         if (role.managesVehicles) item(Icons.directions_car_outlined, l10n.vehicles, '/vehicles'),
         if (me.seesTeamAttendance) item(Icons.how_to_reg, l10n.attendance, '/attendance'),
         if (me.seesEmployeesMap) item(Icons.person_pin_circle, l10n.employeesMap, '/attendance/map'),

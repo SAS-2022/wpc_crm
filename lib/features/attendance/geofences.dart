@@ -60,7 +60,9 @@ Future<void> attendanceGeofenceTriggered(GeofenceCallbackParams params) async {
           enter: type == AttendanceEventType.in_,
           distance: distance,
           accuracy: fix.accuracy,
-          radius: g.radiusMeters,
+          // A small site (under 100 m) is registered with the OS at 100 m;
+          // the GPS fix is checked against the site's real radius.
+          radius: _realRadius(prefs, g.id) ?? g.radiusMeters,
         )) {
           debugPrint('attendance geofence: ${params.event.name} at ${g.id} ignored, GPS ${distance.round()} m');
           continue;
@@ -184,6 +186,7 @@ Future<void> _sync(List<WorkSite> sites, {bool force = false}) async {
     final signature = [for (final s in sites) '${s.id}:${s.lat}:${s.lng}:${s.radius}'].join('|');
     final prefs = await SharedPreferences.getInstance();
     if (!force && prefs.getString(_signatureKey) == signature) return;
+    await prefs.setString(_radiiKey, jsonEncode({for (final s in sites) s.id: s.radius}));
     final manager = NativeGeofenceManager.instance;
     await manager.initialize();
     await manager.removeAllGeofences();
@@ -202,7 +205,7 @@ Future<void> _sync(List<WorkSite> sites, {bool force = false}) async {
         Geofence(
           id: s.id,
           location: Location(latitude: s.lat, longitude: s.lng),
-          radiusMeters: s.radius,
+          radiusMeters: s.radius < minGeofenceRadius ? minGeofenceRadius : s.radius,
           triggers: {GeofenceEvent.enter, GeofenceEvent.exit},
           // Already at the site when registered: counts as arriving.
           iosSettings: const IosGeofenceSettings(initialTrigger: true),
@@ -217,5 +220,19 @@ Future<void> _sync(List<WorkSite> sites, {bool force = false}) async {
     await prefs.setString(_signatureKey, signature);
   } catch (e) {
     debugPrint('attendance geofences: $e');
+  }
+}
+
+/// Each site's real radius, saved at registration (sites under
+/// [minGeofenceRadius] are registered with the OS at that size).
+const _radiiKey = 'attendanceSiteRadii';
+
+double? _realRadius(SharedPreferences prefs, String siteId) {
+  try {
+    final raw = prefs.getString(_radiiKey);
+    if (raw == null) return null;
+    return ((jsonDecode(raw) as Map<String, dynamic>)[siteId] as num?)?.toDouble();
+  } catch (_) {
+    return null;
   }
 }

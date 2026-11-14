@@ -11921,6 +11921,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Each extra role adds its pages, permissions and notices. The main role above decides Home, location tracking, attendance and who they report to.'**
   String get extraRolesHelp;
+
+  /// No description provided for @siteKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Type of place'**
+  String get siteKind;
+
+  /// No description provided for @siteKindOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Office'**
+  String get siteKindOffice;
+
+  /// No description provided for @siteKindWarehouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse'**
+  String get siteKindWarehouse;
+
+  /// No description provided for @siteKindShowroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Showroom'**
+  String get siteKindShowroom;
+
+  /// No description provided for @siteKindFactory.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory'**
+  String get siteKindFactory;
+
+  /// No description provided for @radiusSmallNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Under 100 m the phone notices arriving at about 100 m; check-in still needs GPS within the radius.'**
+  String get radiusSmallNote;
+
+  /// No description provided for @registeredFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered from'**
+  String get registeredFrom;
+
+  /// No description provided for @registeredFromUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not recorded: registered before 12 Nov 2026 or from an older app version.'**
+  String get registeredFromUnknown;
+
+  /// No description provided for @registeredFromIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP address {ip}'**
+  String registeredFromIp(String ip);
+
+  /// No description provided for @registeredFromEmulator.
+  ///
+  /// In en, this message translates to:
+  /// **'Emulator / simulator, not a real phone'**
+  String get registeredFromEmulator;
+
+  /// No description provided for @registeredFromApp.
+  ///
+  /// In en, this message translates to:
+  /// **'App {version}'**
+  String registeredFromApp(String version);
+
+  /// No description provided for @registeredFromWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Web browser'**
+  String get registeredFromWeb;
+
+  /// No description provided for @employmentContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Employment contract'**
+  String get employmentContract;
+
+  /// No description provided for @contractNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No contract uploaded yet.'**
+  String get contractNone;
+
+  /// No description provided for @contractUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload contract'**
+  String get contractUpload;
+
+  /// No description provided for @contractReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get contractReplace;
+
+  /// No description provided for @contractOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get contractOpen;
+
+  /// No description provided for @contractUploadedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded {date}'**
+  String contractUploadedOn(String date);
+
+  /// No description provided for @contractCardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading a contract reads its salary and allowances into the payroll and locks them: only a new contract can change them.'**
+  String get contractCardHint;
+
+  /// No description provided for @contractReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the contract…'**
+  String get contractReading;
+
+  /// No description provided for @contractReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Salary from the contract · {name}'**
+  String contractReviewTitle(String name);
+
+  /// No description provided for @contractReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticked amounts update the salary. Check them against the contract before saving.'**
+  String get contractReviewHint;
+
+  /// No description provided for @contractNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No amounts could be read from this contract. Enter them below, or save just the file.'**
+  String get contractNothingFound;
+
+  /// No description provided for @contractUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'No text could be read from this file (photos and scanned pages are read only in the phone app). Enter the amounts below, or save just the file.'**
+  String get contractUnreadable;
+
+  /// No description provided for @contractTotalMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The contract\'s total ({total}) doesn\'t match the amounts found ({parts}).'**
+  String contractTotalMismatch(String total, String parts);
+
+  /// No description provided for @contractYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Written as a yearly amount, divided by 12'**
+  String get contractYearly;
+
+  /// No description provided for @contractPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Percentage of the basic salary'**
+  String get contractPercent;
+
+  /// No description provided for @contractNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now {amount}'**
+  String contractNow(String amount);
+
+  /// No description provided for @contractOthersReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticked other allowances replace the current ones.'**
+  String get contractOthersReplace;
+
+  /// No description provided for @contractAddOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Add allowance'**
+  String get contractAddOther;
+
+  /// No description provided for @contractSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract saved and salary updated'**
+  String get contractSaved;
+
+  /// No description provided for @contractSavedFileOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract saved'**
+  String get contractSavedFileOnly;
+
+  /// No description provided for @salaryFromContract.
+  ///
+  /// In en, this message translates to:
+  /// **'From the employment contract'**
+  String get salaryFromContract;
+
+  /// No description provided for @salaryLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked amounts come from the employment contract. Upload a new contract to change them.'**
+  String get salaryLockedHint;
+
+  /// No description provided for @roleForkliftDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Forklift driver'**
+  String get roleForkliftDriver;
 }
 
 class _AppLocalizationsDelegate

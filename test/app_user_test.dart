@@ -38,7 +38,7 @@ void main() {
     expect(UserRole.gm.editableRoles, UserRole.assignable);
     expect(UserRole.salesManager.managesUsers, isTrue);
     expect(UserRole.logisticsManager.managesUsers, isTrue);
-    expect(UserRole.logisticsManager.editableRoles, [UserRole.worker, UserRole.driver, UserRole.warehouseSupervisor]);
+    expect(UserRole.logisticsManager.editableRoles, [UserRole.worker, UserRole.driver, UserRole.forkliftDriver, UserRole.warehouseSupervisor]);
     expect(UserRole.factoryManager.managesUsers, isTrue);
     expect(UserRole.factoryManager.editableRoles, [UserRole.worker, UserRole.engineer, UserRole.operator]);
     expect(UserRole.kam.managesUsers, isFalse);

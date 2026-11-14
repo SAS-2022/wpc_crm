@@ -36,7 +36,9 @@ beforeEach(async () => {
 });
 
 const rtdb = (uid) => env.authenticatedContext(uid).database();
-const paths = (uid) => [`live_locations/${uid}`, `presence/${uid}`, `location_history/${uid}`, `device_status/${uid}`];
+// route_snapped + tracking_events: department heads' Route history (2026-11-14).
+const paths = (uid) => [`live_locations/${uid}`, `presence/${uid}`, `location_history/${uid}`, `device_status/${uid}`,
+  `route_snapped/${uid}`, `tracking_events/${uid}`];
 
 describe('location_viewers', () => {
   test('a warehouse supervisor reads the people they supervise, not others', async () => {
@@ -46,7 +48,7 @@ describe('location_viewers', () => {
 
   test('a department head reads their department, not others', async () => {
     for (const p of paths('op')) await assertSucceeds(get(ref(rtdb('fm'), p)));
-    for (const p of [`live_locations/worker`, `presence/worker`, `location_history/worker`]) {
+    for (const p of [`live_locations/worker`, `presence/worker`, `location_history/worker`, `route_snapped/worker`, `tracking_events/worker`]) {
       await assertFails(get(ref(rtdb('fm'), p)));
     }
   });

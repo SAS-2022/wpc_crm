@@ -10,6 +10,8 @@ import 'client_sheet.dart';
 import 'person_style.dart';
 import 'transfer_watch.dart';
 import 'visit_rules.dart';
+import '../attendance/site_markers.dart';
+import '../attendance/work_sites.dart';
 
 /// Amber before two weeks without a visit.
 const transferWaitingColor = Color(0xFFB07800);
@@ -88,6 +90,7 @@ class _TransfersMapState extends ConsumerState<TransfersMap> {
     return Stack(
       children: [
         GoogleMap(
+          onCameraMove: _icons.zoomChanged,
           initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
           mapType: ref.watch(mapTypeProvider),
           padding: const EdgeInsets.only(top: 80),
@@ -97,6 +100,8 @@ class _TransfersMapState extends ConsumerState<TransfersMap> {
           mapToolbarEnabled: false,
           onMapCreated: (controller) => setState(() => _map = controller),
           markers: {
+            // Work sites as icons (2026-11-12).
+            ...siteMarkers(context, _icons, ref.watch(workSitesProvider).value ?? const <WorkSite>[]),
             for (final r in located)
               () {
                 final style = styles[r.transfer.toId] ?? unassignedStyle;

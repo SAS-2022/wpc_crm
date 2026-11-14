@@ -30,6 +30,8 @@ import 'person_style.dart';
 import 'visit_rules.dart';
 import '../../core/app_user.dart';
 import '../tracking/live_data.dart';
+import '../attendance/site_markers.dart';
+import '../attendance/work_sites.dart';
 import '../../core/time_ago.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
@@ -288,6 +290,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       body: Stack(
         children: [
           GoogleMap(
+            onCameraMove: _icons.zoomChanged,
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 15),
             mapType: ref.watch(mapTypeProvider),
             minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
@@ -302,6 +305,8 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
               _goToMe();
             },
             markers: {
+              // Work sites as icons (2026-11-12).
+              ...siteMarkers(context, _icons, ref.watch(workSitesProvider).value ?? const <WorkSite>[]),
               for (final c in clients)
                 for (final (i, loc) in c.locations.indexed)
                   if (inRegion(loc.lat, loc.lng))

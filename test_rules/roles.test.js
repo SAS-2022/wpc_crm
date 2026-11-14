@@ -234,6 +234,16 @@ describe('logistics manager manages drivers only (2026-10-23)', () => {
     await assertFails(updateDoc(doc(fs('lm'), 'users/ws'), { role: 'logistics_manager' }));
     await assertFails(set(ref(rtdb('lm'), 'roles/acc'), 'worker'));
   });
+
+  test('forklift drivers (2026-11-13): add, and switch a driver to one', async () => {
+    await assertSucceeds(setDoc(doc(fs('lm'), 'users/new_fl'), { ...driver, role: 'forklift_driver' }));
+    await assertSucceeds(set(ref(rtdb('lm'), 'roles/new_fl'), 'forklift_driver'));
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/driver'), { role: 'forklift_driver' }));
+    await assertSucceeds(set(ref(rtdb('lm'), 'roles/driver'), 'forklift_driver'));
+    await assertSucceeds(setDoc(doc(fs('hr'), 'users/new_fl2'), { ...driver, role: 'forklift_driver' }));
+    await assertSucceeds(set(ref(rtdb('hr'), 'roles/new_fl2'), 'forklift_driver'));
+    await assertFails(setDoc(doc(fs('fm'), 'users/new_fl3'), { ...driver, role: 'forklift_driver' }));
+  });
 });
 
 describe('factory manager manages workers, engineers and operators (2026-10-31)', () => {

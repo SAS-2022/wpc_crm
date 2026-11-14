@@ -34,9 +34,11 @@ List<TabOption> bottomTabOptions(WidgetRef ref, AppLocalizations l10n) {
       (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),
       (path: '/transfers', icon: Icons.swap_horiz_outlined, selected: Icons.swap_horiz, label: l10n.transferredClients),
       (path: '/catalogs', icon: Icons.style_outlined, selected: Icons.style, label: l10n.catalogsPage),
-      (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
-      (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
     ],
+    if (me.seesRouteHistory)
+      (path: '/history', icon: Icons.route_outlined, selected: Icons.route, label: l10n.routeHistory),
+    if (me.seesLiveTracking)
+      (path: '/live', icon: Icons.my_location_outlined, selected: Icons.my_location, label: l10n.liveTracking),
     if (me.seesEmployeesMap)
       (
         path: '/attendance/map',
@@ -51,7 +53,7 @@ List<TabOption> bottomTabOptions(WidgetRef ref, AppLocalizations l10n) {
     if (role.canSeeHr) (path: '/hr', icon: Icons.badge_outlined, selected: Icons.badge, label: l10n.hrArea),
     if (role.seesCompanyDocs)
       (path: '/documents', icon: Icons.folder_copy_outlined, selected: Icons.folder_copy, label: l10n.companyDocs),
-    if (role.seesPhoneStatus)
+    if (me.seesPhoneStatus)
       (
         path: '/phone-status',
         icon: Icons.phonelink_setup_outlined,

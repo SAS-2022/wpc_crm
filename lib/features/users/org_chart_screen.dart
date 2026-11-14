@@ -289,6 +289,7 @@ Color _groupColor(UserRole r) => switch (r) {
       UserRole.logisticsManager || UserRole.warehouseSupervisor || UserRole.driver => const Color(0xFF6D4C41),
       UserRole.factoryManager || UserRole.operator || UserRole.engineer => const Color(0xFF00897B),
       UserRole.worker => const Color(0xFF8D6E63),
+      UserRole.forkliftDriver => const Color(0xFFF9A825),
       UserRole.hr || UserRole.accounting || UserRole.procurement => const Color(0xFF7B1FA2),
       UserRole.unknown => Colors.grey,
     };

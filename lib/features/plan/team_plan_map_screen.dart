@@ -19,6 +19,8 @@ import '../users/users_repository.dart';
 import 'plan_repository.dart';
 import 'plan_task.dart';
 import 'route_order.dart';
+import '../attendance/site_markers.dart';
+import '../attendance/work_sites.dart';
 import 'team_plans_screen.dart' show teamPlanRegionProvider;
 
 /// Every team member's planned visits for one day on one map (user request
@@ -117,6 +119,7 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
       body: Stack(
         children: [
           GoogleMap(
+            onCameraMove: _icons.zoomChanged,
             initialCameraPosition: const CameraPosition(target: defaultMapCenter, zoom: 11),
             mapType: ref.watch(mapTypeProvider),
             padding: const EdgeInsets.only(top: 136),
@@ -137,6 +140,8 @@ class _TeamPlanMapScreenState extends ConsumerState<TeamPlanMapScreen> {
                   ),
             },
             markers: {
+              // Work sites as icons (2026-11-12).
+              ...siteMarkers(context, _icons, ref.watch(workSitesProvider).value ?? const <WorkSite>[]),
               for (final uid in shown)
                 for (final (n, t) in stops[uid]!)
                   Marker(

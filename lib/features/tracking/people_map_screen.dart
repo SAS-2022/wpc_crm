@@ -16,6 +16,7 @@ import '../../core/search_text.dart';
 import '../../core/time_ago.dart';
 import '../../l10n/app_localizations.dart';
 import '../attendance/employee_map_data.dart';
+import '../attendance/site_markers.dart';
 import '../attendance/site_now.dart';
 import '../attendance/work_sites.dart';
 import '../clients/client_tags.dart';
@@ -25,6 +26,7 @@ import '../devices/device_status.dart';
 import '../devices/quiet_reason_text.dart';
 import '../home/app_shell.dart' show wideLayoutWidth;
 import '../hr/hr_people.dart' show departmentsProvider;
+import '../notifications/notifications.dart' show peopleUnder;
 import '../reports/route_day.dart';
 import '../users/companies.dart';
 import '../users/company_filter.dart';
@@ -115,7 +117,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
   GoogleMapController? _map;
   late final _icons = MarkerIcons(() {
     if (mounted) setState(() {});
-  });
+  }, zoom: 6);
   Timer? _tick;
   final _sheet = DraggableScrollableController();
   final _search = TextEditingController();
@@ -287,25 +289,45 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       // Live positions (live / drivers / history).
       final presence = ref.watch(presenceProvider).value ?? const <String, Presence>{};
       final onlyIds = _onlyIds;
-      // The logistics manager / warehouse supervisor see drivers only.
-      final driversOnly = widget.mode == PeopleMapMode.drivers || !(me?.can.isSupervisor ?? false);
+      final driversOnly = widget.mode == PeopleMapMode.drivers;
+      // Department heads, logistics / factory managers, warehouse supervisors
+      // (2026-11-14): only the people under them (the logistics manager also
+      // every driver); KAM: their team; SM / GM: everyone.
+      final teamScoped = me?.teamScopedMaps ?? true;
+      final team = me == null ? const <String>{} : {for (final u in peopleUnder(me, users)) u.id};
+      bool inTeam(AppUser u) => team.contains(u.id) || (u.role.isDriver && (me?.can.managesDrivers ?? false));
       final tracked = users.where((u) {
         if (!u.active || !u.role.isLocationTracked) return false;
         if (driversOnly && !u.role.isDriver) return false;
         if (onlyIds != null && !onlyIds.contains(u.id)) return false;
         if (me?.kamOnly == true) return u.id == me!.id || u.kamId == me.id;
-        // Warehouse supervisor: their own drivers.
-        if (me?.role == UserRole.warehouseSupervisor) return u.supervisorId == me!.id;
+        if (teamScoped) return inTeam(u);
         return true;
       }).toList();
-      // Everyone else whose GPS is recorded for attendance (sales manager / GM).
-      final staffAll = driversOnly || !(me?.can.isAdmin ?? false)
+      // Everyone else whose GPS is recorded for attendance (sales manager /
+      // GM: all of them; department heads: their own people).
+      final staffGroup = !driversOnly && ((me?.can.isAdmin ?? false) || teamScoped);
+      final staffAll = !staffGroup
           ? const <AppUser>[]
-          : users.where((u) => u.recordsGps && (onlyIds == null || onlyIds.contains(u.id))).toList();
+          : users
+              .where((u) =>
+                  u.recordsGps &&
+                  !u.role.isLocationTracked &&
+                  (onlyIds == null || onlyIds.contains(u.id)) &&
+                  (!teamScoped || team.contains(u.id)))
+              .toList();
       final everyone = tracked.where(ofCompany).toList();
       final staff = staffAll.where(ofCompany).toList();
       final driverCount = everyone.where((u) => u.role.isDriver).length;
-      final showGroups = !driversOnly && (driverCount > 0 || (me?.can.isAdmin ?? false));
+      final salesCount = everyone.length - driverCount;
+      // Team-scoped: only the groups they have people in.
+      final groupOptions = [
+        if (!teamScoped || salesCount > 0) _Group.sales,
+        if (!teamScoped || driverCount > 0) _Group.drivers,
+        if (staffGroup && (!teamScoped || staff.isNotEmpty)) _Group.staff,
+      ];
+      final showGroups = !driversOnly &&
+          (teamScoped ? groupOptions.length > 1 : (driverCount > 0 || (me?.can.isAdmin ?? false)));
       if (onlyIds != null && !_groupPicked && users.isNotEmpty) {
         _groupPicked = true;
         if (everyone.length == driverCount && driverCount > 0) {
@@ -314,7 +336,11 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
           _group = _Group.staff;
         }
       }
-      final group = driversOnly ? _Group.drivers : (showGroups ? _group : _Group.sales);
+      final group = driversOnly
+          ? _Group.drivers
+          : teamScoped
+              ? (groupOptions.contains(_group) ? _group : groupOptions.firstOrNull ?? _Group.sales)
+              : (showGroups ? _group : _Group.sales);
       final recorded = group == _Group.staff;
       final inGroup = recorded ? staffAll : tracked.where((u) => u.role.isDriver == (group == _Group.drivers)).toList();
       final staffKey = (DateFormat('yyyy-MM-dd').format(now), (staff.map((u) => u.id).toList()..sort()).join(','));
@@ -420,8 +446,9 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
               for (final (g, icon, label) in [
                 (_Group.sales, Icons.storefront_outlined, l10n.salesTeamCount(everyone.length - driverCount)),
                 (_Group.drivers, Icons.local_shipping_outlined, l10n.driversCount(driverCount)),
-                if (me?.can.isAdmin ?? false) (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
+                (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
               ])
+                if (groupOptions.contains(g))
                 ChoiceChip(
                   avatar: Icon(icon, size: 18),
                   label: Text(label),
@@ -588,6 +615,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,
       onMapCreated: (c) => setState(() => _map = c),
+      onCameraMove: _icons.zoomChanged,
       polylines: route?.polylines ?? const {},
       circles: route != null
           ? const {}
@@ -613,17 +641,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                     ),
             },
       markers: route != null
-          ? route.markers
+          ? {...siteMarkers(context, _icons, sites), ...route.markers}
           : {
-              for (final s in sites)
-                Marker(
-                  markerId: MarkerId('site_${s.id}'),
-                  position: LatLng(s.lat, s.lng),
-                  anchor: const Offset(0.5, 0.5),
-                  zIndexInt: 0,
-                  icon: _icons.circle(context: context, fill: Colors.blue.shade700, text: '', ringWidth: 3, size: 18),
-                  infoWindow: InfoWindow(title: s.name),
-                ),
+              // Work sites as icons by kind (2026-11-12).
+              ...siteMarkers(context, _icons, sites, selectedId: _siteId),
               for (final p in located)
                 Marker(
                   markerId: MarkerId(p.user.id),

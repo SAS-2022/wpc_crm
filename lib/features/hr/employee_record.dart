@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
+
 import '../documents/company_docs.dart';
 
 // Employee records (user request 2026-11-03): each person's Iqama or national
@@ -29,6 +31,7 @@ class EmployeeRecord {
     this.nationality = '',
     this.insuranceId = '',
     this.insuranceClass = '',
+    this.contract,
   });
 
   final String uid;
@@ -46,6 +49,10 @@ class EmployeeRecord {
   /// Their class when it differs from the policy's ('' = the policy's).
   final String insuranceClass;
 
+  /// The employment contract file (HR / the payroll account upload it; the
+  /// amounts read from it go to `payroll/{uid}`, never here).
+  final EmploymentContract? contract;
+
   bool get hasId => idNumber.isNotEmpty || idExpiry.isNotEmpty;
 
   /// Expired or within App settings `docRenewalDays` (30).
@@ -59,6 +66,7 @@ class EmployeeRecord {
         nationality: d['nationality'] as String? ?? '',
         insuranceId: d['insuranceId'] as String? ?? '',
         insuranceClass: d['insuranceClass'] as String? ?? '',
+        contract: EmploymentContract.fromMap(d['contract']),
       );
 
   Map<String, Object> toMap() => {
@@ -70,6 +78,49 @@ class EmployeeRecord {
         'insuranceId': insuranceId,
         'insuranceClass': insuranceClass.trim(),
       };
+}
+
+/// An employee's contract in Storage `employee_contracts/{uid}/…` (read and
+/// written by HR and the payroll account only; no download URL is kept, so
+/// the file is opened through the Storage rules).
+class EmploymentContract {
+  const EmploymentContract({
+    required this.storagePath,
+    required this.fileName,
+    this.contentType = '',
+    this.size = 0,
+    this.uploadedBy = '',
+    this.uploadedAt,
+  });
+
+  final String storagePath;
+  final String fileName;
+  final String contentType;
+  final int size;
+  final String uploadedBy;
+  final DateTime? uploadedAt;
+
+  Map<String, Object?> toMap() => {
+        'storagePath': storagePath,
+        'fileName': fileName,
+        'contentType': contentType,
+        'size': size,
+        'uploadedBy': uploadedBy,
+        'uploadedAt': uploadedAt,
+      };
+
+  static EmploymentContract? fromMap(Object? m) {
+    if (m is! Map || m['storagePath'] is! String || (m['storagePath'] as String).isEmpty) return null;
+    final at = m['uploadedAt'];
+    return EmploymentContract(
+      storagePath: m['storagePath'] as String,
+      fileName: m['fileName'] as String? ?? '',
+      contentType: m['contentType'] as String? ?? '',
+      size: (m['size'] as num?)?.toInt() ?? 0,
+      uploadedBy: m['uploadedBy'] as String? ?? '',
+      uploadedAt: at is Timestamp ? at.toDate() : (at is DateTime ? at : null),
+    );
+  }
 }
 
 /// The health insurance services, the company's usual one first (latest

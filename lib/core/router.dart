@@ -101,15 +101,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           !(me.can.canManageHr && loc == '/departments') &&
           // Logistics manager: the drivers' live map and route history; logistics
           // and factory managers: the Users page for their people.
-          !(me.can.seesDrivers && (loc == '/drivers' || loc == '/history')) &&
+          !(me.can.seesDrivers && loc == '/drivers') &&
+          // Department heads: Live tracking / Route history of their people (2026-11-14).
+          !(me.seesLiveTracking && loc == '/live') &&
+          !(me.seesRouteHistory && loc == '/history') &&
           !(me.can.managesVehicles && loc.startsWith('/vehicles')) &&
-          !(me.can.seesPhoneStatus && loc == '/phone-status') &&
+          !(me.seesPhoneStatus && loc == '/phone-status') &&
           !(me.can.seesCompanyDocs && loc.startsWith('/documents')) &&
           !(me.can.managesUsers && loc.startsWith('/users'))) {
         return '/';
       }
       if (loc == '/drivers' && !me.can.seesDrivers) return '/';
-      if (loc == '/phone-status' && !me.can.seesPhoneStatus) return '/';
+      if (loc == '/phone-status' && !me.seesPhoneStatus) return '/';
+      if (loc == '/live' && !me.seesLiveTracking) return '/';
+      if (loc == '/history' && !me.seesRouteHistory) return '/';
       if (loc.startsWith('/vehicles') && !me.can.managesVehicles) return '/';
       if (loc.startsWith('/documents') && !me.can.seesCompanyDocs) return '/';
       if (loc.startsWith('/hr') && !me.can.canSeeHr) return '/';
@@ -122,9 +127,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!myLeaveEnabled && (loc == '/leave' || loc == '/leave/new')) return '/';
       if (loc.startsWith('/users') && !me.can.managesUsers) return '/';
       if ((loc.startsWith('/import') || loc == '/visit-rules' || loc == '/given-items' || loc == '/client-tags' || loc == '/location-types' || loc == '/work-hours' || loc == '/work-sites' || loc == '/companies' || loc.startsWith('/settings')) && !me.can.isAdmin) return '/';
-      if (const ['/live', '/reports', '/history', '/team-plans', '/team-plans/map', '/transfers', '/catalogs'].contains(loc) &&
-          !me.can.isSupervisor &&
-          !(me.can.seesDrivers && loc == '/history')) {
+      if (const ['/reports', '/team-plans', '/team-plans/map', '/transfers', '/catalogs'].contains(loc) &&
+          !me.can.isSupervisor) {
         return '/';
       }
       if (loc.startsWith('/plan/') && !me.can.isSupervisor && !loc.startsWith('/plan/${me.id}')) return '/';

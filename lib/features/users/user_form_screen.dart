@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'home_location_field.dart';
 import 'users_repository.dart';
+import 'registered_from_card.dart';
 import '../notifications/notifications.dart' show directManagersOf, peopleUnder;
 import '../../core/saving.dart';
 import '../attendance/attendance_rules.dart' show defaultOvertimeMaxMin;
@@ -76,6 +77,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   /// A self-registered account waiting for approval.
   AppUser? _pending;
+  /// Self-registered accounts: where they registered from (null = created by an admin).
+  AppUser? _registered;
   String? _kamId;
 
   /// Direct manager chosen here; null = automatic ([directManagersOf]).
@@ -178,6 +181,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _attendance = u.attendanceRequired;
     _schedule = u.workSchedule;
     _pending = u.isPendingApproval ? u : null;
+    _registered = u.registeredAt != null ? u : null;
     _savedRole = u.role;
     // Registered accounts have no role yet: the one they asked for, changeable before approving.
     if (_pending != null) _role = u.requestedRole ?? UserRole.worker;
@@ -365,6 +369,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   subtitle: Text(l10n.registrationPendingHelp),
                 ),
               ),
+            if (_registered case final r?) RegisteredFromCard(user: r),
             TextFormField(
               controller: _name,
               decoration: InputDecoration(labelText: l10n.name),

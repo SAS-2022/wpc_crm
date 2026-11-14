@@ -68,6 +68,18 @@ service firebase.storage {
       allow delete: if writer();
     }
 
+    // Employment contracts (2026-11-13): role HR (not their own) and the
+    // payroll account only (= firestore.rules payrollUser()); max 20 MB.
+    match /employee_contracts/{uid}/{fileName} {
+      function contractUser() {
+        return request.auth != null && profile().active == true
+          && (request.auth.token.email == 'wissam.b@woodpanelsco.com'
+              || ((profile().role == 'hr' || 'hr' in profile().get('extraRoles', [])) && uid != request.auth.uid));
+      }
+      allow read, delete: if contractUser();
+      allow create: if contractUser() && request.resource.size < 20 * 1024 * 1024;
+    }
+
     // Client and visit attachments, max 20 MB each.
     match /{folder}/{parentId}/{fileName} {
       allow read: if folder in ['clients', 'visits'] && canAccess(folder, parentId);

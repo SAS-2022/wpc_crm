@@ -9,6 +9,7 @@ import '../../core/saudi_phone.dart';
 import '../../core/saving.dart';
 import '../../l10n/app_localizations.dart';
 import '../users/companies.dart';
+import 'registration_source.dart';
 import '../../core/app_user.dart';
 
 /// Self-registration for people without a company account (user request
@@ -66,6 +67,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'approval': 'pending',
           'registeredAt': FieldValue.serverTimestamp(),
         });
+        // Phone / browser and IP, shown to the approver (2026-11-12).
+        await noteRegistration();
       });
       // The router now shows "Waiting for approval".
     } on FirebaseAuthException catch (e) {

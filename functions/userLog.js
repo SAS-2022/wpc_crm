@@ -11,7 +11,7 @@
  */
 
 /** Written by the app or the server themselves, not worth a log line. */
-const IGNORED = new Set(['appVersions', 'updateRemindedAt', 'menuOrder', 'bottomTabs', 'changedBy', 'changedAt', 'registeredAt']);
+const IGNORED = new Set(['appVersions', 'updateRemindedAt', 'menuOrder', 'bottomTabs', 'changedBy', 'changedAt', 'registeredAt', 'registeredFrom']);
 
 /** Fields a person changes on their own (firestore.rules self-updates). */
 const SELF_KEYS = new Set(['name', 'phone', 'appVersions', 'menuOrder', 'bottomTabs', 'homeLocation']);

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../features/auth/registration_source.dart';
 import '../l10n/app_localizations.dart';
 import '../features/attendance/attendance_rules.dart' show defaultOvertimeMaxMin;
 import '../features/tracking/work_hours.dart';
@@ -33,6 +34,12 @@ enum UserRole {
   factoryManager('factory_manager'),
   operator('operator'),
 
+  /// Warehouse forklift driver (user request 2026-11-13; they were added as
+  /// drivers): works on site like a worker — attendance, breaks, GPS only
+  /// recorded, a warehouse supervisor, Logistics department. Not a company-car
+  /// [driver] (no all-day live tracking, not on the Drivers map).
+  forkliftDriver('forklift_driver'),
+
   /// A role this app version doesn't know (added in a later version): no
   /// access until the app is updated. Never stored.
   unknown('');
@@ -45,14 +52,14 @@ enum UserRole {
   /// Roles that can be given to a user (the user form's list).
   static const assignable = [
     salesExec, kam, salesManager, gm, hr, accounting, procurement, worker, engineer, driver,
-    logisticsManager, warehouseSupervisor, factoryManager, operator,
+    logisticsManager, warehouseSupervisor, factoryManager, operator, forkliftDriver,
   ];
 
   /// What a person may ask for when registering (2026-10-21: the role is
   /// the job; the old Positions list repeated it). Managers are made by an admin.
   static const registrable = [
-    salesExec, kam, hr, accounting, procurement, worker, engineer, driver, logisticsManager, warehouseSupervisor,
-    factoryManager, operator,
+    salesExec, kam, hr, accounting, procurement, worker, engineer, driver, forkliftDriver, logisticsManager,
+    warehouseSupervisor, factoryManager, operator,
   ];
 
   /// Unknown or missing values become [unknown], never a sales role: an old
@@ -91,6 +98,7 @@ enum UserRole {
       this == engineer ||
       this == operator ||
       this == worker ||
+      this == forkliftDriver ||
       this == logisticsManager ||
       this == warehouseSupervisor;
   bool get isDriver => this == driver;
@@ -119,7 +127,7 @@ enum UserRole {
 
   /// Can have a warehouse supervisor (`users.supervisorId`; drivers since
   /// 2026-10-23, workers since 2026-11-04).
-  bool get supervisedByWarehouse => this == driver || this == worker;
+  bool get supervisedByWarehouse => this == driver || this == worker || this == forkliftDriver;
 
   bool get seesPhoneStatus => isSupervisor || this == logisticsManager || this == factoryManager;
 
@@ -139,7 +147,7 @@ enum UserRole {
   List<UserRole> get editableRoles => isAdmin
       ? assignable
       : this == logisticsManager
-      ? const [worker, driver, warehouseSupervisor]
+      ? const [worker, driver, forkliftDriver, warehouseSupervisor]
       : this == factoryManager
       ? const [worker, engineer, operator]
       : this == hr
@@ -151,7 +159,7 @@ enum UserRole {
   /// sales manager / GM keep those (same list as `hrRoles()` in the rules).
   static const hrManagedRoles = [
     hr, accounting, procurement, worker, engineer, driver,
-    logisticsManager, warehouseSupervisor, factoryManager, operator,
+    logisticsManager, warehouseSupervisor, factoryManager, operator, forkliftDriver,
   ];
 
   /// The sales team: uses clients, visits and plans.
@@ -169,7 +177,8 @@ enum UserRole {
       this == logisticsManager ||
       this == warehouseSupervisor ||
       this == factoryManager ||
-      this == operator;
+      this == operator ||
+      this == forkliftDriver;
 
   /// Attendance: people who leave the work site during the day (sales team,
   /// drivers) aren't checked out when they leave before the end of the day;
@@ -179,7 +188,7 @@ enum UserRole {
   /// Ask for a break before leaving the site (user request 2026-11-05):
   /// their warehouse supervisor / department head approves it; leaving
   /// without one shows as "Left without permission".
-  bool get asksForBreaks => this == worker || this == operator || this == warehouseSupervisor;
+  bool get asksForBreaks => this == worker || this == operator || this == warehouseSupervisor || this == forkliftDriver;
 
   /// HR or GM: run the HR area (attendance, payroll, leave, warnings).
   bool get isHr => this == hr || this == gm;
@@ -213,6 +222,7 @@ enum UserRole {
         warehouseSupervisor => l10n.roleWarehouseSupervisor,
         factoryManager => l10n.roleFactoryManager,
         operator => l10n.roleOperator,
+        forkliftDriver => l10n.roleForkliftDriver,
         unknown => l10n.roleUnknown,
       };
 }
@@ -286,6 +296,7 @@ class AppUser {
     this.position = '',
     this.approval = '',
     this.registeredAt,
+    this.registeredFrom,
     this.workSiteIds = const [],
     this.overtimeAllowed = false,
     this.overtimeMaxMin,
@@ -374,6 +385,9 @@ class AppUser {
   /// approves, 'rejected', or '' (approved / created by an admin).
   final String approval;
   final DateTime? registeredAt;
+
+  /// The phone / browser and IP a self-registration came from (2026-11-12).
+  final RegistrationSource? registeredFrom;
   bool get isPendingApproval => approval == 'pending';
 
   /// Attendance: the work sites they check in at, and whether time after
@@ -454,6 +468,17 @@ class AppUser {
 
   bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
 
+  /// Department heads and other managers (factory / logistics manager, "Is a
+  /// manager" people; user request 2026-11-14) also get Live tracking, Route
+  /// history and Phone status, each with only the people under them
+  /// ([peopleUnder]); KAM / SM / GM as before.
+  bool get seesLiveTracking => can.isSupervisor || isManager;
+  bool get seesRouteHistory => can.isSupervisor || can.seesDrivers || isManager;
+  bool get seesPhoneStatus => can.seesPhoneStatus || isManager;
+
+  /// Sees only the people under them on the people maps (not KAM / SM / GM).
+  bool get teamScopedMaps => !can.isSupervisor;
+
   /// Joining date 'yyyy-MM-dd' (HR, 2026-10-24): their leave year starts
   /// on its anniversary (`leaveYearOf` in leave_rules.dart); null = the
   /// calendar year.
@@ -469,7 +494,7 @@ class AppUser {
   /// per person — it decides who approves their leave).
   static String? defaultDepartmentOf(UserRole role) => switch (role) {
         UserRole.salesExec || UserRole.kam || UserRole.salesManager => 'sales',
-        UserRole.driver || UserRole.logisticsManager => 'logistics',
+        UserRole.driver || UserRole.logisticsManager || UserRole.forkliftDriver => 'logistics',
         UserRole.warehouseSupervisor => 'warehouse',
         UserRole.factoryManager || UserRole.operator || UserRole.engineer => 'production',
         UserRole.gm => 'admin',
@@ -507,6 +532,7 @@ class AppUser {
       position: d['position'] as String? ?? '',
       approval: d['approval'] as String? ?? '',
       registeredAt: (d['registeredAt'] as Timestamp?)?.toDate(),
+      registeredFrom: RegistrationSource.fromMap(d['registeredFrom']),
       workSiteIds: List<String>.from(d['workSiteIds'] as List? ?? const []),
       overtimeAllowed: d['overtimeAllowed'] == true,
       overtimeMaxMin: (d['overtimeMaxMin'] as num?)?.toInt(),

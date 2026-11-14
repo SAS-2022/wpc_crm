@@ -3,8 +3,8 @@
     "roles": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "(root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || ((root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) && newData.exists()) || ((root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) && newData.isString() && newData.val().matches(/^(worker|driver|warehouse_supervisor)$/) && (!data.exists() || data.val().matches(/^(worker|driver|warehouse_supervisor)$/))) || ((root.child('roles').child(auth.uid).val() === 'factory_manager' || root.child('role_extras').child(auth.uid).child('factory_manager').val() === true) && newData.isString() && newData.val().matches(/^(worker|engineer|operator)$/) && (!data.exists() || data.val().matches(/^(worker|engineer|operator)$/))) || ((root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true) && newData.isString() && newData.val().matches(/^(hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/) && (!data.exists() || data.val().matches(/^(hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/)))",
-        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/)"
+        ".write": "(root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || ((root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) && newData.exists()) || ((root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) && newData.isString() && newData.val().matches(/^(worker|driver|forklift_driver|warehouse_supervisor)$/) && (!data.exists() || data.val().matches(/^(worker|driver|forklift_driver|warehouse_supervisor)$/))) || ((root.child('roles').child(auth.uid).val() === 'factory_manager' || root.child('role_extras').child(auth.uid).child('factory_manager').val() === true) && newData.isString() && newData.val().matches(/^(worker|engineer|operator)$/) && (!data.exists() || data.val().matches(/^(worker|engineer|operator)$/))) || ((root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true) && newData.isString() && newData.val().matches(/^(hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator|forklift_driver)$/) && (!data.exists() || data.val().matches(/^(hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator|forklift_driver)$/)))",
+        ".validate": "newData.isString() && newData.val().matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator|forklift_driver)$/)"
       }
     },
     "live_locations": {
@@ -37,7 +37,7 @@
     "route_snapped": {
       ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid"
+        ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true"
       }
     },
     "tracking_device": {
@@ -58,7 +58,7 @@
     "tracking_events": {
       ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
       "$uid": {
-        ".read": "root.child('driver_supervisors').child($uid).val() === auth.uid"
+        ".read": "root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true"
       }
     },
     "settings": {
@@ -84,7 +84,7 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "root.child('roles').child(auth.uid).val() === 'gm' || (root.child('roles').child(auth.uid).val() === 'sales_manager' && !newData.child('gm').exists())",
         "$role": {
-          ".validate": "newData.val() === true && $role.matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator)$/)"
+          ".validate": "newData.val() === true && $role.matches(/^(sales_exec|kam|sales_manager|gm|hr|accounting|procurement|worker|engineer|driver|logistics_manager|warehouse_supervisor|factory_manager|operator|forklift_driver)$/)"
         }
       }
     }
