@@ -97,6 +97,16 @@ class UsersRepository {
         ...userChangeStamp(),
       }));
 
+  /// HR on a user outside the roles they manage (2026-11-16): writes only
+  /// [hrUserFields] (no RTDB role mirror, no Odoo clients).
+  Future<void> hrUpdate(AppUser user) => saving(() {
+        final all = user.toMap();
+        return _users.doc(user.id).update({
+          for (final k in hrUserFields) k: all[k],
+          ...userChangeStamp(),
+        });
+      });
+
   Future<void> setSupervised(String supervisorId, Set<String> ids, Iterable<AppUser> current, List<AppUser> users) =>
       saving(() async {
         final before = {for (final u in current) u.id};
@@ -144,14 +154,14 @@ class UsersRepository {
   /// login account (so the email can be used again), profile, role, push
   /// tokens and location data; their clients become unassigned and their
   /// sales team loses its KAM. Visits, plans, attendance and leave stay as
-  /// history. Only the accounts in [userDeleterEmails].
+  /// history. Only [mayManageAccounts] (the GM and [userDeleterEmails]).
   Future<void> delete(String uid) => saving(() async {
     await FirebaseFunctions.instance.httpsCallable('deleteUser').call<Object?>({'uid': uid});
   });
 
   /// Sets someone's password with the `setUserPassword` Cloud Function,
-  /// e.g. for username accounts, which can't get a reset email. GM: anyone;
-  /// sales manager: not GMs or sales managers; logistics manager: drivers.
+  /// e.g. for username accounts, which can't get a reset email. Only the GM
+  /// and [userDeleterEmails] ([mayManageAccounts], 2026-11-16).
   Future<void> setPassword(String uid, String password) => saving(() async {
     await FirebaseFunctions.instance
         .httpsCallable('setUserPassword')

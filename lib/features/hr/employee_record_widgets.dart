@@ -347,32 +347,31 @@ class IdRenewalsCard extends ConsumerWidget {
         if (users.containsKey(r.uid) && r.idNeedsRenewal(today)) r,
     ]..sort((a, b) => a.idExpiry.compareTo(b.idExpiry));
     if (due.isEmpty) return const SizedBox.shrink();
+    // Collapsed by default like the overtime card (2026-11-15, user); the
+    // icon takes the colour of the most urgent ID.
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Text(l10n.idRenewalsDue(due.length), style: Theme.of(context).textTheme.titleMedium),
-            ),
-            for (final r in due)
-              ListTile(
-                dense: true,
-                leading: Icon(Icons.badge_outlined, color: docExpiryColor(context, docExpiryState(r.idExpiry, today))),
-                title: Text('${users[r.uid]!.name} · ${idTypeLabel(l10n, r.idType)}'),
-                subtitle: Text(
-                  idExpiryText(context, r.idExpiry, today),
-                  style: TextStyle(color: docExpiryColor(context, docExpiryState(r.idExpiry, today))),
-                ),
-                trailing: me.can.canManageHr
-                    ? TextButton(onPressed: () => renewEmployeeIdDialog(context, r), child: Text(l10n.markRenewed))
-                    : null,
-                onTap: () => context.push('/hr/employee/${r.uid}'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: Icon(Icons.badge_outlined, color: docExpiryColor(context, docExpiryState(due.first.idExpiry, today))),
+        title: Text(l10n.idRenewalsDue(due.length), style: Theme.of(context).textTheme.titleMedium),
+        children: [
+          for (final r in due)
+            ListTile(
+              dense: true,
+              leading: Icon(Icons.badge_outlined, color: docExpiryColor(context, docExpiryState(r.idExpiry, today))),
+              title: Text('${users[r.uid]!.name} · ${idTypeLabel(l10n, r.idType)}'),
+              subtitle: Text(
+                idExpiryText(context, r.idExpiry, today),
+                style: TextStyle(color: docExpiryColor(context, docExpiryState(r.idExpiry, today))),
               ),
-          ],
-        ),
+              trailing: me.can.canManageHr
+                  ? TextButton(onPressed: () => renewEmployeeIdDialog(context, r), child: Text(l10n.markRenewed))
+                  : null,
+              onTap: () => context.push('/hr/employee/${r.uid}'),
+            ),
+        ],
       ),
     );
   }

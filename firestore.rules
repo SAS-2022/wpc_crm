@@ -77,7 +77,8 @@ service cloud.firestore {
       }
       allow create, update: if isAdmin() && stampOk() && extraRolesOk();
       allow create: if active() && request.resource.data.role in managedRoles() && stampOk() && extraRolesKept();
-      allow update: if active() && stampOk() && extraRolesKept()
+      // Never on their own record (2026-11-16: HR is itself one of hrRoles()).
+      allow update: if active() && stampOk() && extraRolesKept() && request.auth.uid != uid
         && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
       // Self-registration: a new account creates its own profile, inactive
@@ -110,6 +111,16 @@ service cloud.firestore {
       // HR sets each person's joining date and department (2026-10-24).
       allow update: if managesHr()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department', 'changedBy', 'changedAt']) && stampOk();
+      // HR on ANY user, sales people and managers too (2026-11-16, user):
+      // name, joining date, department, attendance, work sites, overtime and
+      // own schedule (= hrUserFields in app_user.dart); never their own record
+      // (their name: Profile). Roles, team, active, Odoo stay with SM / GM.
+      allow update: if active() && hasRole(['hr']) && request.auth.uid != uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+             'name', 'joiningDate', 'department', 'attendanceRequired', 'workSiteIds',
+             'overtimeAllowed', 'overtimeMaxMin', 'workSchedule', 'changedBy', 'changedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0
+        && stampOk();
       // Only the `deleteUser` Cloud Function deletes users (allowed accounts
       // only, user decision 2026-10-23).
       allow delete: if false;
@@ -266,9 +277,17 @@ service cloud.firestore {
     // HR area (HR, GM, SM) reads and writes them, the person reads their own.
     // `idNotified` is written by the companyDocReminders function.
     // Payroll (2026-11-07, user decision): salaries are seen and edited by
-    // ONE account only (= payrollEmails in hr/payroll.dart) — not HR or the GM.
+    // ONE account (= payrollEmails in hr/payroll.dart). Since 2026-11-15
+    // (user) also the GM and HR: they read every salary and edit everyone's
+    // but their own (= canSeePayroll / canEditPayroll in hr/payroll.dart).
     function payrollUser() {
       return active() && request.auth.token.email == 'wissam.b@woodpanelsco.com';
+    }
+    function payrollViewer() {
+      return payrollUser() || (active() && hasRole(['gm', 'hr']));
+    }
+    function payrollEditor(uid) {
+      return payrollUser() || (active() && hasRole(['gm', 'hr']) && uid != request.auth.uid);
     }
     // Employment contracts (2026-11-13): role HR fills the salary parts read
     // from an employee's contract (never on their own record) but still can't
@@ -299,11 +318,11 @@ service cloud.firestore {
       return !('contractFields' in request.resource.data) || request.resource.data.contractFields is list;
     }
     match /payroll/{uid} {
-      allow read: if payrollUser();
-      allow create: if payrollUser() && lockOk()
+      allow read: if payrollViewer();
+      allow create: if payrollEditor(uid) && lockOk()
         && (!('contractFields' in request.resource.data) || contractPathOk(uid));
-      allow update: if payrollUser() && lockOk() && (lockedUnchanged() || newContract(uid));
-      allow delete: if payrollUser() && resource.data.get('contractFields', []).size() == 0;
+      allow update: if payrollEditor(uid) && lockOk() && (lockedUnchanged() || newContract(uid));
+      allow delete: if payrollEditor(uid) && resource.data.get('contractFields', []).size() == 0;
       allow create: if hrFromContract(uid) && request.resource.data.keys().hasOnly(contractFields()) && lockOk() && contractPathOk(uid);
       allow update: if hrFromContract(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(contractFields())
         && lockOk() && newContract(uid);

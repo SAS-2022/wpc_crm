@@ -267,10 +267,24 @@ class RoleAccess {
   }
 }
 
-/// The only accounts that may delete users (user decision 2026-10-23: a
-/// deletion by mistake does great harm). Same list as USER_DELETERS in
+/// Accounts that may delete users and set passwords, besides the GM (user
+/// decisions 2026-10-23: a deletion by mistake does great harm; 2026-11-16:
+/// passwords too, and the GM added). Same list as USER_DELETERS in
 /// functions/index.js, which enforces it.
 const userDeleterEmails = {'wissam.b@woodpanelsco.com'};
+
+/// Deletes users and sets their passwords: [userDeleterEmails] or a GM
+/// (2026-11-16, = `mayManageAccounts` in functions/index.js).
+bool mayManageAccounts(AppUser? u) =>
+    u != null && u.active && (userDeleterEmails.contains(u.email.trim().toLowerCase()) || u.hasRole(UserRole.gm));
+
+/// The fields HR may change on ANY user, sales people and managers too
+/// (2026-11-16, user); = `hrUserFields()` in firestore.rules. The roles HR
+/// manages ([UserRole.hrManagedRoles]) stay fully editable by HR.
+const hrUserFields = [
+  'name', 'joiningDate', 'department', 'attendanceRequired', 'workSiteIds',
+  'overtimeAllowed', 'overtimeMaxMin', 'workSchedule',
+];
 
 /// The SM who also develops the app (2026-11-08, user): may test HR
 /// features on their own record (e.g. past leave), which others can't.

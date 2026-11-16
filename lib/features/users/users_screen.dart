@@ -90,8 +90,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final positions = ref.watch(positionsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
     final me = ref.watch(currentUserProvider).value;
-    // Sales manager / GM: everyone; HR: everyone approved with the roles they
-    // manage; logistics / factory manager: their approved people
+    // Sales manager / GM: everyone; HR: everyone approved; logistics / factory manager: their approved people
     // ([peopleUnder]) with the roles they manage ([UserRole.editableRoles]).
     final admin = me?.can.isAdmin == true;
     final editable = me?.can.editableRoles ?? const <UserRole>[];
@@ -124,10 +123,14 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
         data: (all) {
+          // HR: every approved user since 2026-11-16 (outside their roles the
+          // form lets them change only [hrUserFields]).
           var list = admin
               ? all
+              : me!.hasRole(UserRole.hr)
+              ? [for (final u in all) if (!u.isPendingApproval && u.id != me.id) u]
               : [
-                  for (final u in me!.hasRole(UserRole.hr) ? all : peopleUnder(me, all))
+                  for (final u in peopleUnder(me, all))
                     if (!u.isPendingApproval && editable.contains(u.role)) u,
                 ];
           if (list.isEmpty) return Center(child: Text(l10n.noUsers));

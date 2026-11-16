@@ -68,16 +68,20 @@ String _westernDigits(String s) => s.replaceAllMapped(
 /// Saudi mobile field (05X XXX XXXX); [required] refuses an empty value, else
 /// empty is allowed. Save with `saudiMobile(controller.text) ?? ''`.
 class SaudiPhoneField extends StatelessWidget {
-  const SaudiPhoneField({super.key, required this.controller, this.required = false});
+  const SaudiPhoneField({super.key, required this.controller, this.required = false, this.enabled = true});
 
   final TextEditingController controller;
   final bool required;
+
+  /// Off: shown locked and not checked (e.g. HR on a sales user's form).
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return TextFormField(
       controller: controller,
+      enabled: enabled,
       keyboardType: TextInputType.phone,
       textDirection: TextDirection.ltr,
       inputFormatters: [_SaudiMobileFormatter()],
@@ -87,6 +91,7 @@ class SaudiPhoneField extends StatelessWidget {
         hintTextDirection: TextDirection.ltr,
       ),
       validator: (v) {
+        if (!enabled) return null;
         if (v == null || v.trim().isEmpty) return required ? l10n.required : null;
         return saudiMobileDigits(v) == null ? l10n.saudiPhoneInvalid : null;
       },

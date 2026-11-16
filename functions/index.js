@@ -1992,16 +1992,21 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
 });
 
 /**
- * Deletes a user for good (user request 2026-10-21; since 2026-10-23 only
- * the accounts in USER_DELETERS):
+ * Deletes a user for good (user request 2026-10-21; only the accounts in
+ * USER_DELETERS and, since 2026-11-16 (user), the GM — `mayManageAccounts`):
  * the login account (so the email can be used again), `users/{uid}` with its
  * push tokens, the RTDB role, live location, presence, tracking phone,
  * tracking schedule, route history and tracking log. Their clients become
  * unassigned and their team loses its KAM; visits, plans, attendance and
  * leave stay as history. Nobody deletes themselves.
  */
-/** The only accounts that may delete users (user decision 2026-10-23); `userDeleterEmails` in app_user.dart. */
+/** Accounts that may delete users and set passwords, besides the GM (user decisions 2026-10-23 / 2026-11-16); `userDeleterEmails` in app_user.dart. */
 const USER_DELETERS = ['wissam.b@woodpanelsco.com'];
+/** Delete users / set passwords: those accounts or a GM (2026-11-16) = `mayManageAccounts` in app_user.dart. */
+function mayManageAccounts(caller, token) {
+  const email = String(token?.email || '').toLowerCase();
+  return caller?.active === true && (USER_DELETERS.includes(email) || hasRole(caller, 'gm'));
+}
 
 exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req) => {
   const callerId = req.auth?.uid;
@@ -2009,8 +2014,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
   const db = admin.firestore();
   const caller = (await db.doc(`users/${callerId}`).get()).data();
   // The signed-in account's own email (from Auth, not the profile, which admins can edit).
-  const email = String(req.auth.token.email || '').toLowerCase();
-  if (caller?.active !== true || !USER_DELETERS.includes(email)) {
+  if (!mayManageAccounts(caller, req.auth.token)) {
     throw new HttpsError('permission-denied', 'You are not allowed to delete users.');
   }
   const uid = req.data?.uid;
@@ -2053,13 +2057,11 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
 /**
  * Sets another user's password (2026-10-23), mainly for username accounts:
  * their email is a hidden `<username>@staff.wpc-crm-a9247.web.app` with no
- * mailbox, so no reset email reaches them. GM: anyone; sales manager: not
- * GMs or sales managers; logistics manager: drivers; HR: the back-office
- * roles (UserRole.hrManagedRoles). Never oneself (Profile page does that
- * with the current password).
+ * mailbox, so no reset email reaches them. Since 2026-11-16 (user) only the
+ * GM and the USER_DELETERS accounts (`mayManageAccounts`), for anyone
+ * (before: also SM, logistics / factory manager and HR for their roles).
+ * Never oneself (Profile page does that with the current password).
  */
-const HR_MANAGED_ROLES = ['hr', 'accounting', 'procurement', 'worker', 'engineer', 'driver',
-  'logistics_manager', 'warehouse_supervisor', 'factory_manager', 'operator', 'forklift_driver'];
 exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   const callerId = req.auth?.uid;
   if (!callerId) throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -2071,13 +2073,7 @@ exports.setUserPassword = onCall({ maxInstances: 2 }, async (req) => {
   if (typeof password !== 'string' || password.length < 6) throw new HttpsError('invalid-argument', 'At least 6 characters.');
   if (uid === callerId) throw new HttpsError('invalid-argument', 'Change your own password on the Profile page.');
   const target = (await db.doc(`users/${uid}`).get()).data();
-  const allowed = caller?.active === true && (
-    hasRole(caller, 'gm') ||
-    (hasRole(caller, 'sales_manager') && !['gm', 'sales_manager'].includes(target?.role)) ||
-    (hasRole(caller, 'logistics_manager') && ['worker', 'driver', 'forklift_driver', 'warehouse_supervisor'].includes(target?.role)) ||
-    (hasRole(caller, 'factory_manager') && ['worker', 'engineer', 'operator'].includes(target?.role)) ||
-    (hasRole(caller, 'hr') && HR_MANAGED_ROLES.includes(target?.role)));
-  if (!allowed) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
+  if (!mayManageAccounts(caller, req.auth.token)) throw new HttpsError('permission-denied', 'You cannot change this user\'s password.');
   await admin.auth().updateUser(uid, { password });
   await logUserEvent({ action: 'passwordSet', targetId: uid, targetName: target?.name || '', actorId: callerId, changes: [] });
   return { ok: true };

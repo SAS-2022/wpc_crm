@@ -177,8 +177,13 @@ class PhoneReport {
     required this.fromOldApp,
     this.shouldShare = false,
     this.quiet,
+    this.quietAt,
     this.lastPosition,
   });
+
+  /// When the phone sent the report [quiet] comes from (2026-11-15: a
+  /// 3-hour-old "location not allowed" read as the phone's state now).
+  final DateTime? quietAt;
 
   /// Should share now but no position came for [stoppedAfter]: why
   /// (2026-11-04). Also set while the phone itself still reports
@@ -321,6 +326,7 @@ PhoneReport phoneReport({
     fromOldApp: old,
     shouldShare: shouldShare,
     quiet: quiet,
+    quietAt: quiet == null ? null : quietReportAt(device: device, presence: presence),
     lastPosition: lastPosition,
   );
 }
@@ -344,6 +350,14 @@ enum QuietReason {
   /// Nothing at all from the phone: the app was closed by the phone
   /// (battery saving / autostart off / swiped away) or the phone is off.
   appClosed,
+}
+
+/// When the phone's newest settings report ([device] or [presence]) came.
+DateTime? quietReportAt({required DeviceStatus? device, required Presence? presence}) {
+  final a = device?.at, b = presence?.lastSeen;
+  if (a == null) return b;
+  if (b == null) return a;
+  return b.isAfter(a) ? b : a;
 }
 
 /// [device] the phone's last own report, [presence] the tracker's (tracked

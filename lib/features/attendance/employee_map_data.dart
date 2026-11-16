@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../clients/clients_map_screen.dart' show managerPinColor, showsAsManager;
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -87,16 +88,34 @@ class EmployeeOnMap {
   };
 }
 
+/// Attendance colours (user 2026-11-14): not checked in = red for everyone;
+/// people whose work is outside the site ([worksOutsideSite]: sales team,
+/// drivers) on site = yellow, out = green; everyone else (workers,
+/// operators, office staff) on site = green, out = yellow (orange until
+/// 2026-11-15, user: yellow on every map). Managers are
+/// blue ([showsAsManager], applied by the callers).
 Color employeeStatusColor(BuildContext context, EmployeeOnMap p) => switch (p.day?.status) {
   null => Colors.blueGrey,
-  DayStatus.onSite => Colors.green.shade700,
-  DayStatus.away => Colors.orange.shade800,
-  DayStatus.checkedOut => Colors.indigo,
+  DayStatus.onSite => onSiteColor(p.user),
+  DayStatus.away => awayColor(p.user),
+  DayStatus.checkedOut => checkedOutColor,
   DayStatus.absent => Colors.deepOrange,
   DayStatus.onLeave => Colors.blue.shade400,
-  // Not in yet after their start (+ grace): red.
-  DayStatus.notIn => p.day!.notInYet ? Theme.of(context).colorScheme.error : Colors.grey.shade600,
+  DayStatus.notIn => Theme.of(context).colorScheme.error,
 };
+
+/// Checked out: burgundy (user 2026-11-16; indigo looked like the managers' blue).
+const checkedOutColor = Color(0xFF800020);
+
+/// Sales team and drivers: their work is out of the site.
+bool worksOutsideSite(AppUser u) => u.role.isLocationTracked;
+
+// Everyone on their site green, outside yellow (user 2026-11-16; before,
+// the sales team and drivers had it the other way round).
+final _green = Colors.green.shade700;
+final _yellow = Colors.yellow.shade700;
+Color onSiteColor(AppUser u) => _green;
+Color awayColor(AppUser u) => _yellow;
 
 String employeeStatusLabel(AppLocalizations l10n, EmployeeOnMap p) => switch (p.day?.status) {
   null => l10n.notOnAttendance,
@@ -248,7 +267,8 @@ class EmployeeDetails extends ConsumerWidget {
     final u = p.user;
     final d = p.result;
     final day = p.day;
-    final color = employeeStatusColor(context, p);
+    // Managers / department heads: blue, no attendance colours (2026-11-14).
+    final color = showsAsManager(u) ? managerPinColor : employeeStatusColor(context, p);
     final green = Colors.green.shade700;
     final error = theme.colorScheme.error;
     final midnight = DateTime(now.year, now.month, now.day);
@@ -374,7 +394,7 @@ class EmployeeDetails extends ConsumerWidget {
     final s = r.status;
     final heard = r.lastHeard == null ? null : timeAgo(context, r.lastHeard, now);
     final phone = <Widget>[
-      if (r.quiet != null) line(quietLine(context, r.quiet!, r.lastPosition, now), color: error, bold: true),
+      if (r.quiet != null) line(quietLine(context, r.quiet!, r.lastPosition, now, reportAt: r.quietAt), color: error, bold: true),
       line(
         switch (r.signal) {
           PhoneSignal.noPhone => l10n.phoneStatusNoPhone,

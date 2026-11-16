@@ -319,7 +319,9 @@ List<String> departmentHeadsOf(AppUser person, List<AppUser> users) {
 /// other managers.
 List<AppUser> peopleUnder(AppUser me, List<AppUser> users) => [
       for (final u in users)
-        if (u.id != me.id &&
+        // Inactive people show only on the Users page (user 2026-11-16).
+        if (u.active &&
+            u.id != me.id &&
             (u.supervisorId == me.id ||
                 directManagersOf(u, users).contains(me.id) ||
                 (me.isManager && departmentHeadsOf(u, users).contains(me.id))))

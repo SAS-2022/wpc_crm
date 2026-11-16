@@ -32,8 +32,16 @@ test('the payroll account reads and writes', async () => {
   await assertSucceeds(setDoc(doc(fs('wissam'), 'payroll/worker'), { uid: 'worker', basic: 3500 }));
 });
 
-test('nobody else, not even the GM, HR or the person', async () => {
-  for (const uid of ['sm2', 'gm', 'hr', 'worker']) {
+test('the GM and HR read every salary and edit everyone\'s but their own (2026-11-15)', async () => {
+  for (const uid of ['gm', 'hr']) {
+    await assertSucceeds(getDocs(collection(fs(uid), 'payroll')));
+    await assertSucceeds(setDoc(doc(fs(uid), 'payroll/worker'), { uid: 'worker', basic: 3100 }, { merge: true }));
+    await assertFails(setDoc(doc(fs(uid), `payroll/${uid}`), { uid, basic: 99999 }));
+  }
+});
+
+test('nobody else: another SM or the person', async () => {
+  for (const uid of ['sm2', 'worker']) {
     await assertFails(getDoc(doc(fs(uid), 'payroll/worker')));
     await assertFails(setDoc(doc(fs(uid), 'payroll/worker'), { uid: 'worker', basic: 1 }));
   }
@@ -51,22 +59,19 @@ const fromContract = (by, extra = {}) => ({
   contractPath: 'employee_contracts/worker/1_c.pdf', updatedBy: by, ...extra,
 });
 
-test('HR fills a salary from a contract but still cannot read it', async () => {
+test('HR fills a salary from a contract', async () => {
   await assertSucceeds(setDoc(doc(fs('hr'), 'payroll/worker'), fromContract('hr'), { merge: true }));
   await assertSucceeds(setDoc(doc(fs('hr'), 'payroll/newbie'), {
     ...fromContract('hr'), uid: 'newbie', contractPath: 'employee_contracts/newbie/1_c.pdf',
   }));
-  await assertFails(getDoc(doc(fs('hr'), 'payroll/worker')));
 });
 
-test('HR from a contract: only salary fields, as themselves, never their own', async () => {
-  await assertFails(setDoc(doc(fs('hr'), 'payroll/worker'), fromContract('hr', { bonus: 1 }), { merge: true }));
-  await assertFails(setDoc(doc(fs('hr'), 'payroll/worker'), fromContract('gm'), { merge: true }));
+test('HR never writes their own salary, not even from a contract', async () => {
   await assertFails(setDoc(doc(fs('hr'), 'payroll/hr'), { ...fromContract('hr'), uid: 'hr' }));
 });
 
-test('the GM and others cannot write from a contract', async () => {
-  for (const uid of ['gm', 'sm2', 'worker']) {
+test('others cannot write from a contract', async () => {
+  for (const uid of ['sm2', 'worker']) {
     await assertFails(setDoc(doc(fs(uid), 'payroll/worker'), fromContract(uid), { merge: true }));
   }
 });

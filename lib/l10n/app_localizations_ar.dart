@@ -115,6 +115,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get passwordTooShort => '6 أحرف على الأقل';
 
   @override
+  String get hrLimitedUserNote =>
+      'يمكن للموارد البشرية هنا تعديل الاسم وتاريخ الالتحاق والقسم والحضور ومواقع العمل والعمل الإضافي وجدول العمل. باقي البيانات يعدّلها مدير المبيعات / المدير العام.';
+
+  @override
   String get saved => 'تم الحفظ';
 
   @override
@@ -6115,6 +6119,23 @@ class AppLocalizationsAr extends AppLocalizations {
       'أغلق الجوال التطبيق (توفير البطارية / التشغيل التلقائي)';
 
   @override
+  String quietAsOf(String reason, String ago) {
+    return '$reason (آخر تقرير من الجوال $ago)';
+  }
+
+  @override
+  String focusZoomLevel(int n) {
+    return 'المستوى $n';
+  }
+
+  @override
+  String get settingMapFocusZoom => 'تقريب الخريطة عند الضغط';
+
+  @override
+  String get settingMapFocusZoomHelp =>
+      'مدى التقريب في خريطة الموظفين والتتبع المباشر وسجل المسارات عند الضغط على شخص أو موقع عمل: 12 = منطقة واسعة، 16 = الشوارع (الافتراضي)، 20 = مبنى واحد.';
+
+  @override
   String quietLine(String reason, String ago) {
     return '$reason · آخر موقع $ago';
   }
@@ -7429,4 +7450,55 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get roleForkliftDriver => 'سائق رافعة شوكية';
+
+  @override
+  String atTheSiteCount(int n) {
+    return 'في الموقع ($n)';
+  }
+
+  @override
+  String outsideTheSiteCount(int n) {
+    return 'خارج الموقع ($n)';
+  }
+
+  @override
+  String issueIdExpired(int n) {
+    return 'هوية منتهية ($n)';
+  }
+
+  @override
+  String issueIdExpiring(int n) {
+    return 'هوية تنتهي قريباً ($n)';
+  }
+
+  @override
+  String issueMissingDetails(int n) {
+    return 'بيانات ناقصة ($n)';
+  }
+
+  @override
+  String issueNoSalary(int n) {
+    return 'بدون راتب ($n)';
+  }
+
+  @override
+  String issueNoContract(int n) {
+    return 'بدون عقد ($n)';
+  }
+
+  @override
+  String issueNoInsurance(int n) {
+    return 'بدون تأمين صحي ($n)';
+  }
+
+  @override
+  String missingDetailsList(String items) {
+    return 'ناقص: $items';
+  }
+
+  @override
+  String get contractColumn => 'العقد';
+
+  @override
+  String get idColumn => 'الإقامة / الهوية';
 }

@@ -72,12 +72,12 @@ class EmploymentContractCard extends ConsumerWidget {
               subtitle: contract.uploadedAt == null
                   ? null
                   : Text(l10n.contractUploadedOn(DateFormat.yMMMd(locale).format(contract.uploadedAt!))),
-              onTap: () => _open(contract),
+              onTap: () => openEmploymentContract(contract),
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(
                   tooltip: l10n.contractOpen,
                   icon: const Icon(Icons.open_in_new),
-                  onPressed: () => _open(contract),
+                  onPressed: () => openEmploymentContract(contract),
                 ),
               ]),
             ),
@@ -87,13 +87,13 @@ class EmploymentContractCard extends ConsumerWidget {
     );
   }
 
-  /// Opened through a fresh download URL (none is stored, so only those the
-  /// Storage rules let in can get one).
-  static Future<void> _open(EmploymentContract c) async {
-    final url = await FirebaseStorage.instance.ref(c.storagePath).getDownloadURL();
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  }
+}
 
+/// Opened through a fresh download URL (none is stored, so only those the
+/// Storage rules let in can get one).
+Future<void> openEmploymentContract(EmploymentContract c) async {
+  final url = await FirebaseStorage.instance.ref(c.storagePath).getDownloadURL();
+  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 }
 
 /// Picks [user]'s contract, reads it, lets the uploader check the amounts,

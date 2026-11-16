@@ -296,10 +296,30 @@ describe('HR manages the back-office roles (2026-11-02)', () => {
       await assertFails(setDoc(doc(fs('hr'), `users/new_${role}`), person(role)));
       await assertFails(set(ref(rtdb('hr'), `roles/new_${role}`), role));
     }
-    await assertFails(updateDoc(doc(fs('hr'), 'users/exec'), { name: 'x' }));
-    await assertFails(updateDoc(doc(fs('hr'), 'users/gm'), { name: 'x' }));
+    await assertFails(updateDoc(doc(fs('hr'), 'users/exec'), { role: 'worker' }));
+    await assertFails(updateDoc(doc(fs('hr'), 'users/gm'), { active: false }));
     await assertFails(set(ref(rtdb('hr'), 'roles/sm'), 'worker'));
     await assertFails(set(ref(rtdb('hr'), 'driver_supervisors/exec'), 'ws'));
+  });
+
+  // 2026-11-16 (user): HR opens every user and changes a few fields.
+  test('sales people and managers: only name, dates, attendance, sites, overtime, schedule', async () => {
+    const stamp = { changedBy: 'hr', changedAt: serverTimestamp() };
+    for (const uid of ['exec', 'kam', 'sm', 'gm']) {
+      await assertSucceeds(updateDoc(doc(fs('hr'), `users/${uid}`), {
+        name: `${uid} 2`, joiningDate: '2024-03-01', department: 'sales', attendanceRequired: true,
+        workSiteIds: ['s1'], overtimeAllowed: true, overtimeMaxMin: 120,
+        workSchedule: { days: [1, 2, 3], start: 480, end: 1020 }, ...stamp,
+      }));
+      for (const change of [{ role: 'worker' }, { active: false }, { kamId: 'x' }, { odooName: 'x' },
+        { monthlyTarget: 5 }, { managerId: 'x' }, { extraRoles: ['hr'] }, { phone: '+966500000000' }, { name: '' }]) {
+        await assertFails(updateDoc(doc(fs('hr'), `users/${uid}`), { ...change, ...stamp }));
+      }
+    }
+    // Not on their own record (the Profile page changes their name).
+    await assertFails(updateDoc(doc(fs('hr'), 'users/hr'), { overtimeAllowed: true, ...stamp }));
+    // Other roles don't get it.
+    await assertFails(updateDoc(doc(fs('acc'), 'users/exec'), { name: 'x', changedBy: 'acc', changedAt: serverTimestamp() }));
   });
 });
 

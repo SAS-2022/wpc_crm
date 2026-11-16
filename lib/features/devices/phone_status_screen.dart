@@ -301,7 +301,7 @@ class _PhoneCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               r.quiet != null
-                  ? quietLine(context, r.quiet!, r.lastPosition, now)
+                  ? quietLine(context, r.quiet!, r.lastPosition, now, reportAt: r.quietAt)
                   : switch (r.signal) {
                       PhoneSignal.noPhone => l10n.phoneStatusNoPhone,
                       PhoneSignal.stopped =>

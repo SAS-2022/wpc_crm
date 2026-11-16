@@ -148,6 +148,10 @@ class _CatalogsScreenState extends ConsumerState<CatalogsScreen> {
     );
   }
 
+  /// [id] is an active user (inactive people aren't offered as filters).
+  bool _isActive(String? id) =>
+      (ref.read(usersProvider).value ?? const <AppUser>[]).any((u) => u.id == id && u.active);
+
   Widget _clientsTab(BuildContext context, List<Client> clients, String Function(String?) nameOf) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
@@ -165,7 +169,11 @@ class _CatalogsScreenState extends ConsumerState<CatalogsScreen> {
       now: now,
     );
 
-    final owners = {for (final r in all) r.client.assignedTo ?? ''}.toList()
+    // Inactive people aren't offered as a filter (user 2026-11-16).
+    final owners = {
+      for (final r in all)
+        if ((r.client.assignedTo ?? '').isEmpty || (_isActive(r.client.assignedTo))) r.client.assignedTo ?? '',
+    }.toList()
       ..sort((a, b) => nameOf(a).compareTo(nameOf(b)));
     final cities = {for (final r in all) if (r.client.city.trim().isNotEmpty) r.client.city.trim()}.toList()..sort();
     if (_owner != null && !owners.contains(_owner)) _owner = null;
@@ -361,7 +369,8 @@ class _CatalogsScreenState extends ConsumerState<CatalogsScreen> {
           h,
     ];
     final totals = handoverTotals(matching);
-    final givers = {for (final h in all) h.byId}.toList()..sort((a, b) => nameOf(a).compareTo(nameOf(b)));
+    final givers = {for (final h in all) if (_isActive(h.byId)) h.byId}.toList()
+      ..sort((a, b) => nameOf(a).compareTo(nameOf(b)));
     if (_giver != null && !givers.contains(_giver)) _giver = null;
     final list = [
       for (final h in matching)

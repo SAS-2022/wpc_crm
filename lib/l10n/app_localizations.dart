@@ -302,6 +302,12 @@ abstract class AppLocalizations {
   /// **'At least 6 characters'**
   String get passwordTooShort;
 
+  /// No description provided for @hrLimitedUserNote.
+  ///
+  /// In en, this message translates to:
+  /// **'HR can change the name, joining date, department, attendance, work sites, overtime and work schedule here. The other details are kept by the sales manager / GM.'**
+  String get hrLimitedUserNote;
+
   /// No description provided for @saved.
   ///
   /// In en, this message translates to:
@@ -10045,6 +10051,30 @@ abstract class AppLocalizations {
   /// **'App closed by the phone (battery saving / autostart)'**
   String get quietAppClosed;
 
+  /// No description provided for @quietAsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{reason} (phone\'s last report {ago})'**
+  String quietAsOf(String reason, String ago);
+
+  /// No description provided for @focusZoomLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {n}'**
+  String focusZoomLevel(int n);
+
+  /// No description provided for @settingMapFocusZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Map zoom when clicking'**
+  String get settingMapFocusZoom;
+
+  /// No description provided for @settingMapFocusZoomHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How close the Employee Map, Live tracking and Route history zoom when you click a person or a work site: 12 = a wide area, 16 = streets (default), 20 = one building.'**
+  String get settingMapFocusZoomHelp;
+
   /// No description provided for @quietLine.
   ///
   /// In en, this message translates to:
@@ -12131,6 +12161,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Forklift driver'**
   String get roleForkliftDriver;
+
+  /// No description provided for @atTheSiteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'At the site ({n})'**
+  String atTheSiteCount(int n);
+
+  /// No description provided for @outsideTheSiteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside the site ({n})'**
+  String outsideTheSiteCount(int n);
+
+  /// No description provided for @issueIdExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'ID expired ({n})'**
+  String issueIdExpired(int n);
+
+  /// No description provided for @issueIdExpiring.
+  ///
+  /// In en, this message translates to:
+  /// **'ID expiring soon ({n})'**
+  String issueIdExpiring(int n);
+
+  /// No description provided for @issueMissingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details missing ({n})'**
+  String issueMissingDetails(int n);
+
+  /// No description provided for @issueNoSalary.
+  ///
+  /// In en, this message translates to:
+  /// **'No salary ({n})'**
+  String issueNoSalary(int n);
+
+  /// No description provided for @issueNoContract.
+  ///
+  /// In en, this message translates to:
+  /// **'No contract ({n})'**
+  String issueNoContract(int n);
+
+  /// No description provided for @issueNoInsurance.
+  ///
+  /// In en, this message translates to:
+  /// **'No health insurance ({n})'**
+  String issueNoInsurance(int n);
+
+  /// No description provided for @missingDetailsList.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing: {items}'**
+  String missingDetailsList(String items);
+
+  /// No description provided for @contractColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get contractColumn;
+
+  /// No description provided for @idColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Iqama / ID'**
+  String get idColumn;
 }
 
 class _AppLocalizationsDelegate

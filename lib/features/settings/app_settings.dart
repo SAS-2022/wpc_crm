@@ -45,6 +45,12 @@ enum AppSetting {
   /// many minutes → the people above are told (`escalateTeamAlerts`).
   alertEscalateMin(30, 5, 240),
 
+  /// People maps (Employee Map, Live tracking, Route history): the zoom
+  /// level when a person or a site is clicked (2026-11-15, user: adjustable
+  /// in App settings; 16 = the old fixed level, 13 a wide area … 19 one
+  /// building).
+  mapFocusZoom(16, 12, 20),
+
   /// Catalogs / stands due within this many days show "due soon".
   givenDueSoonDays(14, 1, 90),
 

@@ -124,7 +124,8 @@ class _VehicleCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final v = vehicle;
-    final drivers = [for (final id in v.driverIds) users[id]?.name ?? '?'];
+    // Inactive drivers aren't shown (user 2026-11-16).
+    final drivers = [for (final id in v.driverIds) if (users[id]?.active ?? false) users[id]!.name];
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       clipBehavior: Clip.antiAlias,
@@ -228,14 +229,14 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
     final l10n = AppLocalizations.of(context);
     final drivers = [
       for (final u in users)
-        if (u.role == UserRole.driver && (u.active || v.driverIds.contains(u.id))) u,
+        if (u.role == UserRole.driver && u.active) u,
     ];
     final vehicleOf = {
       for (final o in all)
         if (o.id != v.id)
           for (final id in o.driverIds) id: o.plate,
     };
-    var picked = {...v.driverIds};
+    var picked = {for (final id in v.driverIds) if (drivers.any((d) => d.id == id)) id};
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialog) => StatefulBuilder(
@@ -524,14 +525,14 @@ class _VehicleScreenState extends ConsumerState<VehicleScreen> {
           section(
             l10n.drivers,
             [
-              if (v.driverIds.isEmpty)
+              if (!v.driverIds.any((id) => users[id]?.active ?? false))
                 ListTile(title: Text(l10n.noDriverAssigned))
               else
                 for (final id in v.driverIds)
+                  if (users[id]?.active ?? false)
                   ListTile(
                     leading: const Icon(Icons.person_outline),
-                    title: Text(users[id]?.name ?? '?'),
-                    subtitle: users[id]?.active == false ? Text(l10n.inactive) : null,
+                    title: Text(users[id]!.name),
                     trailing: seesRoutes
                         ? IconButton(
                             icon: const Icon(Icons.route),

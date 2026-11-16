@@ -217,4 +217,17 @@ void main() {
       expect(r(null, p: off, pointAgo: 60), QuietReason.appClosed);
     });
   });
+
+  test('quietReportAt = the newer of the phone report and presence', () {
+    final now = DateTime(2026, 11, 15, 12);
+    final old = now.subtract(const Duration(hours: 3));
+    final d = DeviceStatus(platform: 'android', gps: true, location: 'denied', at: old);
+    expect(quietReportAt(device: d, presence: null), old);
+    expect(quietReportAt(device: null, presence: null), isNull);
+    final p = Presence(online: false, lastSeen: now.subtract(const Duration(days: 1)), gpsOn: true, permission: 'always');
+    expect(quietReportAt(device: d, presence: p), old);
+    final r = phoneReport(device: d, presence: null, liveAt: null, recordedAt: null, versions: const {}, shouldShare: true, now: now);
+    expect(r.quiet, QuietReason.noPermission);
+    expect(r.quietAt, old);
+  });
 }

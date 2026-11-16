@@ -15,8 +15,15 @@ String quietReasonText(AppLocalizations l10n, QuietReason r) => switch (r) {
     };
 
 /// "App closed by the phone … · last location 1 h 55 min ago".
-String quietLine(BuildContext context, QuietReason r, DateTime? lastPosition, DateTime now) {
+/// [reportAt]: when the phone sent the report the reason comes from; a
+/// setting read from an old report (GPS, permission, internet) says so —
+/// the phone may have been fixed since (2026-11-15).
+String quietLine(BuildContext context, QuietReason r, DateTime? lastPosition, DateTime now, {DateTime? reportAt}) {
   final l10n = AppLocalizations.of(context);
-  final reason = quietReasonText(l10n, r);
+  var reason = quietReasonText(l10n, r);
+  final fromSetting = r == QuietReason.gpsOff || r == QuietReason.noPermission || r == QuietReason.noInternet;
+  if (fromSetting && reportAt != null && now.difference(reportAt) >= stoppedAfter) {
+    reason = l10n.quietAsOf(reason, timeAgo(context, reportAt, now));
+  }
   return lastPosition == null ? l10n.quietLineNone(reason) : l10n.quietLine(reason, timeAgo(context, lastPosition, now));
 }

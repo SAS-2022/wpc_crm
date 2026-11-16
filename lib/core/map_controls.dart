@@ -183,6 +183,8 @@ class MarkerIcons {
 
   /// [fill] circle with [text] in [textColor], inside a [ring] of [ringWidth].
   /// [size] is the size at street level; [scaled] false keeps it at any zoom.
+  /// [gap]: a thin white circle between the fill and the ring; [striped]:
+  /// diagonal white stripes over the fill (key account managers, 2026-11-16).
   BitmapDescriptor circle({
     required BuildContext context,
     required Color fill,
@@ -192,13 +194,18 @@ class MarkerIcons {
     double ringWidth = 2,
     double size = 30,
     bool scaled = true,
+    bool gap = false,
+    bool striped = false,
   }) {
     final factor = scaled ? _scale : 1.0;
     final drawn = size * factor;
     final shown = drawn < _minTextSize ? '' : text;
     final ringDrawn = factor == 1 ? ringWidth : math.max(1.0, ringWidth * factor);
-    final key = 'c|${fill.toARGB32()}|$shown|${textColor.toARGB32()}|${ring.toARGB32()}|$ringDrawn|$drawn';
-    return _get(key, context, (ratio) => _drawCircle(fill, shown, textColor, ring, ringDrawn, drawn, ratio),
+    final key = 'c|${fill.toARGB32()}|$shown|${textColor.toARGB32()}|${ring.toARGB32()}|$ringDrawn|$drawn|$gap|$striped';
+    return _get(
+        key,
+        context,
+        (ratio) => _drawCircle(fill, shown, textColor, ring, ringDrawn, drawn, ratio, gap: gap, striped: striped),
         () => BitmapDescriptor.defaultMarkerWithHue(HSVColor.fromColor(fill).hue));
   }
 
@@ -236,8 +243,10 @@ class MarkerIcons {
     Color ring,
     double ringWidth,
     double size,
-    double ratio,
-  ) async {
+    double ratio, {
+    bool gap = false,
+    bool striped = false,
+  }) async {
     const shadow = 2.0;
     final full = size + shadow * 2;
     final recorder = ui.PictureRecorder();
@@ -252,7 +261,11 @@ class MarkerIcons {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, shadow),
     );
     canvas.drawCircle(center, radius, Paint()..color = ring);
-    canvas.drawCircle(center, radius - ringWidth, Paint()..color = fill);
+    final gapWidth = gap ? math.max(1.0, size * 0.05) : 0.0;
+    if (gap) canvas.drawCircle(center, radius - ringWidth, Paint()..color = Colors.white);
+    final inner = radius - ringWidth - gapWidth;
+    canvas.drawCircle(center, inner, Paint()..color = fill);
+    if (striped) paintStripes(canvas, center, inner);
     if (text.isNotEmpty) {
       final painter = TextPainter(
         text: TextSpan(
@@ -307,6 +320,32 @@ class MarkerIcons {
     final png = await image.toByteData(format: ui.ImageByteFormat.png);
     return BitmapDescriptor.bytes(png!.buffer.asUint8List(), imagePixelRatio: ratio);
   }
+}
+
+/// Diagonal white stripes inside the circle at [center] with [radius]
+/// (key account managers' pins and avatars).
+void paintStripes(Canvas canvas, Offset center, double radius) {
+  canvas.save();
+  canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
+  final paint = Paint()
+    ..color = Colors.white.withValues(alpha: 0.55)
+    ..strokeWidth = math.max(1.5, radius * 0.18);
+  final step = math.max(4.0, radius * 0.5);
+  for (var d = -radius * 2; d <= radius * 2; d += step) {
+    canvas.drawLine(center + Offset(d - radius, radius), center + Offset(d + radius, -radius), paint);
+  }
+  canvas.restore();
+}
+
+/// [paintStripes] as a widget painter (list avatars).
+class StripesPainter extends CustomPainter {
+  const StripesPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) => paintStripes(canvas, size.center(Offset.zero), size.shortestSide / 2);
+
+  @override
+  bool shouldRepaint(StripesPainter oldDelegate) => false;
 }
 
 /// Map view, my location, zoom in, zoom out and (optionally) show-all buttons, stacked

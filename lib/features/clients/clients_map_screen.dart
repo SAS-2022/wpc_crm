@@ -366,13 +366,15 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      // The sales manager in blue (user 2026-11-07).
-                      fill: (u.role == UserRole.salesManager ? managerPinColor : salespersonPinColor).withValues(
+                      // Managers / department heads in blue (SM 2026-11-07, all 2026-11-14).
+                      fill: personPinColor(u, salespersonPinColor).withValues(
                         alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45,
                       ),
                       text: styles[u.id]?.initials ?? initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
+                      gap: showsAsManager(u),
+                      striped: stripedPin(u),
                     ),
                     infoWindow: InfoWindow(title: u.name, snippet: timeAgo(context, loc.updatedAt, now)),
                   ),
@@ -386,12 +388,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      fill: liveState(loc, presence[u.id], now) == LiveState.live
-                          ? driverPinColor
-                          : driverPinColor.withValues(alpha: 0.45),
+                      fill: personPinColor(u, driverPinColor).withValues(
+                        alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45,
+                      ),
                       text: initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
+                      gap: showsAsManager(u),
+                      striped: stripedPin(u),
                     ),
                     infoWindow: InfoWindow(
                       title: u.name,
@@ -407,12 +411,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      fill: recordedState(loc, now) == LiveState.live
-                          ? staffPinColor
-                          : staffPinColor.withValues(alpha: 0.45),
+                      fill: personPinColor(u, staffPinColor).withValues(
+                        alpha: recordedState(loc, now) == LiveState.live ? 1 : 0.45,
+                      ),
                       text: initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
+                      gap: showsAsManager(u),
+                      striped: stripedPin(u),
                     ),
                     infoWindow: InfoWindow(
                       title: u.name,
@@ -806,8 +812,23 @@ class MapPeopleController extends Notifier<Set<MapPeople>> {
 /// any client colour (status or salesperson palette).
 const salespersonPinColor = Color(0xFF6A1B9A);
 
-/// The sales manager's pin on the clients map and the live map (2026-11-07).
+/// The sales manager's pin on the clients map and the live map (2026-11-07);
+/// since 2026-11-14 every manager / department head ([showsAsManager]) on
+/// every people map, list avatar included, with no status colours.
 const managerPinColor = Color(0xFF1565C0);
+
+/// Managers and department heads ([AppUser.isManager]: GM, SM, KAM,
+/// logistics / factory manager, "Is a manager" people) show in blue.
+bool showsAsManager(AppUser u) => u.isManager;
+
+/// Key account managers: blue with diagonal white stripes (user 2026-11-16),
+/// main or extra role, unless they also have a higher manager role (GM, SM,
+/// logistics / factory manager): the highest role decides.
+bool stripedPin(AppUser u) =>
+    u.hasRole(UserRole.kam) && !u.roles.any((r) => r.isManagerRole && r != UserRole.kam);
+
+/// [base], or blue for a manager.
+Color personPinColor(AppUser u, Color base) => showsAsManager(u) ? managerPinColor : base;
 
 /// Drivers' and the other employees' pins (2026-11-01).
 const driverPinColor = Color(0xFF5D4037);

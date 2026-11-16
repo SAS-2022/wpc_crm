@@ -64,13 +64,16 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final team = me.can.isAdmin ? null : {me.id, for (final u in teamOf(me, users)) u.id};
     final all = transferWatchRows(clients: clients, visits: visits, since: since, now: now, people: team);
     final archivedCount = all.where((r) => r.archived).length;
+    // Moves to someone made inactive since are left out, and inactive
+    // movers aren't offered as a filter (user 2026-11-16).
+    bool isActive(String? id) => byId[id]?.active ?? false;
     final shown = [
       for (final r in all)
-        if (r.archived == _archived) r,
+        if (r.archived == _archived && isActive(r.transfer.toId)) r,
     ];
     final targets = {for (final r in shown) r.transfer.toId!};
     if (_person != null && !targets.contains(_person)) _person = null;
-    final movers = {for (final r in shown) r.transfer.byId};
+    final movers = {for (final r in shown) if (isActive(r.transfer.byId)) r.transfer.byId};
     if (_mover != null && !movers.contains(_mover)) _mover = null;
     final rows = [
       for (final r in shown)

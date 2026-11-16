@@ -115,6 +115,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordTooShort => 'At least 6 characters';
 
   @override
+  String get hrLimitedUserNote =>
+      'HR can change the name, joining date, department, attendance, work sites, overtime and work schedule here. The other details are kept by the sales manager / GM.';
+
+  @override
   String get saved => 'Saved';
 
   @override
@@ -6104,6 +6108,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'App closed by the phone (battery saving / autostart)';
 
   @override
+  String quietAsOf(String reason, String ago) {
+    return '$reason (phone\'s last report $ago)';
+  }
+
+  @override
+  String focusZoomLevel(int n) {
+    return 'Level $n';
+  }
+
+  @override
+  String get settingMapFocusZoom => 'Map zoom when clicking';
+
+  @override
+  String get settingMapFocusZoomHelp =>
+      'How close the Employee Map, Live tracking and Route history zoom when you click a person or a work site: 12 = a wide area, 16 = streets (default), 20 = one building.';
+
+  @override
   String quietLine(String reason, String ago) {
     return '$reason · last location $ago';
   }
@@ -7416,4 +7437,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleForkliftDriver => 'Forklift driver';
+
+  @override
+  String atTheSiteCount(int n) {
+    return 'At the site ($n)';
+  }
+
+  @override
+  String outsideTheSiteCount(int n) {
+    return 'Outside the site ($n)';
+  }
+
+  @override
+  String issueIdExpired(int n) {
+    return 'ID expired ($n)';
+  }
+
+  @override
+  String issueIdExpiring(int n) {
+    return 'ID expiring soon ($n)';
+  }
+
+  @override
+  String issueMissingDetails(int n) {
+    return 'Details missing ($n)';
+  }
+
+  @override
+  String issueNoSalary(int n) {
+    return 'No salary ($n)';
+  }
+
+  @override
+  String issueNoContract(int n) {
+    return 'No contract ($n)';
+  }
+
+  @override
+  String issueNoInsurance(int n) {
+    return 'No health insurance ($n)';
+  }
+
+  @override
+  String missingDetailsList(String items) {
+    return 'Missing: $items';
+  }
+
+  @override
+  String get contractColumn => 'Contract';
+
+  @override
+  String get idColumn => 'Iqama / ID';
 }

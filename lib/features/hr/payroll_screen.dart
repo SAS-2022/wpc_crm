@@ -6,7 +6,15 @@ import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../core/search_text.dart';
 import '../../l10n/app_localizations.dart';
+import '../documents/company_docs.dart';
+import '../documents/company_docs_repository.dart';
+import '../documents/company_docs_widgets.dart' show docExpiryColor;
 import '../users/users_repository.dart';
+import 'employee_completeness.dart';
+import 'employee_record.dart';
+import 'employee_record_widgets.dart' show idExpiryText, idTypeLabel;
+import 'employee_records_repository.dart';
+import 'employment_contract_card.dart' show openEmploymentContract, uploadEmploymentContract;
 import 'hr_actions.dart';
 import 'hr_actions_repository.dart';
 import 'payroll.dart';
@@ -28,6 +36,9 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   String _search = '';
 
+  /// Ticked issue chips (any of them; empty = everyone), user 2026-11-16.
+  final _issues = <EmployeeIssue>{};
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -43,10 +54,46 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
         if (u.active && (_search.isEmpty || searchHas(u.name, _search))) u,
     ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final map = salaries.value ?? const <String, SalaryStructure>{};
+    final records = ref.watch(employeeRecordsProvider).value ?? const <String, EmployeeRecord>{};
+    final policies = healthInsurances(ref.watch(companyDocsProvider).value ?? const <CompanyDoc>[]);
+    final today = DateTime.now();
+    final issuesOf = {
+      for (final u in people)
+        u.id: employeeIssues(
+          u: u,
+          record: records[u.id],
+          salary: map[u.id] ?? SalaryStructure.empty,
+          insured: insuranceOf(records[u.id], policies) != null,
+          today: today,
+        ),
+    };
+    final issueCounts = {
+      for (final i in EmployeeIssue.values) i: people.where((u) => issuesOf[u.id]!.contains(i)).length,
+    };
     final rows = [
       for (final u in people)
-        (user: u, salary: map[u.id] ?? SalaryStructure.empty, slip: payslipFor(map[u.id] ?? SalaryStructure.empty, actions, u.id, monthKey)),
+        if (matchesIssues(issuesOf[u.id]!, _issues))
+          (
+            user: u,
+            salary: map[u.id] ?? SalaryStructure.empty,
+            slip: payslipFor(map[u.id] ?? SalaryStructure.empty, actions, u.id, monthKey),
+          ),
     ];
+    String issueLabel(EmployeeIssue i, int n) => switch (i) {
+      EmployeeIssue.idExpired => l10n.issueIdExpired(n),
+      EmployeeIssue.idExpiring => l10n.issueIdExpiring(n),
+      EmployeeIssue.missingDetails => l10n.issueMissingDetails(n),
+      EmployeeIssue.noSalary => l10n.issueNoSalary(n),
+      EmployeeIssue.noContract => l10n.issueNoContract(n),
+      EmployeeIssue.noInsurance => l10n.issueNoInsurance(n),
+    };
+    String detailLabel(MissingDetail d) => switch (d) {
+      MissingDetail.idNumber => l10n.idNumber,
+      MissingDetail.idExpiry => l10n.idExpiryDate,
+      MissingDetail.nationality => l10n.nationality,
+      MissingDetail.joiningDate => l10n.joiningDate,
+      MissingDetail.phone => l10n.phone,
+    };
     final withSalary = rows.where((r) => r.salary.isSet).toList();
     double total(double Function(({AppUser user, SalaryStructure salary, Payslip slip}) r) f) =>
         withSalary.fold(0.0, (a, r) => a + f(r));
@@ -60,55 +107,102 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 8, 12, 0),
-          child: Row(children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
-            ),
-            Text(DateFormat.yMMMM(locale).format(_month), style: theme.textTheme.titleMedium),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: l10n.searchEmployee,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (v) => setState(() => _search = v.trim()),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
               ),
-            ),
-          ]),
+              Text(DateFormat.yMMMM(locale).format(_month), style: theme.textTheme.titleMedium),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    isDense: true,
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: l10n.searchEmployee,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (v) => setState(() => _search = v.trim()),
+                ),
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-          child: Wrap(spacing: 8, runSpacing: 8, children: [
-            _Tile(label: l10n.payrollEmployees, value: '${withSalary.length} / ${rows.length}'),
-            _Tile(label: l10n.payrollGross, value: money.format(total((r) => r.slip.gross))),
-            _Tile(label: l10n.payrollDeductions, value: money.format(total((r) => r.slip.deductions)), color: theme.colorScheme.error),
-            _Tile(label: l10n.payrollRewards, value: money.format(total((r) => r.slip.rewards)), color: Colors.green.shade700),
-            _Tile(label: l10n.payrollNet, value: money.format(total((r) => r.slip.net)), bold: true),
-          ]),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _Tile(label: l10n.payrollEmployees, value: '${withSalary.length} / ${rows.length}'),
+              _Tile(label: l10n.payrollGross, value: money.format(total((r) => r.slip.gross))),
+              _Tile(
+                label: l10n.payrollDeductions,
+                value: money.format(total((r) => r.slip.deductions)),
+                color: theme.colorScheme.error,
+              ),
+              _Tile(
+                label: l10n.payrollRewards,
+                value: money.format(total((r) => r.slip.rewards)),
+                color: Colors.green.shade700,
+              ),
+              _Tile(label: l10n.payrollNet, value: money.format(total((r) => r.slip.net)), bold: true),
+            ],
+          ),
+        ),
+        // Who needs attention: ID expiring, details missing, … (2026-11-16).
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              ChoiceChip(
+                visualDensity: VisualDensity.compact,
+                showCheckmark: false,
+                label: Text('${l10n.all} (${people.length})'),
+                selected: _issues.isEmpty,
+                onSelected: (_) => setState(_issues.clear),
+              ),
+              for (final i in EmployeeIssue.values)
+                if (issueCounts[i]! > 0 || _issues.contains(i))
+                  FilterChip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text(issueLabel(i, issueCounts[i]!)),
+                    selected: _issues.contains(i),
+                    onSelected: (on) => setState(() => on ? _issues.add(i) : _issues.remove(i)),
+                  ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Text(l10n.payrollHint, style: theme.textTheme.bodySmall),
         ),
         if (salaries.isLoading && !salaries.hasValue)
-          const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: DataTable(
             showCheckboxColumn: false,
             columnSpacing: 20,
+            // Name cells can hold three lines (salary not set, missing details).
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: double.infinity,
             headingTextStyle: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
             columns: [
               DataColumn(label: Text(l10n.employee)),
+              DataColumn(label: Text(l10n.idColumn)),
+              DataColumn(label: Text(l10n.contractColumn)),
               DataColumn(label: Text(l10n.salaryBasic), numeric: true),
               DataColumn(label: Text(l10n.salaryHousing), numeric: true),
               DataColumn(label: Text(l10n.salaryTransport), numeric: true),
@@ -121,24 +215,44 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
             rows: [
               for (final r in rows)
                 DataRow(
-                  onSelectChanged: (_) => showSalaryDialog(context, ref, r.user, r.salary),
+                  onSelectChanged: canEditPayroll(me, r.user.id)
+                      ? (_) => showSalaryDialog(context, ref, r.user, r.salary)
+                      : null,
                   cells: [
-                    DataCell(Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(r.user.name),
-                        if (!r.salary.isSet)
-                          Text(l10n.salaryNotSet, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
-                      ],
-                    )),
+                    DataCell(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(r.user.name),
+                            if (!r.salary.isSet)
+                              Text(
+                                l10n.salaryNotSet,
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                              ),
+                            if (missingDetails(r.user, records[r.user.id]) case final missing when missing.isNotEmpty)
+                              Text(
+                                l10n.missingDetailsList(missing.map(detailLabel).join(', ')),
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade800),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _idCell(context, records[r.user.id], today),
+                    _contractCell(context, r.user, records[r.user.id]),
                     num(r.salary.basic),
                     num(r.salary.housing),
                     num(r.salary.transport),
-                    DataCell(Tooltip(
-                      message: [for (final o in r.salary.others) '${o.name}: ${money.format(o.amount)}'].join('\n'),
-                      child: Text(m(r.salary.otherTotal)),
-                    )),
+                    DataCell(
+                      Tooltip(
+                        message: [for (final o in r.salary.others) '${o.name}: ${money.format(o.amount)}'].join('\n'),
+                        child: Text(m(r.salary.otherTotal)),
+                      ),
+                    ),
                     num(r.slip.gross),
                     num(r.slip.deductions, style: TextStyle(color: theme.colorScheme.error)),
                     num(r.slip.rewards, style: TextStyle(color: Colors.green.shade700)),
@@ -150,6 +264,8 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
                   color: WidgetStatePropertyAll(theme.colorScheme.surfaceContainerHighest),
                   cells: [
                     DataCell(Text(l10n.total, style: bold)),
+                    const DataCell(SizedBox()),
+                    const DataCell(SizedBox()),
                     num(total((r) => r.salary.basic), style: bold),
                     num(total((r) => r.salary.housing), style: bold),
                     num(total((r) => r.salary.transport), style: bold),
@@ -164,6 +280,71 @@ class _PayrollTabState extends ConsumerState<PayrollTab> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Iqama / national ID: type, number and expiry (red expired, orange soon).
+  DataCell _idCell(BuildContext context, EmployeeRecord? record, DateTime today) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    if (record == null || !record.hasId) {
+      return DataCell(Text('–', style: TextStyle(color: theme.colorScheme.outline)));
+    }
+    final state = docExpiryState(record.idExpiry, today);
+    return DataCell(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text([idTypeLabel(l10n, record.idType), if (record.idNumber.isNotEmpty) record.idNumber].join(' · ')),
+          Text(
+            idExpiryText(context, record.idExpiry, today),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: state == DocExpiryState.dueSoon || state == DocExpiryState.expired
+                  ? docExpiryColor(context, state)
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The employment contract: Open + Replace, or Upload (user 2026-11-16:
+  /// upload from the Payroll tab, not only the employee page).
+  DataCell _contractCell(BuildContext context, AppUser user, EmployeeRecord? record) {
+    final l10n = AppLocalizations.of(context);
+    final contract = record?.contract;
+    final canUpload = canUploadContract(ref.read(currentUserProvider).value, user.id);
+    return DataCell(
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (contract != null)
+            IconButton(
+              tooltip: '${l10n.contractOpen}: ${contract.fileName}',
+              icon: Icon(
+                contract.contentType == 'application/pdf' ? Icons.picture_as_pdf_outlined : Icons.description_outlined,
+              ),
+              onPressed: () => openEmploymentContract(contract),
+            ),
+          if (canUpload)
+            contract == null
+                ? TextButton.icon(
+                    onPressed: () => uploadEmploymentContract(context, ref, user, null),
+                    icon: const Icon(Icons.upload_file_outlined, size: 18),
+                    label: Text(l10n.contractUpload),
+                  )
+                : IconButton(
+                    tooltip: l10n.contractReplace,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    onPressed: () => uploadEmploymentContract(context, ref, user, contract),
+                  )
+          else if (contract == null)
+            const Text('–'),
+        ],
+      ),
     );
   }
 }
@@ -186,11 +367,16 @@ class _Tile extends StatelessWidget {
         border: Border.all(color: theme.dividerColor),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: theme.textTheme.labelSmall),
-        Text(value,
-            style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: bold ? FontWeight.w700 : null)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelSmall),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: bold ? FontWeight.w700 : null),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -203,49 +389,60 @@ class PersonSalaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!canSeePayroll(ref.watch(currentUserProvider).value)) return const SizedBox.shrink();
+    final me = ref.watch(currentUserProvider).value;
+    if (!canSeePayroll(me)) return const SizedBox.shrink();
+    final canEdit = canEditPayroll(me, user.id);
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
     final money = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 2);
     final s = ref.watch(salariesProvider).value?[user.id] ?? SalaryStructure.empty;
     Widget line(String label, double v, {bool bold = false, bool locked = false}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(children: [
-            Expanded(child: Text(label, style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null)),
-            if (locked)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 6),
-                child: Tooltip(message: l10n.salaryFromContract, child: const Icon(Icons.lock_outline, size: 14)),
-              ),
-            Text(money.format(v), style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null),
-          ]),
-        );
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null),
+          ),
+          if (locked)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 6),
+              child: Tooltip(message: l10n.salaryFromContract, child: const Icon(Icons.lock_outline, size: 14)),
+            ),
+          Text(money.format(v), style: bold ? const TextStyle(fontWeight: FontWeight.w600) : null),
+        ],
+      ),
+    );
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: InkWell(
-        onTap: () => showSalaryDialog(context, ref, user, s),
+        onTap: canEdit ? () => showSalaryDialog(context, ref, user, s) : null,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              const Icon(Icons.payments_outlined),
-              const SizedBox(width: 8),
-              Expanded(child: Text(l10n.salary, style: theme.textTheme.titleMedium)),
-              const Icon(Icons.edit_outlined, size: 18),
-            ]),
-            const SizedBox(height: 8),
-            if (!s.isSet)
-              Text(l10n.salaryNotSet, style: TextStyle(color: theme.colorScheme.error))
-            else ...[
-              line(l10n.salaryBasic, s.basic, locked: s.isLocked('basic')),
-              line(l10n.salaryHousing, s.housing, locked: s.isLocked('housing')),
-              line(l10n.salaryTransport, s.transport, locked: s.isLocked('transport')),
-              for (final o in s.others) line(o.name, o.amount, locked: s.isLocked('others')),
-              const Divider(),
-              line(l10n.payrollGross, s.monthly, bold: true),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.payments_outlined),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l10n.salary, style: theme.textTheme.titleMedium)),
+                  if (canEdit) const Icon(Icons.edit_outlined, size: 18),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (!s.isSet)
+                Text(l10n.salaryNotSet, style: TextStyle(color: theme.colorScheme.error))
+              else ...[
+                line(l10n.salaryBasic, s.basic, locked: s.isLocked('basic')),
+                line(l10n.salaryHousing, s.housing, locked: s.isLocked('housing')),
+                line(l10n.salaryTransport, s.transport, locked: s.isLocked('transport')),
+                for (final o in s.others) line(o.name, o.amount, locked: s.isLocked('others')),
+                const Divider(),
+                line(l10n.payrollGross, s.monthly, bold: true),
+              ],
             ],
-          ]),
+          ),
         ),
       ),
     );
@@ -256,12 +453,11 @@ class PersonSalaryCard extends ConsumerWidget {
 /// number of named other allowances (names used for others are suggested).
 Future<void> showSalaryDialog(BuildContext context, WidgetRef ref, AppUser user, SalaryStructure current) async {
   final me = ref.read(currentUserProvider).value;
-  if (!canSeePayroll(me)) return;
+  if (!canEditPayroll(me, user.id)) return;
   final names = <String>{
     for (final s in ref.read(salariesProvider).value?.values ?? const <SalaryStructure>[])
       for (final o in s.others) o.name,
-  }.toList()
-    ..sort();
+  }.toList()..sort();
   final result = await showDialog<SalaryStructure>(
     context: context,
     builder: (_) => _SalaryDialog(name: user.name, current: current, suggestions: names),
@@ -297,7 +493,12 @@ class _SalaryDialogState extends State<_SalaryDialog> {
 
   @override
   void dispose() {
-    for (final c in [_basic, _housing, _transport, for (final o in _others) ...[o.$1, o.$2]]) {
+    for (final c in [
+      _basic,
+      _housing,
+      _transport,
+      for (final o in _others) ...[o.$1, o.$2],
+    ]) {
       c.dispose();
     }
     for (final o in _others) {
@@ -319,7 +520,8 @@ class _SalaryDialogState extends State<_SalaryDialog> {
           ? c.others
           : [
               for (final o in _others)
-                if (o.$1.text.trim().isNotEmpty && _num(o.$2) != 0) OtherAllowance(name: o.$1.text.trim(), amount: _num(o.$2)),
+                if (o.$1.text.trim().isNotEmpty && _num(o.$2) != 0)
+                  OtherAllowance(name: o.$1.text.trim(), amount: _num(o.$2)),
             ],
       contractFields: c.contractFields,
     );
@@ -334,15 +536,19 @@ class _SalaryDialogState extends State<_SalaryDialog> {
     const numbers = TextInputType.numberWithOptions(decimal: true);
     final lockIcon = Tooltip(message: l10n.salaryFromContract, child: const Icon(Icons.lock_outline, size: 18));
     Widget field(TextEditingController c, String label, String part) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: TextField(
-            controller: c,
-            keyboardType: numbers,
-            enabled: !_locked(part),
-            decoration: InputDecoration(labelText: label, suffixText: l10n.sar, suffixIcon: _locked(part) ? lockIcon : null),
-            onChanged: (_) => setState(() {}),
-          ),
-        );
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: c,
+        keyboardType: numbers,
+        enabled: !_locked(part),
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: l10n.sar,
+          suffixIcon: _locked(part) ? lockIcon : null,
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
     final othersLocked = _locked('others');
     return AlertDialog(
       title: Text(l10n.salaryOf(widget.name)),
@@ -356,86 +562,97 @@ class _SalaryDialogState extends State<_SalaryDialog> {
               if (widget.current.contractFields.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(children: [
-                    const Icon(Icons.lock_outline, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(l10n.salaryLockedHint, style: theme.textTheme.bodySmall)),
-                  ]),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_outline, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(l10n.salaryLockedHint, style: theme.textTheme.bodySmall)),
+                    ],
+                  ),
                 ),
               field(_basic, l10n.salaryBasic, 'basic'),
               field(_housing, l10n.salaryHousing, 'housing'),
               field(_transport, l10n.salaryTransport, 'transport'),
-              Row(children: [
-                Expanded(child: Text(l10n.salaryOther, style: theme.textTheme.titleSmall)),
-                if (othersLocked) lockIcon,
-              ]),
+              Row(
+                children: [
+                  Expanded(child: Text(l10n.salaryOther, style: theme.textTheme.titleSmall)),
+                  if (othersLocked) lockIcon,
+                ],
+              ),
               const SizedBox(height: 8),
               if (othersLocked)
                 for (final o in widget.current.others)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(children: [Expanded(child: Text(o.name)), Text('${money.format(o.amount)} ${l10n.sar}')]),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(o.name)),
+                        Text('${money.format(o.amount)} ${l10n.sar}'),
+                      ],
+                    ),
                   ),
               if (!othersLocked)
                 for (final (i, o) in _others.indexed)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(children: [
-                      Expanded(
-                        flex: 3,
-                        // Names used on other salaries are offered as you type.
-                        child: RawAutocomplete<String>(
-                          textEditingController: o.$1,
-                          focusNode: o.$3,
-                          optionsBuilder: (v) => widget.suggestions
-                              .where((s) => s != v.text && searchHas(s, v.text))
-                              .take(8),
-                          fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
-                            controller: controller,
-                            focusNode: focus,
-                            decoration: InputDecoration(isDense: true, labelText: l10n.allowanceName),
-                          ),
-                          optionsViewBuilder: (context, onSelected, options) => Align(
-                            alignment: AlignmentDirectional.topStart,
-                            child: Material(
-                              elevation: 4,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxHeight: 240, maxWidth: 240),
-                                child: ListView(
-                                  shrinkWrap: true,
-                                  padding: EdgeInsets.zero,
-                                  children: [
-                                    for (final s in options) ListTile(dense: true, title: Text(s), onTap: () => onSelected(s)),
-                                  ],
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          // Names used on other salaries are offered as you type.
+                          child: RawAutocomplete<String>(
+                            textEditingController: o.$1,
+                            focusNode: o.$3,
+                            optionsBuilder: (v) =>
+                                widget.suggestions.where((s) => s != v.text && searchHas(s, v.text)).take(8),
+                            fieldViewBuilder: (context, controller, focus, onSubmit) => TextField(
+                              controller: controller,
+                              focusNode: focus,
+                              decoration: InputDecoration(isDense: true, labelText: l10n.allowanceName),
+                            ),
+                            optionsViewBuilder: (context, onSelected, options) => Align(
+                              alignment: AlignmentDirectional.topStart,
+                              child: Material(
+                                elevation: 4,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxHeight: 240, maxWidth: 240),
+                                  child: ListView(
+                                    shrinkWrap: true,
+                                    padding: EdgeInsets.zero,
+                                    children: [
+                                      for (final s in options)
+                                        ListTile(dense: true, title: Text(s), onTap: () => onSelected(s)),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: o.$2,
-                          keyboardType: numbers,
-                          decoration: InputDecoration(isDense: true, labelText: l10n.amountSarLabel),
-                          onChanged: (_) => setState(() {}),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: o.$2,
+                            keyboardType: numbers,
+                            decoration: InputDecoration(isDense: true, labelText: l10n.amountSarLabel),
+                            onChanged: (_) => setState(() {}),
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: l10n.delete,
-                        onPressed: () => setState(() {
-                          final removed = _others.removeAt(i);
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            removed.$1.dispose();
-                            removed.$2.dispose();
-                            removed.$3.dispose();
-                          });
-                        }),
-                      ),
-                    ]),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: l10n.delete,
+                          onPressed: () => setState(() {
+                            final removed = _others.removeAt(i);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              removed.$1.dispose();
+                              removed.$2.dispose();
+                              removed.$3.dispose();
+                            });
+                          }),
+                        ),
+                      ],
+                    ),
                   ),
               if (!othersLocked)
                 Align(
@@ -447,10 +664,12 @@ class _SalaryDialogState extends State<_SalaryDialog> {
                   ),
                 ),
               const Divider(),
-              Row(children: [
-                Expanded(child: Text(l10n.payrollGross, style: theme.textTheme.titleSmall)),
-                Text('${money.format(_value.monthly)} ${l10n.sar}', style: theme.textTheme.titleSmall),
-              ]),
+              Row(
+                children: [
+                  Expanded(child: Text(l10n.payrollGross, style: theme.textTheme.titleSmall)),
+                  Text('${money.format(_value.monthly)} ${l10n.sar}', style: theme.textTheme.titleSmall),
+                ],
+              ),
             ],
           ),
         ),

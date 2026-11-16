@@ -51,7 +51,7 @@ class _OvertimePermissionScreenState extends ConsumerState<OvertimePermissionScr
         ? const <AppUser>[]
         : ([
             for (final u in users)
-              if (u.checksAttendance && canSetOvertimeFor(me, u, users)) u,
+              if (u.active && u.checksAttendance && canSetOvertimeFor(me, u, users)) u,
           ]..sort((a, b) => a.name.compareTo(b.name)));
     final shown = [
       for (final u in people)

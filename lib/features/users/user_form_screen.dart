@@ -104,20 +104,23 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   /// Saved role of the user being edited (null for a new one).
   UserRole? _savedRole;
 
-  /// Only the accounts in [userDeleterEmails]. Never oneself.
-  bool _canDelete(AppUser? me) =>
-      !_isNew && me != null && widget.userId != me.id && userDeleterEmails.contains(me.email.trim().toLowerCase());
+  /// Delete user and Set password (2026-11-16, user): only the GM and
+  /// [userDeleterEmails] ([mayManageAccounts], also checked by the
+  /// `deleteUser` / `setUserPassword` Cloud Functions). Never oneself.
+  bool _canDelete(AppUser? me) => !_isNew && me != null && widget.userId != me.id && mayManageAccounts(me);
+  bool _canSetPassword(AppUser? me) => _canDelete(me);
 
-  /// GM: anyone; sales manager: anyone but GMs and sales managers;
-  /// logistics manager: drivers; HR: the roles they manage. Never oneself
-  /// (same rule as the `setUserPassword` Cloud Function).
-  bool _canSetPassword(AppUser? me) =>
+  /// HR on someone outside the roles they manage (sales people, SM, GM;
+  /// 2026-11-16, user): only name, joining date, department, attendance,
+  /// work sites, overtime and own schedule ([hrUserFields]); the rest is
+  /// shown locked. Not on their own record.
+  bool _hrLimited(AppUser? me) =>
       !_isNew &&
       me != null &&
+      !me.can.isAdmin &&
+      me.hasRole(UserRole.hr) &&
       widget.userId != me.id &&
-      (me.hasRole(UserRole.gm) ||
-          (me.hasRole(UserRole.salesManager) && _savedRole?.isAdmin != true) ||
-          ((me.hasRole(UserRole.logisticsManager) || me.hasRole(UserRole.hr)) && me.can.editableRoles.contains(_savedRole)));
+      !me.can.editableRoles.contains(_savedRole);
 
   Future<void> _setPassword() async {
     final l10n = AppLocalizations.of(context);
@@ -226,6 +229,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     );
     try {
       final repo = ref.read(usersRepositoryProvider);
+      if (_hrLimited(ref.read(currentUserProvider).value)) {
+        await repo.hrUpdate(user);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.saved)));
+        if (mounted) context.go('/users');
+        return;
+      }
       final assigned = _isNew
           ? await repo.create(user, _password.text)
           : approve
@@ -322,10 +331,14 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     }
     // HR, logistics / factory manager: only the roles they manage (also
     // enforced by the rules); the managers only the people under them.
+    final limited = _hrLimited(me);
     if (!_isNew &&
         me != null &&
         !me.can.isAdmin &&
-        (!roles.contains(_savedRole) ||
+        !limited &&
+        // Their own record: Profile (2026-11-16; rules refuse it too).
+        (widget.userId == me.id ||
+            !roles.contains(_savedRole) ||
             (!me.hasRole(UserRole.hr) && !peopleUnder(me, users).any((u) => u.id == widget.userId)))) {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(l10n.noAccessTitle)));
     }
@@ -370,6 +383,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 ),
               ),
             if (_registered case final r?) RegisteredFromCard(user: r),
+            if (limited)
+              Card(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(leading: const Icon(Icons.lock_outline), title: Text(l10n.hrLimitedUserNote)),
+              ),
             TextFormField(
               controller: _name,
               decoration: InputDecoration(labelText: l10n.name),
@@ -441,7 +460,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 autofillHints: const [AutofillHints.newPassword],
                 validator: (v) => (v == null || v.length < 6) ? l10n.passwordTooShort : null,
               ),
-            SaudiPhoneField(controller: _phone),
+            SaudiPhoneField(controller: _phone, enabled: !limited),
             DropdownButtonFormField<String>(
               initialValue: companies.any((c) => c.id == _companyId) ? _companyId : '',
               decoration: InputDecoration(labelText: l10n.company),
@@ -449,7 +468,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 DropdownMenuItem(value: '', child: Text(l10n.none)),
                 for (final c in companies) DropdownMenuItem(value: c.id, child: Text(c.name)),
               ],
-              onChanged: (v) => setState(() => _companyId = v ?? ''),
+              onChanged: limited ? null : (v) => setState(() => _companyId = v ?? ''),
             ),
             DepartmentField(
               value: _department,
@@ -467,7 +486,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
               ],
               hint: Text(l10n.selectRole),
               validator: (r) => r == null ? l10n.required : null,
-              onChanged: (r) => setState(() => _role = r),
+              onChanged: limited ? null : (r) => setState(() => _role = r),
             ),
             // Extra roles (2026-11-11): sales manager / GM only; only a GM gives GM.
             if (_role != null && me?.can.isAdmin == true)
@@ -509,7 +528,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   DropdownMenuItem(value: null, child: Text(l10n.none)),
                   for (final k in kams) DropdownMenuItem(value: k.id, child: Text(k.name)),
                 ],
-                onChanged: (id) => setState(() => _kamId = id),
+                onChanged: limited ? null : (id) => setState(() => _kamId = id),
               ),
             // Managers: by role, or marked here (e.g. the accounting manager).
             // Manager roles: shown on and locked, so the switch doesn't look missing.
@@ -542,7 +561,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                     for (final m in managers)
                       DropdownMenuItem(value: m.id, child: Text('${m.name} · ${m.role.label(l10n)}', overflow: TextOverflow.ellipsis)),
                   ],
-                  onChanged: (id) => setState(() => _managerId = id),
+                  onChanged: limited ? null : (id) => setState(() => _managerId = id),
                 );
               }),
             // Drivers and workers: the warehouse supervisor who follows them
@@ -558,24 +577,26 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                     DropdownMenuItem(value: null, child: Text(l10n.none)),
                     for (final u in supervisors) DropdownMenuItem(value: u.id, child: Text(u.name)),
                   ],
-                  onChanged: (id) => setState(() => _supervisorId = id),
+                  onChanged: limited ? null : (id) => setState(() => _supervisorId = id),
                 );
               }),
             // A warehouse supervisor: who they supervise (2026-11-04), saved right away.
-            if (!_isNew && _savedRole == UserRole.warehouseSupervisor && _role == UserRole.warehouseSupervisor)
+            if (!_isNew && !limited && _savedRole == UserRole.warehouseSupervisor && _role == UserRole.warehouseSupervisor)
               _SupervisesField(supervisorId: widget.userId!, users: users),
             // Drivers: home, where their overtime ends (2026-10-25).
-            if (_role == UserRole.driver)
+            if (_role == UserRole.driver && !limited)
               HomeLocationField(value: _home, onChanged: (v) => setState(() => _home = v)),
             // KAMs too: some Odoo clients are under a KAM until they're moved to the team.
             if (_role?.isTracked == true)
               TextFormField(
                 controller: _odooName,
+                enabled: !limited,
                 decoration: InputDecoration(labelText: l10n.odooSalespersonName, helperText: l10n.odooSalespersonHelp),
               ),
             if (_role?.isTracked == true)
               TextFormField(
                 controller: _target,
+                enabled: !limited,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: l10n.monthlyVisitTarget, helperText: l10n.monthlyVisitTargetHelp),
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
@@ -639,7 +660,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                     : l10n.leaveSiteNotAllowedHelp(ref.watch(appSettingsProvider).value?[AppSetting.awayGraceMin] ??
                         AppSetting.awayGraceMin.defaultValue)),
                 value: _leaveSite ?? _roleOrDefault.leavesSiteForWork,
-                onChanged: (v) => setState(() => _leaveSite = v),
+                onChanged: limited ? null : (v) => setState(() => _leaveSite = v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -684,7 +705,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.active),
                 value: _active,
-                onChanged: (v) => setState(() => _active = v),
+                onChanged: limited ? null : (v) => setState(() => _active = v),
               ),
             // HR area: Iqama / ID, nationality, health insurance (saved at once).
             if (!_isNew && _pending == null) EmployeeRecordCard(uid: widget.userId!, margin: const EdgeInsets.only(top: 8)),

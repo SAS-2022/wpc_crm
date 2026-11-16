@@ -215,6 +215,8 @@ class _OrgChartScreenState extends ConsumerState<OrgChartScreen> {
   void _showPerson(BuildContext context, AppUser me, OrgNode n, Map<String, AppUser> byId) {
     final l10n = AppLocalizations.of(context);
     final u = n.user;
+    // Same as the user form's guard: LM / FM open only the roles they manage;
+    // HR opens everyone (2026-11-16; limited fields outside their roles).
     final mayEdit = me.can.isAdmin || me.can.editableRoles.contains(u.role) || me.hasRole(UserRole.hr);
     showModalBottomSheet<void>(
       context: context,

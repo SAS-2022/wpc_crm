@@ -41,7 +41,8 @@ final plannedTodayProvider = Provider<Map<String, String>>((ref) {
 final clientOwnersProvider = Provider<List<AppUser>>((ref) {
   final users = ref.watch(usersProvider).value ?? const [];
   final owners = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.assignedTo};
-  return users.where((u) => (u.active && u.role.isTracked) || owners.contains(u.id)).toList();
+  // Inactive people are left out even when they still own clients (user 2026-11-16).
+  return users.where((u) => u.active && (u.role.isTracked || owners.contains(u.id))).toList();
 });
 
 /// Salesperson filter for KAM / managers (hidden for sales executives):

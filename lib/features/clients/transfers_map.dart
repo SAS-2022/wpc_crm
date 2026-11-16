@@ -14,7 +14,7 @@ import '../attendance/site_markers.dart';
 import '../attendance/work_sites.dart';
 
 /// Amber before two weeks without a visit.
-const transferWaitingColor = Color(0xFFB07800);
+const transferWaitingColor = Color(0xFFFBC02D); // yellow (was dark amber, 2026-11-15 user)
 
 /// Visited (green) / called (purple) by the new salesperson, else not yet:
 /// amber, red from 14 days.

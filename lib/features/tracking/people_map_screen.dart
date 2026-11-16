@@ -15,12 +15,14 @@ import '../../core/providers.dart';
 import '../../core/search_text.dart';
 import '../../core/time_ago.dart';
 import '../../l10n/app_localizations.dart';
+import '../attendance/attendance_day.dart' show DayStatus;
 import '../attendance/employee_map_data.dart';
 import '../attendance/site_markers.dart';
+import '../settings/app_settings.dart';
 import '../attendance/site_now.dart';
 import '../attendance/work_sites.dart';
 import '../clients/client_tags.dart';
-import '../clients/clients_map_screen.dart' show managerPinColor;
+import '../clients/clients_map_screen.dart' show managerPinColor, showsAsManager, stripedPin;
 import '../clients/person_style.dart';
 import '../devices/device_status.dart';
 import '../devices/quiet_reason_text.dart';
@@ -52,8 +54,9 @@ import 'work_hours.dart';
 
 enum PeopleMapMode { live, drivers, history, employees }
 
-/// Live tracking's groups (drivers apart 2026-10-20, other employees 2026-11-01).
-enum _Group { sales, drivers, staff }
+/// Live tracking's groups (drivers apart 2026-10-20, other employees
+/// 2026-11-01); everyone together is the default (user 2026-11-16).
+enum _Group { all, sales, drivers, staff }
 
 /// A person as the map and the list show them, whatever the mode.
 class _Pin {
@@ -70,7 +73,15 @@ class _Pin {
     this.siteNow,
     this.order = 0,
     this.status,
+    this.gap = false,
+    this.striped = false,
   });
+
+  /// Managers: a thin white circle between the blue and the ring.
+  final bool gap;
+
+  /// Key account managers: diagonal white stripes over the blue.
+  final bool striped;
 
   final AppUser user;
   final LiveLocation? loc;
@@ -128,9 +139,21 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
 
   SaudiRegion? _region;
   String? _siteId;
+
+  /// The site was picked by tapping its circle / icon: the people there now,
+  /// then (separator "Outside the site") the site's people elsewhere
+  /// (2026-11-16, user; 2026-11-15 it was only the people there now).
+  bool _siteNowOnly = false;
+
+  /// Zoom when a person or a site is clicked — the same for both, set in
+  /// App settings (2026-11-15, user).
+  double get _focusZoom =>
+      (ref.read(appSettingsProvider).value ?? AppSettings.defaults)[AppSetting.mapFocusZoom].toDouble();
+
+  /// Map zoom, for the site circles' smallest size.
+  double _zoom = 6;
   String _query = '';
-  _Group _group = _Group.sales;
-  bool _groupPicked = false;
+  _Group _group = _Group.all;
   late Set<String>? _onlyIds = widget.onlyIds;
 
   /// Route history: department id, '' = no department, null = all.
@@ -186,19 +209,22 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
   void _select(_Pin p, bool wide) {
     setState(() => _selected = p.user.id);
     if (!_history && p.loc != null) {
-      _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(p.loc!.lat, p.loc!.lng), 16));
+      _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(p.loc!.lat, p.loc!.lng), _focusZoom));
     }
     if (!wide && _sheet.isAttached) {
       _sheet.animateTo(0.5, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
     }
   }
 
-  Color _liveColor(LiveState s) => switch (s) {
-    LiveState.live => Colors.green.shade600,
-    LiveState.stale => Colors.orange.shade700,
-    LiveState.offDuty => Colors.blueGrey,
-    LiveState.offline => Colors.grey,
-  };
+  void _tapSite(WorkSite s, bool wide) {
+    _filtered(() {
+      _siteId = s.id;
+      _siteNowOnly = true;
+    });
+    if (!wide && _sheet.isAttached) {
+      _sheet.animateTo(0.5, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+  }
 
   /// "Driving", "Walking", "Idle for 23 min" (from 5 min on) or "Stopped".
   String? _motion(AppLocalizations l10n, LiveLocation? loc, DateTime now) {
@@ -246,33 +272,72 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
     LiveLocation? Function(String id) locOf = (_) => null;
     Presence? Function(String id) presenceOf = (_) => null;
     String Function(String id) statusOf = (_) => '';
+    // Live modes: the group a person is in, and the chips built over the
+    // filtered people (counts follow region / company / site / search,
+    // user 2026-11-16).
+    _Group? Function(AppUser u)? groupOf;
+    _Group? group;
+    Widget? Function(List<_Pin> scoped)? buildGroupChips;
+
+    // Today's attendance of the people [me] may see: the same colours on
+    // every people map (user 2026-11-16: yellow on the Employee Map = yellow
+    // on Live tracking and Route history).
+    final everyone = employeePeople(ref, now);
+    final attendanceOf = {for (final p in everyone) p.user.id: p};
+    String? at(EmployeeOnMap p) => siteNow(
+      sites: activeSites,
+      lat: p.loc?.lat,
+      lng: p.loc?.lng,
+      accuracy: p.loc?.accuracy,
+      at: p.loc?.updatedAt,
+      now: now,
+      inside: p.result != null && p.result!.checkInAt != null && !p.result!.closed && p.result!.inside,
+      events: p.record?.events ?? const [],
+    );
+
+    /// The one colour rule: attendance status (on site green, out yellow,
+    /// not checked in red, checked out indigo, …, no attendance blue-grey);
+    /// managers / department heads blue (2026-11-14) with the ring green at
+    /// a site, yellow elsewhere (2026-11-16); grey fill = older position.
+    ({Color color, Color fill, Color? textColor}) look(
+      AppUser u,
+      EmployeeOnMap? e, {
+      required bool live,
+      String? siteHere,
+    }) {
+      if (showsAsManager(u)) {
+        final here =
+            (e != null ? at(e) : siteHere) != null || (e != null && e.loc == null && e.day?.status == DayStatus.onSite);
+        return (
+          color: here ? onSiteColor(u) : awayColor(u),
+          fill: managerPinColor.withValues(alpha: live ? 1 : 0.45),
+          textColor: Colors.white,
+        );
+      }
+      return (
+        color: e != null ? employeeStatusColor(context, e) : Colors.blueGrey,
+        fill: live ? Colors.white : Colors.grey.shade300,
+        textColor: null,
+      );
+    }
 
     if (_employees) {
-      // Today's attendance, the Attendance page's people.
-      final everyone = employeePeople(ref, now);
-      String? at(EmployeeOnMap p) => siteNow(
-        sites: activeSites,
-        lat: p.loc?.lat,
-        lng: p.loc?.lng,
-        accuracy: p.loc?.accuracy,
-        at: p.loc?.updatedAt,
-        now: now,
-        inside: p.result != null && p.result!.checkInAt != null && !p.result!.closed && p.result!.inside,
-        events: p.record?.events ?? const [],
-      );
       candidates = [
         for (final p in everyone)
           _Pin(
             user: p.user,
             loc: p.loc,
-            color: employeeStatusColor(context, p),
-            fill: p.live ? Colors.white : Colors.grey.shade300,
+            gap: showsAsManager(p.user),
+            striped: stripedPin(p.user),
+            color: look(p.user, p, live: p.live).color,
+            fill: look(p.user, p, live: p.live).fill,
+            textColor: look(p.user, p, live: p.live).textColor,
             faded: !p.live,
             line: [employeeRowLine(context, l10n, p), p.siteName].where((s) => s.isNotEmpty).join(' · '),
             trailing: p.report.problemCount > 0
                 ? Tooltip(
                     message: p.report.quiet != null
-                        ? quietLine(context, p.report.quiet!, p.report.lastPosition, now)
+                        ? quietLine(context, p.report.quiet!, p.report.lastPosition, now, reportAt: p.report.quietAt)
                         : l10n.phoneStatusProblems(p.report.problemCount),
                     child: Icon(Icons.phonelink_erase, color: theme.colorScheme.error, size: 20),
                   )
@@ -283,7 +348,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
             status: p.filter,
           ),
       ];
-      pins = [for (final p in candidates) if (ofCompany(p.user)) p];
+      pins = [
+        for (final p in candidates)
+          if (ofCompany(p.user)) p,
+      ];
       locOf = (id) => everyone.where((p) => p.user.id == id).firstOrNull?.loc;
     } else {
       // Live positions (live / drivers / history).
@@ -310,45 +378,49 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       final staffAll = !staffGroup
           ? const <AppUser>[]
           : users
-              .where((u) =>
-                  u.recordsGps &&
-                  !u.role.isLocationTracked &&
-                  (onlyIds == null || onlyIds.contains(u.id)) &&
-                  (!teamScoped || team.contains(u.id)))
-              .toList();
+                .where(
+                  (u) =>
+                      u.recordsGps &&
+                      !u.role.isLocationTracked &&
+                      (onlyIds == null || onlyIds.contains(u.id)) &&
+                      (!teamScoped || team.contains(u.id)),
+                )
+                .toList();
+      final staffIds = {for (final u in staffAll) u.id};
       final everyone = tracked.where(ofCompany).toList();
       final staff = staffAll.where(ofCompany).toList();
       final driverCount = everyone.where((u) => u.role.isDriver).length;
       final salesCount = everyone.length - driverCount;
       // Team-scoped: only the groups they have people in.
       final groupOptions = [
+        _Group.all,
         if (!teamScoped || salesCount > 0) _Group.sales,
         if (!teamScoped || driverCount > 0) _Group.drivers,
         if (staffGroup && (!teamScoped || staff.isNotEmpty)) _Group.staff,
       ];
-      final showGroups = !driversOnly &&
-          (teamScoped ? groupOptions.length > 1 : (driverCount > 0 || (me?.can.isAdmin ?? false)));
-      if (onlyIds != null && !_groupPicked && users.isNotEmpty) {
-        _groupPicked = true;
-        if (everyone.length == driverCount && driverCount > 0) {
-          _group = _Group.drivers;
-        } else if (everyone.isEmpty && staff.isNotEmpty) {
-          _group = _Group.staff;
-        }
-      }
-      final group = driversOnly
+      final showGroups =
+          !driversOnly && (teamScoped ? groupOptions.length > 2 : (driverCount > 0 || (me?.can.isAdmin ?? false)));
+      final picked = driversOnly
           ? _Group.drivers
-          : teamScoped
-              ? (groupOptions.contains(_group) ? _group : groupOptions.firstOrNull ?? _Group.sales)
-              : (showGroups ? _group : _Group.sales);
-      final recorded = group == _Group.staff;
-      final inGroup = recorded ? staffAll : tracked.where((u) => u.role.isDriver == (group == _Group.drivers)).toList();
+          : showGroups && groupOptions.contains(_group)
+          ? _group
+          : _Group.all;
+      group = picked;
+      _Group personGroup(AppUser u) => staffIds.contains(u.id)
+          ? _Group.staff
+          : u.role.isDriver
+          ? _Group.drivers
+          : _Group.sales;
+      groupOf = personGroup;
+      bool isRecorded(String id) => staffIds.contains(id);
       final staffKey = (DateFormat('yyyy-MM-dd').format(now), (staff.map((u) => u.id).toList()..sort()).join(','));
-      final locations = recorded
-          ? ref.watch(recordedLocationsProvider(staffKey)).value ?? const <String, LiveLocation>{}
-          : ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{};
+      final liveLocs = ref.watch(liveLocationsProvider).value ?? const <String, LiveLocation>{};
+      final recordedLocs = staff.isEmpty
+          ? const <String, LiveLocation>{}
+          : ref.watch(recordedLocationsProvider(staffKey)).value ?? const <String, LiveLocation>{};
+      LiveLocation? locationOf(String id) => isRecorded(id) ? recordedLocs[id] : liveLocs[id];
       LiveState stateOf(String id) =>
-          recorded ? recordedState(locations[id], now) : liveState(locations[id], presence[id], now);
+          isRecorded(id) ? recordedState(recordedLocs[id], now) : liveState(liveLocs[id], presence[id], now);
       // Why someone who should share sends nothing (2026-11-04).
       final devices = ref.watch(deviceStatusesProvider).value ?? const <String, DeviceStatus>{};
       final hours = ref.watch(workHoursProvider).value ?? WorkHours.defaults;
@@ -356,6 +428,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       String? reasonOf(String id) {
         final u = byId[id];
         if (u == null) return null;
+        final recorded = isRecorded(id);
         final shares = (schedules[id] ?? const TrackingSchedule.standard()).isOn(
           now,
           hours,
@@ -365,19 +438,28 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
           days: u.workSchedule?.days,
         );
         if (!shares) return null;
-        final loc = locations[id];
+        final loc = locationOf(id);
         final why = quietReason(
           device: devices[id],
           presence: recorded ? null : presence[id],
           lastPosition: loc?.updatedAt,
           now: now,
         );
-        return why == null ? null : quietLine(context, why, loc?.updatedAt, now);
+        return why == null
+            ? null
+            : quietLine(
+                context,
+                why,
+                loc?.updatedAt,
+                now,
+                reportAt: quietReportAt(device: devices[id], presence: recorded ? null : presence[id]),
+              );
       }
 
       String status(String id) {
-        final loc = locations[id];
+        final loc = locationOf(id);
         final state = stateOf(id);
+        final recorded = isRecorded(id);
         if (state == LiveState.offline || (recorded && state != LiveState.live)) {
           final why = reasonOf(id);
           if (why != null) return why;
@@ -391,8 +473,12 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         final p = presence[id];
         if (loc == null && p == null) return l10n.noLocationYet;
         return switch (state) {
-          LiveState.live => [l10n.liveUpdated(timeAgo(context, loc?.updatedAt, now)), ?_motion(l10n, loc, now)].join(' · '),
-          LiveState.stale => p != null && !p.gpsOn ? l10n.liveGpsOff : l10n.liveNoFix(timeAgo(context, loc?.updatedAt, now)),
+          LiveState.live => [
+            l10n.liveUpdated(timeAgo(context, loc?.updatedAt, now)),
+            ?_motion(l10n, loc, now),
+          ].join(' · '),
+          LiveState.stale =>
+            p != null && !p.gpsOn ? l10n.liveGpsOff : l10n.liveNoFix(timeAgo(context, loc?.updatedAt, now)),
           LiveState.offDuty => l10n.liveOffDuty,
           LiveState.offline => l10n.liveOffline(timeAgo(context, p?.lastSeen ?? loc?.updatedAt, now)),
         };
@@ -400,75 +486,93 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
 
       const order = {LiveState.live: 0, LiveState.stale: 1, LiveState.offDuty: 2, LiveState.offline: 3};
       _Pin pin(AppUser u) {
-        final loc = locations[u.id];
-        final color = _liveColor(stateOf(u.id));
-        final manager = u.role == UserRole.salesManager;
+        final loc = locationOf(u.id);
+        final here = siteNow(
+          sites: activeSites,
+          lat: loc?.lat,
+          lng: loc?.lng,
+          accuracy: loc?.accuracy,
+          at: loc?.updatedAt,
+          now: now,
+        );
+        // Same colours as the Employee Map (user 2026-11-16).
+        final c = look(u, attendanceOf[u.id], live: stateOf(u.id) == LiveState.live, siteHere: here);
         return _Pin(
           user: u,
           loc: loc,
-          color: color,
-          // Sales manager: blue with white initials (user 2026-11-07).
-          fill: manager ? managerPinColor : Colors.white,
-          textColor: manager ? Colors.white : color,
+          color: c.color,
+          gap: showsAsManager(u),
+          striped: stripedPin(u),
+          fill: c.fill,
+          textColor: c.textColor,
+          faded: stateOf(u.id) != LiveState.live,
           mocked: loc?.mocked ?? false,
-          line: recorded ? '${u.role.label(l10n)} · ${status(u.id)}' : status(u.id),
-          siteNow: siteNow(
-            sites: activeSites,
-            lat: loc?.lat,
-            lng: loc?.lng,
-            accuracy: loc?.accuracy,
-            at: loc?.updatedAt,
-            now: now,
-          ),
+          line: isRecorded(u.id) ? '${u.role.label(l10n)} · ${status(u.id)}' : status(u.id),
+          siteNow: here,
           order: order[stateOf(u.id)]!,
           trailing: _history ? const Icon(Icons.route) : null,
         );
       }
 
-      candidates = [for (final u in [...tracked, ...staffAll]) pin(u)];
-      pins = [for (final u in inGroup) if (ofCompany(u)) pin(u)];
-      locOf = (id) => locations[id];
-      presenceOf = (id) => recorded ? null : presence[id];
+      candidates = [
+        for (final u in [...tracked, ...staffAll]) pin(u),
+      ];
+      pins = [
+        for (final u in [...everyone, ...staff]) pin(u),
+      ];
+      locOf = locationOf;
+      presenceOf = (id) => isRecorded(id) ? null : presence[id];
       statusOf = status;
-      if (recorded) note = l10n.productionLogisticsNote;
-      noneText = switch (group) {
+      if (picked == _Group.staff) note = l10n.productionLogisticsNote;
+      noneText = switch (picked) {
+        _Group.all => l10n.noOneMatches,
         _Group.sales => l10n.noTrackedStaff,
         _Group.drivers => l10n.noDriversYet,
         _Group.staff => l10n.noOtherEmployees,
       };
       if (showGroups || onlyIds != null) {
-        groupChips = Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (showGroups)
-              for (final (g, icon, label) in [
-                (_Group.sales, Icons.storefront_outlined, l10n.salesTeamCount(everyone.length - driverCount)),
-                (_Group.drivers, Icons.local_shipping_outlined, l10n.driversCount(driverCount)),
-                (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(staff.length)),
-              ])
-                if (groupOptions.contains(g))
-                ChoiceChip(
-                  avatar: Icon(icon, size: 18),
-                  label: Text(label),
-                  selected: group == g,
-                  showCheckmark: false,
-                  // A department of the old group means nothing here (user 2026-11-11).
-                  onSelected: (_) => _filtered(() {
-                    _group = g;
-                    _department = null;
-                  }),
+        buildGroupChips = (scoped) {
+          final counts = <_Group, int>{_Group.all: scoped.length};
+          for (final p in scoped) {
+            final g = personGroup(p.user);
+            counts[g] = (counts[g] ?? 0) + 1;
+          }
+          int n(_Group g) => counts[g] ?? 0;
+          return Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (showGroups)
+                for (final (g, icon, label) in [
+                  (_Group.all, Icons.groups_outlined, '${l10n.all} (${n(_Group.all)})'),
+                  (_Group.sales, Icons.storefront_outlined, l10n.salesTeamCount(n(_Group.sales))),
+                  (_Group.drivers, Icons.local_shipping_outlined, l10n.driversCount(n(_Group.drivers))),
+                  (_Group.staff, Icons.badge_outlined, l10n.otherEmployeesCount(n(_Group.staff))),
+                ])
+                  // Groups with nobody under the other filters are left out.
+                  if (groupOptions.contains(g) && (g == _Group.all || g == picked || n(g) > 0))
+                    ChoiceChip(
+                      avatar: Icon(icon, size: 18),
+                      label: Text(label),
+                      selected: picked == g,
+                      showCheckmark: false,
+                      // A department of the old group means nothing here (user 2026-11-11).
+                      onSelected: (_) => _filtered(() {
+                        _group = g;
+                        _department = null;
+                      }),
+                    ),
+              if (onlyIds != null)
+                InputChip(
+                  visualDensity: VisualDensity.compact,
+                  avatar: const Icon(Icons.phone_android, size: 16),
+                  label: Text(l10n.fromPhoneStatus(onlyIds.length)),
+                  onDeleted: () => _filtered(() => _onlyIds = null),
                 ),
-            if (onlyIds != null)
-              InputChip(
-                visualDensity: VisualDensity.compact,
-                avatar: const Icon(Icons.phone_android, size: 16),
-                label: Text(l10n.fromPhoneStatus(onlyIds.length)),
-                onDeleted: () => _filtered(() => _onlyIds = null),
-              ),
-          ],
-        );
+            ],
+          );
+        };
       }
     }
 
@@ -491,23 +595,38 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
     final scoped = [
       for (final p in pins)
         if (inRegion(region, p) &&
-            (site == null || showsUnderSite(site.id, now: p.siteNow, assigned: p.user.workSiteIds)) &&
+            (site == null ||
+                (_siteNowOnly
+                    // Tapped site: everyone there now or assigned to it,
+                    // listed apart by presence (user 2026-11-16).
+                    ? p.siteNow == site.id || p.user.workSiteIds.contains(site.id)
+                    : showsUnderSite(site.id, now: p.siteNow, assigned: p.user.workSiteIds))) &&
             searchHas(p.user.name, q))
           p,
     ];
+    if (buildGroupChips != null) groupChips = buildGroupChips(scoped);
+    final inGroup = group == null || group == _Group.all
+        ? scoped
+        : [
+            for (final p in scoped)
+              if (groupOf!(p.user) == group) p,
+          ];
 
-    // ---- The mode's own chips over the scoped people ----
+    // ---- The mode's own chips over the group's people ----
     Widget? modeChips;
-    var shown = scoped;
+    var shown = inGroup;
     if (_history) {
       final departments = ref.watch(departmentsProvider).value ?? defaultDepartments;
       final counts = <String, int>{};
-      for (final p in scoped) {
+      for (final p in inGroup) {
         counts[p.user.departmentId ?? ''] = (counts[p.user.departmentId ?? ''] ?? 0) + 1;
       }
       // A department with nobody left counts as not picked.
       final dept = counts.containsKey(_department) ? _department : null;
-      shown = [for (final p in scoped) if (dept == null || (p.user.departmentId ?? '') == dept) p];
+      shown = [
+        for (final p in inGroup)
+          if (dept == null || (p.user.departmentId ?? '') == dept) p,
+      ];
       final options = [
         for (final d in departments)
           if ((counts[d.id] ?? 0) > 0) (d.id, d.label(lang)),
@@ -518,13 +637,8 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
           spacing: 6,
           runSpacing: 4,
           children: [
-            ChoiceChip(
-              visualDensity: VisualDensity.compact,
-              showCheckmark: false,
-              label: Text('${l10n.all} (${scoped.length})'),
-              selected: dept == null,
-              onSelected: (_) => _filtered(() => _department = null),
-            ),
+            // No "All" here: the group chips above have one (user
+            // 2026-11-16); tap a picked department again to clear it.
             for (final (id, label) in options)
               ChoiceChip(
                 visualDensity: VisualDensity.compact,
@@ -539,24 +653,42 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       }
       note = [?note, l10n.routeHistoryPickPerson].join('\n');
     } else if (_employees) {
-      final counts = {for (final f in EmployeeFilter.values) f: scoped.where((p) => p.status == f).length};
-      final picked = {for (final f in _statuses) if (counts[f]! > 0) f};
-      shown = [for (final p in scoped) if (picked.isEmpty || picked.contains(p.status)) p];
+      final counts = {for (final f in EmployeeFilter.values) f: inGroup.where((p) => p.status == f).length};
+      List<Color> chipColors(EmployeeFilter f, Color Function(AppUser) of) => [
+        ...{
+          for (final p in inGroup)
+            if (p.status == f && !showsAsManager(p.user)) of(p.user),
+        },
+      ].ifEmpty(Colors.green.shade700);
+      final picked = {
+        for (final f in _statuses)
+          if (counts[f]! > 0) f,
+      };
+      shown = [
+        for (final p in inGroup)
+          if (picked.isEmpty || picked.contains(p.status)) p,
+      ];
       modeChips = Wrap(
         spacing: 6,
         runSpacing: 4,
         children: [
-          for (final (f, color, label) in [
-            (EmployeeFilter.onSite, Colors.green.shade700, l10n.onSite),
-            (EmployeeFilter.away, Colors.orange.shade800, l10n.leftTheSite),
-            (EmployeeFilter.notIn, Colors.grey.shade600, l10n.notCheckedIn),
-            (EmployeeFilter.checkedOut, Colors.indigo, l10n.checkedOutTitle),
-            (EmployeeFilter.noAttendance, Colors.blueGrey, l10n.notOnAttendance),
+          for (final (f, colors, label) in [
+            // On site / out: yellow / green differ by job (2026-11-14), so a
+            // dot per colour of the people counted.
+            (EmployeeFilter.onSite, chipColors(EmployeeFilter.onSite, onSiteColor), l10n.onSite),
+            (EmployeeFilter.away, chipColors(EmployeeFilter.away, awayColor), l10n.leftTheSite),
+            (EmployeeFilter.notIn, [theme.colorScheme.error], l10n.notCheckedIn),
+            (EmployeeFilter.checkedOut, [checkedOutColor], l10n.checkedOutTitle),
+            (EmployeeFilter.noAttendance, [Colors.blueGrey], l10n.notOnAttendance),
           ])
             if (counts[f]! > 0)
               FilterChip(
                 visualDensity: VisualDensity.compact,
-                avatar: Icon(Icons.circle, size: 12, color: color),
+                avatar: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  // The chip's avatar box is 20 px: two dots of 12 overflowed.
+                  children: [for (final c in colors) Icon(Icons.circle, size: colors.length > 1 ? 10 : 12, color: c)],
+                ),
                 label: Text('$label (${counts[f]})'),
                 selected: picked.contains(f),
                 showCheckmark: false,
@@ -566,14 +698,15 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       );
       note = [l10n.employeesCount(shown.length), l10n.employeesMapNote].join(' · ');
     }
-    shown = [...shown]..sort((a, b) => a.order != b.order ? a.order.compareTo(b.order) : a.user.name.compareTo(b.user.name));
+    shown = [...shown]
+      ..sort((a, b) => a.order != b.order ? a.order.compareTo(b.order) : a.user.name.compareTo(b.user.name));
 
     // ---- The selected person ----
     final selected = _selected == null ? null : byId[_selected];
     final selectedPin = selected == null
         ? null
         : candidates.where((p) => p.user.id == selected.id).firstOrNull ??
-            pins.where((p) => p.user.id == selected.id).firstOrNull;
+              pins.where((p) => p.user.id == selected.id).firstOrNull;
     final route = _history && selected != null
         ? _route.build(
             context,
@@ -587,7 +720,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         : null;
 
     // ---- Map ----
-    final located = [for (final p in shown) if (p.loc != null) p];
+    final located = [
+      for (final p in shown)
+        if (p.loc != null) p,
+    ];
     final points = route?.focus ?? [for (final p in located) LatLng(p.loc!.lat, p.loc!.lng)];
     final fitKey = route != null
         ? 'route|${route.fitKey}'
@@ -599,7 +735,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       final size = MediaQuery.sizeOf(context);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (route == null && site != null) {
-          map.animateCamera(CameraUpdate.newLatLngZoom(LatLng(site.lat, site.lng), 16));
+          map.animateCamera(CameraUpdate.newLatLngZoom(LatLng(site.lat, site.lng), _focusZoom));
         } else if (points.isNotEmpty) {
           fitPoints(map, points, padding: 48);
         } else if (route == null && region != null) {
@@ -615,7 +751,12 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,
       onMapCreated: (c) => setState(() => _map = c),
-      onCameraMove: _icons.zoomChanged,
+      onCameraMove: (pos) {
+        _icons.zoomChanged(pos);
+        // Rebuild the circles only per half zoom step (onCameraIdle didn't
+        // come on the web, leaving them at the first, country-wide size).
+        if ((pos.zoom - _zoom).abs() >= 0.5) setState(() => _zoom = pos.zoom);
+      },
       polylines: route?.polylines ?? const {},
       circles: route != null
           ? const {}
@@ -624,7 +765,13 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                 Circle(
                   circleId: CircleId('site_${s.id}'),
                   center: LatLng(s.lat, s.lng),
-                  radius: s.radius,
+                  // Never smaller than ~26 px on screen, so zoomed out the
+                  // site still shows (2026-11-15, user).
+                  radius: siteCircleRadius(s.radius, s.lat, _zoom),
+                  zIndex: 1,
+                  consumeTapEvents: true,
+                  // Tap = the people at this site now, in the pane / sheet.
+                  onTap: () => _tapSite(s, wide),
                   strokeWidth: s.id == _siteId ? 3 : 1,
                   strokeColor: Colors.blue.shade700,
                   fillColor: Colors.blue.withValues(alpha: s.id == _siteId ? 0.15 : 0.06),
@@ -644,7 +791,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
           ? {...siteMarkers(context, _icons, sites), ...route.markers}
           : {
               // Work sites as icons by kind (2026-11-12).
-              ...siteMarkers(context, _icons, sites, selectedId: _siteId),
+              ...siteMarkers(context, _icons, sites, selectedId: _siteId, onTap: (s) => _tapSite(s, wide)),
               for (final p in located)
                 Marker(
                   markerId: MarkerId(p.user.id),
@@ -659,10 +806,12 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                     ring: p.user.id == _selected
                         ? Colors.black
                         : p.mocked
-                            ? theme.colorScheme.error
-                            : p.color,
+                        ? theme.colorScheme.error
+                        : p.color,
                     ringWidth: 4,
                     size: p.user.id == _selected ? 46 : 40,
+                    gap: p.gap,
+                    striped: p.striped,
                   ),
                   onTap: () => _select(p, wide),
                 ),
@@ -703,7 +852,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         },
         sites: sites,
         siteId: _siteId,
-        onSite: (s) => _filtered(() => _siteId = s?.id),
+        onSite: (s) => _filtered(() {
+          _siteId = s?.id;
+          _siteNowOnly = false;
+        }),
       ),
     );
     Widget mapButtons(double bottom) => PositionedDirectional(
@@ -727,6 +879,21 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
     );
 
     // ---- Pane / sheet content ----
+    // A tapped site: the people there now first, then a separator and those
+    // of the site who are elsewhere.
+    final bySite = _siteNowOnly && site != null;
+    final atSite = [for (final p in shown) if (!bySite || p.siteNow == site.id) p];
+    final outside = [for (final p in shown) if (bySite && p.siteNow != site.id) p];
+    Widget sectionLabel(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          Text(text, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+          const SizedBox(width: 8),
+          const Expanded(child: Divider()),
+        ],
+      ),
+    );
     List<Widget> listItems() => [
       if (groupChips != null) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child: groupChips),
       if (modeChips != null) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child: modeChips),
@@ -750,17 +917,31 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         ),
       if (shown.isEmpty)
         ListTile(
-          title: Text(_query.isNotEmpty || region != null || site != null || pins.isNotEmpty ? l10n.noOneMatches : noneText),
+          title: Text(
+            _query.isNotEmpty || region != null || site != null || pins.isNotEmpty ? l10n.noOneMatches : noneText,
+          ),
         ),
-      for (final p in shown)
+      for (final p in [...atSite, ...outside]) ...[
+        if (outside.isNotEmpty && identical(p, atSite.firstOrNull)) sectionLabel(l10n.atTheSiteCount(atSite.length)),
+        if (identical(p, outside.firstOrNull)) sectionLabel(l10n.outsideTheSiteCount(outside.length)),
         ListTile(
           selected: p.user.id == _selected,
-          leading: _Avatar(name: p.user.name, color: p.color, faded: p.faded, mocked: p.mocked),
+          leading: _Avatar(
+            name: p.user.name,
+            color: p.color,
+            faded: p.faded,
+            mocked: p.mocked,
+            fill: p.fill,
+            textColor: p.textColor,
+            gap: p.gap,
+            striped: p.striped,
+          ),
           title: Text(p.user.name),
           subtitle: Text(p.line, maxLines: 2, overflow: TextOverflow.ellipsis),
           trailing: p.trailing,
           onTap: () => _select(p, wide),
         ),
+      ],
     ];
 
     List<Widget> detailItems(AppUser u) {
@@ -785,6 +966,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                 color: selectedPin?.color ?? theme.colorScheme.outline,
                 faded: selectedPin?.faded ?? true,
                 mocked: selectedPin?.mocked ?? false,
+                fill: selectedPin?.fill,
+                textColor: selectedPin?.textColor,
+                gap: selectedPin?.gap ?? false,
+                striped: selectedPin?.striped ?? false,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -806,7 +991,13 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         else
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: _LiveDetails(user: u, loc: locOf(u.id), presence: presenceOf(u.id), status: statusOf(u.id), color: selectedPin?.color),
+            child: _LiveDetails(
+              user: u,
+              loc: locOf(u.id),
+              presence: presenceOf(u.id),
+              status: statusOf(u.id),
+              color: selectedPin?.color,
+            ),
           ),
       ];
     }
@@ -844,7 +1035,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
           final sheetTop = c.maxHeight * initial;
           return Stack(
             children: [
-              Padding(padding: EdgeInsets.only(bottom: sheetTop - 16), child: googleMap),
+              Padding(
+                padding: EdgeInsets.only(bottom: sheetTop - 16),
+                child: googleMap,
+              ),
               filterCard,
               mapButtons(sheetTop + 8),
               DraggableScrollableSheet(
@@ -868,7 +1062,10 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             width: 36,
                             height: 4,
-                            decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
                         ...paneItems,
@@ -950,26 +1147,64 @@ class _LiveDetails extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, required this.color, required this.faded, required this.mocked});
+  const _Avatar({
+    required this.name,
+    required this.color,
+    required this.faded,
+    required this.mocked,
+    this.fill,
+    this.textColor,
+    this.gap = false,
+    this.striped = false,
+  });
 
   final String name;
   final Color color;
+  final bool gap;
+  final bool striped;
+
+  /// The map pin's fill and initials colour (managers: blue / white); only
+  /// used when not plain white, so faded people stay grey.
+  final Color? fill;
+  final Color? textColor;
 
   /// An older position (or none): grey fill, as on the map.
   final bool faded;
   final bool mocked;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      color: faded ? Colors.grey.shade300 : Colors.white,
-      shape: BoxShape.circle,
-      border: Border.all(color: mocked ? Theme.of(context).colorScheme.error : color, width: 4),
-      boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
-    ),
-    alignment: Alignment.center,
-    child: Text(initialsOf(name), style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
-  );
+  Widget build(BuildContext context) {
+    final inner = fill != null && fill != Colors.white && fill != Colors.grey.shade300
+        ? fill!
+        : faded
+        ? Colors.grey.shade300
+        : Colors.white;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: gap ? Colors.white : inner,
+        shape: BoxShape.circle,
+        border: Border.all(color: mocked ? Theme.of(context).colorScheme.error : color, width: 4),
+        boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+      ),
+      padding: EdgeInsets.all(gap ? 2 : 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: inner, shape: BoxShape.circle),
+        child: CustomPaint(
+          painter: striped ? const StripesPainter() : null,
+          child: Center(
+            child: Text(
+              initialsOf(name),
+              style: TextStyle(fontWeight: FontWeight.bold, color: textColor ?? color, fontSize: 13),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+extension on List<Color> {
+  List<Color> ifEmpty(Color fallback) => isEmpty ? [fallback] : this;
 }

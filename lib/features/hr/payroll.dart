@@ -11,17 +11,29 @@ import 'hr_actions.dart';
 
 const payrollActive = true;
 
-/// Who sees and edits payroll. Same address in firestore.rules `payrollUser()`.
+/// The payroll account. Same address in firestore.rules `payrollUser()`.
 const payrollEmails = {'wissam.b@woodpanelsco.com'};
 
-bool canSeePayroll(AppUser? me) => payrollActive && me != null && me.active && payrollEmails.contains(me.email.toLowerCase());
+bool _payrollAccount(AppUser me) => payrollEmails.contains(me.email.toLowerCase());
+
+/// Sees every salary: the payroll account, and since 2026-11-15 (user) the GM
+/// and HR (firestore.rules `payrollViewer()`).
+bool canSeePayroll(AppUser? me) =>
+    payrollActive &&
+    me != null &&
+    me.active &&
+    (_payrollAccount(me) || me.hasRole(UserRole.gm) || me.hasRole(UserRole.hr));
+
+/// Edits [uid]'s salary: the payroll account anyone's, the GM and HR
+/// everyone's but their own (firestore.rules `payrollEditor()`).
+bool canEditPayroll(AppUser? me, String uid) => canSeePayroll(me) && (_payrollAccount(me!) || me.id != uid);
 
 /// Uploads employment contracts, whose amounts fill the salary (2026-11-13):
 /// role HR (who may write those amounts but never read payroll; not on their
 /// own record) and the payroll account. Same as firestore.rules / storage.rules
 /// `contractUser()`.
 bool canUploadContract(AppUser? me, String uid) =>
-    me != null && me.active && (canSeePayroll(me) || (me.hasRole(UserRole.hr) && me.id != uid));
+    me != null && me.active && (canEditPayroll(me, uid) || (me.hasRole(UserRole.hr) && me.id != uid));
 
 /// One "other allowance" (named by the user, e.g. Phone, Food).
 class OtherAllowance {

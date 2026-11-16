@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -57,4 +59,12 @@ Set<Marker> siteMarkers(
           onTap: onTap == null ? null : () => onTap(s),
         ),
   };
+}
+
+/// A site circle's radius in metres at [zoom]: the real [radius], but never
+/// under [minPixels] on screen (2026-11-15, user: zoomed out the circles
+/// vanished). Web Mercator: metres per pixel = 156543 × cos(lat) / 2^zoom.
+double siteCircleRadius(double radius, double lat, double zoom, {double minPixels = 26}) {
+  final metersPerPixel = 156543.03392 * math.cos(lat * math.pi / 180) / math.pow(2, zoom);
+  return math.max(radius, minPixels * metersPerPixel);
 }

@@ -62,6 +62,7 @@ class AppSettingsScreen extends ConsumerWidget {
           header(l10n.settingsSectionPeople),
           page(Icons.apartment, l10n.workSites, '/work-sites'),
           page(Icons.business, l10n.companies, '/companies'),
+          number(Icons.center_focus_strong_outlined, AppSetting.mapFocusZoom),
           number(Icons.more_time, AppSetting.lateGraceMin),
           number(Icons.directions_walk, AppSetting.awayGraceMin),
           number(Icons.free_breakfast_outlined, AppSetting.breakAllowanceMin),
@@ -92,6 +93,7 @@ String settingTitle(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.minOvertimeMin => l10n.settingMinOvertime,
       AppSetting.alertEscalateMin => l10n.settingAlertEscalate,
       AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGrace,
+      AppSetting.mapFocusZoom => l10n.settingMapFocusZoom,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoon,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewal,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoon,
@@ -108,6 +110,7 @@ String settingHelp(AppLocalizations l10n, AppSetting s) => switch (s) {
       AppSetting.minOvertimeMin => l10n.settingMinOvertimeHelp,
       AppSetting.alertEscalateMin => l10n.settingAlertEscalateHelp,
       AppSetting.driveHomeGraceMin => l10n.settingDriveHomeGraceHelp,
+      AppSetting.mapFocusZoom => l10n.settingMapFocusZoomHelp,
       AppSetting.givenDueSoonDays => l10n.settingGivenDueSoonHelp,
       AppSetting.vehicleRenewalDays => l10n.settingVehicleRenewalHelp,
       AppSetting.oilDueSoonKm => l10n.settingOilDueSoonHelp,
@@ -123,6 +126,7 @@ String settingValue(AppLocalizations l10n, AppSetting s, int v) => switch (s) {
       AppSetting.visitRadiusM => l10n.valueMeters(v),
       AppSetting.givenDueSoonDays || AppSetting.vehicleRenewalDays || AppSetting.docRenewalDays => l10n.valueDays(v),
       AppSetting.oilDueSoonKm => l10n.kmValue('$v'),
+      AppSetting.mapFocusZoom => l10n.focusZoomLevel(v),
     };
 
 class _NumberTile extends StatelessWidget {
