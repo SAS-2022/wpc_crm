@@ -26,6 +26,8 @@ import 'transfer.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 import 'client_links_widgets.dart';
+import '../projects/project.dart' show canUseProjects;
+import '../projects/project_widgets.dart';
 
 /// Digits only, with Saudi local numbers (05…) turned into 9665… (WhatsApp links).
 String whatsAppNumber(String phone) {
@@ -379,6 +381,8 @@ class ClientDetailScreen extends ConsumerWidget {
           section(l10n.linkedClients, [
             ClientLinksSection(client: client, canEdit: me?.can.isSupervisor ?? false),
           ]),
+          // Projects the client is linked to (2026-11-17).
+          if (canUseProjects(me)) section(l10n.projects, [ClientProjectsSection(clientId: clientId)]),
           section(l10n.clientStatusHistory, [
             if (client.statusLog.isNotEmpty) ClientStatusHistory(client: client),
           ]),

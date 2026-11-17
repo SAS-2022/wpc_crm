@@ -7501,4 +7501,385 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get idColumn => 'الإقامة / الهوية';
+
+  @override
+  String get projects => 'المشاريع';
+
+  @override
+  String get addProject => 'إضافة مشروع';
+
+  @override
+  String get editProject => 'تعديل المشروع';
+
+  @override
+  String get searchProjects => 'البحث في المشاريع';
+
+  @override
+  String get ledByMe => 'بقيادتي';
+
+  @override
+  String get noProjectsYet => 'لا توجد مشاريع بعد.';
+
+  @override
+  String get noMatches => 'لا توجد نتائج.';
+
+  @override
+  String get projectNotFound => 'هذا المشروع لم يعد موجوداً.';
+
+  @override
+  String get projectStageInitiated => 'بدأ';
+
+  @override
+  String get projectStageSamples => 'تم تقديم العينات';
+
+  @override
+  String get projectStageApproved => 'معتمد';
+
+  @override
+  String get projectStageRejected => 'مرفوض';
+
+  @override
+  String get projectStage => 'المرحلة';
+
+  @override
+  String get projectDetails => 'المشروع';
+
+  @override
+  String get projectName => 'اسم المشروع';
+
+  @override
+  String get contractingCompany => 'شركة المقاولات';
+
+  @override
+  String get projectLead => 'قائد المشروع';
+
+  @override
+  String get change => 'تغيير';
+
+  @override
+  String get addedBy => 'أضافه';
+
+  @override
+  String get projectLocation => 'الموقع';
+
+  @override
+  String get projectNoLocation => 'لا يوجد موقع بعد';
+
+  @override
+  String get projectLocationLater => 'غير محدد – يمكن إضافته لاحقاً.';
+
+  @override
+  String get clearLocationButton => 'إزالة الموقع';
+
+  @override
+  String get designerAndContact => 'المصمم وجهة الاتصال';
+
+  @override
+  String get designerAndContactOptional => 'المصمم وجهة الاتصال (اختياري)';
+
+  @override
+  String get designerName => 'اسم المصمم';
+
+  @override
+  String get designerPhone => 'هاتف المصمم';
+
+  @override
+  String get designerEmail => 'بريد المصمم';
+
+  @override
+  String get contactPhone => 'هاتف جهة الاتصال';
+
+  @override
+  String get linkClients => 'ربط عملاء';
+
+  @override
+  String get searchClients => 'البحث عن عملاء';
+
+  @override
+  String get typeToSearchClients => 'اكتب اسم العميل للبحث عنه.';
+
+  @override
+  String get noClientsLinked => 'لا يوجد عملاء مرتبطون بعد.';
+
+  @override
+  String get clientNotYours => 'عميل لدى مندوب آخر';
+
+  @override
+  String get materialsFromCollection => 'مواد من مجموعتنا';
+
+  @override
+  String get material => 'المادة';
+
+  @override
+  String get addMaterial => 'إضافة مادة';
+
+  @override
+  String get materialProposed => 'مقترحة';
+
+  @override
+  String get materialApproved => 'معتمدة';
+
+  @override
+  String get markApproved => 'اعتماد';
+
+  @override
+  String get markProposed => 'إرجاع إلى مقترحة';
+
+  @override
+  String get noMaterialsYet => 'لا توجد مواد بعد.';
+
+  @override
+  String get materialsEmpty =>
+      'لا توجد منتجات بعد – اطلب من مدير المبيعات استيرادها من أودو.';
+
+  @override
+  String get materialsEmptyAdmin =>
+      'لا توجد منتجات بعد – استوردها من الإعدادات ← الاستيراد ← المنتجات.';
+
+  @override
+  String get removedMaterial => 'مادة محذوفة';
+
+  @override
+  String get samplesSubmitted => 'العينات المقدمة';
+
+  @override
+  String get recordSamples => 'تسجيل عينات';
+
+  @override
+  String get otherSample => 'أخرى (صف العينة)';
+
+  @override
+  String get sampleDescription => 'ما الذي تم تقديمه';
+
+  @override
+  String get noSamplesYet => 'لم تقدم عينات بعد.';
+
+  @override
+  String get projectHistory => 'السجل';
+
+  @override
+  String get changeProjectLead => 'تغيير قائد المشروع';
+
+  @override
+  String get deleteProject => 'حذف المشروع';
+
+  @override
+  String get deleteProjectBody =>
+      'سيتم حذف المشروع وموادّه وعيّناته. يبقى العملاء.';
+
+  @override
+  String get chooseProjects => 'اختيار مشاريع';
+
+  @override
+  String get projectFilterHelp =>
+      'يعرض العملاء المرتبطين بالمشاريع أو المراحل المختارة.';
+
+  @override
+  String get noProjectsForClient => 'غير مرتبط بأي مشروع.';
+
+  @override
+  String projectLeadIs(String name) {
+    return 'القائد: $name';
+  }
+
+  @override
+  String materialsCount(int count) {
+    return '$count مواد';
+  }
+
+  @override
+  String samplesCount(int count) {
+    return '$count عينات';
+  }
+
+  @override
+  String moveProjectToStage(String stage) {
+    return 'النقل إلى \"$stage\"؟';
+  }
+
+  @override
+  String projectMovedTo(String stage) {
+    return 'تغيرت المرحلة إلى $stage';
+  }
+
+  @override
+  String deleteProjectQ(String name) {
+    return 'حذف $name؟';
+  }
+
+  @override
+  String linkedClientsCount(int count) {
+    return 'العملاء ($count)';
+  }
+
+  @override
+  String leadChanged(String from, String to) {
+    return 'القائد: $from ← $to';
+  }
+
+  @override
+  String get importData => 'الاستيراد';
+
+  @override
+  String get importDataSubtitle => 'العملاء ومواقعهم وغيرها من أودو / إكسل';
+
+  @override
+  String get importHubHelp =>
+      'اختر ما تريد استيراده. يعرض كل استيراد معاينة للتغييرات قبل الحفظ.';
+
+  @override
+  String get importClientsSubtitle =>
+      'ملف جهات الاتصال من أودو (إكسل / CSV): يضيف عملاء جدداً ويحدّث الموجودين';
+
+  @override
+  String get importLocationsTitle => 'مواقع العملاء';
+
+  @override
+  String get importLocationsSubtitle =>
+      'اسم العميل (أو الرقم الضريبي) + الموقع: يحدّث مواقع العملاء الموجودين';
+
+  @override
+  String get importProducts => 'المنتجات';
+
+  @override
+  String get designerOffice => 'مكتب التصميم';
+
+  @override
+  String get designerOffices => 'مكاتب التصميم';
+
+  @override
+  String get consultant => 'الاستشاري';
+
+  @override
+  String get consultants => 'الاستشاريون';
+
+  @override
+  String get contractors => 'شركات المقاولات';
+
+  @override
+  String get addContractor => 'إضافة شركة مقاولات';
+
+  @override
+  String get addDesignerOffice => 'إضافة مكتب تصميم';
+
+  @override
+  String get addConsultant => 'إضافة استشاري';
+
+  @override
+  String get noContactsYet => 'لا توجد جهات اتصال بعد';
+
+  @override
+  String get addContact => 'إضافة جهة اتصال';
+
+  @override
+  String get editContact => 'تعديل جهة الاتصال';
+
+  @override
+  String get contactName => 'الاسم';
+
+  @override
+  String get contactTitle => 'المسمى الوظيفي / الدور';
+
+  @override
+  String get products => 'المنتجات';
+
+  @override
+  String get searchProducts => 'البحث في المنتجات ورموز الألوان والألوان';
+
+  @override
+  String get noProductsYet =>
+      'لا توجد منتجات بعد – يستوردها مدير المبيعات من أودو (الإعدادات ← الاستيراد ← المنتجات).';
+
+  @override
+  String get productsWithoutDecor => 'الإكسسوارات ومنتجات أخرى';
+
+  @override
+  String get productPanels => 'ألواح';
+
+  @override
+  String get productEdgeBands => 'أشرطة الحواف';
+
+  @override
+  String get productLaminates => 'لامينيت';
+
+  @override
+  String get productSamples => 'عينات';
+
+  @override
+  String get productAccessories => 'إكسسوارات';
+
+  @override
+  String get chooseDecor => 'اختر الديكور';
+
+  @override
+  String get searchDecors => 'رمز اللون أو اللون أو المنتج';
+
+  @override
+  String get anyProductOfDecor => 'الديكور (بدون منتج محدد)';
+
+  @override
+  String get otherDecor => 'ديكور آخر';
+
+  @override
+  String get importProductsSubtitle =>
+      'ملف \"Product Variant\" من أودو (CSV / إكسل): مجموعتنا حسب الديكور مع الأسعار';
+
+  @override
+  String get productImportHelp =>
+      'في أودو: المبيعات ← المنتجات ← متغيرات المنتج، حدد الكل، تصدير (CSV أو إكسل). الاسم مطلوب؛ يُستخدم رمز اللون (= الديكور) واللون وسعر البيع ووحدة القياس؛ يتم تجاهل المخزون والقيمة الإجمالية. أضف \"المرجع الداخلي\" إلى التصدير ليبقى المنتج مطابقاً إذا تغير اسمه. تُستبعد الآلات وعناصر الاختبار. لا يُحذف شيء.';
+
+  @override
+  String get productImportNoRef =>
+      'لا يحتوي هذا الملف على عمود المرجع الداخلي، لذا تتم المطابقة بالاسم: المنتج الذي يتغير اسمه في أودو سيُضاف كمنتج جديد.';
+
+  @override
+  String get productImportNewList => 'منتجات جديدة';
+
+  @override
+  String get productImportUpdatedList => 'منتجات تغيرت';
+
+  @override
+  String get productImportExcluded => 'مستبعدة (آلات، عناصر اختبار)';
+
+  @override
+  String get productImportDuplicates => 'صفوف مكررة (تُستورد مرة واحدة)';
+
+  @override
+  String get productImportNotInFile =>
+      'موجودة في التطبيق وليست في هذا الملف (تبقى)';
+
+  @override
+  String productImportNew(int count) {
+    return '$count جديد';
+  }
+
+  @override
+  String productImportUpdated(int count) {
+    return '$count تغيّر';
+  }
+
+  @override
+  String productImportUnchanged(int count) {
+    return '$count بدون تغيير';
+  }
+
+  @override
+  String decorsCount(int count) {
+    return '$count ديكور';
+  }
+
+  @override
+  String productsCount(int count) {
+    return '$count منتج';
+  }
+
+  @override
+  String productImportSave(int count) {
+    return 'حفظ $count منتج';
+  }
+
+  @override
+  String productImportDone(int added, int updated) {
+    return 'تم استيراد المنتجات: $added جديد، $updated تغيّر';
+  }
 }

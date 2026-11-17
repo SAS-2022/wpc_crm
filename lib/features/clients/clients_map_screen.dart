@@ -33,6 +33,9 @@ import '../tracking/live_data.dart';
 import '../attendance/site_markers.dart';
 import '../attendance/work_sites.dart';
 import '../../core/time_ago.dart';
+import '../projects/project.dart';
+import '../projects/project_widgets.dart';
+import '../projects/projects_repository.dart';
 
 /// Map filter. [planned] = on today's plan; it shows blue and takes
 /// precedence over the visit status colour.
@@ -193,10 +196,20 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     ];
     // One pin per location (main, factory, showroom, …), all in the client's
     // colour; with a region only the pins inside it.
+    // With a project filter (2026-11-17) the projects' own locations too.
+    final projectPins = [
+      for (final p in filteredProjects(
+        ref.watch(projectsProvider).value ?? const <Project>[],
+        ref.watch(projectFilterProvider),
+        ref.watch(projectStageFilterProvider),
+      ))
+        if (p.hasLocation && inRegion(p.lat!, p.lng!)) p,
+    ];
     final points = [
       for (final c in clients)
         for (final l in c.locations)
           if (inRegion(l.lat, l.lng)) LatLng(l.lat, l.lng),
+      for (final p in projectPins) LatLng(p.lat!, p.lng!),
     ];
     // The Filters sheet lists only the salespeople with clients in the
     // region (user 2026-11-08).
@@ -271,6 +284,8 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
       ref.watch(clientTypeFilterProvider),
       Object.hashAllUnordered(ref.watch(tagFilterProvider)),
       Object.hashAllUnordered(ref.watch(givenDueFilterProvider)),
+      Object.hashAllUnordered(ref.watch(projectFilterProvider)),
+      Object.hashAllUnordered(ref.watch(projectStageFilterProvider)),
       _query.text,
     );
     if (_fittedTo == null && clients.isNotEmpty) {
@@ -307,6 +322,18 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             markers: {
               // Work sites as icons (2026-11-12).
               ...siteMarkers(context, _icons, ref.watch(workSitesProvider).value ?? const <WorkSite>[]),
+              for (final p in projectPins)
+                Marker(
+                  markerId: MarkerId('project_${p.id}'),
+                  position: LatLng(p.lat!, p.lng!),
+                  anchor: const Offset(0.5, 0.5),
+                  icon: _icons.badge(context: context, icon: Icons.apartment, fill: projectPinColor),
+                  infoWindow: InfoWindow(
+                    title: p.name,
+                    snippet: '${projectStageLabel(l10n, p.stage)} · ${p.contractor}',
+                    onTap: () => context.push('/projects/${p.id}'),
+                  ),
+                ),
               for (final c in clients)
                 for (final (i, loc) in c.locations.indexed)
                   if (inRegion(loc.lat, loc.lng))

@@ -14,6 +14,8 @@ import 'given_items.dart';
 import 'given_items_widgets.dart';
 import 'client_status.dart';
 import 'client_status_widgets.dart';
+import '../projects/project_widgets.dart';
+import '../projects/projects_repository.dart';
 
 /// Number of active filters (salesperson, type, each tag).
 int _activeCount(WidgetRef ref) =>
@@ -21,7 +23,9 @@ int _activeCount(WidgetRef ref) =>
     (ref.watch(clientTypeFilterProvider) == null ? 0 : 1) +
     ref.watch(tagFilterProvider).length +
     ref.watch(givenDueFilterProvider).length +
-    (isDefaultStatusFilter(ref.watch(clientStatusFilterProvider)) ? 0 : 1);
+    (isDefaultStatusFilter(ref.watch(clientStatusFilterProvider)) ? 0 : 1) +
+    ref.watch(projectFilterProvider).length +
+    ref.watch(projectStageFilterProvider).length;
 
 void _clearAll(WidgetRef ref) {
   ref.read(salesFilterProvider.notifier).clear();
@@ -29,6 +33,8 @@ void _clearAll(WidgetRef ref) {
   ref.read(tagFilterProvider.notifier).clear();
   ref.read(givenDueFilterProvider.notifier).clear();
   ref.read(clientStatusFilterProvider.notifier).reset();
+  ref.read(projectFilterProvider.notifier).clear();
+  ref.read(projectStageFilterProvider.notifier).clear();
 }
 
 String _typeLabel(AppLocalizations l10n, String type) =>
@@ -125,6 +131,9 @@ class _FiltersSheetState extends ConsumerState<_FiltersSheet> {
             heading(widget.region == null ? l10n.salesperson : l10n.salespeopleInRegion(widget.region!.label(l10n))),
             SalesFilterChips(ownerIds: widget.ownerIds, onPicked: _advanced ? null : () => Navigator.pop(context)),
           ],
+          // Projects (2026-11-17): on the quick sheet too.
+          heading(l10n.projects),
+          const ProjectFilterSection(),
           if (supervisor && widget.quick)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -229,12 +238,15 @@ class ActiveClientFilters extends ConsumerWidget {
     final due = ref.watch(givenDueFilterProvider);
     final statuses = ref.watch(clientStatusFilterProvider);
     final defaultStatuses = isDefaultStatusFilter(statuses);
-    if (sales.isEmpty && type == null && tagFilter.isEmpty && due.isEmpty && defaultStatuses) {
+    final projectIds = ref.watch(projectFilterProvider);
+    final projectStages = ref.watch(projectStageFilterProvider);
+    if (sales.isEmpty && type == null && tagFilter.isEmpty && due.isEmpty && defaultStatuses && projectIds.isEmpty && projectStages.isEmpty) {
       return const SizedBox.shrink();
     }
     final users = {for (final u in ref.watch(usersProvider).value ?? const []) u.id: u};
     final tags = ref.watch(clientTagsByIdProvider);
     final lang = Localizations.localeOf(context).languageCode;
+    final projectsById = {for (final p in ref.watch(projectsProvider).value ?? const []) p.id: p};
 
     Widget chip(IconData icon, String label, VoidCallback onDeleted) => Padding(
       padding: const EdgeInsetsDirectional.only(end: 6),
@@ -282,6 +294,18 @@ class ActiveClientFilters extends ConsumerWidget {
               givenItemIcon(item),
               '${givenItemLabel(l10n, item)} · ${l10n.givenDue}',
               () => ref.read(givenDueFilterProvider.notifier).toggle(item),
+            ),
+          for (final id in projectIds)
+            chip(
+              Icons.apartment,
+              projectsById[id]?.name ?? '?',
+              () => ref.read(projectFilterProvider.notifier).toggle(id),
+            ),
+          for (final st in projectStages)
+            chip(
+              projectStageIcon(st),
+              '${l10n.projects}: ${projectStageLabel(l10n, st)}',
+              () => ref.read(projectStageFilterProvider.notifier).toggle(st),
             ),
           TextButton(onPressed: () => _clearAll(ref), child: Text(l10n.clearFilters)),
         ],

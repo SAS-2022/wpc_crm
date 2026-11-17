@@ -17,6 +17,8 @@ import 'transfer.dart';
 import '../../core/saving.dart';
 import 'client_status.dart';
 import 'client_links.dart';
+import '../projects/project.dart';
+import '../projects/projects_repository.dart';
 
 /// Every client the signed-in user may read (all for KAM/managers, own for
 /// sales execs), hidden ones included: for the client page, imports and
@@ -133,8 +135,13 @@ final workingClientsProvider = Provider<AsyncValue<List<Client>>>(
   (ref) => ref.watch(clientsProvider).whenData((list) => list.where((c) => c.isActive).toList()),
 );
 
-/// Salesperson, company / individual, tag, "catalog due" and status filters together.
+/// Salesperson, company / individual, tag, "catalog due", status and project filters together.
 bool Function(Client) _clientFilter(Ref ref) {
+  final inProject = projectClientFilter(
+    ref.watch(projectsProvider).value ?? const [],
+    ref.watch(projectFilterProvider),
+    ref.watch(projectStageFilterProvider),
+  );
   final sales = ref.watch(salesFilterProvider);
   final type = ref.watch(clientTypeFilterProvider);
   final tags = ref.watch(tagFilterProvider);
@@ -147,6 +154,7 @@ bool Function(Client) _clientFilter(Ref ref) {
       (type == null || c.clientType == type) &&
       (tags.isEmpty || c.tagIds.any(tags.contains)) &&
       statuses.contains(c.status) &&
+      inProject(c.id) &&
       (due.isEmpty || due.any((item) => givenStatus(c.given[item], item, givenRules, now) == GivenStatus.due));
 }
 

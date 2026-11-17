@@ -251,7 +251,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 IconButton(
                   icon: const Icon(Icons.upload_file),
                   tooltip: l10n.importClients,
-                  onPressed: () => context.go('/import'),
+                  onPressed: () => context.go('/import/clients'),
                 ),
             ],
           );

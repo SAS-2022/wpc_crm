@@ -251,6 +251,37 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Projects (2026-11-17): the sales team, SM and GM add, view and edit
+    // every project (name + contracting company required). Whoever adds one
+    // is its lead; only the SM / GM change the lead (and its log) or delete.
+    match /projects/{projectId} {
+      function projectOk() {
+        let d = request.resource.data;
+        return d.get('name', '') is string && d.get('name', '').trim().size() > 0
+          && d.get('contractor', '') is string && d.get('contractor', '').trim().size() > 0;
+      }
+      allow read: if isSales();
+      allow create: if isSales() && projectOk()
+        && request.resource.data.leadId == request.auth.uid
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSales() && projectOk()
+        && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '')
+        && (isAdmin() || (request.resource.data.get('leadId', '') == resource.data.get('leadId', '')
+          && request.resource.data.get('leadLog', []) == resource.data.get('leadLog', [])));
+      allow delete: if isAdmin();
+    }
+
+    // Products (2026-11-17): imported from Odoo by the SM / GM (Settings →
+    // Import → Products); the sales team reads them (prices included, user
+    // decision). Import records in product_imports.
+    match /products/{productId} {
+      allow read: if isSales();
+      allow write: if isAdmin();
+    }
+    match /product_imports/{importId} {
+      allow read, write: if isAdmin();
+    }
+
     // Company documents (2026-11-01): folders and files of the tree. The GM /
     // sales manager read and edit all; HR reads all and edits the Expiring
     // section; the sales team reads Official and Product items that aren't

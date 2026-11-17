@@ -12227,6 +12227,684 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Iqama / ID'**
   String get idColumn;
+
+  /// No description provided for @projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get projects;
+
+  /// No description provided for @addProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Add project'**
+  String get addProject;
+
+  /// No description provided for @editProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit project'**
+  String get editProject;
+
+  /// No description provided for @searchProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Search projects'**
+  String get searchProjects;
+
+  /// No description provided for @ledByMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Led by me'**
+  String get ledByMe;
+
+  /// No description provided for @noProjectsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects yet.'**
+  String get noProjectsYet;
+
+  /// No description provided for @noMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches.'**
+  String get noMatches;
+
+  /// No description provided for @projectNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This project no longer exists.'**
+  String get projectNotFound;
+
+  /// No description provided for @projectStageInitiated.
+  ///
+  /// In en, this message translates to:
+  /// **'Initiated'**
+  String get projectStageInitiated;
+
+  /// No description provided for @projectStageSamples.
+  ///
+  /// In en, this message translates to:
+  /// **'Samples submitted'**
+  String get projectStageSamples;
+
+  /// No description provided for @projectStageApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get projectStageApproved;
+
+  /// No description provided for @projectStageRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get projectStageRejected;
+
+  /// No description provided for @projectStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get projectStage;
+
+  /// No description provided for @projectDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get projectDetails;
+
+  /// No description provided for @projectName.
+  ///
+  /// In en, this message translates to:
+  /// **'Project name'**
+  String get projectName;
+
+  /// No description provided for @contractingCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracting company'**
+  String get contractingCompany;
+
+  /// No description provided for @projectLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Project lead'**
+  String get projectLead;
+
+  /// No description provided for @change.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get change;
+
+  /// No description provided for @addedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Added by'**
+  String get addedBy;
+
+  /// No description provided for @projectLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get projectLocation;
+
+  /// No description provided for @projectNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'No location yet'**
+  String get projectNoLocation;
+
+  /// No description provided for @projectLocationLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set – it can be added later.'**
+  String get projectLocationLater;
+
+  /// No description provided for @clearLocationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove location'**
+  String get clearLocationButton;
+
+  /// No description provided for @designerAndContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer and contact'**
+  String get designerAndContact;
+
+  /// No description provided for @designerAndContactOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer and contact (optional)'**
+  String get designerAndContactOptional;
+
+  /// No description provided for @designerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer name'**
+  String get designerName;
+
+  /// No description provided for @designerPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer phone'**
+  String get designerPhone;
+
+  /// No description provided for @designerEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer email'**
+  String get designerEmail;
+
+  /// No description provided for @contactPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact phone'**
+  String get contactPhone;
+
+  /// No description provided for @linkClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Link clients'**
+  String get linkClients;
+
+  /// No description provided for @searchClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clients'**
+  String get searchClients;
+
+  /// No description provided for @typeToSearchClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a client\'s name to find it.'**
+  String get typeToSearchClients;
+
+  /// No description provided for @noClientsLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients linked yet.'**
+  String get noClientsLinked;
+
+  /// No description provided for @clientNotYours.
+  ///
+  /// In en, this message translates to:
+  /// **'Another salesperson\'s client'**
+  String get clientNotYours;
+
+  /// No description provided for @materialsFromCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials from our collection'**
+  String get materialsFromCollection;
+
+  /// No description provided for @material.
+  ///
+  /// In en, this message translates to:
+  /// **'Material'**
+  String get material;
+
+  /// No description provided for @addMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Add material'**
+  String get addMaterial;
+
+  /// No description provided for @materialProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed'**
+  String get materialProposed;
+
+  /// No description provided for @materialApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get materialApproved;
+
+  /// No description provided for @markApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get markApproved;
+
+  /// No description provided for @markProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to proposed'**
+  String get markProposed;
+
+  /// No description provided for @noMaterialsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No materials yet.'**
+  String get noMaterialsYet;
+
+  /// No description provided for @materialsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No products yet – ask the sales manager to import them from Odoo.'**
+  String get materialsEmpty;
+
+  /// No description provided for @materialsEmptyAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'No products yet – import them at Settings → Import → Products.'**
+  String get materialsEmptyAdmin;
+
+  /// No description provided for @removedMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed material'**
+  String get removedMaterial;
+
+  /// No description provided for @samplesSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Samples submitted'**
+  String get samplesSubmitted;
+
+  /// No description provided for @recordSamples.
+  ///
+  /// In en, this message translates to:
+  /// **'Record samples'**
+  String get recordSamples;
+
+  /// No description provided for @otherSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Other (describe)'**
+  String get otherSample;
+
+  /// No description provided for @sampleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'What was submitted'**
+  String get sampleDescription;
+
+  /// No description provided for @noSamplesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No samples submitted yet.'**
+  String get noSamplesYet;
+
+  /// No description provided for @projectHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get projectHistory;
+
+  /// No description provided for @changeProjectLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Change project lead'**
+  String get changeProjectLead;
+
+  /// No description provided for @deleteProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete project'**
+  String get deleteProject;
+
+  /// No description provided for @deleteProjectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The project, its materials and samples are deleted. The clients stay.'**
+  String get deleteProjectBody;
+
+  /// No description provided for @chooseProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose projects'**
+  String get chooseProjects;
+
+  /// No description provided for @projectFilterHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows the clients linked to the chosen projects / stages.'**
+  String get projectFilterHelp;
+
+  /// No description provided for @noProjectsForClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked to any project.'**
+  String get noProjectsForClient;
+
+  /// No description provided for @projectLeadIs.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead: {name}'**
+  String projectLeadIs(String name);
+
+  /// No description provided for @materialsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} materials'**
+  String materialsCount(int count);
+
+  /// No description provided for @samplesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} samples'**
+  String samplesCount(int count);
+
+  /// No description provided for @moveProjectToStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to \"{stage}\"?'**
+  String moveProjectToStage(String stage);
+
+  /// No description provided for @projectMovedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage changed to {stage}'**
+  String projectMovedTo(String stage);
+
+  /// No description provided for @deleteProjectQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String deleteProjectQ(String name);
+
+  /// No description provided for @linkedClientsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients ({count})'**
+  String linkedClientsCount(int count);
+
+  /// No description provided for @leadChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead: {from} → {to}'**
+  String leadChanged(String from, String to);
+
+  /// No description provided for @importData.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importData;
+
+  /// No description provided for @importDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients, client locations and more from Odoo / Excel'**
+  String get importDataSubtitle;
+
+  /// No description provided for @importHubHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what to import. Each import shows a preview of the changes before anything is saved.'**
+  String get importHubHelp;
+
+  /// No description provided for @importClientsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo contacts export (Excel / CSV): adds new clients and updates existing ones'**
+  String get importClientsSubtitle;
+
+  /// No description provided for @importLocationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client locations'**
+  String get importLocationsTitle;
+
+  /// No description provided for @importLocationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Client name (or Tax ID) + location: updates the locations of existing clients'**
+  String get importLocationsSubtitle;
+
+  /// No description provided for @importProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Products'**
+  String get importProducts;
+
+  /// No description provided for @designerOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer office'**
+  String get designerOffice;
+
+  /// No description provided for @designerOffices.
+  ///
+  /// In en, this message translates to:
+  /// **'Designer offices'**
+  String get designerOffices;
+
+  /// No description provided for @consultant.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get consultant;
+
+  /// No description provided for @consultants.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultants'**
+  String get consultants;
+
+  /// No description provided for @contractors.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracting companies'**
+  String get contractors;
+
+  /// No description provided for @addContractor.
+  ///
+  /// In en, this message translates to:
+  /// **'Add contracting company'**
+  String get addContractor;
+
+  /// No description provided for @addDesignerOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Add designer office'**
+  String get addDesignerOffice;
+
+  /// No description provided for @addConsultant.
+  ///
+  /// In en, this message translates to:
+  /// **'Add consultant'**
+  String get addConsultant;
+
+  /// No description provided for @noContactsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts yet'**
+  String get noContactsYet;
+
+  /// No description provided for @addContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Add contact'**
+  String get addContact;
+
+  /// No description provided for @editContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit contact'**
+  String get editContact;
+
+  /// No description provided for @contactName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get contactName;
+
+  /// No description provided for @contactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Job title / role'**
+  String get contactTitle;
+
+  /// No description provided for @products.
+  ///
+  /// In en, this message translates to:
+  /// **'Products'**
+  String get products;
+
+  /// No description provided for @searchProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search products, colour codes, colours'**
+  String get searchProducts;
+
+  /// No description provided for @noProductsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No products yet – the sales manager imports them from Odoo (Settings → Import → Products).'**
+  String get noProductsYet;
+
+  /// No description provided for @productsWithoutDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessories and other products'**
+  String get productsWithoutDecor;
+
+  /// No description provided for @productPanels.
+  ///
+  /// In en, this message translates to:
+  /// **'Panels'**
+  String get productPanels;
+
+  /// No description provided for @productEdgeBands.
+  ///
+  /// In en, this message translates to:
+  /// **'Edge bands'**
+  String get productEdgeBands;
+
+  /// No description provided for @productLaminates.
+  ///
+  /// In en, this message translates to:
+  /// **'Laminates'**
+  String get productLaminates;
+
+  /// No description provided for @productSamples.
+  ///
+  /// In en, this message translates to:
+  /// **'Samples'**
+  String get productSamples;
+
+  /// No description provided for @productAccessories.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessories'**
+  String get productAccessories;
+
+  /// No description provided for @chooseDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a decor'**
+  String get chooseDecor;
+
+  /// No description provided for @searchDecors.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour code, colour or product'**
+  String get searchDecors;
+
+  /// No description provided for @anyProductOfDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'The decor (no specific product)'**
+  String get anyProductOfDecor;
+
+  /// No description provided for @otherDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'Other decor'**
+  String get otherDecor;
+
+  /// No description provided for @importProductsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Odoo \"Product Variant\" export (CSV / Excel): our collection by decor, with prices'**
+  String get importProductsSubtitle;
+
+  /// No description provided for @productImportHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'In Odoo: Sales → Products → Product Variants, select all, Export (CSV or Excel). Name is required; Color Code (= decor), Color, Sales Price and Unit of Measure are used; stock and Total Value are ignored. Add \"Internal Reference\" to the export so renamed products stay matched. Machines and test items are left out. Nothing is deleted.'**
+  String get productImportHelp;
+
+  /// No description provided for @productImportNoRef.
+  ///
+  /// In en, this message translates to:
+  /// **'This file has no Internal Reference column, so products are matched by name: a product renamed in Odoo will come in as a new one.'**
+  String get productImportNoRef;
+
+  /// No description provided for @productImportNewList.
+  ///
+  /// In en, this message translates to:
+  /// **'New products'**
+  String get productImportNewList;
+
+  /// No description provided for @productImportUpdatedList.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed products'**
+  String get productImportUpdatedList;
+
+  /// No description provided for @productImportExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Left out (machines, test items)'**
+  String get productImportExcluded;
+
+  /// No description provided for @productImportDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeated rows (imported once)'**
+  String get productImportDuplicates;
+
+  /// No description provided for @productImportNotInFile.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app but not in this file (kept)'**
+  String get productImportNotInFile;
+
+  /// No description provided for @productImportNew.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new'**
+  String productImportNew(int count);
+
+  /// No description provided for @productImportUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changed'**
+  String productImportUpdated(int count);
+
+  /// No description provided for @productImportUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unchanged'**
+  String productImportUnchanged(int count);
+
+  /// No description provided for @decorsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} decors'**
+  String decorsCount(int count);
+
+  /// No description provided for @productsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} products'**
+  String productsCount(int count);
+
+  /// No description provided for @productImportSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {count} products'**
+  String productImportSave(int count);
+
+  /// No description provided for @productImportDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Products imported: {added} new, {updated} changed'**
+  String productImportDone(int added, int updated);
 }
 
 class _AppLocalizationsDelegate

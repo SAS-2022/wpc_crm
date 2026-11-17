@@ -28,6 +28,8 @@ List<TabOption> bottomTabOptions(WidgetRef ref, AppLocalizations l10n) {
       (path: '/map', icon: Icons.map_outlined, selected: Icons.map, label: l10n.clientMap),
       (path: '/visits', icon: Icons.event_note_outlined, selected: Icons.event_note, label: l10n.visits),
     ],
+    if (role.isSales) (path: '/projects', icon: Icons.apartment_outlined, selected: Icons.apartment, label: l10n.projects),
+    if (role.isSales) (path: '/products', icon: Icons.palette_outlined, selected: Icons.palette, label: l10n.products),
     if (role.isTracked) (path: '/plan/${me.id}', icon: Icons.today_outlined, selected: Icons.today, label: l10n.myPlan),
     if (supervisor) ...[
       (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),

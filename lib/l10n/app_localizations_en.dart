@@ -7488,4 +7488,385 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get idColumn => 'Iqama / ID';
+
+  @override
+  String get projects => 'Projects';
+
+  @override
+  String get addProject => 'Add project';
+
+  @override
+  String get editProject => 'Edit project';
+
+  @override
+  String get searchProjects => 'Search projects';
+
+  @override
+  String get ledByMe => 'Led by me';
+
+  @override
+  String get noProjectsYet => 'No projects yet.';
+
+  @override
+  String get noMatches => 'Nothing matches.';
+
+  @override
+  String get projectNotFound => 'This project no longer exists.';
+
+  @override
+  String get projectStageInitiated => 'Initiated';
+
+  @override
+  String get projectStageSamples => 'Samples submitted';
+
+  @override
+  String get projectStageApproved => 'Approved';
+
+  @override
+  String get projectStageRejected => 'Rejected';
+
+  @override
+  String get projectStage => 'Stage';
+
+  @override
+  String get projectDetails => 'Project';
+
+  @override
+  String get projectName => 'Project name';
+
+  @override
+  String get contractingCompany => 'Contracting company';
+
+  @override
+  String get projectLead => 'Project lead';
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get addedBy => 'Added by';
+
+  @override
+  String get projectLocation => 'Location';
+
+  @override
+  String get projectNoLocation => 'No location yet';
+
+  @override
+  String get projectLocationLater => 'Not set – it can be added later.';
+
+  @override
+  String get clearLocationButton => 'Remove location';
+
+  @override
+  String get designerAndContact => 'Designer and contact';
+
+  @override
+  String get designerAndContactOptional => 'Designer and contact (optional)';
+
+  @override
+  String get designerName => 'Designer name';
+
+  @override
+  String get designerPhone => 'Designer phone';
+
+  @override
+  String get designerEmail => 'Designer email';
+
+  @override
+  String get contactPhone => 'Contact phone';
+
+  @override
+  String get linkClients => 'Link clients';
+
+  @override
+  String get searchClients => 'Search clients';
+
+  @override
+  String get typeToSearchClients => 'Type a client\'s name to find it.';
+
+  @override
+  String get noClientsLinked => 'No clients linked yet.';
+
+  @override
+  String get clientNotYours => 'Another salesperson\'s client';
+
+  @override
+  String get materialsFromCollection => 'Materials from our collection';
+
+  @override
+  String get material => 'Material';
+
+  @override
+  String get addMaterial => 'Add material';
+
+  @override
+  String get materialProposed => 'Proposed';
+
+  @override
+  String get materialApproved => 'Approved';
+
+  @override
+  String get markApproved => 'Approve';
+
+  @override
+  String get markProposed => 'Back to proposed';
+
+  @override
+  String get noMaterialsYet => 'No materials yet.';
+
+  @override
+  String get materialsEmpty =>
+      'No products yet – ask the sales manager to import them from Odoo.';
+
+  @override
+  String get materialsEmptyAdmin =>
+      'No products yet – import them at Settings → Import → Products.';
+
+  @override
+  String get removedMaterial => 'Removed material';
+
+  @override
+  String get samplesSubmitted => 'Samples submitted';
+
+  @override
+  String get recordSamples => 'Record samples';
+
+  @override
+  String get otherSample => 'Other (describe)';
+
+  @override
+  String get sampleDescription => 'What was submitted';
+
+  @override
+  String get noSamplesYet => 'No samples submitted yet.';
+
+  @override
+  String get projectHistory => 'History';
+
+  @override
+  String get changeProjectLead => 'Change project lead';
+
+  @override
+  String get deleteProject => 'Delete project';
+
+  @override
+  String get deleteProjectBody =>
+      'The project, its materials and samples are deleted. The clients stay.';
+
+  @override
+  String get chooseProjects => 'Choose projects';
+
+  @override
+  String get projectFilterHelp =>
+      'Shows the clients linked to the chosen projects / stages.';
+
+  @override
+  String get noProjectsForClient => 'Not linked to any project.';
+
+  @override
+  String projectLeadIs(String name) {
+    return 'Lead: $name';
+  }
+
+  @override
+  String materialsCount(int count) {
+    return '$count materials';
+  }
+
+  @override
+  String samplesCount(int count) {
+    return '$count samples';
+  }
+
+  @override
+  String moveProjectToStage(String stage) {
+    return 'Move to \"$stage\"?';
+  }
+
+  @override
+  String projectMovedTo(String stage) {
+    return 'Stage changed to $stage';
+  }
+
+  @override
+  String deleteProjectQ(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String linkedClientsCount(int count) {
+    return 'Clients ($count)';
+  }
+
+  @override
+  String leadChanged(String from, String to) {
+    return 'Lead: $from → $to';
+  }
+
+  @override
+  String get importData => 'Import';
+
+  @override
+  String get importDataSubtitle =>
+      'Clients, client locations and more from Odoo / Excel';
+
+  @override
+  String get importHubHelp =>
+      'Pick what to import. Each import shows a preview of the changes before anything is saved.';
+
+  @override
+  String get importClientsSubtitle =>
+      'Odoo contacts export (Excel / CSV): adds new clients and updates existing ones';
+
+  @override
+  String get importLocationsTitle => 'Client locations';
+
+  @override
+  String get importLocationsSubtitle =>
+      'Client name (or Tax ID) + location: updates the locations of existing clients';
+
+  @override
+  String get importProducts => 'Products';
+
+  @override
+  String get designerOffice => 'Designer office';
+
+  @override
+  String get designerOffices => 'Designer offices';
+
+  @override
+  String get consultant => 'Consultant';
+
+  @override
+  String get consultants => 'Consultants';
+
+  @override
+  String get contractors => 'Contracting companies';
+
+  @override
+  String get addContractor => 'Add contracting company';
+
+  @override
+  String get addDesignerOffice => 'Add designer office';
+
+  @override
+  String get addConsultant => 'Add consultant';
+
+  @override
+  String get noContactsYet => 'No contacts yet';
+
+  @override
+  String get addContact => 'Add contact';
+
+  @override
+  String get editContact => 'Edit contact';
+
+  @override
+  String get contactName => 'Name';
+
+  @override
+  String get contactTitle => 'Job title / role';
+
+  @override
+  String get products => 'Products';
+
+  @override
+  String get searchProducts => 'Search products, colour codes, colours';
+
+  @override
+  String get noProductsYet =>
+      'No products yet – the sales manager imports them from Odoo (Settings → Import → Products).';
+
+  @override
+  String get productsWithoutDecor => 'Accessories and other products';
+
+  @override
+  String get productPanels => 'Panels';
+
+  @override
+  String get productEdgeBands => 'Edge bands';
+
+  @override
+  String get productLaminates => 'Laminates';
+
+  @override
+  String get productSamples => 'Samples';
+
+  @override
+  String get productAccessories => 'Accessories';
+
+  @override
+  String get chooseDecor => 'Choose a decor';
+
+  @override
+  String get searchDecors => 'Colour code, colour or product';
+
+  @override
+  String get anyProductOfDecor => 'The decor (no specific product)';
+
+  @override
+  String get otherDecor => 'Other decor';
+
+  @override
+  String get importProductsSubtitle =>
+      'Odoo \"Product Variant\" export (CSV / Excel): our collection by decor, with prices';
+
+  @override
+  String get productImportHelp =>
+      'In Odoo: Sales → Products → Product Variants, select all, Export (CSV or Excel). Name is required; Color Code (= decor), Color, Sales Price and Unit of Measure are used; stock and Total Value are ignored. Add \"Internal Reference\" to the export so renamed products stay matched. Machines and test items are left out. Nothing is deleted.';
+
+  @override
+  String get productImportNoRef =>
+      'This file has no Internal Reference column, so products are matched by name: a product renamed in Odoo will come in as a new one.';
+
+  @override
+  String get productImportNewList => 'New products';
+
+  @override
+  String get productImportUpdatedList => 'Changed products';
+
+  @override
+  String get productImportExcluded => 'Left out (machines, test items)';
+
+  @override
+  String get productImportDuplicates => 'Repeated rows (imported once)';
+
+  @override
+  String get productImportNotInFile => 'In the app but not in this file (kept)';
+
+  @override
+  String productImportNew(int count) {
+    return '$count new';
+  }
+
+  @override
+  String productImportUpdated(int count) {
+    return '$count changed';
+  }
+
+  @override
+  String productImportUnchanged(int count) {
+    return '$count unchanged';
+  }
+
+  @override
+  String decorsCount(int count) {
+    return '$count decors';
+  }
+
+  @override
+  String productsCount(int count) {
+    return '$count products';
+  }
+
+  @override
+  String productImportSave(int count) {
+    return 'Save $count products';
+  }
+
+  @override
+  String productImportDone(int added, int updated) {
+    return 'Products imported: $added new, $updated changed';
+  }
 }

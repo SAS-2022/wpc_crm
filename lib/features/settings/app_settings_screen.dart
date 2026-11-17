@@ -57,6 +57,7 @@ class AppSettingsScreen extends ConsumerWidget {
           page(Icons.menu_book_outlined, l10n.givenItemsSettings, '/given-items'),
           page(Icons.sell_outlined, l10n.clientTags, '/client-tags'),
           page(Icons.place_outlined, l10n.locationTypes, '/location-types'),
+          page(Icons.upload_file, l10n.importData, '/import', subtitle: l10n.importDataSubtitle),
           number(Icons.social_distance, AppSetting.visitRadiusM),
           number(Icons.event_repeat, AppSetting.givenDueSoonDays),
           header(l10n.settingsSectionPeople),

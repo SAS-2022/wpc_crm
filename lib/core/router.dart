@@ -18,6 +18,7 @@ import '../features/home/bottom_tabs_screen.dart';
 import '../features/home/app_shell.dart';
 import '../features/home/home_screen.dart';
 import '../features/home/more_screen.dart';
+import '../features/import/import_hub_screen.dart';
 import '../features/import/import_screen.dart';
 import '../features/import/location_import_screen.dart';
 import '../features/hr/employee_leave_screen.dart';
@@ -63,6 +64,10 @@ import '../features/settings/tracking_schedules_screen.dart';
 import '../features/vehicles/vehicles_screen.dart';
 import '../features/documents/company_docs.dart' show DocSection;
 import '../features/documents/company_docs_screen.dart';
+import '../features/projects/project.dart' show canUseProjects;
+import '../features/projects/projects_screen.dart';
+import '../features/products/product_import_screen.dart';
+import '../features/products/products_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -117,6 +122,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc == '/history' && !me.seesRouteHistory) return '/';
       if (loc.startsWith('/vehicles') && !me.can.managesVehicles) return '/';
       if (loc.startsWith('/documents') && !me.can.seesCompanyDocs) return '/';
+      // Projects (2026-11-17): the sales team, SM and GM.
+      if ((loc.startsWith('/projects') || loc == '/products') && !canUseProjects(me)) return '/';
       if (loc.startsWith('/hr') && !me.can.canSeeHr) return '/';
       // Departments: HR edits them too (HR area → Leave types tab).
       if (loc == '/departments' && !me.can.canManageHr) return '/';
@@ -305,6 +312,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: 'file/:id', builder: (_, state) => CompanyDocScreen(id: state.pathParameters['id']!)),
               ],
             ),
+            // Projects (2026-11-17); 'new' before ':id'.
+            GoRoute(
+              path: '/projects',
+              builder: (_, _) => const ProjectsScreen(),
+              routes: [
+                GoRoute(path: 'new', builder: (_, state) => ProjectEditScreen(clientId: state.uri.queryParameters['client'])),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => ProjectScreen(id: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(path: 'edit', builder: (_, state) => ProjectEditScreen(id: state.pathParameters['id']!)),
+                  ],
+                ),
+              ],
+            ),
             GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
             GoRoute(path: '/transfers', builder: (_, _) => const TransfersScreen()),
             GoRoute(path: '/catalogs', builder: (_, _) => const CatalogsScreen()),
@@ -336,6 +358,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/location-types',
               builder: (_, _) => const ClientTagsScreen(kind: TagList.locationTypes),
             ),
+            // Products (2026-11-17): the collection by decor, with prices.
+            GoRoute(path: '/products', builder: (_, _) => const ProductsScreen()),
             GoRoute(path: '/work-hours', builder: (_, _) => const WorkHoursScreen()),
             GoRoute(path: '/departments', builder: (_, _) => const ClientTagsScreen(kind: TagList.departments)),
             GoRoute(
@@ -362,8 +386,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             GoRoute(
               path: '/import',
-              builder: (_, _) => const ImportScreen(),
+              // Import page (2026-11-17): clients, locations, later products.
+              builder: (_, _) => const ImportHubScreen(),
               routes: [
+                GoRoute(path: 'clients', builder: (_, _) => const ImportScreen()),
+                GoRoute(path: 'products', builder: (_, _) => const ProductImportScreen()),
                 GoRoute(path: 'locations', builder: (_, _) => const LocationImportScreen()),
               ],
             ),

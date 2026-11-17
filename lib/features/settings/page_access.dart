@@ -22,6 +22,8 @@ enum AppPage {
   reports(['/reports'], {_kam, _sm, _gm}),
   transfers(['/transfers'], {_kam, _sm, _gm}),
   catalogs(['/catalogs'], {_kam, _sm, _gm}),
+  projects(['/projects'], {_exec, _kam, _sm, _gm}),
+  products(['/products'], {_exec, _kam, _sm, _gm}),
   liveTracking(['/live'], {_kam, _sm, _gm, _lm, _fm}),
   routeHistory(['/history'], {_kam, _sm, _gm, _lm, _ws, _fm}),
   drivers(['/drivers'], {_sm, _gm, _lm, _ws}),

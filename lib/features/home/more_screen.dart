@@ -40,6 +40,8 @@ class MoreScreen extends ConsumerWidget {
       (l10n.moreSectionSales, [
         if (role.isTracked) item(Icons.today, l10n.myPlan, '/plan/${me.id}'),
         if (role.isSales) item(Icons.map, l10n.clientMap, '/map', go: true),
+        if (role.isSales) item(Icons.apartment, l10n.projects, '/projects'),
+        if (role.isSales) item(Icons.palette_outlined, l10n.products, '/products'),
         if (role.isSupervisor) ...[
           item(Icons.groups, l10n.teamPlans, '/team-plans'),
           item(Icons.my_location, l10n.liveTracking, '/live'),
@@ -84,7 +86,7 @@ class MoreScreen extends ConsumerWidget {
         // settings (user request 2026-10-21).
         if (role.isAdmin) ...[
           item(Icons.settings_outlined, l10n.appSettings, '/settings'),
-          item(Icons.upload_file, l10n.importClients, '/import'),
+          item(Icons.upload_file, l10n.importData, '/import'),
         ],
       ]),
     ];
