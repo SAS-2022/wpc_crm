@@ -220,8 +220,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
               if (c.locations.any((l) => city.contains(l.lat, l.lng))) c.assignedTo ?? unassignedFilter,
           };
     final types = ref.watch(locationTypesByIdProvider);
-    // Moving clients from the map: web dashboard, KAM / managers.
-    final canSelect = kIsWeb && (me?.can.isSupervisor ?? false);
+    // Selecting several clients: KAM / managers on the web dashboard (plan or
+    // move), sales execs anywhere (2026-11-18, user: onto their own plan).
+    final canSelect = (kIsWeb && (me?.can.isSupervisor ?? false)) || (me?.can.isTracked ?? false);
     final lang = Localizations.localeOf(context).languageCode;
     // The sales team's live positions (KAM / managers; RTDB rules): the KAM's
     // own team, the people ticked in the salesperson filter.
@@ -394,9 +395,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     icon: _icons.circle(
                       context: context,
                       // Managers / department heads in blue (SM 2026-11-07, all 2026-11-14).
-                      fill: personPinColor(u, salespersonPinColor).withValues(
-                        alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45,
-                      ),
+                      fill: personPinColor(
+                        u,
+                        salespersonPinColor,
+                      ).withValues(alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45),
                       text: styles[u.id]?.initials ?? initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
@@ -415,9 +417,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      fill: personPinColor(u, driverPinColor).withValues(
-                        alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45,
-                      ),
+                      fill: personPinColor(
+                        u,
+                        driverPinColor,
+                      ).withValues(alpha: liveState(loc, presence[u.id], now) == LiveState.live ? 1 : 0.45),
                       text: initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
@@ -438,9 +441,10 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                     zIndexInt: 10,
                     icon: _icons.circle(
                       context: context,
-                      fill: personPinColor(u, staffPinColor).withValues(
-                        alpha: recordedState(loc, now) == LiveState.live ? 1 : 0.45,
-                      ),
+                      fill: personPinColor(
+                        u,
+                        staffPinColor,
+                      ).withValues(alpha: recordedState(loc, now) == LiveState.live ? 1 : 0.45),
                       text: initialsOf(u.name),
                       ringWidth: 3,
                       size: 40,
@@ -536,7 +540,9 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                               children: [
                                 if (canSelect) ...[
                                   IconButton(
-                                    tooltip: l10n.selectClientsToMove,
+                                    tooltip: (me?.can.isSupervisor ?? false)
+                                        ? l10n.selectClientsToMove
+                                        : l10n.selectClientsToPlan,
                                     isSelected: _selecting,
                                     icon: const Icon(Icons.checklist),
                                     onPressed: () => setState(() {
@@ -696,11 +702,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                           icon: const Icon(Icons.playlist_add),
                           label: Text(l10n.addToPlan),
                         ),
-                        FilledButton.tonalIcon(
-                          onPressed: _selected.isEmpty || _moving ? null : () => _moveSelected(located),
-                          icon: const Icon(Icons.swap_horiz),
-                          label: Text(l10n.moveToSalesperson),
-                        ),
+                        // Moving is for KAM / managers only.
+                        if (me?.can.isSupervisor ?? false)
+                          FilledButton.tonalIcon(
+                            onPressed: _selected.isEmpty || _moving ? null : () => _moveSelected(located),
+                            icon: const Icon(Icons.swap_horiz),
+                            label: Text(l10n.moveToSalesperson),
+                          ),
                         if (_selected.isNotEmpty)
                           TextButton(onPressed: () => setState(_selected.clear), child: Text(l10n.clear)),
                         TextButton(
@@ -851,8 +859,11 @@ bool showsAsManager(AppUser u) => u.isManager;
 /// Key account managers: blue with diagonal white stripes (user 2026-11-16),
 /// main or extra role, unless they also have a higher manager role (GM, SM,
 /// logistics / factory manager): the highest role decides.
-bool stripedPin(AppUser u) =>
-    u.hasRole(UserRole.kam) && !u.roles.any((r) => r.isManagerRole && r != UserRole.kam);
+bool stripedPin(AppUser u) => u.hasRole(UserRole.kam) && !u.roles.any((r) => r.isManagerRole && r != UserRole.kam);
+
+/// The GM's pin and avatar fill on the people maps: burgundy (user
+/// 2026-11-17, instead of the managers' blue).
+const gmPinColor = Color(0xFF800020);
 
 /// [base], or blue for a manager.
 Color personPinColor(AppUser u, Color base) => showsAsManager(u) ? managerPinColor : base;

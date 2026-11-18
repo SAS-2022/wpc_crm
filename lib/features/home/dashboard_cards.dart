@@ -12,6 +12,10 @@ import '../plan/plan_repository.dart';
 import '../plan/plan_screen.dart';
 import '../plan/plan_task.dart';
 import '../plan/route_order.dart';
+import '../projects/project.dart';
+import '../projects/project_widgets.dart';
+import '../projects/projects_repository.dart';
+import '../settings/page_access.dart';
 import '../users/users_repository.dart';
 
 class _DashCard extends StatelessWidget {
@@ -40,6 +44,59 @@ class _DashCard extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// The 3 most recently added projects (user 2026-11-18): name, contracting
+/// company, lead, clients, stage; "View all" opens Projects. The sales team,
+/// SM and GM, unless Page access turns Projects off for them.
+class RecentProjectsCard extends ConsumerWidget {
+  const RecentProjectsCard({super.key, required this.me});
+
+  final AppUser me;
+
+  /// How many projects the card shows.
+  static const shown = 3;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final access = ref.watch(pageAccessProvider).value ?? PageAccess.defaults;
+    if (!canUseProjects(me) || !access.allowsLocation(me, '/projects')) return const SizedBox.shrink();
+    final all = ref.watch(projectsProvider).value;
+    if (all == null) return const SizedBox.shrink();
+    // projectsProvider is newest first (createdAt).
+    final recent = all.take(shown).toList();
+    final users = {for (final u in ref.watch(usersProvider).value ?? const <AppUser>[]) u.id: u};
+    return _DashCard(
+      title: l10n.recentProjects,
+      action: TextButton(
+        onPressed: () => context.push(all.isEmpty ? '/projects/new' : '/projects'),
+        child: Text(all.isEmpty ? l10n.addProject : l10n.viewAllCount(all.length)),
+      ),
+      child: Column(
+        children: [
+          if (recent.isEmpty) ListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.noProjectsYet)),
+          for (final p in recent)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.apartment, color: projectStageColor(p.stage)),
+              title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(
+                [
+                  if (p.contractor.isNotEmpty) p.contractor,
+                  l10n.projectLeadIs(users[p.leadId]?.name ?? '?'),
+                  l10n.clientsCountShort(p.clientIds.length),
+                ].join(' · '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: ProjectStageChip(stage: p.stage),
+              onTap: () => context.push('/projects/${p.id}'),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Today's plan of [user]: done vs. pending, with a link to the full plan.

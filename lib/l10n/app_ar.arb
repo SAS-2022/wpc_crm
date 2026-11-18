@@ -1120,7 +1120,7 @@
   "scoreFor": "نقاط {name}: {points} / 100",
   "salesExecutivesSection": "مندوبو المبيعات",
   "kamSection": "مدراء الحسابات الرئيسية",
-  "kamSectionNote": "لم تُحدد بعد طريقة قياس أداء مدراء الحسابات. هذه أرقامهم الخاصة، بدون نقاط أو ترتيب.",
+  "kamSectionNote": "مرتبون فيما بينهم بنفس نقاط مندوبي المبيعات (زياراتهم ومكالماتهم الخاصة). الزيارات مع فريقهم والفريق (زيارات ومكالمات مندوبيهم) معروضة ولا تدخل في النقاط.",
   "kamVisitsWithTeam": "زيارات مع فريقه",
   "kamTeamSize": "أعضاء الفريق",
   "kamTeamVisits": "زيارات ومكالمات الفريق",
@@ -2130,5 +2130,11 @@
   "decorsCount": "{count} ديكور",
   "productsCount": "{count} منتج",
   "productImportSave": "حفظ {count} منتج",
-  "productImportDone": "تم استيراد المنتجات: {added} جديد، {updated} تغيّر"
+  "productImportDone": "تم استيراد المنتجات: {added} جديد، {updated} تغيّر",
+  "selectClientsToPlan": "تحديد عدة عملاء لإضافتهم إلى خطتك",
+  "planSelectedOwnHint": "تُضاف إلى خطتك لذلك اليوم وتنتظر موافقة مدير الحسابات.",
+  "recentProjects": "أحدث المشاريع",
+  "viewAllCount": "عرض الكل ({count})",
+  "kamTeamColumn": "زيارات ومكالمات الفريق",
+  "kamTeamMembers": "{count} أعضاء"
 }

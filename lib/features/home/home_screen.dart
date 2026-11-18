@@ -345,6 +345,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             TeamPlansCard(me: me),
           ],
           if (me.role.isTracked) TodayPlanCard(user: me),
+          // Latest projects (2026-11-18).
+          RecentProjectsCard(me: me),
         ],
       ),
     );

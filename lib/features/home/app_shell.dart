@@ -86,8 +86,7 @@ class AppShell extends ConsumerWidget {
       ],
       if (role?.isSales ?? false)
         (path: '/projects', icon: Icons.apartment_outlined, selected: Icons.apartment, label: l10n.projects),
-      if (role?.isSales ?? false)
-        (path: '/products', icon: Icons.palette_outlined, selected: Icons.palette, label: l10n.products),
+      // Products: hidden from the side menu for now (2026-11-17, user) — used only inside Projects.
       if (supervisor) ...[
         (path: '/team-plans', icon: Icons.groups_outlined, selected: Icons.groups, label: l10n.teamPlans),
         (path: '/reports', icon: Icons.table_chart_outlined, selected: Icons.table_chart, label: l10n.reports),

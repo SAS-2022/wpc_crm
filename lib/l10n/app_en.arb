@@ -2368,7 +2368,7 @@
   "@scoreFor": {"placeholders": {"name": {"type": "String"}, "points": {"type": "String"}}},
   "salesExecutivesSection": "Sales executives",
   "kamSection": "Key account managers",
-  "kamSectionNote": "How KAMs are measured is not decided yet. These are their own numbers, without a score or ranking.",
+  "kamSectionNote": "Ranked among the KAMs with the same score as the sales executives (their own visits and calls). Visits with their team and Team (their sales executives' visits + calls) are shown but not scored.",
   "kamVisitsWithTeam": "Visits with their team",
   "kamTeamSize": "Team members",
   "kamTeamVisits": "Team visits + calls",
@@ -3637,5 +3637,13 @@
   "productImportSave": "Save {count} products",
   "@productImportSave": {"placeholders": {"count": {"type": "int"}}},
   "productImportDone": "Products imported: {added} new, {updated} changed",
-  "@productImportDone": {"placeholders": {"added": {"type": "int"}, "updated": {"type": "int"}}}
+  "@productImportDone": {"placeholders": {"added": {"type": "int"}, "updated": {"type": "int"}}},
+  "selectClientsToPlan": "Select several clients to add to your plan",
+  "planSelectedOwnHint": "They go on your plan for that day and wait for your KAM's approval.",
+  "recentProjects": "Latest projects",
+  "viewAllCount": "View all ({count})",
+  "@viewAllCount": {"placeholders": {"count": {"type": "int"}}},
+  "kamTeamColumn": "Team visits + calls",
+  "kamTeamMembers": "{count} members",
+  "@kamTeamMembers": {"placeholders": {"count": {"type": "int"}}}
 }

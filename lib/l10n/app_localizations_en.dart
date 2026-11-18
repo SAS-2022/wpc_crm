@@ -4094,7 +4094,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kamSectionNote =>
-      'How KAMs are measured is not decided yet. These are their own numbers, without a score or ranking.';
+      'Ranked among the KAMs with the same score as the sales executives (their own visits and calls). Visits with their team and Team (their sales executives\' visits + calls) are shown but not scored.';
 
   @override
   String get kamVisitsWithTeam => 'Visits with their team';
@@ -7868,5 +7868,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String productImportDone(int added, int updated) {
     return 'Products imported: $added new, $updated changed';
+  }
+
+  @override
+  String get selectClientsToPlan =>
+      'Select several clients to add to your plan';
+
+  @override
+  String get planSelectedOwnHint =>
+      'They go on your plan for that day and wait for your KAM\'s approval.';
+
+  @override
+  String get recentProjects => 'Latest projects';
+
+  @override
+  String viewAllCount(int count) {
+    return 'View all ($count)';
+  }
+
+  @override
+  String get kamTeamColumn => 'Team visits + calls';
+
+  @override
+  String kamTeamMembers(int count) {
+    return '$count members';
   }
 }

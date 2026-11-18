@@ -4100,7 +4100,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get kamSectionNote =>
-      'لم تُحدد بعد طريقة قياس أداء مدراء الحسابات. هذه أرقامهم الخاصة، بدون نقاط أو ترتيب.';
+      'مرتبون فيما بينهم بنفس نقاط مندوبي المبيعات (زياراتهم ومكالماتهم الخاصة). الزيارات مع فريقهم والفريق (زيارات ومكالمات مندوبيهم) معروضة ولا تدخل في النقاط.';
 
   @override
   String get kamVisitsWithTeam => 'زيارات مع فريقه';
@@ -7881,5 +7881,28 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String productImportDone(int added, int updated) {
     return 'تم استيراد المنتجات: $added جديد، $updated تغيّر';
+  }
+
+  @override
+  String get selectClientsToPlan => 'تحديد عدة عملاء لإضافتهم إلى خطتك';
+
+  @override
+  String get planSelectedOwnHint =>
+      'تُضاف إلى خطتك لذلك اليوم وتنتظر موافقة مدير الحسابات.';
+
+  @override
+  String get recentProjects => 'أحدث المشاريع';
+
+  @override
+  String viewAllCount(int count) {
+    return 'عرض الكل ($count)';
+  }
+
+  @override
+  String get kamTeamColumn => 'زيارات ومكالمات الفريق';
+
+  @override
+  String kamTeamMembers(int count) {
+    return '$count أعضاء';
   }
 }

@@ -106,9 +106,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final ids = {for (final u in people) u.id};
     final clientsById = {for (final c in ref.watch(allClientsProvider).value ?? const <Client>[]) c.id: c};
     // Sales executives are ranked against each other (all of them, so a person
-    // keeps their rank when shown alone); KAMs are measured apart.
+    // keeps their rank when shown alone); KAMs the same way among the KAMs
+    // (user 2026-11-18: same fields and score board as the sales executives).
     final execs = team.where((u) => u.role == UserRole.salesExec).toList();
-    final kams = [for (final u in people) if (u.role == UserRole.kam) u];
+    final kams = team.where((u) => u.role == UserRole.kam).toList();
+    final hasKams = people.any((u) => u.role == UserRole.kam);
     final teamReports = buildReports(
       people: execs,
       clients: clients,
@@ -178,10 +180,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       return !days.contains(date.weekday) || holidays.contains(day) || (leaveDays[uid]?.contains(day) ?? false);
     }
 
-    final ranked = before.value == null
+    List<RankedPerson>? rank(List<PersonReport> reports) => before.value == null
         ? null
         : rankPeople(
-            reports: teamReports,
+            reports: reports,
             range: _range,
             visits: visits,
             visitedBefore: before.value!,
@@ -190,7 +192,25 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             routing: teamRouting,
             isOffDay: isOffDay,
           );
+    final ranked = rank(teamReports);
     final shown = ranked?.where((p) => ids.contains(p.report.user.id)).toList();
+    final rankedKams = rank(kamReports);
+    final shownKams = rankedKams?.where((p) => ids.contains(p.report.user.id)).toList();
+    // A KAM's own team: visits with them, team size, the team's visits + calls.
+    final inRange = visits.where((v) => v.checkedInAt != null && _range.contains(v.checkedInAt!)).toList();
+    final kamTeams = <String, KamTeamNumbers>{
+      for (final k in kams)
+        k.id: () {
+          final members = {for (final u in teamOf(k, users)) u.id};
+          final contacts = inRange.where((v) => members.contains(v.salesExecId)).toList();
+          return (
+            withTeam: inRange.where((v) => v.kamId == k.id).length,
+            size: members.length,
+            visits: contacts.where((v) => !v.isCall).length,
+            calls: contacts.where((v) => v.isCall).length,
+          );
+        }(),
+    };
     final lang = Localizations.localeOf(context).languageCode;
     final tags = ref.watch(clientTagsByIdProvider);
     String tagLabel(String id) => id.isEmpty ? l10n.mrNoTag : (tags[id]?.label(lang) ?? id);
@@ -211,7 +231,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           l10n: l10n,
           languageCode: lang,
           periodLabel: rangeLabel,
-          teamSize: ranked!.length,
+          teamSize: p.report.user.role == UserRole.kam ? rankedKams!.length : ranked!.length,
           clients: clientsById,
           tagLabel: tagLabel,
           createdAt: DateTime.now(),
@@ -239,7 +259,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         TextButton.icon(
           icon: const Icon(Icons.picture_as_pdf_outlined),
           label: Text(l10n.downloadPdfs),
-          onPressed: shown == null || shown.isEmpty ? null : () => download(shown),
+          onPressed: shown == null || shownKams == null || (shown.isEmpty && shownKams.isEmpty)
+              ? null
+              : () => download([...shown, ...shownKams]),
         ),
         const SizedBox(width: 8),
       ]),
@@ -277,7 +299,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           const SizedBox(height: 4),
           Text(rangeLabel, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 12),
-          if (shown == null || shown.isNotEmpty || kamReports.isEmpty)
+          if (shown == null || shown.isNotEmpty || !hasKams)
             _Section(
               title: l10n.salesExecutivesSection,
               icon: Icons.groups,
@@ -295,18 +317,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       onPdf: (p) => download([p], ask: false),
                     ),
             ),
-          if (kamReports.isNotEmpty) ...[
+          if (hasKams) ...[
             const SizedBox(height: 12),
             _Section(
               title: l10n.kamSection,
               icon: Icons.supervisor_account,
-              child: _KamTable(
-                reports: kamReports,
-                visits: visits,
-                range: _range,
-                teams: {for (final k in kamReports) k.user.id: teamOf(k.user, users)},
-                onSelect: (id) => setState(() => _person = id),
+              trailing: IconButton(
+                tooltip: l10n.scoreInfoTitle,
+                icon: const Icon(Icons.info_outline),
+                onPressed: () => showScoreInfo(context),
               ),
+              child: shownKams == null
+                  ? const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+                  : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Text(
+                        l10n.kamSectionNote,
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 4),
+                      _TeamTable(
+                        people: shownKams,
+                        range: _range,
+                        kamTeams: kamTeams,
+                        onSelect: (id) => setState(() => _person = id),
+                        onPdf: (p) => download([p], ask: false),
+                      ),
+                    ]),
             ),
           ],
           if (shown != null && shown.isNotEmpty) ...[
@@ -443,9 +479,13 @@ DataColumn _column(String label, double width, void Function(int, bool)? onSort,
 /// Sales executives, ranked, sortable by any column, with a total row.
 /// Related numbers share a cell so it fits a screen without scrolling.
 class _TeamTable extends StatefulWidget {
-  const _TeamTable({required this.people, required this.range, required this.onSelect, required this.onPdf});
+  const _TeamTable({required this.people, required this.range, required this.onSelect, required this.onPdf, this.kamTeams});
 
   final List<RankedPerson> people;
+
+  /// KAM table (2026-11-18): "Visits with KAM" becomes visits with their
+  /// team, plus a Team column (members, their visits + calls).
+  final Map<String, KamTeamNumbers>? kamTeams;
   final StatsRange range;
   final ValueChanged<String> onSelect;
   final ValueChanged<RankedPerson> onPdf;
@@ -458,7 +498,10 @@ class _TeamTableState extends State<_TeamTable> {
   int _sortColumn = 0;
   bool _ascending = true;
 
-  static final _sortKeys = <Comparable<Object> Function(RankedPerson)>[
+  KamTeamNumbers _team(RankedPerson p) =>
+      widget.kamTeams?[p.report.user.id] ?? (withTeam: 0, size: 0, visits: 0, calls: 0);
+
+  late final _sortKeys = <Comparable<Object> Function(RankedPerson)>[
     (p) => p.rank,
     (p) => p.score,
     (p) => p.report.contacts,
@@ -468,8 +511,9 @@ class _TeamTableState extends State<_TeamTable> {
     (p) => p.distanceKm ?? -1,
     (p) => p.report.coverage ?? -1,
     (p) => p.report.planCompletion ?? -1,
-    (p) => p.report.withKam,
+    (p) => widget.kamTeams == null ? p.report.withKam : _team(p).withTeam,
     (p) => p.report.flagged,
+    (p) => _team(p).visits + _team(p).calls,
   ];
 
   @override
@@ -479,6 +523,7 @@ class _TeamTableState extends State<_TeamTable> {
     if (widget.people.isEmpty) {
       return Text(l10n.noTrackedStaff, style: theme.textTheme.bodyMedium);
     }
+    final kam = widget.kamTeams != null;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final until = today.isBefore(widget.range.end) ? today : widget.range.end;
@@ -545,8 +590,9 @@ class _TeamTableState extends State<_TeamTable> {
               _column(l10n.mrDistance, 76, sort),
               _column(l10n.ownClientsVisited, 104, sort),
               _column(l10n.planCompletion, 84, sort),
-              _column(l10n.rideAlongs, 60, sort),
+              _column(kam ? l10n.kamVisitsWithTeam : l10n.rideAlongs, kam ? 72 : 60, sort),
               _column(l10n.flaggedVisits, 56, sort),
+              if (kam) _column(l10n.kamTeamColumn, 92, sort),
               const DataColumn(label: SizedBox.shrink()),
             ],
             rows: [
@@ -593,11 +639,17 @@ class _TeamTableState extends State<_TeamTable> {
                       p.report.assigned == 0 ? null : l10n.onScheduleShort('${p.report.onSchedule}/${p.report.assigned}'),
                     )),
                     DataCell(Text(_ratio(p.report.tasksDone, p.report.tasksApproved))),
-                    DataCell(Text('${p.report.withKam}')),
+                    DataCell(Text(kam ? '${_team(p).withTeam}' : '${p.report.withKam}')),
                     DataCell(Text(
                       '${p.report.flagged}',
                       style: p.report.flagged > 0 ? TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold) : null,
                     )),
+                    if (kam)
+                      DataCell(_twoLines(
+                        context,
+                        Text(visitsAndCallsText(_team(p).visits, _team(p).calls)),
+                        l10n.kamTeamMembers(_team(p).size),
+                      )),
                     DataCell(PopupMenuButton<String>(
                       tooltip: l10n.moreActions,
                       icon: const Icon(Icons.more_vert, size: 20),
@@ -635,8 +687,13 @@ class _TeamTableState extends State<_TeamTable> {
                   DataCell(Text(l10n.mrKm(_km(rows.fold(0.0, (s, r) => s + (r.distanceKm ?? 0)))), style: bold)),
                   DataCell(Text(_ratio(sum((p) => p.report.assignedVisited), sum((p) => p.report.assigned)), style: bold)),
                   DataCell(Text(_ratio(sum((p) => p.report.tasksDone), sum((p) => p.report.tasksApproved)), style: bold)),
-                  DataCell(Text('${sum((p) => p.report.withKam)}', style: bold)),
+                  DataCell(Text('${sum((p) => kam ? _team(p).withTeam : p.report.withKam)}', style: bold)),
                   DataCell(Text('${sum((p) => p.report.flagged)}', style: bold)),
+                  if (kam)
+                    DataCell(Text(
+                      visitsAndCallsText(sum((p) => _team(p).visits), sum((p) => _team(p).calls)),
+                      style: bold,
+                    )),
                   const DataCell(SizedBox.shrink()),
                 ]),
             ],
@@ -647,84 +704,8 @@ class _TeamTableState extends State<_TeamTable> {
   }
 }
 
-/// KAMs' own numbers for now: no score or ranking until the user decides
-/// how KAMs are measured (2026-10-22).
-class _KamTable extends StatelessWidget {
-  const _KamTable({
-    required this.reports,
-    required this.visits,
-    required this.range,
-    required this.teams,
-    required this.onSelect,
-  });
-
-  final List<PersonReport> reports;
-  final List<Visit> visits;
-  final StatsRange range;
-
-  /// KAM id → their sales executives.
-  final Map<String, List<AppUser>> teams;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final inRange = visits.where((v) => v.checkedInAt != null && range.contains(v.checkedInAt!)).toList();
-    DataColumn column(String label, double width, {bool numeric = true}) => _column(label, width, null, numeric: numeric);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(l10n.kamSectionNote, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-      const SizedBox(height: 4),
-      LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              showCheckboxColumn: false,
-              columnSpacing: 16,
-              horizontalMargin: 8,
-              headingRowHeight: 52,
-              columns: [
-                column(l10n.person, 150, numeric: false),
-                column(l10n.visitsPlusCalls, 92),
-                column(l10n.clientsVisitedColumn, 72),
-                column(l10n.ownClientsVisited, 104),
-                column(l10n.planCompletion, 84),
-                column(l10n.kamVisitsWithTeam, 84),
-                column(l10n.kamTeamSize, 64),
-                column(l10n.kamTeamVisits, 92),
-              ],
-              rows: [
-                for (final r in reports)
-                  () {
-                    final team = {for (final u in teams[r.user.id] ?? const <AppUser>[]) u.id};
-                    final teamContacts = inRange.where((v) => team.contains(v.salesExecId)).toList();
-                    return DataRow(
-                      onSelectChanged: (_) => onSelect(r.user.id),
-                      cells: [
-                        DataCell(Text(r.user.name)),
-                        DataCell(Text([visitsAndCallsText(r.visits, r.calls), if (r.target > 0) '${r.target.round()}'].join(' / '))),
-                        DataCell(Text('${r.clientsVisited}')),
-                        DataCell(Text(_ratio(r.assignedVisited, r.assigned))),
-                        DataCell(Text(_ratio(r.tasksDone, r.tasksApproved))),
-                        DataCell(Text('${inRange.where((v) => v.kamId == r.user.id).length}')),
-                        DataCell(Text('${team.length}')),
-                        DataCell(Text(visitsAndCallsText(
-                          teamContacts.where((v) => !v.isCall).length,
-                          teamContacts.where((v) => v.isCall).length,
-                        ))),
-                      ],
-                    );
-                  }(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ]);
-  }
-}
+/// A KAM's own team in the period (KAM table, 2026-11-18).
+typedef KamTeamNumbers = ({int withTeam, int size, int visits, int calls});
 
 class _UnvisitedList extends StatelessWidget {
   const _UnvisitedList({

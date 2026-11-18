@@ -6833,7 +6833,7 @@ abstract class AppLocalizations {
   /// No description provided for @kamSectionNote.
   ///
   /// In en, this message translates to:
-  /// **'How KAMs are measured is not decided yet. These are their own numbers, without a score or ranking.'**
+  /// **'Ranked among the KAMs with the same score as the sales executives (their own visits and calls). Visits with their team and Team (their sales executives\' visits + calls) are shown but not scored.'**
   String get kamSectionNote;
 
   /// No description provided for @kamVisitsWithTeam.
@@ -12905,6 +12905,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Products imported: {added} new, {updated} changed'**
   String productImportDone(int added, int updated);
+
+  /// No description provided for @selectClientsToPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Select several clients to add to your plan'**
+  String get selectClientsToPlan;
+
+  /// No description provided for @planSelectedOwnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'They go on your plan for that day and wait for your KAM\'s approval.'**
+  String get planSelectedOwnHint;
+
+  /// No description provided for @recentProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest projects'**
+  String get recentProjects;
+
+  /// No description provided for @viewAllCount.
+  ///
+  /// In en, this message translates to:
+  /// **'View all ({count})'**
+  String viewAllCount(int count);
+
+  /// No description provided for @kamTeamColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Team visits + calls'**
+  String get kamTeamColumn;
+
+  /// No description provided for @kamTeamMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String kamTeamMembers(int count);
 }
 
 class _AppLocalizationsDelegate

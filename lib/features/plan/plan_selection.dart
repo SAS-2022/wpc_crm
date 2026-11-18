@@ -67,12 +67,17 @@ Future<bool> addSelectionToPlans(
   final messenger = ScaffoldMessenger.of(context);
   final locale = Localizations.localeOf(context).toString();
   final me = ref.read(currentUserProvider).value;
-  if (me == null || !me.can.isSupervisor || selected.isEmpty) return false;
+  if (me == null || !(me.can.isSupervisor || me.can.isTracked) || selected.isEmpty) return false;
   final users = {for (final u in ref.read(usersProvider).value ?? const <AppUser>[]) u.id: u};
+  // A sales exec plans for themselves (2026-11-18): their own clients go on
+  // their own plan and wait for approval, like the add sheet.
+  final own = !me.can.isSupervisor;
 
   final clients = [...selected];
   final moved = <String, String?>{};
-  var split = splitForPlans(clients, me, users);
+  var split = own
+      ? (byOwner: {me.id: clients}, unassigned: <Client>[], notAllowed: <Client>[])
+      : splitForPlans(clients, me, users);
 
   if (split.unassigned.isNotEmpty) {
     final names = split.unassigned.take(5).map((c) => c.name).join('، ');
@@ -96,17 +101,24 @@ Future<bool> addSelectionToPlans(
     );
     if (action == null || !context.mounted) return false;
     if (action == 'move') {
-      await showTransferDialog(context, ref, split.unassigned, onMoved: (list, toId) {
-        for (final c in list) {
-          moved[c.id] = toId;
-        }
-      });
+      await showTransferDialog(
+        context,
+        ref,
+        split.unassigned,
+        onMoved: (list, toId) {
+          for (final c in list) {
+            moved[c.id] = toId;
+          }
+        },
+      );
       if (!context.mounted) return false;
       split = splitForPlans(clients, me, users, moved: moved);
     }
   }
   if (split.byOwner.isEmpty) {
-    if (split.notAllowed.isNotEmpty) messenger.showSnackBar(SnackBar(content: Text(l10n.planNotAllowed(split.notAllowed.length))));
+    if (split.notAllowed.isNotEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.planNotAllowed(split.notAllowed.length))));
+    }
     return false;
   }
 
@@ -141,19 +153,23 @@ Future<bool> addSelectionToPlans(
                 ),
                 const SizedBox(height: 8),
                 for (final o in owners)
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(users[o]!.name),
-                    trailing: Text('${split.byOwner[o]!.length}'),
-                  ),
+                  if (!own)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.person_outline),
+                      title: Text(users[o]!.name),
+                      trailing: Text('${split.byOwner[o]!.length}'),
+                    ),
                 if (split.notAllowed.isNotEmpty)
                   Text(
                     l10n.planNotAllowed(split.notAllowed.length),
                     style: TextStyle(color: Theme.of(dialog).colorScheme.error),
                   ),
-                Text(l10n.planSelectedHint, style: Theme.of(dialog).textTheme.bodySmall),
+                Text(
+                  own ? l10n.planSelectedOwnHint : l10n.planSelectedHint,
+                  style: Theme.of(dialog).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
@@ -185,10 +201,19 @@ Future<bool> addSelectionToPlans(
         ownerId: o,
         date: date,
         createdBy: me.id,
-        approved: true,
+        approved: !own,
         clients: [for (final c in fresh) (id: c.id, name: c.name, locationId: locations[c.id])],
       );
-      if (o != me.id) {
+      if (own) {
+        await sendNotifications(
+          toIds: reviewersOf(me, users.values.toList()),
+          type: NotificationType.planSubmitted,
+          fromId: me.id,
+          ownerId: me.id,
+          date: date,
+          count: fresh.length,
+        );
+      } else if (o != me.id) {
         await sendNotifications(
           toIds: [o],
           type: NotificationType.planItemsAdded,
@@ -201,12 +226,16 @@ Future<bool> addSelectionToPlans(
       added += fresh.length;
       plans++;
     }
-    messenger.showSnackBar(SnackBar(
-      content: Text([
-        l10n.plannedFromSelection(added, plans),
-        if (already > 0) l10n.alreadyOnPlanCount(already),
-      ].join(' · ')),
-    ));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          [
+            own ? l10n.planSentForApproval(added) : l10n.plannedFromSelection(added, plans),
+            if (already > 0) l10n.alreadyOnPlanCount(already),
+          ].join(' · '),
+        ),
+      ),
+    );
     return added > 0;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.errorWithMessage('$e'))));

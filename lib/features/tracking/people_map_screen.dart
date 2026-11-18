@@ -22,13 +22,13 @@ import '../settings/app_settings.dart';
 import '../attendance/site_now.dart';
 import '../attendance/work_sites.dart';
 import '../clients/client_tags.dart';
-import '../clients/clients_map_screen.dart' show managerPinColor, showsAsManager, stripedPin;
+import '../clients/clients_map_screen.dart' show gmPinColor, managerPinColor, showsAsManager, stripedPin;
 import '../clients/person_style.dart';
 import '../devices/device_status.dart';
 import '../devices/quiet_reason_text.dart';
 import '../home/app_shell.dart' show wideLayoutWidth;
 import '../hr/hr_people.dart' show departmentsProvider;
-import '../notifications/notifications.dart' show peopleUnder;
+import '../notifications/notifications.dart' show peopleUnder, seesGmLocation;
 import '../reports/route_day.dart';
 import '../users/companies.dart';
 import '../users/company_filter.dart';
@@ -310,7 +310,8 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
             (e != null ? at(e) : siteHere) != null || (e != null && e.loc == null && e.day?.status == DayStatus.onSite);
         return (
           color: here ? onSiteColor(u) : awayColor(u),
-          fill: managerPinColor.withValues(alpha: live ? 1 : 0.45),
+          // The GM burgundy (user 2026-11-17), other managers blue.
+          fill: (u.role == UserRole.gm ? gmPinColor : managerPinColor).withValues(alpha: live ? 1 : 0.45),
           textColor: Colors.white,
         );
       }
@@ -363,11 +364,14 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       // every driver); KAM: their team; SM / GM: everyone.
       final teamScoped = me?.teamScopedMaps ?? true;
       final team = me == null ? const <String>{} : {for (final u in peopleUnder(me, users)) u.id};
+      final gmVisible = me != null && seesGmLocation(me, users);
       bool inTeam(AppUser u) => team.contains(u.id) || (u.role.isDriver && (me?.can.managesDrivers ?? false));
       final tracked = users.where((u) {
         if (!u.active || !u.role.isLocationTracked) return false;
         if (driversOnly && !u.role.isDriver) return false;
         if (onlyIds != null && !onlyIds.contains(u.id)) return false;
+        // The GM (tracked since 2026-11-17): only department heads and GMs.
+        if (u.role == UserRole.gm) return me != null && (u.id == me.id || gmVisible);
         if (me?.kamOnly == true) return u.id == me!.id || u.kamId == me.id;
         if (teamScoped) return inTeam(u);
         return true;

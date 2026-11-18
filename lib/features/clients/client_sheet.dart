@@ -174,7 +174,7 @@ void showClientSheet(
                             onSelectSeveral();
                           },
                           icon: const Icon(Icons.checklist),
-                          label: Text(l10n.selectSeveralToMove),
+                          label: Text((me?.can.isSupervisor ?? false) ? l10n.selectSeveralToMove : l10n.selectClientsToPlan),
                         ),
                       ),
                   ],

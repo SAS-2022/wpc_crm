@@ -80,11 +80,13 @@ enum UserRole {
   /// Location shared during work hours (live map, route history): the sales
   /// field staff and drivers (user request 2026-10-20; drivers are shown
   /// apart, see [isDriver]).
-  bool get isLocationTracked => isTracked || this == driver || this == salesManager;
+  /// The GM since 2026-11-17 (user: show Fadi on the live map; only
+  /// department heads see the GM, `seesGmLocation`).
+  bool get isLocationTracked => isTracked || this == driver || this == salesManager || this == gm;
 
   /// Shared 08:00–18:00 on work days instead of the company work hours
   /// (user 2026-11-07: the sales manager is tracked but works no overtime).
-  bool get tracksOfficeHours => this == salesManager;
+  bool get tracksOfficeHours => this == salesManager || this == gm;
 
   /// Office staff whose GPS is recorded (not shared live) during the
   /// recording hours when they check attendance (2026-10-28, see

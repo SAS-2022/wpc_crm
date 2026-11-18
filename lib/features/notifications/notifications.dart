@@ -312,6 +312,21 @@ List<String> departmentHeadsOf(AppUser person, List<AppUser> users) {
   ];
 }
 
+/// [me] heads a department (2026-11-17): an active manager of their
+/// department whose own direct manager isn't another manager of it (SM,
+/// logistics / factory manager, an "Is a manager" HR / accounting user; not
+/// KAMs). Same as `isDepartmentHead` in functions/index.js.
+bool isDepartmentHead(AppUser me, List<AppUser> users) {
+  final dept = me.departmentId;
+  if (!me.active || !me.isManager || dept == null) return false;
+  final managers = {for (final u in users) if (u.active && u.isManager && u.departmentId == dept) u.id};
+  return !directManagersOf(me, users).any(managers.contains);
+}
+
+/// The GM's position (tracked since 2026-11-17, user: "people who can see
+/// Fadi are the department heads"): the GMs themselves and department heads.
+bool seesGmLocation(AppUser me, List<AppUser> users) => me.hasRole(UserRole.gm) || isDepartmentHead(me, users);
+
 /// The people under [me] (2026-10-23): those whose direct manager is
 /// [me] ([directManagersOf]) or whose department [me] heads
 /// ([departmentHeadsOf], 2026-11-02), plus a warehouse supervisor's

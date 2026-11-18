@@ -1601,6 +1601,18 @@ function departmentHeads(person, uid, users) {
 }
 
 /**
+ * An active manager whose own direct manager isn't another manager of their
+ * department (2026-11-17) = `isDepartmentHead` in notifications.dart.
+ */
+function isDepartmentHead(u, users) {
+  const dept = departmentOf(u);
+  if (u.active !== true || !dept || !(hasRole(u, MANAGER_ROLES) || u.isManager === true)) return false;
+  const managers = new Set(users.filter((m) => m.active === true && departmentOf(m) === dept
+    && (hasRole(m, MANAGER_ROLES) || m.isManager === true)).map((m) => m.id));
+  return !directManagers(u, u.id, users).some((id) => managers.has(id));
+}
+
+/**
  * Who may read each person's location data besides the roles that read
  * everyone (KAM, SM, GM, logistics manager): RTDB `location_viewers/{uid}`
  * {viewerUid: true} (2026-11-04, employee map for department heads and
@@ -1612,9 +1624,13 @@ function departmentHeads(person, uid, users) {
  */
 function locationViewers(users) {
   const active = users.filter((u) => u.active === true);
+  // The GM is tracked since 2026-11-17 (user: "people who can see Fadi are
+  // the department heads").
+  const heads = active.filter((u) => isDepartmentHead(u, active)).map((u) => u.id);
   const out = {};
   for (const u of active) {
     const viewers = new Set();
+    if (u.role === 'gm') for (const id of heads) viewers.add(id);
     if (u.supervisorId && u.supervisorId !== u.id && active.some((s) => s.id === u.supervisorId)) viewers.add(u.supervisorId);
     for (const id of directManagers(u, u.id, active)) viewers.add(id);
     for (const id of departmentHeads(u, u.id, active)) viewers.add(id);

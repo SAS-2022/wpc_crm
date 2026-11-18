@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
-import '../notifications/notifications.dart' show peopleUnder;
+import '../notifications/notifications.dart' show peopleUnder, seesGmLocation;
 import '../users/users_repository.dart';
 
 import 'motion.dart';
@@ -95,7 +95,10 @@ List<String>? locationReadIds(Ref ref, [Set<UserRole> all = readsAllLocations]) 
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return const [];
   if (me.roles.any(all.contains)) return null;
-  return [for (final u in peopleUnder(me, ref.watch(usersProvider).value ?? const <AppUser>[])) if (u.active) u.id]..sort();
+  final users = ref.watch(usersProvider).value ?? const <AppUser>[];
+  // Department heads also read the GM (2026-11-17, `location_viewers`).
+  final gms = seesGmLocation(me, users) ? [for (final u in users) if (u.active && u.role == UserRole.gm) u.id] : const <String>[];
+  return {for (final u in peopleUnder(me, users)) if (u.active) u.id, ...gms}.toList()..sort();
 }
 
 /// The children of RTDB [path] by key: one listener on the whole list, or
