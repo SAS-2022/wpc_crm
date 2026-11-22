@@ -32,21 +32,28 @@ class HoursBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final normal = (split.normalShare * 1000).round();
-    final ot = (split.overtimeShare * 1000).round();
-    final rest = 1000 - normal - ot;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: SizedBox(
-        height: 8,
-        child: Row(
-          children: [
-            if (normal > 0) Expanded(flex: normal, child: ColoredBox(color: normalColor)),
-            if (ot > 0) Expanded(flex: ot, child: ColoredBox(color: overtimeColor)),
-            if (rest > 0) Expanded(flex: rest, child: ColoredBox(color: bg)),
-          ],
-        ),
-      ),
+    // Fixed widths from the row's width (2026-11-22: the Expanded version
+    // drew nothing in the web release build).
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth.isFinite ? box.maxWidth : 200.0;
+        final normal = w * split.normalShare.clamp(0.0, 1.0);
+        final ot = w * split.overtimeShare.clamp(0.0, 1.0 - split.normalShare.clamp(0.0, 1.0));
+        return Container(
+          width: w,
+          height: 8,
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+          clipBehavior: Clip.antiAlias,
+          alignment: AlignmentDirectional.centerStart,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (normal > 0) Container(width: normal, height: 8, color: normalColor),
+              if (ot > 0) Container(width: ot, height: 8, color: overtimeColor),
+            ],
+          ),
+        );
+      },
     );
   }
 }
