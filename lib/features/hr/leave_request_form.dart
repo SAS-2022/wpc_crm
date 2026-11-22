@@ -32,6 +32,9 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
   DateTimeRange? _dates;
   bool _halfDay = false;
 
+  /// Annual leave worked from home (2026-11-21).
+  bool _wfh = false;
+
   /// Departure time on the first day; at or after the end of their work day
   /// the leave counts from the next work day.
   TimeOfDay? _departure;
@@ -67,6 +70,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     required DateTime? countFrom,
     required List<ApprovalStep> chain,
     required List<AppUser> users,
+    ({double workDays, double ratio})? workFromHome,
   }) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -101,6 +105,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
                 ? '${_departure!.hour.toString().padLeft(2, '0')}:${_departure!.minute.toString().padLeft(2, '0')}'
                 : null,
             days: type.isLeave ? days : 0,
+            workFromHome: workFromHome,
             reason: _reason.text.trim(),
             chain: chain,
             files: _files,
@@ -151,7 +156,7 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
     final afterWork = countFrom != null && _dates != null && countFrom != _dates!.start;
     String hm(int minutes) => MaterialLocalizations.of(context)
         .formatTimeOfDay(TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60));
-    final days = type.isLeave && _dates != null
+    final workDaysCount = type.isLeave && _dates != null
         ? countFrom!.isAfter(_dates!.end)
             ? 0.0
             : leaveDays(
@@ -163,6 +168,12 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
             halfDay: _halfDay,
           )
         : 0.0;
+    // Work from home (annual leave, sales team / department heads): every
+    // [ratio] work days at home use one day of annual leave.
+    final canWfh = type.id == wfhLeaveTypeId && mayWorkFromHome(me, users);
+    final wfh = canWfh && _wfh;
+    final ratio = ref.watch(wfhRatioProvider).value ?? defaultWfhDaysPerLeaveDay;
+    final days = wfh ? wfhLeaveDays(workDaysCount, ratio) : workDaysCount;
     final chain = approvalChain(me, users);
 
     // What's left of this type after this request.
@@ -256,7 +267,25 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
                   ],
                 ),
               ),
-            if (_dates != null)
+            if (canWfh) ...[
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _wfh,
+                onChanged: (v) => setState(() => _wfh = v ?? false),
+                title: Text(l10n.workFromHome),
+                subtitle: Text(l10n.wfhCounts(formatLeaveDays(ratio))),
+              ),
+              if (_wfh) const WfhNote(),
+            ],
+            if (_dates != null && wfh)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.home_work_outlined),
+                title: Text(l10n.wfhDaysCount(formatLeaveDays(workDaysCount), formatLeaveDays(days))),
+                subtitle: balance == null ? null : Text(l10n.leaveLeftAfter(formatLeaveDays(balance.remaining - days))),
+              )
+            else if (_dates != null)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event),
@@ -333,7 +362,15 @@ class _LeaveRequestFormState extends ConsumerState<LeaveRequestForm> {
           FilledButton.icon(
             onPressed: _busy
                 ? null
-                : () => _submit(me: me, type: type, days: days, countFrom: countFrom, chain: chain, users: users),
+                : () => _submit(
+                      me: me,
+                      type: type,
+                      days: days,
+                      countFrom: countFrom,
+                      chain: chain,
+                      users: users,
+                      workFromHome: wfh ? (workDays: workDaysCount, ratio: ratio) : null,
+                    ),
             icon: _busy
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.send),

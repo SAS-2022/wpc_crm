@@ -171,6 +171,16 @@ enum NotificationType {
   /// escalated: `fromId` = one of the people told before who didn't act,
   /// [AppNotification.count] = minutes since the first notice.
   teamAlert,
+
+  /// Asked to visit a client that isn't theirs (2026-11-21, "Also visited
+  /// by"): [AppNotification.ref] = client id, [AppNotification.clientName],
+  /// [AppNotification.count] = number of locations (0 = all).
+  clientVisitAssigned,
+
+  /// Someone asked to visit the recipient's client did (2026-11-21):
+  /// [AppNotification.ref] = visit id, [AppNotification.clientName],
+  /// [AppNotification.issue] 'visit' | 'call', [AppNotification.note] = where.
+  clientVisitedByOther,
 }
 
 /// In-app notification in Firestore `notifications`. The `sendPush` Cloud

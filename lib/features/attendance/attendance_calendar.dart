@@ -13,6 +13,9 @@ enum DayMark {
   /// Approved leave.
   leave,
 
+  /// Approved annual leave worked from home (2026-11-21); counts as leave.
+  wfh,
+
   /// Reported "not coming to work" beforehand (2026-10-22), not approved leave.
   absent,
 
@@ -40,6 +43,7 @@ Map<DateTime, DayMark> markMonth({
   required Set<int> workDays,
   required Set<String> holidays,
   required Set<String> leaveDays,
+  Set<String> wfhDays = const {},
   Set<String> absentDays = const {},
   required DateTime? since,
   required DateTime today,
@@ -52,7 +56,7 @@ Map<DateTime, DayMark> markMonth({
     out[d] = attended.contains(key)
         ? DayMark.attended
         : leaveDays.contains(key) && !d.isAfter(todayDay)
-            ? DayMark.leave
+            ? (wfhDays.contains(key) ? DayMark.wfh : DayMark.leave)
             : absentDays.contains(key)
                 ? DayMark.absent
                 : d.isAfter(todayDay)

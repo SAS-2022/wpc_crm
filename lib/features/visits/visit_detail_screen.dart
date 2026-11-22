@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'visit_place.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -176,8 +177,8 @@ class _VisitDetailScreenState extends ConsumerState<VisitDetailScreen> {
                   ListTile(
                     leading: Icon(Icons.my_location, color: far || visit.mocked ? error : Colors.green.shade600),
                     title: Text([
-                      if (ref.watch(locationTypesByIdProvider)[visit.locationTypeId] case final t?)
-                        t.label(Localizations.localeOf(context).languageCode),
+                      ?visitPlace(visit, ref.watch(clientsByIdProvider)[visit.clientId], ref.watch(locationTypesByIdProvider),
+                          Localizations.localeOf(context).languageCode),
                       visit.distanceMeters == null
                           ? l10n.noLocation
                           : l10n.distanceFromClient(formatDistance(visit.distanceMeters!)),

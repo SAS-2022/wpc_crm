@@ -169,6 +169,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           now: now,
           reportedAbsent: absences.containsKey(u.id),
           onLeave: leave.containsKey(u.id),
+          workingFromHome: leave[u.id]?.workFromHome ?? false,
         ),
     };
 
@@ -186,7 +187,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           _Show.all => true,
           _Show.onSite => days[u.id]!.status == DayStatus.onSite,
           _Show.notOnSite =>
-            const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave].contains(days[u.id]!.status),
+            const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave, DayStatus.workingFromHome].contains(days[u.id]!.status),
           _Show.checkedOut => days[u.id]!.status == DayStatus.checkedOut,
         };
     final shown = filtered.where(shows).toList();
@@ -194,7 +195,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     int count(bool Function(PersonDay) test) => filtered.where((u) => test(days[u.id]!)).length;
     final onSite = count((d) => d.status == DayStatus.onSite);
     final notOnSite =
-        count((d) => const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave].contains(d.status));
+        count((d) => const [DayStatus.away, DayStatus.notIn, DayStatus.absent, DayStatus.onLeave, DayStatus.workingFromHome].contains(d.status));
     final checkedOut = count((d) => d.status == DayStatus.checkedOut);
     final workedTotal = filtered.fold(0, (n, u) => n + days[u.id]!.workedMin);
     final late = filtered.where((u) => days[u.id]!.lateMin > 0).toList();
@@ -243,6 +244,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             Colors.blue.shade600,
             leave[u.id]?.typeName(Localizations.localeOf(context).languageCode) ?? l10n.dayOnLeave,
           ),
+        DayStatus.workingFromHome => (Icons.home_work_outlined, Colors.blue.shade600, l10n.dayWorkingFromHome),
         DayStatus.onSite || DayStatus.away => (
             p.status == DayStatus.onSite ? Icons.how_to_reg : Icons.directions_walk,
             p.status == DayStatus.onSite ? Colors.green.shade700 : Colors.orange.shade800,
@@ -363,6 +365,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             (DayStatus.notIn, l10n.notCheckedIn),
             (DayStatus.absent, l10n.reportedAbsent),
             (DayStatus.onLeave, l10n.dayOnLeave),
+            (DayStatus.workingFromHome, l10n.dayWorkingFromHome),
             (DayStatus.checkedOut, l10n.checkedOutTitle),
           ])
             if (shown.where((u) => days[u.id]!.status == status).toList() case final list when list.isNotEmpty) ...[

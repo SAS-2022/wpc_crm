@@ -46,6 +46,14 @@ final annualCarryOverProvider = StreamProvider<bool>(
 Future<void> saveAnnualCarryOver(bool on) =>
     saving(() => _db.doc('settings/leavePolicy').set({'annualCarryOver': on}, SetOptions(merge: true)));
 
+/// `settings/leavePolicy.wfhDaysPerLeaveDay` (2026-11-21): work days from home
+/// per annual leave day ([wfhRatioOf]; default 2).
+final wfhRatioProvider = StreamProvider<double>(
+    (ref) => _db.doc('settings/leavePolicy').snapshots().map((s) => wfhRatioOf(s.data()?['wfhDaysPerLeaveDay'])));
+
+Future<void> saveWfhRatio(double v) =>
+    saving(() => _db.doc('settings/leavePolicy').set({'wfhDaysPerLeaveDay': v}, SetOptions(merge: true)));
+
 /// HR sets a person's joining date / department (rules: the HR area may
 /// change only these two fields of a user).
 Future<void> saveEmployeeHrFields(String uid, {required String? joiningDate, required String? department}) =>
@@ -229,3 +237,55 @@ class AnnualCarryOverTile extends ConsumerWidget {
     );
   }
 }
+
+/// HR / GM / SM: how many work days from home use one annual leave day
+/// (2026-11-21). Applies to requests sent after a change.
+class WfhRatioTile extends ConsumerWidget {
+  const WfhRatioTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final canEdit = ref.watch(currentUserProvider).value?.can.canManageHr ?? false;
+    final ratio = ref.watch(wfhRatioProvider).value ?? defaultWfhDaysPerLeaveDay;
+    return ListTile(
+      leading: const Icon(Icons.home_work_outlined),
+      title: Text(l10n.wfhRatioTitle),
+      subtitle: Text(l10n.wfhRatioValue(formatLeaveDays(ratio))),
+      trailing: canEdit ? const Icon(Icons.edit_outlined) : null,
+      onTap: !canEdit
+          ? null
+          : () async {
+              final controller = TextEditingController(text: formatLeaveDays(ratio));
+              final v = await showDialog<double>(
+                context: context,
+                builder: (dialog) => StatefulBuilder(builder: (dialog, setState) {
+                  final n = double.tryParse(controller.text.trim().replaceAll(',', '.'));
+                  final ok = n != null && n >= minWfhDaysPerLeaveDay && n <= maxWfhDaysPerLeaveDay;
+                  return AlertDialog(
+                    title: Text(l10n.wfhRatioTitle),
+                    content: TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: l10n.wfhRatioLabel,
+                        helperText: l10n.wfhRatioHelp,
+                        helperMaxLines: 3,
+                        errorText: ok || controller.text.isEmpty ? null : l10n.wfhRatioRange,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.cancel)),
+                      FilledButton(onPressed: ok ? () => Navigator.pop(dialog, n) : null, child: Text(l10n.save)),
+                    ],
+                  );
+                }),
+              );
+              if (v != null) await saveWfhRatio(v);
+            },
+    );
+  }
+}
+

@@ -98,11 +98,16 @@ class NotificationsScreen extends ConsumerWidget {
                 ? l10n.notifDriveOvertimeSelf(_clock(context, n.time))
                 : l10n.notifDriveOvertime(owner, _clock(context, n.time)),
             'site' => l10n.notifOvertimeConfirmed(owner, n.siteName.isEmpty ? '' : ' · ${n.siteName}', _clock(context, n.time)),
+            'field' => l10n.notifFieldOvertime(owner, _clock(context, n.time)),
             _ => n.ownerId == meId
                 ? l10n.notifOvertimeStartedSelf(n.siteName, _clock(context, n.time))
                 : l10n.notifOvertimeStarted(owner, n.siteName, _clock(context, n.time)),
           },
-        NotificationType.overtimeAsk => n.count > 0
+        NotificationType.overtimeAsk => n.issue == 'field'
+            ? l10n.notifFieldOvertimeAsk(_clock(context, n.time))
+            : n.issue == 'fieldAsk'
+            ? l10n.notifFieldOvertimeStartAsk(_clock(context, n.time))
+            : n.count > 0
             ? l10n.notifOvertimeAskReminder(_clock(context, n.time))
             : l10n.notifOvertimeAsk(_clock(context, n.time), n.siteName),
         NotificationType.absenceReported => [
@@ -156,13 +161,26 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.visitComment => n.issue == 'reply'
             ? l10n.notifVisitReply(from, n.clientName, n.note)
             : l10n.notifVisitComment(from, n.clientName, n.note),
+        NotificationType.clientVisitAssigned => n.count > 0
+            ? l10n.notifClientVisitAssigned(from, n.clientName, n.count)
+            : l10n.notifClientVisitAssignedAll(from, n.clientName),
+        NotificationType.clientVisitedByOther => [
+            n.issue == 'call' ? l10n.notifClientCalledByOther(from, n.clientName) : l10n.notifClientVisitedByOther(from, n.clientName),
+            if (n.note.isNotEmpty) n.note,
+          ].join(' · '),
         NotificationType.clientsTransferredIn => l10n.notifClientsTransferredIn(from, n.count),
         NotificationType.clientsTransferredOut =>
           l10n.notifClientsTransferredOut(from, n.count, n.ownerId.isEmpty ? l10n.unassigned : owner),
-        NotificationType.leaveRequested => l10n.notifLeaveRequested(owner),
-        NotificationType.leaveApproved => l10n.notifLeaveApproved(from),
-        NotificationType.leaveRejected => l10n.notifLeaveRejected(from),
-        NotificationType.leaveStepApproved => l10n.notifLeaveStepApproved(from),
+        // A note from the approver (2026-11-21); the next step's people see
+        // whose note it is.
+        NotificationType.leaveRequested => [
+            l10n.notifLeaveRequested(owner),
+            if (n.note.isNotEmpty) l10n.leaveNoteFrom(from, n.note),
+          ].join(' – '),
+        NotificationType.leaveApproved => [l10n.notifLeaveApproved(from), if (n.note.isNotEmpty) '“${n.note}”'].join(' '),
+        NotificationType.leaveRejected => [l10n.notifLeaveRejected(from), if (n.note.isNotEmpty) '“${n.note}”'].join(' '),
+        NotificationType.leaveStepApproved =>
+          [l10n.notifLeaveStepApproved(from), if (n.note.isNotEmpty) '“${n.note}”'].join(' '),
         NotificationType.leaveReminder => l10n.notifLeaveReminder(owner, n.count),
         NotificationType.leaveUpdate => switch (LeaveUpdate.values.asNameMap()[n.issue]) {
             LeaveUpdate.stepApproved => l10n.notifLeaveUpdateStepApproved(from, owner),
@@ -170,7 +188,8 @@ class NotificationsScreen extends ConsumerWidget {
             LeaveUpdate.rejected => l10n.notifLeaveUpdateRejected(from, owner),
             LeaveUpdate.cancelled => l10n.notifLeaveUpdateCancelled(owner),
             _ => l10n.notifLeaveUpdateSent(owner),
-          },
+          } +
+            (n.note.isEmpty ? '' : ' “${n.note}”'),
         NotificationType.clientStatusRequested =>
           l10n.notifClientStatusRequested(from, n.clientName, clientStatusLabel(l10n, ClientStatus.fromKey(n.issue))),
         NotificationType.clientStatusApproved =>
@@ -223,6 +242,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.planChanged => Icons.edit_calendar,
                     NotificationType.planItemsAdded => Icons.playlist_add,
                     NotificationType.visitComment => Icons.comment_outlined,
+                    NotificationType.clientVisitAssigned => Icons.add_location_alt_outlined,
+                    NotificationType.clientVisitedByOther => Icons.storefront,
                     NotificationType.hrActionIssued => Icons.gavel,
                     NotificationType.hrActionAccepted => Icons.verified_outlined,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
@@ -317,6 +338,10 @@ class NotificationsScreen extends ConsumerWidget {
                         if (n.ref.isNotEmpty) context.push('/hr/employee/${n.ref}');
                       case NotificationType.visitComment:
                         if (n.ref.isNotEmpty) context.push('/visits/${n.ref}');
+                      case NotificationType.clientVisitedByOther:
+                        if (n.ref.isNotEmpty) context.push('/visits/${n.ref}');
+                      case NotificationType.clientVisitAssigned:
+                        if (n.ref.isNotEmpty) context.push('/clients/${n.ref}');
                       // The gate shows it until accepted.
                       case NotificationType.hrActionIssued:
                         context.go('/');

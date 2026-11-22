@@ -74,6 +74,46 @@ class _OvertimeSectionState extends ConsumerState<OvertimeSection> {
     final time = DateFormat.jm(Localizations.localeOf(context).toString());
     final drive = widget.record?.drive;
 
+    // Away from the site after the end (2026-11-21).
+    final field = fieldOvertimeQuestion(widget.record, now, me.overtimeCapMin);
+    if (field != FieldOvertimeAsk.none) {
+      final from = time.format(widget.record!.drive!.startAt);
+      final confirm = field == FieldOvertimeAsk.confirm;
+      return Container(
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              Icon(Icons.more_time, color: Colors.orange.shade800),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l10n.fieldOvertimeQuestion(from), style: theme.textTheme.titleSmall)),
+            ]),
+            const SizedBox(height: 4),
+            Text(confirm ? l10n.fieldOvertimeConfirmHelp(from) : l10n.fieldOvertimeStartHelp(from),
+                style: theme.textTheme.bodySmall),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: _busy ? null : () => _run(() => saving(() => declineOvertime(me))),
+                  child: Text(confirm ? l10n.notWorking : l10n.notToday),
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.more_time),
+                  label: BusyLabel(busy: _busy, child: Text(confirm ? l10n.imWorking : l10n.startOvertime)),
+                  onPressed: _busy ? null : () => _run(() => saving(() => confirmFieldOvertime(me))),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
     if (overtimeQuestionPending(me, day, me.scheduleOr(company), now)) {
       return Container(
         margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -123,7 +163,9 @@ class _OvertimeSectionState extends ConsumerState<OvertimeSection> {
     }
     final String? text;
     if (!day.closed && drive != null && drive.running) {
-      text = l10n.driveOvertimeRunning(time.format(drive.startAt));
+      text = drive.field
+          ? l10n.fieldOvertimeRunning(time.format(drive.startAt))
+          : l10n.driveOvertimeRunning(time.format(drive.startAt));
     } else if (!day.closed && day.overtimeOn) {
       final cap = end.add(Duration(minutes: me.overtimeCapMin));
       final so = (now.isBefore(cap) ? now : cap).difference(end).inMinutes;
@@ -207,8 +249,14 @@ class _OvertimePromptGateState extends ConsumerState<OvertimePromptGate> with Wi
       await _show(() => _askDialog(me, company));
       return;
     }
+    final field = fieldOvertimeQuestion(record, now, me.overtimeCapMin);
+    if (!_askedThisTime && field != FieldOvertimeAsk.none) {
+      _askedThisTime = true;
+      await _show(() => _fieldDialog(me, record.drive!, confirm: field == FieldOvertimeAsk.confirm));
+      return;
+    }
     final drive = record.drive;
-    if (drive != null && drive.running && !day.closed) {
+    if (drive != null && drive.running && !drive.field && !day.closed) {
       final key = 'overtimeDriveShown_${record.date}_${drive.startAt.millisecondsSinceEpoch}';
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -247,6 +295,30 @@ class _OvertimePromptGateState extends ConsumerState<OvertimePromptGate> with Wi
     );
     if (!mounted) return;
     if (choice == 'start') await _start(context, ref, me);
+    if (choice == 'no') await saving(() => declineOvertime(me));
+  }
+
+  Future<void> _fieldDialog(AppUser me, DriveOvertime drive, {required bool confirm}) async {
+    final l10n = AppLocalizations.of(context);
+    final time = DateFormat.jm(Localizations.localeOf(context).toString()).format(drive.startAt);
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        icon: Icon(Icons.more_time, color: Colors.orange.shade800, size: 40),
+        title: Text(l10n.fieldOvertimeQuestion(time)),
+        content: Text(confirm ? l10n.fieldOvertimeConfirmHelp(time) : l10n.fieldOvertimeStartHelp(time)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, 'no'), child: Text(confirm ? l10n.notWorking : l10n.notToday)),
+          TextButton(onPressed: () => Navigator.pop(dialog), child: Text(l10n.later)),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, 'yes'),
+            child: Text(confirm ? l10n.imWorking : l10n.startOvertime),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 'yes') await saving(() => confirmFieldOvertime(me));
     if (choice == 'no') await saving(() => declineOvertime(me));
   }
 
@@ -332,7 +404,16 @@ class _ApproveOvertimeDialogState extends State<_ApproveOvertimeDialog> {
           Text(DateFormat.yMMMMEEEEd(locale).format(DateTime.parse(widget.record.date))),
           if (from != null && end != null)
             Text(l10n.overtimeRecorded(formatMinutes(_recorded), time.format(from), time.format(end))),
-          if (person.role.isLocationTracked)
+          // Away from the site (2026-11-21): whether they confirmed it themselves.
+          if (widget.record.drive case final d? when d.field)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                d.confirmed ? l10n.fieldOvertimeConfirmed : l10n.fieldOvertimeNotConfirmed,
+                style: TextStyle(color: d.confirmed ? Colors.green.shade700 : Colors.orange.shade800),
+              ),
+            ),
+          if (person.locationTracked || person.recordsGps)
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(

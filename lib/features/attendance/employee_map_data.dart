@@ -84,7 +84,7 @@ class EmployeeOnMap {
     DayStatus.onSite => EmployeeFilter.onSite,
     DayStatus.away => EmployeeFilter.away,
     DayStatus.checkedOut => EmployeeFilter.checkedOut,
-    DayStatus.notIn || DayStatus.absent || DayStatus.onLeave => EmployeeFilter.notIn,
+    DayStatus.notIn || DayStatus.absent || DayStatus.onLeave || DayStatus.workingFromHome => EmployeeFilter.notIn,
   };
 }
 
@@ -100,7 +100,7 @@ Color employeeStatusColor(BuildContext context, EmployeeOnMap p) => switch (p.da
   DayStatus.away => awayColor(p.user),
   DayStatus.checkedOut => checkedOutColor,
   DayStatus.absent => Colors.deepOrange,
-  DayStatus.onLeave => Colors.blue.shade400,
+  DayStatus.onLeave || DayStatus.workingFromHome => Colors.blue.shade400,
   DayStatus.notIn => Theme.of(context).colorScheme.error,
 };
 
@@ -108,7 +108,7 @@ Color employeeStatusColor(BuildContext context, EmployeeOnMap p) => switch (p.da
 const checkedOutColor = Color(0xFF800020);
 
 /// Sales team and drivers: their work is out of the site.
-bool worksOutsideSite(AppUser u) => u.role.isLocationTracked;
+bool worksOutsideSite(AppUser u) => u.locationTracked;
 
 // Everyone on their site green, outside yellow (user 2026-11-16; before,
 // the sales team and drivers had it the other way round).
@@ -124,6 +124,7 @@ String employeeStatusLabel(AppLocalizations l10n, EmployeeOnMap p) => switch (p.
   DayStatus.checkedOut => l10n.checkedOutTitle,
   DayStatus.absent => l10n.reportedAbsent,
   DayStatus.onLeave => l10n.dayOnLeave,
+  DayStatus.workingFromHome => l10n.dayWorkingFromHome,
   DayStatus.notIn => l10n.notCheckedIn,
 };
 
@@ -134,6 +135,7 @@ IconData _statusIcon(EmployeeOnMap p) => switch (p.day?.status) {
   DayStatus.checkedOut => Icons.logout,
   DayStatus.absent => Icons.sick_outlined,
   DayStatus.onLeave => Icons.beach_access,
+  DayStatus.workingFromHome => Icons.home_work_outlined,
   DayStatus.notIn => p.day!.notInYet ? Icons.hourglass_bottom : Icons.person_off_outlined,
 };
 
@@ -150,7 +152,7 @@ List<EmployeeOnMap> employeePeople(WidgetRef ref, DateTime now) {
       if (u.active &&
           u.role != UserRole.unknown &&
           u.role.value.isNotEmpty &&
-          (u.role.isLocationTracked || u.recordsGps || u.checksAttendance))
+          (u.locationTracked || u.recordsGps || u.checksAttendance))
         u,
   ]..sort((a, b) => a.name.compareTo(b.name));
 
@@ -162,7 +164,7 @@ List<EmployeeOnMap> employeePeople(WidgetRef ref, DateTime now) {
   final presence = ref.watch(presenceProvider).value ?? const <String, Presence>{};
   final recordedIds = [
     for (final u in users)
-      if (!u.role.isLocationTracked && u.recordsGps) u.id,
+      if (!u.locationTracked && u.recordsGps) u.id,
   ]..sort();
   final recorded = recordedIds.isEmpty
       ? const <String, LiveLocation>{}
@@ -185,7 +187,7 @@ List<EmployeeOnMap> employeePeople(WidgetRef ref, DateTime now) {
   return [
     for (final u in users)
       () {
-        final tracked = u.role.isLocationTracked;
+        final tracked = u.locationTracked;
         final loc = tracked ? live[u.id] : recorded[u.id];
         final state = tracked ? liveState(loc, presence[u.id], now) : recordedState(loc, now);
         final result = u.checksAttendance ? records[u.id]?.best(u, company) : null;
@@ -204,6 +206,7 @@ List<EmployeeOnMap> employeePeople(WidgetRef ref, DateTime now) {
                   now: now,
                   reportedAbsent: absences.containsKey(u.id),
                   onLeave: leave.containsKey(u.id),
+                  workingFromHome: leave[u.id]?.workFromHome ?? false,
                 )
               : null,
           result: result,
@@ -373,7 +376,7 @@ class EmployeeDetails extends ConsumerWidget {
     final location = <Widget>[
       if (loc == null)
         line(
-          u.role.isLocationTracked ? l10n.noLocationYet : l10n.noPositionRecordedToday,
+          u.locationTracked ? l10n.noLocationYet : l10n.noPositionRecordedToday,
           color: theme.colorScheme.outline,
         )
       else ...[

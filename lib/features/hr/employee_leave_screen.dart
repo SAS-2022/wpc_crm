@@ -286,6 +286,9 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
   String? _typeId;
   DateTimeRange? _dates;
   bool _halfDay = false;
+
+  /// Worked from home (annual leave, 2026-11-21): uses fewer days.
+  bool _wfh = false;
   final _days = TextEditingController();
   final _note = TextEditingController();
 
@@ -309,7 +312,7 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
     final workDays = widget.person.scheduleOr(ref.watch(workHoursProvider).value ?? WorkHours.defaults).days;
     final holidays = ref.watch(holidaysProvider).value ?? const <String>{};
     final oneDay = _dates != null && _dates!.start == _dates!.end;
-    final counted = _dates == null
+    final workDaysCount = _dates == null
         ? null
         : leaveDays(
             from: _dates!.start,
@@ -319,6 +322,9 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
             holidays: holidays,
             halfDay: _halfDay && oneDay,
           );
+    final ratio = ref.watch(wfhRatioProvider).value ?? defaultWfhDaysPerLeaveDay;
+    final wfh = _wfh && type.id == wfhLeaveTypeId;
+    final counted = workDaysCount == null ? null : (wfh ? wfhLeaveDays(workDaysCount, ratio) : workDaysCount);
     // Refresh the days field when the count changes, unless HR typed their own.
     if (counted != _counted) {
       if (_days.text.isEmpty || double.tryParse(_days.text) == _counted) _days.text = counted == null ? '' : formatLeaveDays(counted);
@@ -377,6 +383,14 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
                   value: _halfDay,
                   onChanged: (v) => setState(() => _halfDay = v),
                 ),
+              if (type.id == wfhLeaveTypeId)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.workFromHome),
+                  subtitle: Text(l10n.wfhCounts(formatLeaveDays(ratio))),
+                  value: _wfh,
+                  onChanged: (v) => setState(() => _wfh = v),
+                ),
               TextField(
                 controller: _days,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -402,6 +416,7 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
                         to: leaveDayKey(_dates!.end),
                         halfDay: _halfDay && oneDay,
                         days: days,
+                        workFromHome: wfh && workDaysCount != null ? (workDays: workDaysCount, ratio: ratio) : null,
                         note: _note.text.trim(),
                       );
                   if (context.mounted) Navigator.pop(context);

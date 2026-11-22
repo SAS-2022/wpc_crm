@@ -41,6 +41,7 @@ String checkOutTypeLabel(AppLocalizations l10n, String? type) => switch (type) {
   'arrivedHome' => l10n.checkOutArrivedHome,
   'arrivedSite' => l10n.checkOutArrivedSite,
   'overtimeCap' => l10n.checkOutOvertimeCap,
+  'lastJob' => l10n.checkOutLastJob,
   _ => '',
 };
 
@@ -116,7 +117,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
   static bool _askedBackground = false;
 
   Future<void> _askBackgroundOnce() async {
-    if (_askedBackground || widget.me.role.isLocationTracked || widget.me.workSiteIds.isEmpty) return;
+    if (_askedBackground || widget.me.locationTracked || widget.me.workSiteIds.isEmpty) return;
     if (defaultTargetPlatform != TargetPlatform.android) return;
     _askedBackground = true;
     if (!await Permission.ignoreBatteryOptimizations.isGranted) await _allowBackground();
@@ -635,7 +636,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                 title: Text(l10n.allowAlwaysForAttendance),
                 trailing: TextButton(onPressed: _allowAlways, child: Text(l10n.allow)),
               ),
-            if (!me.role.isLocationTracked && (health?.batteryOptimized ?? false))
+            if (!me.locationTracked && (health?.batteryOptimized ?? false))
               ListTile(
                 dense: true,
                 leading: Icon(Icons.battery_alert, color: theme.colorScheme.error),
@@ -650,7 +651,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
               ),
             // Battery / autostart settings that keep the phone from waking the
             // app at the site (the tracking card shows them to tracked staff).
-            if (!me.role.isLocationTracked && PhoneHealthTips.needed(health))
+            if (!me.locationTracked && PhoneHealthTips.needed(health))
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: PhoneHealthTips(health: health!),
@@ -676,7 +677,8 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                           style: widget.prominent ? OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,
                           onPressed: _busy || users == null ? null : _checkOut,
                           icon: const Icon(Icons.logout),
-                          label: Text(l10n.checkOut),
+                          // Overtime away from the site: the check-out ends it (2026-11-21).
+                          label: Text((record?.drive?.field ?? false) && (record?.drive?.running ?? false) ? l10n.endOvertime : l10n.checkOut),
                         )
                       : FilledButton.icon(
                           style: widget.prominent ? FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)) : null,

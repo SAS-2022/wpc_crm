@@ -53,9 +53,15 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
         content: TextField(
           controller: comment,
           autofocus: true,
-          minLines: 1,
-          maxLines: 4,
-          decoration: InputDecoration(labelText: approve ? l10n.commentOptional : l10n.rejectReason),
+          minLines: 3,
+          maxLines: 6,
+          decoration: InputDecoration(
+            labelText: approve ? l10n.leaveNotesLabel : l10n.rejectReason,
+            helperText: l10n.leaveNotesHelp,
+            helperMaxLines: 3,
+            border: const OutlineInputBorder(),
+            alignLabelWithHint: true,
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.cancel)),
@@ -167,6 +173,17 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                       : Text(l10n.travelAfterWorkOn(
                           DateFormat.MMMEd(locale).format(DateTime.parse(r.travelDay!)), r.departureTime ?? '')),
             ),
+          // Work from home (2026-11-21): the days at home and what they use.
+          if (r.workFromHome) ...[
+            ListTile(
+              leading: Icon(Icons.home_work_outlined, color: theme.colorScheme.tertiary),
+              title: Text(l10n.workFromHome),
+              subtitle: Text(r.wfhDays == null
+                  ? l10n.leaveDaysCount(formatLeaveDays(r.days))
+                  : l10n.wfhDaysCount(formatLeaveDays(r.wfhDays!), formatLeaveDays(r.days))),
+            ),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: WfhNote()),
+          ],
           if (r.reason.isNotEmpty)
             ListTile(leading: const Icon(Icons.notes), title: SelectableText(r.reason)),
           // HR area: the person's balance for the request's year.
@@ -227,6 +244,36 @@ class _LeaveRequestScreenState extends ConsumerState<LeaveRequestScreen> {
                       if (s.at != null) fmt.format(s.at!),
                       if (s.comment.isNotEmpty) '“${s.comment}”',
                     ].where((x) => x.isNotEmpty).join(' · ')),
+            ),
+          // Notes left by earlier approvers, right above the buttons of the
+          // one deciding now (2026-11-21, user: HR sees the manager's note).
+          if (canAct && r.steps.any((s) => s.comment.isNotEmpty))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Card(
+                margin: EdgeInsets.zero,
+                elevation: 0,
+                color: theme.colorScheme.secondaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.sticky_note_2_outlined, size: 18),
+                        const SizedBox(width: 6),
+                        Text(l10n.leaveEarlierNotes, style: theme.textTheme.titleSmall),
+                      ]),
+                      for (final s in r.steps)
+                        if (s.comment.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: SelectableText(l10n.leaveNoteFrom(users[s.byId]?.name ?? '?', s.comment)),
+                          ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           if (canAct)
             Padding(

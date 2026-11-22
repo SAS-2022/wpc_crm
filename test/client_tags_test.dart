@@ -2,6 +2,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wpc_crm/features/clients/client_tags.dart';
 
 void main() {
+  group('matchesTagFilter', () {
+    const known = {'factory', 'showroom'};
+    test('empty filter passes everyone', () {
+      expect(matchesTagFilter(const [], const {}, known), isTrue);
+    });
+    test('any selected tag', () {
+      expect(matchesTagFilter(const ['factory'], const {'factory', 'showroom'}, known), isTrue);
+      expect(matchesTagFilter(const ['showroom'], const {'factory'}, known), isFalse);
+    });
+    test('no tag = no known tag', () {
+      expect(matchesTagFilter(const [], const {noTagFilterId}, known), isTrue);
+      expect(matchesTagFilter(const ['deleted'], const {noTagFilterId}, known), isTrue);
+      expect(matchesTagFilter(const ['factory'], const {noTagFilterId}, known), isFalse);
+      expect(matchesTagFilter(const ['factory'], const {noTagFilterId, 'factory'}, known), isTrue);
+    });
+  });
+
   group('isDuplicateTag', () {
     test('ignores case, spaces and punctuation', () {
       expect(isDuplicateTag(defaultClientTags, 'interior  designer', ''), isTrue);

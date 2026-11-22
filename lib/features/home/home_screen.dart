@@ -152,6 +152,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
+          // Overtime away from the site needs their home (2026-11-21).
+          SetHomeLocationCard(me: me),
           const TrackingCard(),
           // Assigned to a work site: today's check-in / check-out.
           AttendanceCard(me: me),
@@ -443,7 +445,7 @@ class _BackOfficeHome extends ConsumerWidget {
           // Drivers without a home location: asked to set it (decides their overtime).
           SetHomeLocationCard(me: me),
           // Drivers share their location like the sales team: permissions / phone health.
-          if (me.role.isLocationTracked) const TrackingCard(),
+          if (me.locationTracked) const TrackingCard(),
           // Today's check-in (big Check in / Check out button) and the month calendar.
           AttendanceCard(me: me, prominent: true),
           if (me.checksAttendance) MyAttendanceCalendar(me: me),

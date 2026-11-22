@@ -3580,7 +3580,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String trackingSchedulesHelp(String hours) {
-    return 'متى يُشارك موقع كل شخص. افتراضيًا يتبع فريق المبيعات ساعات عمل الشركة ($hours) ويُتتبع السائقون طوال اليوم. اضغط على شخص لتحديد أيام وساعات خاصة به، أو طوال اليوم.';
+    return 'من تتم مشاركة موقعه مباشرة ومتى. افتراضياً يتبع فريق المبيعات ساعات عمل الشركة ($hours)، ويُتتبع السائقون طوال اليوم ولا يُتتبع باقي الموظفين مباشرة. اضغط على شخص لتفعيل التتبع أو إيقافه له، أو لتحديد أيام وساعات خاصة به.';
   }
 
   @override
@@ -7904,5 +7904,328 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String kamTeamMembers(int count) {
     return '$count أعضاء';
+  }
+
+  @override
+  String get trackedLive => 'يتم تتبعه مباشرة';
+
+  @override
+  String get notTrackedLive => 'لا يتم تتبعه';
+
+  @override
+  String get notTrackedLiveRecorded =>
+      'لا يتم تتبعه مباشرة · يُسجَّل الموقع للحضور';
+
+  @override
+  String get trackingSetForPerson => 'مضبوط لهذا الشخص (ليس الافتراضي لدوره)';
+
+  @override
+  String get trackLiveLocation => 'تتبع الموقع مباشرة';
+
+  @override
+  String get trackingRoleDefaultOn => 'مفعّل كما لكل من لديه هذا الدور';
+
+  @override
+  String get trackingRoleDefaultOff => 'متوقف كما لكل من لديه هذا الدور';
+
+  @override
+  String get trackingTurnedOnForPerson =>
+      'مفعّل لهذا الشخص (دوره لا يُتتبع عادة)';
+
+  @override
+  String get trackingTurnedOffForPerson =>
+      'متوقف لهذا الشخص (دوره يُتتبع عادة)';
+
+  @override
+  String get notTrackedHelp =>
+      'لا تتم مشاركة موقعه. يحتاج هاتفه إلى فتح التطبيق مرة بعد هذا التغيير.';
+
+  @override
+  String get notTrackedRecordedHelp =>
+      'لا تتم المشاركة مباشرة. إذا كان يسجل الحضور فما زال موقعه يُسجَّل من 08:00 إلى 18:00 لفحوصات الحضور.';
+
+  @override
+  String get trackingOnForPersonHelp =>
+      'يظهر في التتبع المباشر وسجل المسار مثل فريق المبيعات؛ يطلب هاتفه إذن الموقع \"طوال الوقت\" ويشاركه في الساعات أدناه. تُبلَّغ مشاكل التتبع والهواتف التي لا ترد إلى مديري المبيعات.';
+
+  @override
+  String get trackingBackToRole => 'العودة إلى افتراضي الدور';
+
+  @override
+  String get liveLocationTracking => 'تتبع الموقع المباشر';
+
+  @override
+  String clientBreakdownTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عميل',
+      one: 'عميل واحد',
+    );
+    return '$_temp0 · حسب النوع والوسم';
+  }
+
+  @override
+  String get noTag => 'بدون وسم';
+
+  @override
+  String get leaveNotesLabel => 'ملاحظات (اختياري)';
+
+  @override
+  String get leaveNotesHelp =>
+      'سيرى هذه الملاحظة الموظف ومن يوافق بعدك (مثل الموارد البشرية) والمطّلعون على الطلب.';
+
+  @override
+  String get leaveEarlierNotes => 'ملاحظات الموافقات السابقة';
+
+  @override
+  String leaveNoteFrom(String name, String note) {
+    return 'ملاحظة من $name: «$note»';
+  }
+
+  @override
+  String get clientBreakdownShow => 'الأنواع والوسوم';
+
+  @override
+  String get clientBreakdownHide => 'إخفاء الدليل';
+
+  @override
+  String get alsoVisitedBy => 'يزوره أيضاً';
+
+  @override
+  String get addVisitor => 'اطلب من شخص زيارته';
+
+  @override
+  String get allLocations => 'كل المواقع';
+
+  @override
+  String get visitorLocationsGone => 'حُذفت مواقعه';
+
+  @override
+  String visitingForOwner(String owner) {
+    return 'تزور هذا العميل نيابة عن $owner';
+  }
+
+  @override
+  String get visitorHelp =>
+      'يرى المواقع المحددة فقط لهذا العميل، ويمكنه تسجيل الزيارة والمكالمات والكتالوجات هناك. تُحتسب الزيارات له، ويُبلَّغ مندوب العميل. يبقى العميل مع مندوبه.';
+
+  @override
+  String addToPlanOfToday(String name) {
+    return 'أضف إلى خطة $name اليوم';
+  }
+
+  @override
+  String addedToPlanOf(String name) {
+    return 'أُضيف إلى خطة $name لليوم';
+  }
+
+  @override
+  String notifClientVisitAssigned(String name, String client, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مواقع',
+      one: 'موقع واحد',
+    );
+    return 'طلب منك $name زيارة $client ($_temp0)';
+  }
+
+  @override
+  String notifClientVisitAssignedAll(String name, String client) {
+    return 'طلب منك $name زيارة $client';
+  }
+
+  @override
+  String notifClientVisitedByOther(String name, String client) {
+    return 'زار $name عميلك $client';
+  }
+
+  @override
+  String notifClientCalledByOther(String name, String client) {
+    return 'اتصل $name بعميلك $client';
+  }
+
+  @override
+  String get visitorLinkedClients => 'الشركات والمعارض المرتبطة';
+
+  @override
+  String locationsCount(int count) {
+    return '$count مواقع';
+  }
+
+  @override
+  String get locationName => 'الاسم (اختياري)';
+
+  @override
+  String get locationNameHelp => 'للتمييز بين المواقع، مثل \"معرض العليا\"';
+
+  @override
+  String visitedByPeople(String names) {
+    return 'يزوره $names';
+  }
+
+  @override
+  String get askToVisit => 'اطلب الزيارة';
+
+  @override
+  String askToVisitSummary(int clients, int locations) {
+    String _temp0 = intl.Intl.pluralLogic(
+      clients,
+      locale: localeName,
+      other: '$clients عملاء',
+      one: 'عميل واحد',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      locations,
+      locale: localeName,
+      other: '$locations مواقع',
+      one: 'موقع واحد',
+    );
+    return '$_temp0 · $_temp1 محددة';
+  }
+
+  @override
+  String askToVisitSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عملاء مستبعدون',
+      one: 'عميل واحد مستبعد',
+    );
+    return '$_temp0: لا يمكنك تعيين زوار لهم';
+  }
+
+  @override
+  String askToVisitOwnSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count منهم',
+      one: 'واحد منهم',
+    );
+    return '$_temp0 له أصلاً ويبقى كما هو';
+  }
+
+  @override
+  String get askToVisitNotAllowed => 'لا يمكنك تعيين زوار لهؤلاء العملاء';
+
+  @override
+  String askToVisitDone(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عملاء',
+      one: 'عميلاً واحداً',
+    );
+    return 'يزور $name الآن $_temp0';
+  }
+
+  @override
+  String get endOvertime => 'إنهاء العمل الإضافي';
+
+  @override
+  String get checkOutLastJob => 'غادر آخر مكان عمل (عمل إضافي خارج الموقع)';
+
+  @override
+  String fieldOvertimeQuestion(String time) {
+    return 'انتهى دوامك الساعة $time – هل ما زلت تعمل؟';
+  }
+
+  @override
+  String fieldOvertimeConfirmHelp(String time) {
+    return 'لست في المنزل، لذلك يُسجَّل عملك الإضافي من الساعة $time. أكّد أنك تعمل، واضغط «إنهاء العمل الإضافي» عند الانتهاء. طريق العودة إلى المنزل لا يُحتسب.';
+  }
+
+  @override
+  String fieldOvertimeStartHelp(String time) {
+    return 'تعمل خارج الموقع؟ ابدأ العمل الإضافي – يُحتسب من الساعة $time حتى تضغط «إنهاء العمل الإضافي». حدّد موقع منزلك ليُنهيه التطبيق عند وصولك إلى المنزل.';
+  }
+
+  @override
+  String get imWorking => 'نعم، أعمل';
+
+  @override
+  String get notWorking => 'لا أعمل';
+
+  @override
+  String fieldOvertimeRunning(String time) {
+    return 'عمل إضافي خارج الموقع منذ $time – اضغط «إنهاء العمل الإضافي» عند الانتهاء';
+  }
+
+  @override
+  String notifFieldOvertime(String name, String time) {
+    return '$name ما زال يعمل خارج الموقع بعد نهاية الدوام ($time) – يُسجَّل العمل الإضافي';
+  }
+
+  @override
+  String notifFieldOvertimeAsk(String time) {
+    return 'انتهى دوامك الساعة $time ولست في المنزل – يُسجَّل عملك الإضافي. أكّد أنك تعمل.';
+  }
+
+  @override
+  String notifFieldOvertimeStartAsk(String time) {
+    return 'انتهى دوامك الساعة $time. هل ما زلت تعمل؟ ابدأ العمل الإضافي من التطبيق.';
+  }
+
+  @override
+  String get fieldOvertimeNotConfirmed =>
+      'خارج الموقع · لم يؤكده الموظف – راجع سجل المسار قبل الاعتماد';
+
+  @override
+  String get fieldOvertimeConfirmed => 'خارج الموقع · أكّده الموظف';
+
+  @override
+  String get workFromHome => 'العمل من المنزل';
+
+  @override
+  String wfhCounts(String ratio) {
+    return 'كل $ratio أيام عمل من المنزل تُحتسب يوماً واحداً من الإجازة السنوية';
+  }
+
+  @override
+  String get wfhNote =>
+      'يجب على الموظفين العاملين من المنزل أن يكونوا متاحين على Microsoft Teams من الساعة 8:00 صباحاً حتى 5:00 مساءً يومياً، وأن يكون لديهم اتصال بالإنترنت طوال الوقت.';
+
+  @override
+  String wfhDaysCount(String workDays, String days) {
+    return '$workDays أيام عمل من المنزل = $days أيام من الإجازة السنوية';
+  }
+
+  @override
+  String get wfhRatioTitle => 'العمل من المنزل';
+
+  @override
+  String wfhRatioValue(String ratio) {
+    return '$ratio أيام عمل من المنزل = يوم واحد من الإجازة السنوية';
+  }
+
+  @override
+  String get wfhRatioLabel => 'أيام العمل من المنزل لكل يوم إجازة سنوية';
+
+  @override
+  String get wfhRatioHelp =>
+      'مثلاً 2: يومان من العمل من المنزل يُحتسبان يوماً واحداً من الإجازة السنوية. يُطبّق على الطلبات المرسلة بعد التغيير.';
+
+  @override
+  String get wfhRatioRange => 'بين 1 و10';
+
+  @override
+  String get dayWorkingFromHome => 'يعمل من المنزل · في إجازة';
+
+  @override
+  String get wfhLegend => 'العمل من المنزل';
+
+  @override
+  String wfhDaysInMonth(int count) {
+    return 'منها $count من المنزل';
+  }
+
+  @override
+  String get clientBreakdownHeading => 'العملاء حسب النوع والوسم';
+
+  @override
+  String clientBreakdownWho(int count, String who) {
+    return '$count عميل · $who';
   }
 }

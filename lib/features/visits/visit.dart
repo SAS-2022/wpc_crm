@@ -36,6 +36,8 @@ class Visit {
     this.callFromApp = false,
     this.callSeconds,
     this.locationTypeId = '',
+    this.locationId = '',
+    this.clientOwnerId = '',
     this.given = const {},
   });
 
@@ -78,6 +80,13 @@ class Visit {
   /// id), e.g. 'factory'; empty for calls, unlabelled or older visits.
   final String locationTypeId;
 
+  /// Which client location (`ClientLocation.id`); empty for calls / older visits.
+  final String locationId;
+
+  /// The client's salesperson when someone else made the visit (asked to
+  /// visit it, 2026-11-21): lets them read it; empty otherwise.
+  final String clientOwnerId;
+
   /// Catalogs / display stands handed over at this visit.
   final Map<GivenItem, int> given;
 
@@ -108,6 +117,8 @@ class Visit {
       callFromApp: d['callFromApp'] as bool? ?? false,
       callSeconds: (d['callSeconds'] as num?)?.toInt(),
       locationTypeId: d['locationTypeId'] as String? ?? '',
+      locationId: d['locationId'] as String? ?? '',
+      clientOwnerId: d['clientOwnerId'] as String? ?? '',
       given: parseGiven(d['given']),
     );
   }

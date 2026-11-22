@@ -54,16 +54,29 @@ class AttendanceEvent {
 /// ends on arriving home or at a work site ([place] 'home' | 'site'), at the
 /// cap ('cap') or unknown (null, phone silent).
 class DriveOvertime {
-  const DriveOvertime({required this.startAt, this.endAt, this.place});
+  const DriveOvertime({required this.startAt, this.endAt, this.place, this.field = false, this.confirmed = false, this.asked = false});
 
   final DateTime startAt;
   final DateTime? endAt;
+
+  /// 'home' | 'site' | 'cap' | 'lastJob' (field: left the last job before
+  /// going home) | 'button' (field: "End overtime") | null (end unknown).
   final String? place;
 
-  bool get running => endAt == null;
+  /// Overtime away from the work sites (2026-11-21, `kind: 'field'`): people
+  /// allowed to leave the site, not drivers. Started at the end when they
+  /// weren't home; [confirmed] once they pressed "Start overtime".
+  final bool field;
+  final bool confirmed;
+
+  /// Field overtime without a home location: asked only, not running until
+  /// they start it (not passed to the day rules).
+  final bool asked;
+
+  bool get running => endAt == null && !asked;
 }
 
-/// left | manual | leftSite | leftEarly | endOfDay | auto | hr | arrivedHome | arrivedSite | overtimeCap
+/// left | manual | leftSite | leftEarly | endOfDay | auto | hr | arrivedHome | arrivedSite | overtimeCap | lastJob
 class DayResult {
   const DayResult({
     this.checkInAt,
@@ -363,6 +376,7 @@ DayResult deriveDay(
         'home' => 'arrivedHome',
         'site' => 'arrivedSite',
         'cap' => 'overtimeCap',
+        'lastJob' => 'lastJob',
         _ => 'auto',
       };
       close(later(later(endAt, end), checkInAt), type);

@@ -43,6 +43,28 @@ bool overtimeQuestionPending(AppUser me, DayResult? day, WorkHours hours, DateTi
   return !now.isBefore(end.add(overtimeAskAfter)) && now.isBefore(from.add(Duration(minutes: me.overtimeCapMin)));
 }
 
+/// Overtime away from the work sites (2026-11-21, server `fieldOvertime`):
+/// what to ask the person now. [confirm]: it's running from the end (they
+/// weren't home) — "Yes, I'm working" / "I'm not working"; [start]: no home
+/// location, it runs only once they start it.
+enum FieldOvertimeAsk { none, confirm, start }
+
+FieldOvertimeAsk fieldOvertimeQuestion(AttendanceRecord? record, DateTime now, int capMin) {
+  final drive = record?.drive;
+  if (drive == null || !drive.field || drive.confirmed) return FieldOvertimeAsk.none;
+  // Answered on this phone (the server catches up within 10 min).
+  final from = drive.startAt.subtract(overtimeAskAfter);
+  final answered = record!.events.any((e) =>
+      (e.type == AttendanceEventType.otStart || e.type == AttendanceEventType.otDecline) && !e.at.isBefore(from));
+  if (answered) return FieldOvertimeAsk.none;
+  if (drive.running) return FieldOvertimeAsk.confirm;
+  if (drive.asked && now.isBefore(drive.startAt.add(Duration(minutes: capMin)))) return FieldOvertimeAsk.start;
+  return FieldOvertimeAsk.none;
+}
+
+/// "Yes, I'm working" / "Start overtime" away from the site: no site check.
+Future<void> confirmFieldOvertime(AppUser me) => recordAttendance(me.id, AttendanceEventType.otStart, extra: {'field': true});
+
 enum StartOvertimeResult { started, notAtSite }
 
 /// "Start overtime": a GPS fix must not put them clearly away from their

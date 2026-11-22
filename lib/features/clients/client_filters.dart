@@ -193,6 +193,11 @@ class _FiltersSheetState extends ConsumerState<_FiltersSheet> {
                     selected: tagFilter.contains(t.id),
                     onSelected: (_) => ref.read(tagFilterProvider.notifier).toggle(t.id),
                   ),
+                FilterChip(
+                  label: Text(l10n.noTag),
+                  selected: tagFilter.contains(noTagFilterId),
+                  onSelected: (_) => ref.read(tagFilterProvider.notifier).toggle(noTagFilterId),
+                ),
               ],
             ),
             if (tagFilter.length > 1)
@@ -277,7 +282,7 @@ class ActiveClientFilters extends ConsumerWidget {
           for (final id in tagFilter)
             chip(
               Icons.sell_outlined,
-              tags[id]?.label(lang) ?? '?',
+              id == noTagFilterId ? l10n.noTag : tags[id]?.label(lang) ?? '?',
               () => ref.read(tagFilterProvider.notifier).toggle(id),
             ),
           if (!defaultStatuses)

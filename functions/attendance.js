@@ -266,7 +266,7 @@ function deriveDay(events, o) {
   if (drive && s.checkInAt !== null && !s.closed) {
     // Driving: open until the server finds the arrival (or the cap).
     if (typeof drive.endAt === 'number') {
-      const type = { home: 'arrivedHome', site: 'arrivedSite', cap: 'overtimeCap' }[drive.place] || 'auto';
+      const type = { home: 'arrivedHome', site: 'arrivedSite', cap: 'overtimeCap', lastJob: 'lastJob' }[drive.place] || 'auto';
       close(Math.max(drive.endAt, o.endMs, s.checkInAt), type);
     }
   } else {
@@ -552,7 +552,97 @@ function driveEnd({ points, startAt, now, capMs, places }) {
   return null;
 }
 
+// Overtime away from the work sites (2026-11-21, user decisions; Ali Sbag's
+// evenings at the Showroom / on jobs were never counted): people with
+// overtime allowed AND allowed to leave the site (not drivers, who have
+// their own rules above). Stored like the drivers' in `driveOvertime` with
+// kind 'field'. Decided 10 min after the end from the GPS:
+// - at home at the end (users.homeLocation, 150 m) → none;
+// - elsewhere → running from the end (also when they don't confirm: it is
+//   recorded as not confirmed and the manager approves or rejects it); the
+//   phone asks "Still working?" (otStart = confirmed, otDecline = none);
+// - no home set → only asked; it runs once they press Start overtime.
+// It ends at the "End overtime" button (check-out), at the cap, or when they
+// get home — then at the moment they LEFT the last place they stayed 10+
+// min before going home: the drive home doesn't count (user decision).
+
+/** A stay: fixes within this distance of its first one for at least STAY_MIN_MS. */
+const STAY_RADIUS_M = 150;
+const STAY_MIN_MS = 10 * MINUTE;
+
+function goodPoints(points) {
+  return points.filter((p) => typeof p?.t === 'number' && typeof p.lat === 'number' && typeof p.lng === 'number'
+    && (p.accuracy ?? 0) <= 100 && p.mocked !== true).sort((a, b) => a.t - b.t);
+}
+
+/** Stays in sorted [pts]: [{from, to, lat, lng}] of 10+ min within 150 m of their first fix (gaps over 30 min end them). */
+function staysOf(pts) {
+  const out = [];
+  let i = 0;
+  while (i < pts.length) {
+    let j = i;
+    while (j + 1 < pts.length && pts[j + 1].t - pts[j].t <= STAY_GAP_MS && meters(pts[i], pts[j + 1]) <= STAY_RADIUS_M) j++;
+    if (pts[j].t - pts[i].t >= STAY_MIN_MS) {
+      out.push({ from: pts[i].t, to: pts[j].t, lat: pts[i].lat, lng: pts[i].lng });
+      i = j + 1;
+    } else i++;
+  }
+  return out;
+}
+
+const atHome = (p, home) => !!home && placeAt(p, [{ ...home, radius: HOME_RADIUS_M, kind: 'home' }]) === 'home';
+
+/**
+ * Field overtime decided at end + 10 min: 'wait' | 'late' | 'none' |
+ * 'ask' (no home set: ask only) | 'running'.
+ * @param {{points: Array, endMs: number, now: number, home: {lat: number, lng: number}|null}} o
+ */
+function fieldDecide({ points, endMs, now, home }) {
+  const decideAt = endMs + ASK_AFTER_MS;
+  if (now < decideAt) return 'wait';
+  const pts = goodPoints(points);
+  const atEnd = pts.filter((p) => p.t <= endMs && p.t >= endMs - DRIVE_FRESH_MS).at(-1)
+    ?? pts.find((p) => p.t > endMs && p.t <= endMs + DRIVE_FRESH_MS);
+  if (!home) return 'ask';
+  if (!atEnd) return now > decideAt + DRIVE_DECIDE_UNTIL_MS ? 'late' : 'wait';
+  return atHome(atEnd, home) ? 'none' : 'running';
+}
+
+/**
+ * When field overtime started at [startAt] ended, from the GPS: home
+ * reached (two fixes in a row there) → when they left the last place they
+ * stayed 10+ min before it (not before the start; the drive home isn't
+ * overtime), place 'lastJob'; a fix past the cap → the cap ('cap'); the
+ * phone silent past the cap → the end of the last stay (else the last fix),
+ * place null (end unknown). Null while it's still running.
+ * [points] may start before [startAt] (a stay can run across it).
+ * @returns {{endAt: number, place: string|null}|null}
+ */
+function fieldEnd({ points, startAt, now, capMs, home }) {
+  const pts = goodPoints(points);
+  const capAt = startAt + capMs;
+  const after = pts.filter((p) => p.t >= startAt);
+  let arrivedAt = null;
+  for (let i = 0; i + 1 < after.length; i++) {
+    if (after[i].t >= capAt) break;
+    if (atHome(after[i], home) && atHome(after[i + 1], home)) { arrivedAt = after[i].t; break; }
+  }
+  const lastStayEnd = (before) => {
+    const stays = staysOf(pts.filter((p) => p.t <= before && !atHome(p, home)));
+    const last = stays.filter((x) => x.to >= startAt).at(-1);
+    return last ? Math.min(last.to, before) : null;
+  };
+  if (arrivedAt !== null) return { endAt: Math.max(startAt, lastStayEnd(arrivedAt) ?? startAt), place: 'lastJob' };
+  if (after.some((p) => p.t >= capAt)) return { endAt: capAt, place: 'cap' };
+  if (now >= capAt) {
+    const last = lastStayEnd(capAt) ?? (after.length ? after[after.length - 1].t : startAt);
+    return { endAt: Math.min(Math.max(startAt, last), capAt), place: null };
+  }
+  return null;
+}
+
 module.exports = {
   gpsPresence, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN,
+  fieldDecide, fieldEnd, staysOf,
   deriveDay, correctedEvents, siteCheckDue, saudiTime, overtimeCap, LATE_GRACE_MIN, AWAY_GRACE_MIN, OVERTIME_MAX_MIN, BREAK_ALLOWANCE_MIN, MIN_OVERTIME_MIN, breakTaker,
 };

@@ -24,8 +24,8 @@ bool get _android => defaultTargetPlatform == TargetPlatform.android;
 final trackingStatusProvider = FutureProvider<TrackingStatus?>((ref) async {
   final me = ref.watch(currentUserProvider).value;
   if (kIsWeb || me == null) return null;
-  final recordOnly = !me.role.isLocationTracked && me.recordsGps;
-  if (!me.active || !(me.role.isLocationTracked || recordOnly)) {
+  final recordOnly = !me.locationTracked && me.recordsGps;
+  if (!me.active || !(me.locationTracked || recordOnly)) {
     await Tracking.stop();
     return null;
   }

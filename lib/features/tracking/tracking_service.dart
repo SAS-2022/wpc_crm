@@ -16,12 +16,10 @@ import '../../core/app_user.dart';
 import '../../firebase_options.dart';
 import 'location_tracker.dart';
 
-/// Roles whose location the background service shares; same as
-/// `UserRole.isLocationTracked` (drivers added 2026-10-20).
+/// Roles whose location the background service shares when the users doc
+/// can't be read; same as `UserRole.isLocationTracked` (drivers added
+/// 2026-10-20). Normally `AppUser.locationTracked` decides (2026-11-18).
 final _trackedRoles = {for (final r in UserRole.values) if (r.isLocationTracked) r.value};
-
-/// Office staff whose GPS is only recorded (2026-10-28, [AppUser.recordsGps]).
-final _recordedRoles = {for (final r in UserRole.values) if (r.recordsGps) r.value};
 
 /// Starts and stops live tracking. Android: a foreground service with its own
 /// isolate that survives the app being closed and restarts after reboot.
@@ -175,15 +173,23 @@ Future<void> trackingServiceMain(ServiceInstance service) async {
 Future<(User, AppUser?)?> _whoToTrack() async {
   final user = await FirebaseAuth.instance.authStateChanges().first;
   if (user == null) return null;
+  // The users doc decides (2026-11-18: live tracking can be switched on or
+  // off per person, `users.liveTracking`); the RTDB role only when it can't
+  // be read (offline at boot).
+  try {
+    final doc = await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+    if (doc.exists) {
+      final me = AppUser.fromDoc(doc);
+      if (!me.active) return null;
+      if (me.locationTracked) return (user, null);
+      if (me.recordsGps) return (user, me);
+      return null;
+    }
+  } catch (_) {
+    // Unreadable: go by the role below.
+  }
   final role = (await FirebaseDatabase.instance.ref('roles/${user.uid}').get()).value;
   if (_trackedRoles.contains(role)) return (user, null);
-  if (!_recordedRoles.contains(role)) return null;
-  try {
-    final me = AppUser.fromDoc(await FirebaseFirestore.instance.doc('users/${user.uid}').get());
-    if (me.recordsGps) return (user, me);
-  } catch (_) {
-    // Unknown: not recorded.
-  }
   return null;
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,6 +18,8 @@ import 'merge.dart';
 import 'transfer.dart';
 import '../../core/saving.dart';
 import 'client_status.dart';
+import 'client_tags.dart';
+import 'client_visitors.dart';
 import 'client_links.dart';
 import '../projects/project.dart';
 import '../projects/projects_repository.dart';
@@ -26,12 +30,59 @@ import '../projects/projects_repository.dart';
 final allClientsProvider = StreamProvider<List<Client>>((ref) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
-  Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('clients');
-  if (!me.can.isSupervisor) query = query.where('assignedTo', isEqualTo: me.id);
-  return query.snapshots().map(
-        (s) => s.docs.map(Client.fromDoc).toList()..sort((a, b) => a.name.compareTo(b.name)),
-      );
+  final clients = FirebaseFirestore.instance.collection('clients');
+  List<Client> sorted(Iterable<Client> list) => list.toList()..sort((a, b) => a.name.compareTo(b.name));
+  if (me.can.isSupervisor) return clients.snapshots().map((s) => sorted(s.docs.map(Client.fromDoc)));
+  // A sales exec: their own clients plus those they are asked to visit
+  // (`visitorIds`, 2026-11-21), the latter with only their locations.
+  return _mergeClientStreams(
+    clients.where('assignedTo', isEqualTo: me.id).snapshots(),
+    clients.where('visitorIds', arrayContains: me.id).snapshots(),
+    (docs) => sorted(docs.map((d) => Client.fromDoc(d, viewerId: me.id))),
+  );
 });
+
+/// Both queries' latest results as one list (a client in both once, own first).
+Stream<List<Client>> _mergeClientStreams(
+  Stream<QuerySnapshot<Map<String, dynamic>>> own,
+  Stream<QuerySnapshot<Map<String, dynamic>>> visiting,
+  List<Client> Function(Iterable<DocumentSnapshot<Map<String, dynamic>>>) build,
+) {
+  late StreamController<List<Client>> out;
+  QuerySnapshot<Map<String, dynamic>>? a, b;
+  var visitingFailed = false;
+  final subs = <StreamSubscription<Object?>>[];
+  void emit() {
+    if (a == null || (b == null && !visitingFailed)) return;
+    final byId = <String, DocumentSnapshot<Map<String, dynamic>>>{
+      for (final d in b?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[]) d.id: d,
+      for (final d in a!.docs) d.id: d,
+    };
+    out.add(build(byId.values));
+  }
+  out = StreamController<List<Client>>(
+    onListen: () {
+      subs.add(own.listen((s) {
+        a = s;
+        emit();
+      }, onError: out.addError));
+      // Rules not deployed yet / older data: own clients still show.
+      subs.add(visiting.listen((s) {
+        b = s;
+        emit();
+      }, onError: (_) {
+        visitingFailed = true;
+        emit();
+      }));
+    },
+    onCancel: () async {
+      for (final s in subs) {
+        await s.cancel();
+      }
+    },
+  );
+  return out.stream;
+}
 
 /// The clients used everywhere else (lists, map, plans, statistics): hidden
 /// ones left out.
@@ -56,8 +107,8 @@ final hiddenClientIdsProvider = Provider<Set<String>>((ref) => {
 final salesFilterProvider = NotifierProvider<SalesFilter, Set<String>>(SalesFilter.new);
 const unassignedFilter = '_unassigned';
 
-bool matchesSalesFilter(Client c, Set<String> filter) =>
-    filter.isEmpty || filter.contains(c.assignedTo ?? unassignedFilter);
+/// Also the clients a picked person is asked to visit (2026-11-21).
+bool matchesSalesFilter(Client c, Set<String> filter) => matchesOwnerOrVisitor(c, filter, unassignedFilter);
 
 class SalesFilter extends Notifier<Set<String>> {
   @override
@@ -145,6 +196,7 @@ bool Function(Client) _clientFilter(Ref ref) {
   final sales = ref.watch(salesFilterProvider);
   final type = ref.watch(clientTypeFilterProvider);
   final tags = ref.watch(tagFilterProvider);
+  final knownTags = ref.watch(clientTagsByIdProvider).keys.toSet();
   final due = ref.watch(givenDueFilterProvider);
   final statuses = ref.watch(clientStatusFilterProvider);
   final givenRules = ref.watch(givenItemRulesProvider).value ?? GivenItemRules.defaults;
@@ -152,7 +204,7 @@ bool Function(Client) _clientFilter(Ref ref) {
   return (c) =>
       matchesSalesFilter(c, sales) &&
       (type == null || c.clientType == type) &&
-      (tags.isEmpty || c.tagIds.any(tags.contains)) &&
+      matchesTagFilter(c.tagIds, tags, knownTags) &&
       statuses.contains(c.status) &&
       inProject(c.id) &&
       (due.isEmpty || due.any((item) => givenStatus(c.given[item], item, givenRules, now) == GivenStatus.due));
@@ -257,6 +309,27 @@ class ClientsRepository {
 
   /// Marks [clients] as different customers, so they stop showing as
   /// possible duplicates of each other.
+  /// Saves who else visits [client] and where ("Also visited by",
+  /// 2026-11-21); people newly added (or given other locations) are told.
+  Future<void> setVisitAssignments(Client client, List<VisitAssignment> list, {required String byId}) => saving(() async {
+    await _clients.doc(client.id).update({...visitAssignmentsUpdate(list), 'updatedAt': FieldValue.serverTimestamp()});
+    final before = {for (final a in client.visitAssignments) a.uid: a.locationIds.toSet()};
+    for (final a in list) {
+      final old = before[a.uid];
+      if (old != null && old.length == a.locationIds.length && old.containsAll(a.locationIds)) continue;
+      await sendNotifications(
+        toIds: [a.uid],
+        type: NotificationType.clientVisitAssigned,
+        fromId: byId,
+        ownerId: client.assignedTo ?? '',
+        date: '',
+        count: a.locationIds.length,
+        ref: client.id,
+        clientName: client.name,
+      );
+    }
+  });
+
   Future<void> markNotDuplicates(List<Client> clients) => saving(() async {
     final batch = _db.batch();
     for (final c in clients) {

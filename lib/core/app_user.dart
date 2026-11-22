@@ -318,6 +318,7 @@ class AppUser {
     this.overtimeMaxMin,
     this.attendanceRequired,
     this.leaveSiteAllowed,
+    this.liveTracking,
     this.workSchedule,
     this.managerId,
     this.markedManager = false,
@@ -428,6 +429,17 @@ class AppUser {
   final bool? leaveSiteAllowed;
   bool get leavesSite => leaveSiteAllowed ?? role.leavesSiteForWork;
 
+  /// Live location tracking for this person (2026-11-18, user: any user can
+  /// be tracked): null = as their role ([UserRole.isLocationTracked]), true =
+  /// tracked live like the sales team, false = not tracked live. Set by the
+  /// SM / GM (user form, App settings → Tracking schedules); functions
+  /// `tracksLive` follows it for alerts and wake pings.
+  final bool? liveTracking;
+
+  /// Whether this person's location is shared live (use this, not
+  /// `role.isLocationTracked`, for a person).
+  bool get locationTracked => liveTracking ?? role.isLocationTracked;
+
   /// Requests breaks ([UserRole.asksForBreaks]) — not when allowed to leave
   /// the site, and only with attendance.
   bool get requestsBreaks => role.asksForBreaks && !leavesSite && checksAttendance;
@@ -435,11 +447,17 @@ class AppUser {
   /// Checks in and out: attendance required and at least one work site.
   bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;
 
+  /// Overtime away from the work sites (2026-11-21, server `fieldOvertime`):
+  /// overtime allowed and allowed to leave the site; drivers have their own.
+  bool get fieldOvertime => active && overtimeAllowed && leavesSite && role != UserRole.driver && checksAttendance;
+
   /// GPS recorded 08:00–18:00 on their work days, only into the route
   /// history (no live map, no presence or alerts) — user request
   /// 2026-10-28 after a missed geofence arrival: the server then sees when
   /// they really arrived (`gpsArrival`) and whether they're at the site.
-  bool get recordsGps => active && role.recordsGps && checksAttendance;
+  /// Not when tracked live; a back-office person switched off live tracking
+  /// (e.g. a driver) is still recorded for attendance.
+  bool get recordsGps => active && !locationTracked && role.isBackOffice && checksAttendance;
 
   /// Their own attendance days and hours (2026-10-20, user form); null =
   /// the company work hours (More → Work hours).
@@ -529,10 +547,11 @@ class AppUser {
 
   static bool defaultAttendance(UserRole role, List<String> workSiteIds) => !role.isSales || workSiteIds.isNotEmpty;
 
-  factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final d = doc.data() ?? const {};
+  factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) => AppUser.fromMap(doc.id, doc.data() ?? const {});
+
+  factory AppUser.fromMap(String id, Map<String, dynamic> d) {
     return AppUser(
-      id: doc.id,
+      id: id,
       name: d['name'] as String? ?? '',
       email: d['email'] as String? ?? '',
       phone: d['phone'] as String? ?? '',
@@ -554,6 +573,7 @@ class AppUser {
       overtimeMaxMin: (d['overtimeMaxMin'] as num?)?.toInt(),
       attendanceRequired: d['attendanceRequired'] as bool?,
       leaveSiteAllowed: d['leaveSiteAllowed'] as bool?,
+      liveTracking: d['liveTracking'] as bool?,
       workSchedule: WorkHours.tryParse(d['workSchedule']),
       managerId: d['managerId'] as String?,
       markedManager: d['isManager'] == true,
@@ -598,6 +618,8 @@ class AppUser {
         'overtimeMaxMin': overtimeAllowed ? overtimeMaxMin : null,
         'attendanceRequired': ?attendanceRequired,
         'leaveSiteAllowed': ?leaveSiteAllowed,
+        // Written as null too, so "as the role" clears an earlier choice.
+        'liveTracking': liveTracking,
         'workSchedule': workSchedule?.toMap(),
         'managerId': managerId,
         'isManager': roles.any((r) => r.isManagerRole) ? false : markedManager,

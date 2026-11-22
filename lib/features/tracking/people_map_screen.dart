@@ -367,7 +367,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       final gmVisible = me != null && seesGmLocation(me, users);
       bool inTeam(AppUser u) => team.contains(u.id) || (u.role.isDriver && (me?.can.managesDrivers ?? false));
       final tracked = users.where((u) {
-        if (!u.active || !u.role.isLocationTracked) return false;
+        if (!u.active || !u.locationTracked) return false;
         if (driversOnly && !u.role.isDriver) return false;
         if (onlyIds != null && !onlyIds.contains(u.id)) return false;
         // The GM (tracked since 2026-11-17): only department heads and GMs.
@@ -385,7 +385,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
                 .where(
                   (u) =>
                       u.recordsGps &&
-                      !u.role.isLocationTracked &&
+                      !u.locationTracked &&
                       (onlyIds == null || onlyIds.contains(u.id)) &&
                       (!teamScoped || team.contains(u.id)),
                 )

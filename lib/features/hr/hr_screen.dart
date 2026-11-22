@@ -318,6 +318,7 @@ class _TypesTab extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 24),
       children: [
         const AnnualCarryOverTile(),
+          const WfhRatioTile(),
         if (canEdit)
           ListTile(
             leading: const Icon(Icons.account_tree_outlined),

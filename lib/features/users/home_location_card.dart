@@ -17,7 +17,9 @@ class SetHomeLocationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (me.role != UserRole.driver || me.homeLocation != null) return const SizedBox.shrink();
+    // Also people with overtime away from the site (2026-11-21): it tells
+    // overtime apart from being home.
+    if ((me.role != UserRole.driver && !me.fieldOvertime) || me.homeLocation != null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Card(

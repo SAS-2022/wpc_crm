@@ -91,6 +91,11 @@ class UsersRepository {
   /// Overtime on / off for [uid] and its daily cap (null = standard 3 h);
   /// department heads use it from Attendance → Overtime permission
   /// (2026-11-05; the rules allow only these two fields for them).
+  /// Live tracking switched on / off for one person (null = as their role;
+  /// 2026-11-18, SM / GM: App settings → Tracking schedules, user form).
+  Future<void> setLiveTracking(String uid, bool? value) =>
+      saving(() => _users.doc(uid).update({'liveTracking': value, ...userChangeStamp()}));
+
   Future<void> setOvertime(String uid, {required bool allowed, int? maxMin}) => saving(() => _users.doc(uid).update({
         'overtimeAllowed': allowed,
         'overtimeMaxMin': allowed ? maxMin : null,

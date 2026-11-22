@@ -34,7 +34,16 @@ class LeaveRequest {
     required this.createdAt,
     this.watcherIds = const [],
     this.pastRecord = false,
+    this.workFromHome = false,
+    this.wfhDays,
+    this.wfhRatio,
   });
+
+  /// Annual leave worked from home (2026-11-21): [wfhDays] work days at home,
+  /// [wfhRatio] of them per leave day when it was sent; [days] = what it uses.
+  final bool workFromHome;
+  final double? wfhDays;
+  final double? wfhRatio;
 
   final String id;
 
@@ -113,6 +122,9 @@ class LeaveRequest {
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
       watcherIds: [for (final id in d['watcherIds'] as List<dynamic>? ?? const []) if (id is String) id],
       pastRecord: d['pastRecord'] as bool? ?? false,
+      workFromHome: d['workFromHome'] == true,
+      wfhDays: (d['wfhDays'] as num?)?.toDouble(),
+      wfhRatio: (d['wfhRatio'] as num?)?.toDouble(),
     );
   }
 }
@@ -262,6 +274,7 @@ class LeaveRepository {
     String? travelDay,
     String? departureTime,
     required double days,
+    ({double workDays, double ratio})? workFromHome,
     required String reason,
     required List<ApprovalStep> chain,
     required List<PendingFile> files,
@@ -287,6 +300,10 @@ class LeaveRepository {
       'travelDay': ?travelDay,
       'departureTime': ?departureTime,
       'days': days,
+      // Work from home: the work days and the ratio used (2026-11-21).
+      if (workFromHome != null) 'workFromHome': true,
+      if (workFromHome != null) 'wfhDays': workFromHome.workDays,
+      if (workFromHome != null) 'wfhRatio': workFromHome.ratio,
       // The leave year (from their joining date) it uses days of.
       'year': leaveYearOf(me.joiningDate, from == null ? DateTime.now() : DateTime.parse(from)),
       'reason': reason,
@@ -360,6 +377,7 @@ class LeaveRepository {
     required String to,
     required bool halfDay,
     required double days,
+    ({double workDays, double ratio})? workFromHome,
     required String note,
   }) => saving(() async {
     final doc = _requests.doc();
@@ -377,6 +395,9 @@ class LeaveRepository {
       'to': to,
       'halfDay': halfDay,
       'days': days,
+      if (workFromHome != null) 'workFromHome': true,
+      if (workFromHome != null) 'wfhDays': workFromHome.workDays,
+      if (workFromHome != null) 'wfhRatio': workFromHome.ratio,
       'year': leaveYearOf(person.joiningDate, DateTime.parse(from)),
       'reason': note,
       'status': LeaveStatus.approved.name,
@@ -435,15 +456,19 @@ class LeaveRepository {
     });
     if (next == null) throw StateError('already decided');
     final (r, nextStep) = next;
+    // The approver's note goes with every notice: the person, the next step
+    // (HR) and those informed (2026-11-21, user).
+    final note = comment.trim().isEmpty ? null : comment.trim();
     await _notifyWatchers(
       r.watcherIds,
       nextStep != null ? LeaveUpdate.stepApproved : (approve ? LeaveUpdate.approved : LeaveUpdate.rejected),
       fromId: me.id,
       ownerId: r.uid,
       requestId: id,
+      note: note,
     );
     if (nextStep != null) {
-      await _notifyStep(nextStep, fromId: me.id, ownerId: r.uid, requestId: id, users: users);
+      await _notifyStep(nextStep, fromId: me.id, ownerId: r.uid, requestId: id, users: users, note: note);
       // The person hears that their manager approved and HR is next.
       await sendNotifications(
         toIds: [r.uid],
@@ -453,6 +478,7 @@ class LeaveRepository {
         date: '',
         count: 0,
         ref: id,
+        note: note,
       );
     } else {
       await sendNotifications(
@@ -463,6 +489,7 @@ class LeaveRepository {
         date: '',
         count: 0,
         ref: id,
+        note: note,
       );
       // Their direct manager should know who is on leave (2026-10-22);
       // not those who approved a step.
@@ -490,6 +517,7 @@ class LeaveRepository {
     required String fromId,
     required String ownerId,
     required String requestId,
+    String? note,
   }) =>
       sendNotifications(
         toIds: watcherIds,
@@ -500,6 +528,7 @@ class LeaveRepository {
         count: 0,
         ref: requestId,
         issue: update.name,
+        note: note,
       );
 
   Future<void> _notifyStep(
@@ -508,6 +537,7 @@ class LeaveRepository {
     required String ownerId,
     required String requestId,
     required List<AppUser> users,
+    String? note,
   }) =>
       sendNotifications(
         toIds: step.uid != null
@@ -519,6 +549,7 @@ class LeaveRepository {
         date: '',
         count: 0,
         ref: requestId,
+        note: note,
       );
 
   Future<void> saveTypes(List<LeaveType> types) => saving(() => _typesDoc.set({'types': [for (final t in types) t.toMap()]}));

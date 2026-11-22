@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/location.dart';
+import '../../core/saudi_cities.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../attachments/attachments.dart';
@@ -92,6 +93,19 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
 
   /// Where the visit is: the chosen location, else the one nearest to the
   /// phone, else the main one.
+  /// "Showroom · Dammam" for the owner's notice when visiting for them.
+  String _placeNote(Client client) {
+    final at = _location(client);
+    if (at == null) return '';
+    final lang = Localizations.localeOf(context).languageCode;
+    return [
+      ref.read(locationTypesByIdProvider)[at.typeId]?.label(lang) ?? '',
+      at.name.trim(),
+      at.address.trim(),
+      nearestSaudiCity(at.lat, at.lng)?.label(lang) ?? '',
+    ].where((s) => s.isNotEmpty).join(' · ');
+  }
+
   ClientLocation? _location(Client client) =>
       client.locations.where((l) => l.id == _locationId).firstOrNull ??
       (_position == null ? null : nearestLocation(client, _position!.latitude, _position!.longitude)) ??
@@ -159,6 +173,7 @@ class _AddVisitScreenState extends ConsumerState<AddVisitScreen> {
           setClientLocation: !client.hasLocation && _setClientLocation,
           location: _location(client),
           given: _given,
+          placeNote: _placeNote(client),
         );
       }
       // The visit is saved; a failed photo shows an error but the visit stays.

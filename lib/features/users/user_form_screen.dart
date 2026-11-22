@@ -67,6 +67,8 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
 
   /// Null until set here or saved: follows the role ([AppUser.leavesSite]).
   bool? _leaveSite;
+  /// `users.liveTracking`, changed at once by the tracking dialog (kept so Save doesn't undo it).
+  bool? _liveTracking;
 
   /// Null until set here or saved: follows the role (see [AppUser.needsAttendance]).
   bool? _attendance;
@@ -181,6 +183,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _overtime = u.overtimeAllowed;
     _overtimeMax = u.overtimeMaxMin;
     _leaveSite = u.leaveSiteAllowed;
+    _liveTracking = u.liveTracking;
     _attendance = u.attendanceRequired;
     _schedule = u.workSchedule;
     _pending = u.isPendingApproval ? u : null;
@@ -219,6 +222,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
       overtimeMaxMin: _overtimeMax,
       attendanceRequired: _needsAttendance,
       leaveSiteAllowed: _needsAttendance ? _leaveSite ?? _roleOrDefault.leavesSiteForWork : null,
+      liveTracking: _liveTracking,
       workSchedule: schedule,
       managerId: _managerId,
       markedManager: _markedManager,
@@ -583,8 +587,10 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
             // A warehouse supervisor: who they supervise (2026-11-04), saved right away.
             if (!_isNew && !limited && _savedRole == UserRole.warehouseSupervisor && _role == UserRole.warehouseSupervisor)
               _SupervisesField(supervisorId: widget.userId!, users: users),
-            // Drivers: home, where their overtime ends (2026-10-25).
-            if (_role == UserRole.driver && !limited)
+            // Drivers: home, where their overtime ends (2026-10-25); also people
+            // with overtime away from the site (allowed to leave, 2026-11-21).
+            if (!limited &&
+                (_role == UserRole.driver || (_overtime && (_leaveSite ?? _roleOrDefault.leavesSiteForWork))))
               HomeLocationField(value: _home, onChanged: (v) => setState(() => _home = v)),
             // KAMs too: some Odoo clients are under a KAM until they're moved to the team.
             if (_role?.isTracked == true)
@@ -601,29 +607,28 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                 decoration: InputDecoration(labelText: l10n.monthlyVisitTarget, helperText: l10n.monthlyVisitTargetHelp),
                 validator: (v) => (v == null || v.trim().isEmpty || int.tryParse(v.trim()) != null) ? null : l10n.invalidNumber,
               ),
-            // When their location is shared; saved at once (App settings → Tracking schedules).
-            // RTDB settings: sales manager / GM only.
-            if (_role?.isLocationTracked == true && !_isNew && _pending == null && me?.can.isAdmin == true)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.edit_calendar_outlined),
-                title: Text(l10n.trackingHours),
-                subtitle: Text(trackingScheduleSummary(
-                  context,
-                  ref.watch(trackingSchedulesProvider).value?[widget.userId] ?? const TrackingSchedule.standard(),
-                  company,
-                  driver: _role!.isDriver,
-                )),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => showTrackingScheduleDialog(
-                  context,
-                  uid: widget.userId!,
-                  name: _name.text,
-                  driver: _role!.isDriver,
-                  current: ref.read(trackingSchedulesProvider).value?[widget.userId],
-                  company: company,
-                ),
-              ),
+            // Whether and when their location is shared live, for every user
+            // (2026-11-18); saved at once (App settings → Tracking schedules).
+            // RTDB settings + liveTracking: sales manager / GM only.
+            if (!_isNew && _pending == null && me?.can.isAdmin == true)
+              Builder(builder: (context) {
+                final saved = (ref.watch(usersProvider).value ?? const <AppUser>[]).where((u) => u.id == widget.userId).firstOrNull;
+                if (saved == null) return const SizedBox.shrink();
+                // The role picked on the form (maybe not saved yet) decides the default.
+                final shown = AppUser.fromMap(saved.id, {...saved.toMap(), 'role': _role!.value, 'liveTracking': _liveTracking});
+                final schedule = ref.watch(trackingSchedulesProvider).value?[widget.userId];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(shown.locationTracked ? Icons.my_location : Icons.location_disabled_outlined),
+                  title: Text(l10n.liveLocationTracking),
+                  subtitle: Text(trackingSummary(context, shown, schedule, company)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final r = await showTrackingScheduleDialog(context, user: shown, current: schedule, company: company);
+                    if (r != null && mounted) setState(() => _liveTracking = r.liveTracking);
+                  },
+                );
+              }),
             // Attendance: required or not, where they check in, and whether time after the work day counts.
             const SizedBox(height: 16),
             SwitchListTile(

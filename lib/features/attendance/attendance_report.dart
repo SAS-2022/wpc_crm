@@ -66,7 +66,10 @@ class AttendanceReportRow {
   int get workDays => days.where((d) => d.mark != DayMark.off && schedule.days.contains(d.date.weekday)).length;
   int get attended => days.where((d) => d.mark == DayMark.attended).length;
   int get missed => days.where((d) => d.mark == DayMark.missed).length;
-  int get leave => days.where((d) => d.mark == DayMark.leave).length;
+  int get leave => days.where((d) => d.mark == DayMark.leave || d.mark == DayMark.wfh).length;
+
+  /// Of [leave], days worked from home (2026-11-21).
+  int get wfh => days.where((d) => d.mark == DayMark.wfh).length;
 
   /// Work days reported beforehand as "not coming" (not counted as missed).
   int get absent => days.where((d) => d.mark == DayMark.absent && schedule.days.contains(d.date.weekday)).length;
@@ -108,6 +111,7 @@ AttendanceReportRow reportRow({
   required Map<String, DayResult> results,
   required Set<String> holidays,
   required Set<String> leaveDays,
+  Set<String> wfhDays = const {},
   Map<String, Absence> absences = const {},
   Map<String, int> approvedOvertime = const {},
   Set<String> rejectedOvertime = const {},
@@ -121,6 +125,7 @@ AttendanceReportRow reportRow({
     workDays: schedule.days,
     holidays: holidays,
     leaveDays: leaveDays,
+    wfhDays: wfhDays,
     absentDays: {for (final e in absences.entries) if (e.value.pending) e.key},
     since: user.registeredAt ?? first ?? DateTime(month.year, month.month),
     today: today,
@@ -167,6 +172,7 @@ String dayMarkLabel(AppLocalizations l10n, DayMark m) => switch (m) {
       DayMark.attended => l10n.dayAttended,
       DayMark.missed => l10n.dayMissed,
       DayMark.leave => l10n.dayOnLeave,
+      DayMark.wfh => l10n.dayWorkingFromHome,
       DayMark.absent => l10n.reportedAbsent,
       DayMark.off => l10n.dayOff,
       DayMark.today || DayMark.future || DayMark.none => '',

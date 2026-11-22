@@ -89,7 +89,7 @@ class _PhoneStatusScreenState extends ConsumerState<PhoneStatusScreen> {
           liveAt: live[u.id]?.updatedAt,
           recordedAt: recorded[u.id]?.updatedAt,
           versions: u.appVersions,
-          shouldShare: (u.role.isLocationTracked || u.recordsGps) &&
+          shouldShare: (u.locationTracked || u.recordsGps) &&
               (schedules[u.id] ?? const TrackingSchedule.standard()).isOn(
                 now,
                 company,

@@ -424,3 +424,17 @@ describe('user history stamp (2026-11-08)', () => {
     await assertFails(setDoc(doc(fs('gm'), 'user_log/e2'), { action: 'created' }));
   });
 });
+
+describe('live tracking per person (2026-11-18)', () => {
+  test('only the SM / GM switch live tracking on or off', async () => {
+    await assertSucceeds(updateDoc(doc(fs('sm'), 'users/driver'), { liveTracking: false }));
+    await assertSucceeds(updateDoc(doc(fs('gm'), 'users/op'), { liveTracking: true }));
+    // The logistics manager edits their drivers but not this field.
+    await assertSucceeds(updateDoc(doc(fs('lm'), 'users/driver'), { name: 'Driver 3' }));
+    await assertFails(updateDoc(doc(fs('lm'), 'users/driver'), { liveTracking: true }));
+    await assertFails(updateDoc(doc(fs('fm'), 'users/op'), { liveTracking: false }));
+    await assertFails(setDoc(doc(fs('lm'), 'users/new2'), { name: 'D', role: 'driver', active: true, liveTracking: false }));
+    // Nobody switches it for themselves.
+    await assertFails(updateDoc(doc(fs('exec'), 'users/exec'), { liveTracking: false }));
+  });
+});

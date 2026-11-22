@@ -7,8 +7,9 @@ import '../../l10n/app_localizations.dart';
 import '../clients/client.dart';
 import '../clients/client_edit_screen.dart';
 import '../clients/client_location_dialog.dart';
-import '../clients/client_locations_section.dart' show locationLabel;
 import '../clients/client_tags.dart' show locationTypesByIdProvider;
+import '../clients/client_visitors.dart';
+import '../clients/client_visitors_widgets.dart' show locationPlaceLabel;
 import '../clients/client_widgets.dart';
 import '../clients/clients_repository.dart';
 import '../clients/visit_rules.dart';
@@ -144,7 +145,16 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
             createdBy: me.id,
             approved: approved,
             clients: _visit
-                ? [for (final c in _selected.values) (id: c.id, name: c.name, locationId: _locations[c.id])]
+                ? [
+                    for (final c in _selected.values)
+                      (
+                        id: c.id,
+                        name: c.name,
+                        // A visitor's client: one of their locations, never the main by default.
+                        locationId: _locations[c.id] ??
+                            (isVisitorOf(c, widget.owner.id) ? locationsFor(c, widget.owner.id).firstOrNull?.id : null),
+                      ),
+                  ]
                 : const [],
             title: _title.text.trim(),
             checklist: _visit ? _checklist : const [],
@@ -187,7 +197,8 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     }
     // A sales exec plans their own clients; a KAM's own plan can include any client.
     final candidates = all
-        .where((c) => widget.owner.role != UserRole.salesExec || c.assignedTo == widget.owner.id)
+        .where((c) =>
+            widget.owner.role != UserRole.salesExec || c.assignedTo == widget.owner.id || isVisitorOf(c, widget.owner.id))
         .where((c) => !widget.alreadyPlanned.contains(c.id))
         .where((c) => _query.isEmpty || searchHas(c.name, _query) || c.aliases.any((a) => searchHas(a, _query)) || searchHas(c.city, _query))
         .toList()
@@ -285,19 +296,20 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
                                     else
                                       l10n.noLocation,
                                   ].where((s) => s.isNotEmpty).join(' · ')),
-                                  // Several locations: which one to visit (default the main one).
-                                  if (selected && c.locations.length > 1)
+                                  // Several locations: which one to visit (default the
+                                  // first: the main one, or a visitor's first location).
+                                  if (locationsFor(c, widget.owner.id) case final locs when selected && locs.length > 1)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Wrap(
                                         spacing: 6,
                                         runSpacing: 4,
                                         children: [
-                                          for (final (j, l) in c.locations.indexed)
+                                          for (final l in locs)
                                             ChoiceChip(
                                               visualDensity: VisualDensity.compact,
-                                              label: Text(locationLabel(l, j, types, lang, l10n)),
-                                              selected: (_locations[c.id] ?? ClientLocation.mainId) == l.id,
+                                              label: Text(locationPlaceLabel(c, l, types, lang, l10n)),
+                                              selected: (_locations[c.id] ?? locs.first.id) == l.id,
                                               onSelected: (_) => setState(() => _locations[c.id] = l.id),
                                             ),
                                         ],

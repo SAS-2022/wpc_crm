@@ -3578,7 +3578,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String trackingSchedulesHelp(String hours) {
-    return 'When each person\'s location is shared. By default the sales team follows the company work hours ($hours) and drivers are tracked all day. Tap a person to give them their own days and hours, or all day.';
+    return 'Whose location is shared live and when. By default the sales team follows the company work hours ($hours), drivers are tracked all day and other staff aren\'t tracked live. Tap a person to turn tracking on or off for them, or give them their own days and hours.';
   }
 
   @override
@@ -7892,5 +7892,332 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String kamTeamMembers(int count) {
     return '$count members';
+  }
+
+  @override
+  String get trackedLive => 'Tracked live';
+
+  @override
+  String get notTrackedLive => 'Not tracked';
+
+  @override
+  String get notTrackedLiveRecorded =>
+      'Not tracked live · GPS recorded for attendance';
+
+  @override
+  String get trackingSetForPerson =>
+      'Set for this person (not the role\'s default)';
+
+  @override
+  String get trackLiveLocation => 'Track live location';
+
+  @override
+  String get trackingRoleDefaultOn => 'On, like everyone with this role';
+
+  @override
+  String get trackingRoleDefaultOff => 'Off, like everyone with this role';
+
+  @override
+  String get trackingTurnedOnForPerson =>
+      'Turned on for this person (their role isn\'t tracked)';
+
+  @override
+  String get trackingTurnedOffForPerson =>
+      'Turned off for this person (their role is tracked)';
+
+  @override
+  String get notTrackedHelp =>
+      'Their location isn\'t shared. Their phone needs the app open once after this change.';
+
+  @override
+  String get notTrackedRecordedHelp =>
+      'Not shared live. If they check attendance, their GPS is still recorded 08:00–18:00 for the attendance checks.';
+
+  @override
+  String get trackingOnForPersonHelp =>
+      'Shown on Live tracking and Route history like the sales team; their phone asks for location \"all the time\" and shares it in the hours below. Tracking problems and unanswered phones are reported to the sales managers.';
+
+  @override
+  String get trackingBackToRole => 'Back to the role\'s default';
+
+  @override
+  String get liveLocationTracking => 'Live location tracking';
+
+  @override
+  String clientBreakdownTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clients',
+      one: '1 client',
+    );
+    return '$_temp0 · by type and tag';
+  }
+
+  @override
+  String get noTag => 'No tag';
+
+  @override
+  String get leaveNotesLabel => 'Notes (optional)';
+
+  @override
+  String get leaveNotesHelp =>
+      'The employee, the next approvers (e.g. HR) and the people informed will see this note.';
+
+  @override
+  String get leaveEarlierNotes => 'Notes from earlier approvals';
+
+  @override
+  String leaveNoteFrom(String name, String note) {
+    return 'Note from $name: “$note”';
+  }
+
+  @override
+  String get clientBreakdownShow => 'Types & tags';
+
+  @override
+  String get clientBreakdownHide => 'Hide the legend';
+
+  @override
+  String get alsoVisitedBy => 'Also visited by';
+
+  @override
+  String get addVisitor => 'Ask someone to visit';
+
+  @override
+  String get allLocations => 'All locations';
+
+  @override
+  String get visitorLocationsGone => 'Its locations were removed';
+
+  @override
+  String visitingForOwner(String owner) {
+    return 'You visit this client for $owner';
+  }
+
+  @override
+  String get visitorHelp =>
+      'They see only the ticked locations of this client, can check in, log calls and record catalogs there. The visits count for them, and the client\'s salesperson is told. The client stays with its salesperson.';
+
+  @override
+  String addToPlanOfToday(String name) {
+    return 'Add to $name\'s plan today';
+  }
+
+  @override
+  String addedToPlanOf(String name) {
+    return 'Added to $name\'s plan for today';
+  }
+
+  @override
+  String notifClientVisitAssigned(String name, String client, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count locations',
+      one: '1 location',
+    );
+    return '$name asked you to visit $client ($_temp0)';
+  }
+
+  @override
+  String notifClientVisitAssignedAll(String name, String client) {
+    return '$name asked you to visit $client';
+  }
+
+  @override
+  String notifClientVisitedByOther(String name, String client) {
+    return '$name visited your client $client';
+  }
+
+  @override
+  String notifClientCalledByOther(String name, String client) {
+    return '$name called your client $client';
+  }
+
+  @override
+  String get visitorLinkedClients => 'Linked companies and showrooms';
+
+  @override
+  String locationsCount(int count) {
+    return '$count locations';
+  }
+
+  @override
+  String get locationName => 'Name (optional)';
+
+  @override
+  String get locationNameHelp =>
+      'To tell places apart, e.g. \"Olaya showroom\"';
+
+  @override
+  String visitedByPeople(String names) {
+    return 'Visited by $names';
+  }
+
+  @override
+  String get askToVisit => 'Ask to visit';
+
+  @override
+  String askToVisitSummary(int clients, int locations) {
+    String _temp0 = intl.Intl.pluralLogic(
+      clients,
+      locale: localeName,
+      other: '$clients clients',
+      one: '1 client',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      locations,
+      locale: localeName,
+      other: '$locations locations',
+      one: '1 location',
+    );
+    return '$_temp0 · $_temp1 picked';
+  }
+
+  @override
+  String askToVisitSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clients',
+      one: '1 client',
+    );
+    return '$_temp0 left out: you can\'t assign visitors for them';
+  }
+
+  @override
+  String askToVisitOwnSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count of them are',
+      one: '1 of them is',
+    );
+    return '$_temp0 already theirs and stay as they are';
+  }
+
+  @override
+  String get askToVisitNotAllowed =>
+      'You can\'t assign visitors for these clients';
+
+  @override
+  String askToVisitDone(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clients',
+      one: '1 client',
+    );
+    return '$name now visits $_temp0';
+  }
+
+  @override
+  String get endOvertime => 'End overtime';
+
+  @override
+  String get checkOutLastJob =>
+      'left the last job (overtime away from the site)';
+
+  @override
+  String fieldOvertimeQuestion(String time) {
+    return 'Your shift ended at $time – still working?';
+  }
+
+  @override
+  String fieldOvertimeConfirmHelp(String time) {
+    return 'You\'re not at home, so your overtime from $time is being recorded. Confirm you\'re working, and tap \"End overtime\" when you finish. The drive home doesn\'t count.';
+  }
+
+  @override
+  String fieldOvertimeStartHelp(String time) {
+    return 'Working away from the site? Start overtime – it counts from $time until you tap \"End overtime\". Set your home location so the app can end it when you get home.';
+  }
+
+  @override
+  String get imWorking => 'Yes, I\'m working';
+
+  @override
+  String get notWorking => 'I\'m not working';
+
+  @override
+  String fieldOvertimeRunning(String time) {
+    return 'Overtime away from the site since $time – tap \"End overtime\" when you finish';
+  }
+
+  @override
+  String notifFieldOvertime(String name, String time) {
+    return '$name is still working away from the site after the end of the shift ($time) – overtime is recorded';
+  }
+
+  @override
+  String notifFieldOvertimeAsk(String time) {
+    return 'Your shift ended at $time and you\'re not at home – your overtime is being recorded. Confirm you\'re working.';
+  }
+
+  @override
+  String notifFieldOvertimeStartAsk(String time) {
+    return 'Your shift ended at $time. Still working? Start overtime in the app.';
+  }
+
+  @override
+  String get fieldOvertimeNotConfirmed =>
+      'Away from the site · not confirmed by them – check Route history before approving';
+
+  @override
+  String get fieldOvertimeConfirmed => 'Away from the site · confirmed by them';
+
+  @override
+  String get workFromHome => 'Work from home';
+
+  @override
+  String wfhCounts(String ratio) {
+    return 'Every $ratio work days from home use 1 day of annual leave';
+  }
+
+  @override
+  String get wfhNote =>
+      'Employees working from home must be available on Microsoft Teams from 8:00 AM to 5:00 PM every day and have an internet connection at all times.';
+
+  @override
+  String wfhDaysCount(String workDays, String days) {
+    return '$workDays work days from home = $days days of annual leave';
+  }
+
+  @override
+  String get wfhRatioTitle => 'Work from home';
+
+  @override
+  String wfhRatioValue(String ratio) {
+    return '$ratio work days from home = 1 day of annual leave';
+  }
+
+  @override
+  String get wfhRatioLabel => 'Work days from home per annual leave day';
+
+  @override
+  String get wfhRatioHelp =>
+      'E.g. 2: two days working from home use one day of annual leave. Applies to requests sent after the change.';
+
+  @override
+  String get wfhRatioRange => 'Between 1 and 10';
+
+  @override
+  String get dayWorkingFromHome => 'Working from home · On leave';
+
+  @override
+  String get wfhLegend => 'Working from home';
+
+  @override
+  String wfhDaysInMonth(int count) {
+    return '$count of them from home';
+  }
+
+  @override
+  String get clientBreakdownHeading => 'Clients by type and tag';
+
+  @override
+  String clientBreakdownWho(int count, String who) {
+    return '$count clients · $who';
   }
 }

@@ -21,6 +21,8 @@ import 'client_status.dart';
 import 'client_status_widgets.dart';
 import 'client_links.dart';
 import 'client_links_widgets.dart';
+import 'client_breakdown.dart';
+import 'client_visitors.dart';
 import 'client_search.dart';
 import 'client_search_widgets.dart';
 
@@ -424,6 +426,12 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 return Column(
                   children: [
                     chips,
+                    // Web, a salesperson picked: their clients by type and tag.
+                    if (!_showHidden && !_showStatusRequests)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: ClientBreakdownLegend(clients: list),
+                      ),
                     Padding(
                       padding: const EdgeInsets.all(8),
                       child: Text(
@@ -443,7 +451,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                             client: c,
                             exec: exec,
                             match: matches[c.id],
-                            showOwner: supervisor,
+                            showOwner: supervisor || isVisitorOf(c, me?.id),
                             status: visitStatus(c, rules, now),
                             planned: planned.contains(c.id),
                             now: now,

@@ -19,7 +19,10 @@ import '../../l10n/app_localizations.dart';
 import 'client.dart';
 import 'client_locations_section.dart';
 import 'client_sheet.dart';
+import 'client_visitors.dart';
+import 'client_visitors_widgets.dart';
 import 'client_tags.dart';
+import 'client_breakdown.dart';
 import 'client_filters.dart';
 import '../plan/plan_selection.dart';
 import 'client_search.dart';
@@ -84,7 +87,15 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
   /// Web, KAM / managers: tapping pins picks clients to move or plan together.
   bool _selecting = false;
-  final _selected = <String>{};
+
+  /// Client id → the location pins picked (several per client, 2026-11-21:
+  /// showrooms to give to a visitor).
+  final _picked = <String, Set<String>>{};
+  Set<String> get _selected => _picked.keys.toSet();
+  void _clearPicked() {
+    _picked.clear();
+    _selectedAt.clear();
+  }
 
   /// Client id → the location pin tapped, for clients with several
   /// locations (planned there; otherwise the main one).
@@ -93,8 +104,36 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
 
   /// This pin is the picked one: for a client with several locations only
   /// the location tapped, not all of its pins.
-  bool _isPicked(Client c, ClientLocation loc) =>
-      _selected.contains(c.id) && (c.locations.length == 1 || (_selectedAt[c.id] ?? ClientLocation.mainId) == loc.id);
+  bool _isPicked(Client c, ClientLocation loc) => _picked[c.id]?.contains(loc.id) ?? false;
+
+  void _togglePin(Client c, ClientLocation loc) {
+    final set = _picked[c.id] ??= {};
+    if (!set.remove(loc.id)) {
+      set.add(loc.id);
+      // The pin tapped last is where the plan item goes.
+      if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+    } else if (set.isEmpty) {
+      _picked.remove(c.id);
+      _selectedAt.remove(c.id);
+    } else if (_selectedAt[c.id] == loc.id) {
+      _selectedAt[c.id] = set.first;
+    }
+  }
+
+  /// KAM / managers: the picked locations go to a salesperson to visit
+  /// ("Also visited by"), added to what they already have there.
+  Future<void> _askToVisitSelected(List<Client> all) async {
+    final me = ref.read(currentUserProvider).value;
+    if (me == null) return;
+    final picked = {for (final c in all) if (_picked.containsKey(c.id)) c: _picked[c.id]!};
+    setState(() => _moving = true);
+    final done = await askToVisitLocations(context, ref, me, picked);
+    if (!mounted) return;
+    setState(() {
+      _moving = false;
+      if (done) _clearPicked();
+    });
+  }
 
   /// Each picked client onto its salesperson's plan for a chosen day.
   Future<void> _planSelected(List<Client> all) async {
@@ -107,7 +146,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     if (!mounted) return;
     setState(() {
       _moving = false;
-      if (done) _selected.clear();
+      if (done) _clearPicked();
     });
   }
 
@@ -121,7 +160,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     if (!mounted) return;
     setState(() {
       _moving = false;
-      if (moved) _selected.clear();
+      if (moved) _clearPicked();
     });
   }
 
@@ -168,25 +207,32 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
             VisitStatus.overdue => _Status.overdue,
           };
     final styles = ref.watch(personStylesProvider);
-    PersonStyle styleOf(Client c) => styles[c.assignedTo] ?? unassignedStyle;
+    // A visitor's pins: in their colour when only they are picked.
+    PersonStyle styleOf(Client c, [ClientLocation? l]) =>
+        styles[l == null ? c.assignedTo : pinPersonFor(c, l, filter, unassignedFilter)] ?? unassignedStyle;
     final byPerson = _byPerson && (me?.can.isSupervisor ?? false);
-    Color colorOf(Client c) => byPerson
-        ? styleOf(c).color
+    Color colorOf(Client c, [ClientLocation? l]) => byPerson
+        ? styleOf(c, l).color
         : planned.contains(c.id)
         ? plannedColor
         : clientColor(c, rules, now);
+    // Under a salesperson filter, a client they visit for someone else shows
+    // only the locations given to them (2026-11-21).
+    List<ClientLocation> shown(Client c) => locationsForFilter(c, filter, unassignedFilter);
     // Region (2026-11-04, user: Central shows only Central): only the pins
     // inside it, and the counts / legend of the clients there.
     final city = _city;
     bool inRegion(double lat, double lng) => city == null || city.contains(lat, lng);
     final regional = [
       for (final c in located)
-        if (c.locations.any((l) => inRegion(l.lat, l.lng))) c,
+        if (shown(c).any((l) => inRegion(l.lat, l.lng))) c,
     ];
     // Salesperson legend: everyone with clients on the map, most clients first.
     final perPerson = <String?, int>{};
     for (final c in regional) {
-      perPerson[c.assignedTo] = (perPerson[c.assignedTo] ?? 0) + 1;
+      // A client visited for someone else counts under the picked visitor.
+      final who = shown(c).isEmpty ? c.assignedTo : pinPersonFor(c, shown(c).first, filter, unassignedFilter);
+      perPerson[who] = (perPerson[who] ?? 0) + 1;
     }
     final legend = perPerson.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     int count(_Status s) => s == _Status.all ? regional.length : regional.where((c) => statusOf(c) == s).length;
@@ -207,7 +253,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     ];
     final points = [
       for (final c in clients)
-        for (final l in c.locations)
+        for (final l in shown(c))
           if (inRegion(l.lat, l.lng)) LatLng(l.lat, l.lng),
       for (final p in projectPins) LatLng(p.lat!, p.lng!),
     ];
@@ -217,7 +263,12 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
         ? null
         : {
             for (final c in ref.watch(clientsProvider).value ?? const <Client>[])
-              if (c.locations.any((l) => city.contains(l.lat, l.lng))) c.assignedTo ?? unassignedFilter,
+              if (c.locations.any((l) => city.contains(l.lat, l.lng))) ...[
+                c.assignedTo ?? unassignedFilter,
+                // People visiting a location there for its salesperson.
+                for (final a in c.visitAssignments)
+                  if (locationsFor(c, a.uid).any((l) => city.contains(l.lat, l.lng))) a.uid,
+              ],
           };
     final types = ref.watch(locationTypesByIdProvider);
     // Selecting several clients: KAM / managers on the web dashboard (plan or
@@ -227,6 +278,12 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     // The sales team's live positions (KAM / managers; RTDB rules): the KAM's
     // own team, the people ticked in the salesperson filter.
     final supervisor = me?.can.isSupervisor ?? false;
+    // Who visits a location for the client's salesperson ("Also visited by").
+    List<String> visitorsAt(Client c, ClientLocation l) => [
+          for (final a in c.visitAssignments)
+            if (a.locationIds.isEmpty || a.locationIds.contains(l.id)) users[a.uid]?.name ?? l10n.deletedUser,
+        ];
+    String? orNull(String s) => s.isEmpty ? null : s;
     // Drivers and the other employees too (sales manager / GM, user request
     // 2026-11-01); KAMs their team only.
     final admin = me?.can.isAdmin ?? false;
@@ -336,7 +393,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                   ),
                 ),
               for (final c in clients)
-                for (final (i, loc) in c.locations.indexed)
+                for (final loc in shown(c))
                   if (inRegion(loc.lat, loc.lng))
                     Marker(
                       markerId: MarkerId('${c.id}/${loc.id}'),
@@ -344,39 +401,33 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                       anchor: const Offset(0.5, 0.5),
                       icon: _icons.circle(
                         context: context,
-                        fill: colorOf(c),
+                        fill: colorOf(c, loc),
                         // Picked for moving: thick dark ring, slightly bigger.
                         ring: _isPicked(c, loc) ? Colors.black : Colors.white,
                         ringWidth: _isPicked(c, loc) ? 5 : 2,
                         size: _isPicked(c, loc) ? 38 : 30,
                         // Salesperson mode: their initials; otherwise the category letter.
-                        text: byPerson ? styleOf(c).initials : c.category,
+                        text: byPerson ? styleOf(c, loc).initials : c.category,
                         // Dark letter on yellow, white on the darker colours.
-                        textColor: !byPerson && colorOf(c) == statusDueSoonColor ? Colors.black87 : Colors.white,
+                        textColor: !byPerson && colorOf(c, loc) == statusDueSoonColor ? Colors.black87 : Colors.white,
                       ),
                       onTap: () => _selecting
-                          ? setState(() {
-                              if (_isPicked(c, loc)) {
-                                _selected.remove(c.id);
-                                _selectedAt.remove(c.id);
-                              } else {
-                                // The pin tapped: that location goes on the plan
-                                // (another pin of a picked client switches to it).
-                                _selected.add(c.id);
-                                if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
-                              }
-                            })
+                          ? setState(() => _togglePin(c, loc))
                           : showClientSheet(
                               context,
                               ref,
                               c,
-                              c.locations.length > 1 ? locationLabel(loc, i, types, lang, l10n) : null,
+                              orNull([
+                                if (c.locations.length > 1) locationLabel(loc, c.locations.indexOf(loc), types, lang, l10n),
+                                // Who visits this location for the salesperson.
+                                if (supervisor && visitorsAt(c, loc).isNotEmpty)
+                                  l10n.visitedByPeople(visitorsAt(c, loc).join(', ')),
+                              ].join(' · ')),
                               null,
                               canSelect
                                   ? () => setState(() {
                                       _selecting = true;
-                                      _selected.add(c.id);
-                                      if (c.locations.length > 1) _selectedAt[c.id] = loc.id;
+                                      _togglePin(c, loc);
                                     })
                                   : null,
                               c.locations.length > 1 ? loc : null,
@@ -520,13 +571,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                           if (c != null) {
                             c.zoomTo(_map, MediaQuery.sizeOf(context), [
                               for (final cl in located)
-                                for (final l in cl.locations)
+                                for (final l in shown(cl))
                                   if (c.contains(l.lat, l.lng)) LatLng(l.lat, l.lng),
                             ]);
                           } else {
                             _fit([
                               for (final c in located)
-                                for (final l in c.locations) LatLng(l.lat, l.lng),
+                                for (final l in shown(c)) LatLng(l.lat, l.lng),
                             ]);
                           }
                         },
@@ -547,7 +598,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                                     icon: const Icon(Icons.checklist),
                                     onPressed: () => setState(() {
                                       _selecting = !_selecting;
-                                      _selected.clear();
+                                      _clearPicked();
                                     }),
                                   ),
                                 ],
@@ -679,6 +730,14 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
               ),
             ),
           ),
+          // Web, a salesperson picked: the clients on the map by type and tag
+          // (2026-11-21, user).
+          if (!_selecting)
+            PositionedDirectional(
+              start: 12,
+              bottom: 32,
+              child: PointerInterceptor(child: ClientBreakdownLegend(clients: clients, elevated: true)),
+            ),
           if (_selecting)
             PositionedDirectional(
               start: 12,
@@ -694,7 +753,13 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          _selected.isEmpty ? l10n.tapPinsToSelect : l10n.selectedCount(_selected.length),
+                          _selected.isEmpty
+                              ? l10n.tapPinsToSelect
+                              : [
+                                  l10n.selectedCount(_selected.length),
+                                  if (_picked.values.fold(0, (n, s) => n + s.length) case final n when n > _selected.length)
+                                    l10n.locationsCount(n),
+                                ].join(' · '),
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         FilledButton.icon(
@@ -709,12 +774,19 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
                             icon: const Icon(Icons.swap_horiz),
                             label: Text(l10n.moveToSalesperson),
                           ),
+                        // Give the picked locations to someone to visit (2026-11-21).
+                        if (me?.can.isSupervisor ?? false)
+                          FilledButton.tonalIcon(
+                            onPressed: _selected.isEmpty || _moving ? null : () => _askToVisitSelected(located),
+                            icon: const Icon(Icons.add_location_alt_outlined),
+                            label: Text(l10n.askToVisit),
+                          ),
                         if (_selected.isNotEmpty)
-                          TextButton(onPressed: () => setState(_selected.clear), child: Text(l10n.clear)),
+                          TextButton(onPressed: () => setState(_clearPicked), child: Text(l10n.clear)),
                         TextButton(
                           onPressed: () => setState(() {
                             _selecting = false;
-                            _selected.clear();
+                            _clearPicked();
                           }),
                           child: Text(l10n.done),
                         ),

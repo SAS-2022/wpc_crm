@@ -32,8 +32,11 @@ service cloud.firestore {
     function ownsClient(clientId) {
       return active() && get(/databases/$(database)/documents/clients/$(clientId)).data.assignedTo == request.auth.uid;
     }
+    // The visitor, or the client's salesperson when someone else visited
+    // (`clientOwnerId`, 2026-11-21).
     function ownsVisit(visitId) {
-      return active() && get(/databases/$(database)/documents/visits/$(visitId)).data.salesExecId == request.auth.uid;
+      let v = get(/databases/$(database)/documents/visits/$(visitId)).data;
+      return active() && (v.salesExecId == request.auth.uid || v.get('clientOwnerId', '') == request.auth.uid);
     }
 
     // GM / sales manager create and edit users; deleting is done by the deleteUser function.
@@ -76,11 +79,12 @@ service cloud.firestore {
         return request.resource.data.get('extraRoles', []) == (resource == null ? [] : resource.data.get('extraRoles', []));
       }
       allow create, update: if isAdmin() && stampOk() && extraRolesOk();
-      allow create: if active() && request.resource.data.role in managedRoles() && stampOk() && extraRolesKept();
+      allow create: if active() && request.resource.data.role in managedRoles() && stampOk() && extraRolesKept()
+        && request.resource.data.get('liveTracking', null) == null;
       // Never on their own record (2026-11-16: HR is itself one of hrRoles()).
       allow update: if active() && stampOk() && extraRolesKept() && request.auth.uid != uid
         && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt']);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt', 'liveTracking']);
       // Self-registration: a new account creates its own profile, inactive
       // and pending, with no role; the sales manager / GM approve it.
       allow create: if request.auth != null && request.auth.uid == uid
@@ -95,7 +99,9 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'appVersions', 'menuOrder', 'bottomTabs', 'changedBy', 'changedAt']) && stampOk();
       // A driver sets their own home location (2026-10-27, it decides their
       // overtime) only while none is set; after that the user form changes it.
-      allow update: if request.auth != null && request.auth.uid == uid && resource.data.role == 'driver'
+      // Also people allowed overtime (2026-11-21: overtime away from the site).
+      allow update: if request.auth != null && request.auth.uid == uid
+        && (resource.data.role == 'driver' || resource.data.get('overtimeAllowed', false) == true)
         && resource.data.get('homeLocation', null) == null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeLocation', 'changedBy', 'changedAt']) && stampOk()
         && request.resource.data.homeLocation.keys().hasOnly(['lat', 'lng'])
@@ -141,7 +147,10 @@ service cloud.firestore {
     // KAM, sales manager and GM can edit clients; a sales exec edits contact
     // details, locations and notes of their own clients (not category or assignment).
     match /clients/{clientId} {
-      allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid);
+      // Also those asked to visit it for its salesperson (`visitorIds`,
+      // "Also visited by", 2026-11-21).
+      allow read: if isSupervisor() || (active() && resource.data.assignedTo == request.auth.uid)
+        || (active() && request.auth.uid in resource.data.get('visitorIds', []));
       // KAM / managers add any client; a sales exec adds clients for themselves.
       // Clients added in the app need a name, a type (client tag), a contact
       // person, a phone or mobile and a location (user decision 2026-11-10;
@@ -157,14 +166,18 @@ service cloud.firestore {
         && (isSupervisor()
         || (active() && resource.data.assignedTo == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'extraLocations', 'name', 'contactPerson',
+              'lastVisitAt', 'lat', 'lng', 'mainLocationType', 'mainLocationName', 'extraLocations', 'name', 'contactPerson',
               'phone', 'mobile', 'email', 'address', 'city', 'notes', 'updatedAt', 'given', 'givenLog',
               'statusRequest', 'tagIds'])
             // Asks for a status change (closed / not working) as themselves,
             // or withdraws it; KAM / managers approve and set `status`.
             && (!('statusRequest' in request.resource.data)
                 || request.resource.data.statusRequest == null
-                || request.resource.data.statusRequest.byId == request.auth.uid)));
+                || request.resource.data.statusRequest.byId == request.auth.uid))
+        // A visitor: only what a visit / call writes (green, catalogs given).
+        || (active() && request.auth.uid in resource.data.get('visitorIds', [])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'lastVisitAt', 'updatedAt', 'given', 'givenLog'])));
 
       function hasClientName() {
         return request.resource.data.name is string && request.resource.data.name.trim().size() > 0;
@@ -186,8 +199,13 @@ service cloud.firestore {
     }
 
     match /visits/{visitId} {
-      allow read: if isSupervisor() || (active() && resource.data.salesExecId == request.auth.uid);
-      allow create: if isSales() && request.resource.data.salesExecId == request.auth.uid;
+      allow read: if isSupervisor() || (active() && resource.data.salesExecId == request.auth.uid)
+        || (active() && resource.data.get('clientOwnerId', '') == request.auth.uid);
+      // `clientOwnerId` (someone else's client) must be that client's salesperson.
+      allow create: if isSales() && request.resource.data.salesExecId == request.auth.uid
+        && (!('clientOwnerId' in request.resource.data)
+            || request.resource.data.clientOwnerId
+                == get(/databases/$(database)/documents/clients/$(request.resource.data.clientId)).data.get('assignedTo', ''));
       // A KAM only marks / unmarks themselves as having been at the visit.
       allow update: if isAdmin()
         || (isSupervisor()

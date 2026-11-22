@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'visit_place.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -202,6 +203,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     final hidden = ref.watch(hiddenClientIdsProvider);
     final locale = Localizations.localeOf(context).toString();
     final locationTypes = ref.watch(locationTypesByIdProvider);
+    final clientsById = ref.watch(clientsByIdProvider);
 
     final periodLabels = {
       _Period.day: l10n.dayView,
@@ -401,7 +403,7 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
                         ),
                       final Visit v => _VisitCard(
                           visit: v,
-                          place: locationTypes[v.locationTypeId]?.label(locale.split('_').first),
+                          place: visitPlace(v, clientsById[v.clientId], locationTypes, locale.split('_').first),
                           visitor: users[v.salesExecId]?.name ?? '',
                           kam: users[v.kamId]?.name,
                           locale: locale,

@@ -195,7 +195,7 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
                           return ListTile(
                             title: Text(r.user.name),
                             subtitle: Text([
-                              l10n.reportSummaryLine(r.attended, r.workDays, r.missed, r.leave),
+                              [l10n.reportSummaryLine(r.attended, r.workDays, r.missed, r.leave), if (r.wfh > 0) l10n.wfhDaysInMonth(r.wfh)].join(' · '),
                               [
                                 if (r.absent > 0) l10n.daysReportedAbsent(r.absent),
                                 if (r.lateDays > 0) l10n.reportLateLine(r.lateDays, formatMinutes(r.lateMin)),
@@ -270,6 +270,11 @@ class _AttendanceReportScreenState extends ConsumerState<AttendanceReportScreen>
         leaveDays: {
           for (final r in requests)
             if (r.uid == u.id && r.isLeave && r.status == LeaveStatus.approved && r.from != null && r.to != null)
+              ...daysBetween(r.from!, r.to!),
+        },
+        wfhDays: {
+          for (final r in requests)
+            if (r.uid == u.id && r.isLeave && r.workFromHome && r.status == LeaveStatus.approved && r.from != null && r.to != null)
               ...daysBetween(r.from!, r.to!),
         },
         absences: absences[u.id] ?? const {},

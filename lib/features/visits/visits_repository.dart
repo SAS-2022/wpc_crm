@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../core/providers.dart';
 import '../clients/client.dart';
+import '../clients/client_visitors.dart';
+import '../notifications/notifications.dart';
 import '../clients/given_items.dart';
 import '../plan/plan_repository.dart';
 import '../plan/plan_task.dart';
@@ -15,10 +19,53 @@ import '../../core/saving.dart';
 final clientVisitsProvider = StreamProvider.family<List<Visit>, String>((ref, clientId) {
   final me = ref.watch(currentUserProvider).value;
   if (me == null) return Stream.value(const []);
-  var query = FirebaseFirestore.instance.collection('visits').where('clientId', isEqualTo: clientId);
-  if (!me.can.isSupervisor) query = query.where('salesExecId', isEqualTo: me.id);
-  return query.snapshots().map(_newestFirst);
+  final query = FirebaseFirestore.instance.collection('visits').where('clientId', isEqualTo: clientId);
+  if (me.can.isSupervisor) return query.snapshots().map(_newestFirst);
+  // A sales exec: their own visits, plus others' to their client (people
+  // asked to visit it, KAM; `clientOwnerId`, 2026-11-21).
+  final own = query.where('salesExecId', isEqualTo: me.id).snapshots();
+  final others = query.where('clientOwnerId', isEqualTo: me.id).snapshots();
+  return _mergeVisitStreams(own, others);
 });
+
+/// Both queries' latest visits as one list, newest first; the second one may
+/// fail (rules not deployed yet) without hiding the first.
+Stream<List<Visit>> _mergeVisitStreams(
+  Stream<QuerySnapshot<Map<String, dynamic>>> own,
+  Stream<QuerySnapshot<Map<String, dynamic>>> others,
+) {
+  late StreamController<List<Visit>> out;
+  List<Visit>? a, b;
+  var othersFailed = false;
+  final subs = <StreamSubscription<Object?>>[];
+  void emit() {
+    if (a == null || (b == null && !othersFailed)) return;
+    final byId = {for (final v in [...?b, ...a!]) v.id: v};
+    out.add(byId.values.toList()
+      ..sort((x, y) => (y.checkedInAt ?? DateTime(3000)).compareTo(x.checkedInAt ?? DateTime(3000))));
+  }
+  out = StreamController<List<Visit>>(
+    onListen: () {
+      subs.add(own.listen((s) {
+        a = s.docs.map(Visit.fromDoc).toList();
+        emit();
+      }, onError: out.addError));
+      subs.add(others.listen((s) {
+        b = s.docs.map(Visit.fromDoc).toList();
+        emit();
+      }, onError: (_) {
+        othersFailed = true;
+        emit();
+      }));
+    },
+    onCancel: () async {
+      for (final s in subs) {
+        await s.cancel();
+      }
+    },
+  );
+  return out.stream;
+}
 
 List<Visit> _newestFirst(QuerySnapshot<Map<String, dynamic>> s) {
   final visits = s.docs.map(Visit.fromDoc).toList();
@@ -85,6 +132,7 @@ class VisitsRepository {
     required bool setClientLocation,
     ClientLocation? location,
     Map<GivenItem, int> given = const {},
+    String placeNote = '',
   }) => saving(() async {
     final at = location ?? client.locations.firstOrNull;
     final distance =
@@ -97,6 +145,7 @@ class VisitsRepository {
       'clientId': client.id,
       'clientName': client.name,
       'salesExecId': userId,
+      ...?_ownerField(client, userId),
       'checkedInAt': FieldValue.serverTimestamp(),
       'checkInLat': position.latitude,
       'checkInLng': position.longitude,
@@ -117,8 +166,36 @@ class VisitsRepository {
     });
     await batch.commit();
     await _completePlan(userId, client.id, visitRef.id, now);
+    await _tellOwner(client, userId, visitRef.id, call: false, place: placeNote);
     return visitRef.id;
   });
+
+  /// `clientOwnerId` when someone else visits the client, so its salesperson
+  /// can read the visit (rules check it is the client's owner).
+  Map<String, dynamic>? _ownerField(Client client, String userId) {
+    final owner = client.assignedTo;
+    return owner == null || owner.isEmpty || owner == userId ? null : {'clientOwnerId': owner};
+  }
+
+  /// The owner hears about a visit / call by someone asked to visit their
+  /// client (2026-11-21, user). A failed notice doesn't fail the visit.
+  Future<void> _tellOwner(Client client, String userId, String visitId, {required bool call, String place = ''}) async {
+    if (!isVisitorOf(client, userId)) return;
+    try {
+      await sendNotifications(
+        toIds: [client.assignedTo!],
+        type: NotificationType.clientVisitedByOther,
+        fromId: userId,
+        ownerId: client.assignedTo!,
+        date: '',
+        count: 0,
+        ref: visitId,
+        issue: call ? 'call' : 'visit',
+        clientName: client.name,
+        note: place.isEmpty ? null : place,
+      );
+    } catch (_) {}
+  }
 
   /// Saves a phone call with the client. It counts like a visit (the client
   /// turns green, today's plan item for the client is done) but has no
@@ -138,6 +215,7 @@ class VisitsRepository {
       'clientId': client.id,
       'clientName': client.name,
       'salesExecId': userId,
+      ...?_ownerField(client, userId),
       'checkedInAt': FieldValue.serverTimestamp(),
       'notes': notes,
       'status': 'completed',
@@ -148,6 +226,7 @@ class VisitsRepository {
     batch.update(_db.collection('clients').doc(client.id), {'lastVisitAt': FieldValue.serverTimestamp()});
     await batch.commit();
     await _completePlan(userId, client.id, visitRef.id, now);
+    await _tellOwner(client, userId, visitRef.id, call: true);
     return visitRef.id;
   });
 

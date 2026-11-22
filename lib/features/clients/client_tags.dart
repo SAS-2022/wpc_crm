@@ -27,6 +27,19 @@ class ClientTag {
   Map<String, dynamic> toMap() => {'id': id, 'en': en, 'ar': ar};
 }
 
+/// Tag filter value for clients without any tag (none of their `tagIds` is
+/// in the current tag list, like "No tag" in the type / tag legend).
+const noTagFilterId = '_noTag';
+
+/// Whether [tagIds] passes the tag filter [filter] (empty = everyone): any
+/// selected tag, or no tag when [noTagFilterId] is selected. [knownIds] =
+/// ids of the current tag list.
+bool matchesTagFilter(List<String> tagIds, Set<String> filter, Set<String> knownIds) {
+  if (filter.isEmpty) return true;
+  if (filter.contains(noTagFilterId) && !tagIds.any(knownIds.contains)) return true;
+  return tagIds.any(filter.contains);
+}
+
 /// Used until a GM / sales manager first saves the list.
 const defaultClientTags = [
   ClientTag(id: 'factory', en: 'Factory', ar: 'مصنع'),

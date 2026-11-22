@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_user.dart';
 import '../attendance/absence.dart' show smActsAsHr;
-import '../notifications/notifications.dart' show directManagersOf;
+import '../notifications/notifications.dart' show directManagersOf, isDepartmentHead;
 
 /// "My leave" (own balances and new requests). Greyed out 2026-10-20 until
 /// the module was finished; open to every employee since 2026-10-30.
@@ -469,3 +469,35 @@ String formatLeaveDays(double days) {
   final r = (days * 100).roundToDouble() / 100;
   return r == r.roundToDouble() ? '${r.round()}' : '$r';
 }
+
+// Working from home on annual leave (2026-11-21, user): department heads and
+// the sales team may tick "Work from home" on an annual leave request. They
+// must be on Teams 08:00–17:00 and online all day; every
+// `settings/leavePolicy.wfhDaysPerLeaveDay` (default 2) work days from home
+// use 1 day of annual leave. The request stores the work days (`wfhDays`) and
+// the number used (`wfhRatio`), so a later change of the setting doesn't
+// change requests already sent; `days` = what comes off the balance.
+
+/// The leave type that can be taken as work from home.
+const wfhLeaveTypeId = 'annual';
+
+/// Work days from home per annual leave day, when not set.
+const defaultWfhDaysPerLeaveDay = 2.0;
+
+/// Accepted values of the setting (one decimal allowed, e.g. 1.5).
+const minWfhDaysPerLeaveDay = 1.0;
+const maxWfhDaysPerLeaveDay = 10.0;
+
+/// The setting as stored, or the default when missing / out of range.
+double wfhRatioOf(Object? v) =>
+    v is num && v >= minWfhDaysPerLeaveDay && v <= maxWfhDaysPerLeaveDay ? v.toDouble() : defaultWfhDaysPerLeaveDay;
+
+/// Annual leave days [workDays] from home use (2 days → 1 with ratio 2; 3 → 1.5).
+double wfhLeaveDays(double workDays, double perLeaveDay) {
+  if (perLeaveDay <= 1) return workDays;
+  return (workDays / perLeaveDay * 100).roundToDouble() / 100;
+}
+
+/// Who may ask to work from home: the sales team (any role) and department heads.
+bool mayWorkFromHome(AppUser me, List<AppUser> users) => me.can.isSales || isDepartmentHead(me, users);
+

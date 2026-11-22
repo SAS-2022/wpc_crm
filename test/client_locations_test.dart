@@ -59,7 +59,7 @@ void main() {
     expect(extra.single['typeId'], 'office');
     expect(extra.single['id'], isNot(ClientLocation.mainId));
     // Everything deleted.
-    expect(locationsUpdate(const []), {'lat': null, 'lng': null, 'mainLocationType': '', 'extraLocations': []});
+    expect(locationsUpdate(const []), {'lat': null, 'lng': null, 'mainLocationType': '', 'mainLocationName': '', 'extraLocations': []});
   });
 
   test("merge keeps every location once, the kept client's main first", () {

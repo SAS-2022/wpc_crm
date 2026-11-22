@@ -19,6 +19,10 @@ enum DayStatus {
   /// No check-in, on approved leave.
   onLeave,
 
+  /// No check-in, on approved annual leave worked from home (2026-11-21):
+  /// "Working from home · On leave"; counts like leave.
+  workingFromHome,
+
   /// The day is closed (checked out).
   checkedOut,
 }
@@ -40,6 +44,7 @@ PersonDay personDay(
   required DateTime now,
   bool reportedAbsent = false,
   bool onLeave = false,
+  bool workingFromHome = false,
 }) {
   final workDay = schedule.days.contains(day.weekday);
   final start = day.add(Duration(minutes: schedule.startMinute));
@@ -48,7 +53,7 @@ PersonDay personDay(
   if (d == null || !d.checkedIn) {
     if (onLeave || reportedAbsent) {
       return (
-        status: onLeave ? DayStatus.onLeave : DayStatus.absent,
+        status: onLeave ? (workingFromHome ? DayStatus.workingFromHome : DayStatus.onLeave) : DayStatus.absent,
         workedMin: 0,
         lateMin: 0,
         notInYet: false,

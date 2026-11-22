@@ -138,10 +138,15 @@ class AttendanceRecord {
         _ => null,
       },
       drive: switch (d['driveOvertime']) {
-        {'status': 'running' || 'done', 'startAt': final Timestamp start} && final Map v => DriveOvertime(
+        {'status': final String status, 'startAt': final Timestamp start} && final Map v
+            when status == 'running' || status == 'done' || (status == 'asked' && v['kind'] == 'field') =>
+          DriveOvertime(
             startAt: start.toDate(),
             endAt: (v['endAt'] as Timestamp?)?.toDate(),
             place: v['place'] as String?,
+            field: v['kind'] == 'field',
+            confirmed: v['confirmed'] == true,
+            asked: status == 'asked',
           ),
         _ => null,
       },
@@ -253,7 +258,8 @@ class AttendanceRecord {
       leavesSite: leavesSite,
       overtimeAllowed: overtimeAllowed,
       overtimeMaxMin: overtimeMaxMin,
-      drive: drive,
+      // Field overtime only asked (no home location): not running yet.
+      drive: drive?.asked ?? false ? null : drive,
       arrivedAt: arrivedAt,
       breaks: breaks,
       breakAllowanceMin: breakAllowance,

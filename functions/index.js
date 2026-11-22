@@ -6,7 +6,8 @@ const admin = require('firebase-admin');
 const { findMatches } = require('./duplicates');
 const { coordsFromPlusCode } = require('./plusCode');
 const {
-  gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap, BREAK_ALLOWANCE_MIN,
+  gpsPresence, deriveDay, correctedEvents, siteCheckDue, siteArrival, atSiteReminderDue, overtimeAskDue, driveDecide, driveEnd, HOME_RADIUS_M,
+  fieldDecide, fieldEnd, DRIVE_HOME_GRACE_MIN, saudiTime, overtimeCap, BREAK_ALLOWANCE_MIN,
   LATE_GRACE_MIN, AWAY_GRACE_MIN, MIN_OVERTIME_MIN,
 } = require('./attendance');
 
@@ -138,6 +139,9 @@ exports.findClientDuplicates = onCall({ maxInstances: 5 }, async (req) => {
 });
 
 // Push texts, same wording as the in-app list (app_en.arb / app_ar.arb).
+// Leave notices that carry the approver's note in `note`.
+const LEAVE_NOTE_TYPES = ['leaveRequested', 'leaveApproved', 'leaveRejected', 'leaveStepApproved', 'leaveUpdate'];
+
 const TEXTS = {
   en: {
     title: 'WPC CRM',
@@ -147,6 +151,8 @@ const TEXTS = {
     planChanged: (n, c, d) => `${n} changed your plan for ${d}`,
     planItemsAdded: (n, c, d) => `${n} added ${c} item(s) to your plan for ${d}`,
     visitComment: (n, c, d, o, x) => `${x.reply ? `${n} replied on the visit to` : `${n} commented on your visit to`} ${x.client}: “${x.note}”`,
+    clientVisitAssigned: (n, c, d, o, x) => c > 0 ? `${n} asked you to visit ${x.client} (${c} location${c === 1 ? '' : 's'})` : `${n} asked you to visit ${x.client}`,
+    clientVisitedByOther: (n, c, d, o, x) => `${n} ${x.call ? 'called' : 'visited'} your client ${x.client}${x.note ? ` · ${x.note}` : ''}`,
     hrActionIssued: (n, c, d, o, x) => `HR sent you ${x.hrKind}: “${x.note}” – open the app to read and accept it`,
     hrActionAccepted: (n, c, d, o, x) => `${o} accepted ${x.hrKind}: “${x.note}”`,
     hrKind: { warning: 'a warning', deduction: 'a deduction', reward: 'a reward', note: 'a note' },
@@ -177,12 +183,18 @@ const TEXTS = {
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'You are checked in' : `${n} checked in`}${x.site ? ` at ${x.site}` : ''} at ${x.time}${c > 0 ? ` – ${c} min late` : ''}`,
     attendanceLate: (n, c, d, o, x) => `You haven't checked in yet – your work day started at ${x.time}. Please be at work soon.`,
     attendanceAtSite: (n, c, d, o, x) => `You're at ${x.site || 'your work site'} since ${x.time} but not checked in – open the app and check in.`,
-    overtimeStarted: (n, c, d, o, x) => (x.driving
+    overtimeStarted: (n, c, d, o, x) => (x.field
+      ? `${n} is still working away from the work site after the end of the shift (${x.time}) – overtime is recorded; approve it later on the Attendance page`
+      : x.driving
       ? (x.self
         ? `Your shift ended at ${x.time} while you're on the road – overtime started. It ends when you arrive home or at the work site.`
         : `${n} is still driving after the end of the shift (${x.time}) – overtime started, until they arrive home or at the work site`)
       : `${n} started overtime${x.site ? ` at ${x.site}` : ''} (counted from ${x.time}) – approve it later on the Attendance page`),
-    overtimeAsk: (n, c, d, o, x) => `${c > 0 ? 'Reminder: ' : ''}Your shift ended at ${x.time} and you're still at ${x.site || 'the work site'}. Working overtime? Open the app and tap "Start overtime" – it counts from ${x.time}.`,
+    overtimeAsk: (n, c, d, o, x) => x.fieldAsk
+      ? `Your shift ended at ${x.time}. Still working? Open the app and tap "Start overtime" – it counts from ${x.time} until you end it.`
+      : x.field
+      ? `Your shift ended at ${x.time} and you're not at home – your overtime is being recorded. Open the app to confirm you're working, or tap "I'm not working".`
+      : `${c > 0 ? 'Reminder: ' : ''}Your shift ended at ${x.time} and you're still at ${x.site || 'the work site'}. Working overtime? Open the app and tap "Start overtime" – it counts from ${x.time}.`,
     absenceReported: (n, c, d, o, x) => `${o} won't be at work on ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'Active', closed: 'Closed', notWorking: 'Not working' },
     absence: { sick: 'Sick', tired: 'Tired', cantCome: "Can't come" },
@@ -229,6 +241,8 @@ const TEXTS = {
     planChanged: (n, c, d) => `عدّل ${n} خطتك ليوم ${d}`,
     planItemsAdded: (n, c, d) => `أضاف ${n} ${c} عنصر إلى خطتك ليوم ${d}`,
     visitComment: (n, c, d, o, x) => `${x.reply ? `ردّ ${n} على زيارة` : `علّق ${n} على زيارتك إلى`} ${x.client}: «${x.note}»`,
+    clientVisitAssigned: (n, c, d, o, x) => c > 0 ? `طلب منك ${n} زيارة ${x.client} (${c} موقع)` : `طلب منك ${n} زيارة ${x.client}`,
+    clientVisitedByOther: (n, c, d, o, x) => `${x.call ? 'اتصل' : 'زار'} ${n} عميلك ${x.client}${x.note ? ` · ${x.note}` : ''}`,
     hrActionIssued: (n, c, d, o, x) => `أرسلت لك الموارد البشرية ${x.hrKind}: «${x.note}» – افتح التطبيق لقراءته وقبوله`,
     hrActionAccepted: (n, c, d, o, x) => `قبل ${o} ${x.hrKind}: «${x.note}»`,
     hrKind: { warning: 'إنذارًا', deduction: 'خصمًا', reward: 'مكافأة', note: 'ملاحظة' },
@@ -259,12 +273,18 @@ const TEXTS = {
     attendanceCheckedIn: (n, c, d, o, x) => `${x.self ? 'تم تسجيل حضورك' : `سجّل ${n} حضوره`}${x.site ? ` في ${x.site}` : ''} الساعة ${x.time}${c > 0 ? ` – متأخر ${c} دقيقة` : ''}`,
     attendanceLate: (n, c, d, o, x) => `لم تسجّل حضورك بعد – بدأ يوم عملك الساعة ${x.time}. يرجى الحضور إلى العمل قريباً.`,
     attendanceAtSite: (n, c, d, o, x) => `أنت في ${x.site || 'موقع العمل'} منذ الساعة ${x.time} ولم تسجّل حضورك – افتح التطبيق وسجّل الحضور.`,
-    overtimeStarted: (n, c, d, o, x) => (x.driving
+    overtimeStarted: (n, c, d, o, x) => (x.field
+      ? `${n} ما زال يعمل خارج موقع العمل بعد نهاية الدوام (${x.time}) – يُسجَّل العمل الإضافي؛ اعتمده لاحقاً من صفحة الحضور`
+      : x.driving
       ? (x.self
         ? `انتهى دوامك الساعة ${x.time} وأنت في الطريق – بدأ العمل الإضافي. ينتهي عند وصولك إلى المنزل أو موقع العمل.`
         : `${n} ما زال يقود بعد نهاية الدوام (${x.time}) – بدأ العمل الإضافي حتى يصل إلى المنزل أو موقع العمل`)
       : `بدأ ${n} العمل الإضافي${x.site ? ` في ${x.site}` : ''} (يُحتسب من ${x.time}) – اعتمده لاحقاً من صفحة الحضور`),
-    overtimeAsk: (n, c, d, o, x) => `${c > 0 ? 'تذكير: ' : ''}انتهى دوامك الساعة ${x.time} وما زلت في ${x.site || 'موقع العمل'}. هل ستعمل وقتاً إضافياً؟ افتح التطبيق واضغط «بدء العمل الإضافي» – يُحتسب من ${x.time}.`,
+    overtimeAsk: (n, c, d, o, x) => x.fieldAsk
+      ? `انتهى دوامك الساعة ${x.time}. هل ما زلت تعمل؟ افتح التطبيق واضغط «بدء العمل الإضافي» – يُحتسب من ${x.time} حتى تنهيه.`
+      : x.field
+      ? `انتهى دوامك الساعة ${x.time} ولست في المنزل – يُسجَّل عملك الإضافي. افتح التطبيق لتأكيد أنك تعمل، أو اضغط «لا أعمل».`
+      : `${c > 0 ? 'تذكير: ' : ''}انتهى دوامك الساعة ${x.time} وما زلت في ${x.site || 'موقع العمل'}. هل ستعمل وقتاً إضافياً؟ افتح التطبيق واضغط «بدء العمل الإضافي» – يُحتسب من ${x.time}.`,
     absenceReported: (n, c, d, o, x) => `${o} لن يحضر إلى العمل يوم ${d} – ${x.reason}${x.note ? `: ${x.note}` : ''}`,
     status: { active: 'نشط', closed: 'مغلق', notWorking: 'لا يتعامل معنا' },
     absence: { sick: 'مريض', tired: 'متعب', cantCome: 'لا أستطيع الحضور' },
@@ -379,16 +399,20 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
     const extra = {
       client: n.clientName || '', status: t.status[n.issue] || n.issue || '',
       site: n.siteName || '', time: formatClock(n.time, lang), self: n.toId === n.fromId, driving: n.issue === 'driving',
+      field: n.issue === 'field', fieldAsk: n.issue === 'fieldAsk',
       reason: t.absence[n.issue] || '', note: n.note || '', leave: t.leave[n.issue] || '',
       vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '', km: String(n.note || ''),
       idType: lang === 'ar' ? (n.issue === 'nationalId' ? 'الهوية الوطنية' : 'الإقامة') : (n.issue === 'nationalId' ? 'national ID' : 'Iqama'),
       reply: n.issue === 'reply',
+      call: n.issue === 'call',
       hrKind: t.hrKind[n.issue] || t.hrKind.note,
       first: n.fromId === n.ownerId,
       range: n.note && n.note !== n.date ? `${formatDay(n.date, lang)} – ${formatDay(n.note, lang)}` : formatDay(n.date, lang),
     };
     extra.alertWhat = n.type === 'teamAlert' ? (t.alertWhat[n.issue] || t.alertWhat.late)(extra) : '';
-    const body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
+    let body = (t[key] || t.planChanged)(fromName, n.count || 0, formatDay(n.date, lang), otherUser?.get('name') || '', extra);
+    // The approver's note on a leave decision (2026-11-21, user).
+    if (LEAVE_NOTE_TYPES.includes(n.type) && n.note) body += lang === 'ar' ? ` – «${n.note}»` : ` – “${n.note}”`;
     const res = await admin.messaging().sendEachForMulticast({
       tokens,
       notification: { title: t.title, body },
@@ -401,6 +425,8 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
           : n.type === 'overtimeStarted' ? '/'
           : n.type === 'overtimeAsk' || n.type === 'attendanceAtSite' ? '/'
           : n.type === 'visitComment' && n.ref ? `/visits/${n.ref}`
+          : n.type === 'clientVisitedByOther' && n.ref ? `/visits/${n.ref}`
+          : n.type === 'clientVisitAssigned' && n.ref ? `/clients/${n.ref}`
           : n.type === 'teamAlert' && n.ref ? `/team-alerts/${n.ref}`
           // The app covers the screen with it until accepted.
           : n.type === 'hrActionIssued' ? '/'
@@ -531,8 +557,9 @@ exports.trackingAlerts = onValueWritten({ ref: '/presence/{uid}', maxInstances: 
   const db = admin.firestore();
   const user = await db.doc(`users/${uid}`).get();
   const role = user.get('role');
-  // Drivers are tracked too (2026-10-20): reported to the sales managers and GMs.
-  if (!['sales_exec', 'kam', 'driver'].includes(role) || user.get('active') !== true) return;
+  // Drivers are tracked too (2026-10-20): reported to the sales managers and GMs;
+  // anyone switched on by hand too, and nobody switched off (2026-11-18).
+  if (!tracksLive({ role, liveTracking: user.get('liveTracking') }) || user.get('active') !== true) return;
 
   // Drivers: also the logistics managers (2026-10-20).
   const managerRoles = role === 'driver' ? ['sales_manager', 'gm', 'logistics_manager'] : ['sales_manager', 'gm'];
@@ -612,6 +639,7 @@ function workStartToday(hours, now) {
 }
 
 const { wakeStep, REPING_MS } = require('./wakePing');
+const { tracksLive } = require('./liveTracking');
 
 /**
  * Silent push to a person's phones (no title or text: nothing is shown):
@@ -679,7 +707,7 @@ exports.offlineAlerts = onSchedule(
     const pings = [];
     for (const user of users) {
       const uid = user.id;
-      if (user.active !== true || !['sales_exec', 'kam', 'driver'].includes(user.role) || !phones[uid]) continue;
+      if (user.active !== true || !tracksLive(user) || !phones[uid]) continue;
       const schedule = schedules[uid];
       const hours = trackingHours(company, schedule);
       const started = workStartToday(hours, now);
@@ -1240,11 +1268,11 @@ async function announceOvertime(data, siteId, user, endMs, issue) {
 }
 
 /** "Start overtime?" to the person (2026-10-25; count 1 = the reminder). */
-async function askOvertime(data, siteId, endMs, remind) {
+async function askOvertime(data, siteId, endMs, remind, issue = null) {
   const db = admin.firestore();
   const site = siteId ? (await db.doc(`work_sites/${siteId}`).get()).get('name') || '' : '';
   await db.doc(`notifications/${remind ? 'otAsk2' : 'otAsk'}_${data.uid}_${data.date}`).create({
-    toId: data.uid, fromId: data.uid, ownerId: data.uid, type: 'overtimeAsk', date: data.date,
+    toId: data.uid, fromId: data.uid, ownerId: data.uid, type: 'overtimeAsk', date: data.date, ...(issue ? { issue } : {}),
     siteName: site, time: saudiClock(endMs), count: remind ? 1 : 0, read: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   }).catch((e) => { if (e.code !== 6) throw e; });
@@ -1458,6 +1486,7 @@ exports.closeAttendance = onSchedule(
     // the end ('endOfDay') and still has to be checked for driving overtime
     // (26 Oct: Worker Number Two's overtime never started because of that).
     await driverOvertime(hours, now).catch((e) => console.error('driver overtime', e));
+    await fieldOvertime(hours, now).catch((e) => console.error('field overtime', e));
   },
 );
 
@@ -1521,6 +1550,7 @@ async function driverOvertime(hours, now) {
   const running = await db.collection('attendance').where('driveOvertime.status', '==', 'running').get();
   for (const doc of running.docs) {
     const data = doc.data();
+    if (data.driveOvertime.kind === 'field') continue; // fieldOvertime below
     const startAt = data.driveOvertime.startAt?.toMillis?.();
     if (!startAt || !data.uid) continue;
     const user = (await db.doc(`users/${data.uid}`).get()).data() || {};
@@ -1537,6 +1567,121 @@ async function driverOvertime(hours, now) {
     await doc.ref.update({
       'driveOvertime.status': 'done',
       'driveOvertime.endAt': admin.firestore.Timestamp.fromMillis(r.endAt),
+      'driveOvertime.place': r.place,
+    });
+  }
+}
+
+/** RTDB `overtime_tracking/{uid}` {until}: keeps the phone recording GPS while field overtime runs. */
+const overtimeTracking = (uid) => admin.database().ref(`overtime_tracking/${uid}`);
+
+/**
+ * Overtime away from the work sites (2026-11-21, `fieldDecide` / `fieldEnd`
+ * in attendance.js): people with overtime allowed and allowed to leave the
+ * site, not drivers. Decided 10 min after their end when they're checked in
+ * and not inside a site (site staff get the usual "Start overtime?"):
+ * at home → {kind 'field', status 'none'}; elsewhere → 'running' from the end
+ * (not confirmed until they press Start; recorded either way, the manager
+ * approves), the person asked and their managers told; no home location →
+ * 'asked' (runs only once they press Start overtime). Then every run: their
+ * otStart confirms (or starts an 'asked' one), otDecline ends it with no
+ * overtime, a check-out ("End overtime") ends it, else `fieldEnd` finds the
+ * end from the GPS (last job before home / cap / phone silent).
+ */
+async function fieldOvertime(hours, now) {
+  const db = admin.firestore();
+  const rtdb = admin.database();
+  const ts = admin.firestore.Timestamp.fromMillis;
+  const ms = (v) => (v?.toMillis ? v.toMillis() : v);
+  const people = await db.collection('users').where('overtimeAllowed', '==', true).get();
+  const date = saudiDay(now);
+  for (const u of people.docs) {
+    const user = u.data();
+    if (user.active !== true || user.role === 'driver') continue;
+    const leavesSite = typeof user.leaveSiteAllowed === 'boolean' ? user.leaveSiteAllowed : LEAVES_SITE_ROLES.includes(user.role);
+    if (!leavesSite) continue;
+    const mine = scheduleOf(user, hours);
+    if (!mine.days.includes(weekdayOf(date))) continue;
+    const endMs = saudiTime(date, mine.end);
+    if (now < endMs + 10 * 60000 || now > endMs + 80 * 60000) continue;
+    const ref = db.doc(`attendance/${u.id}_${date}`);
+    const day = await ref.get();
+    if (!day.exists || !day.get('checkInAt') || day.get('driveOvertime')) continue;
+    // At a work site after the end: the site's own "Start overtime?" applies.
+    if (day.get('inside') === true && day.get('closed') !== true) continue;
+    if (day.get('overtimeDay')?.dayOff === true) continue;
+    // Checked out by hand before the end: done for the day.
+    if (day.get('checkOutType') === 'manual' || day.get('checkOutType') === 'hr') continue;
+    const h = user.homeLocation;
+    const home = typeof h?.lat === 'number' && typeof h.lng === 'number' ? { lat: h.lat, lng: h.lng } : null;
+    const history = await rtdb.ref(`location_history/${u.id}/${date}`).get();
+    const r = fieldDecide({ points: Object.values(history.val() || {}), endMs, now, home });
+    if (r === 'wait') continue;
+    const capMs = overtimeCap(user.overtimeMaxMin) * 60000;
+    const data = { uid: u.id, date };
+    if (r === 'running') {
+      await ref.update({ driveOvertime: { kind: 'field', status: 'running', startAt: ts(endMs), startedAt: ts(now), confirmed: false } });
+      await overtimeTracking(u.id).set({ until: endMs + capMs, date });
+      await askOvertime(data, null, endMs, false, 'field');
+      await announceOvertime(data, null, user, endMs, 'field');
+    } else if (r === 'ask') {
+      await ref.update({ driveOvertime: { kind: 'field', status: 'asked', startAt: ts(endMs), startedAt: ts(now), confirmed: false } });
+      await askOvertime(data, null, endMs, false, 'fieldAsk');
+    } else {
+      await ref.update({ driveOvertime: { kind: 'field', status: r } });
+    }
+  }
+  // Running / asked: the person's answer, the button, or the GPS ends it.
+  const open = await db.collection('attendance').where('driveOvertime.status', 'in', ['running', 'asked']).get();
+  for (const doc of open.docs) {
+    const data = doc.data();
+    const f = data.driveOvertime;
+    if (f.kind !== 'field' || !data.uid) continue;
+    const startAt = ms(f.startAt);
+    if (!startAt) continue;
+    const user = (await db.doc(`users/${data.uid}`).get()).data() || {};
+    const capMs = overtimeCap(user.overtimeMaxMin) * 60000;
+    const events = (data.events || []).map((e) => ({ type: e.type, at: ms(e.at) })).filter((e) => typeof e.at === 'number' && e.at >= startAt - 10 * 60000);
+    const firstOf = (type) => events.filter((e) => e.type === type).sort((a, b) => a.at - b.at)[0];
+    const decline = firstOf('otDecline');
+    const start = firstOf('otStart');
+    const out = firstOf('checkOut');
+    const stop = async (fields) => {
+      await doc.ref.update(fields);
+      await overtimeTracking(data.uid).remove();
+    };
+    if (decline && (!start || decline.at > start.at)) {
+      await stop({ driveOvertime: { kind: 'field', status: 'none', declinedAt: ts(decline.at) } });
+      continue;
+    }
+    if (f.status === 'asked') {
+      if (start) {
+        await doc.ref.update({ 'driveOvertime.status': 'running', 'driveOvertime.confirmed': true, 'driveOvertime.confirmedAt': ts(start.at) });
+        await overtimeTracking(data.uid).set({ until: startAt + capMs, date: data.date });
+        await announceOvertime(data, null, user, startAt, 'field');
+      } else if (now >= startAt + capMs) {
+        await doc.ref.update({ driveOvertime: { kind: 'field', status: 'none' } });
+      }
+      continue;
+    }
+    if (start && f.confirmed !== true) {
+      await doc.ref.update({ 'driveOvertime.confirmed': true, 'driveOvertime.confirmedAt': ts(start.at) });
+    }
+    if (out) {
+      await stop({ 'driveOvertime.status': 'done', 'driveOvertime.endAt': ts(Math.max(out.at, startAt)), 'driveOvertime.place': 'button' });
+      continue;
+    }
+    // Home has no location: only the button, the cap or the silent phone end it.
+    const hl = user.homeLocation;
+    const home = typeof hl?.lat === 'number' && typeof hl.lng === 'number' ? { lat: hl.lat, lng: hl.lng } : null;
+    const days = [...new Set([data.date, saudiDay(Math.min(now, startAt + capMs))])];
+    const histories = await Promise.all(days.map((d) => rtdb.ref(`location_history/${data.uid}/${d}`).get()));
+    const points = histories.flatMap((x) => Object.values(x.val() || {}));
+    const r = fieldEnd({ points, startAt, now, capMs, home });
+    if (!r) continue;
+    await stop({
+      'driveOvertime.status': 'done',
+      'driveOvertime.endAt': ts(r.endAt),
       'driveOvertime.place': r.place,
     });
   }
@@ -1599,6 +1744,7 @@ function departmentHeads(person, uid, users) {
   return users.filter((u) => managers.has(u.id) && u.id !== uid
     && !directManagers(u, u.id, users).some((id) => managers.has(id))).map((u) => u.id);
 }
+
 
 /**
  * An active manager whose own direct manager isn't another manager of their
@@ -2060,7 +2206,7 @@ exports.deleteUser = onCall({ timeoutSeconds: 120, maxInstances: 2 }, async (req
   await logUserEvent({ action: 'deleted', targetId: uid, targetName: target?.name || '', actorId: callerId, changes: [] });
   await admin.database().ref().update(Object.fromEntries([
     'roles', 'live_locations', 'presence', 'tracking_device', 'settings/trackingSchedules', 'location_history',
-    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site', 'device_status',
+    'route_snapped', 'tracking_events', 'tracking_alerts', 'attendance_reminders', 'attendance_at_site', 'device_status', 'overtime_tracking',
   ].map((path) => [`${path}/${uid}`, null])));
   try {
     await admin.auth().deleteUser(uid);

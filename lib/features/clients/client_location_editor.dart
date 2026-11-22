@@ -30,6 +30,7 @@ class _ClientLocationEditorState extends ConsumerState<ClientLocationEditor> {
   late final _lat = TextEditingController(text: widget.location?.lat.toStringAsFixed(6) ?? '');
   late final _lng = TextEditingController(text: widget.location?.lng.toStringAsFixed(6) ?? '');
   late final _address = TextEditingController(text: widget.location?.address ?? '');
+  late final _name = TextEditingController(text: widget.location?.name ?? '');
   late String _typeId = widget.location?.typeId ?? '';
   bool _locating = false;
 
@@ -37,7 +38,7 @@ class _ClientLocationEditorState extends ConsumerState<ClientLocationEditor> {
 
   @override
   void dispose() {
-    for (final c in [_lat, _lng, _address]) {
+    for (final c in [_lat, _lng, _address, _name]) {
       c.dispose();
     }
     super.dispose();
@@ -116,6 +117,7 @@ class _ClientLocationEditorState extends ConsumerState<ClientLocationEditor> {
         lat: double.parse(_lat.text.trim()),
         lng: double.parse(_lng.text.trim()),
         address: _isMain ? '' : _address.text.trim(),
+        name: _name.text.trim(),
       ),
     );
   }
@@ -147,6 +149,12 @@ class _ClientLocationEditorState extends ConsumerState<ClientLocationEditor> {
                 for (final t in types) DropdownMenuItem(value: t.id, child: Text(t.label(lang))),
               ],
               onChanged: (v) => setState(() => _typeId = v ?? ''),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _name,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(labelText: l10n.locationName, helperText: l10n.locationNameHelp),
             ),
             if (!_isMain) ...[
               const SizedBox(height: 12),

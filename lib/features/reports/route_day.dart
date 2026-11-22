@@ -127,7 +127,7 @@ class RouteDay {
     // The day's GPS timeline, and the team benchmark of the month (median of
     // the salespeople's measured visit length, speed and road factor).
     final timeline = person == null ? null : ref.watch(dayTimelineProvider((person.id, dayStr))).value;
-    if (person != null && person.role.isLocationTracked && allPoints.isNotEmpty && (timeline == null || !timeline.isFinal)) {
+    if (person != null && person.locationTracked && allPoints.isNotEmpty && (timeline == null || !timeline.isFinal)) {
       _buildTimeline(person.id, dayStr, allPoints.length);
     }
     final pace = routingReport(

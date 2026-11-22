@@ -68,6 +68,33 @@ class LeaveStatusChip extends ConsumerWidget {
   }
 }
 
+/// The work-from-home conditions (2026-11-21, user), on the request form and page.
+class WfhNote extends StatelessWidget {
+  const WfhNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: theme.colorScheme.onTertiaryContainer),
+          const SizedBox(width: 8),
+          Expanded(child: Text(l10n.wfhNote, style: TextStyle(color: theme.colorScheme.onTertiaryContainer))),
+        ],
+      ),
+    );
+  }
+}
+
 /// One request in a list; [showPerson] for lists of several people's requests.
 class LeaveRequestTile extends ConsumerWidget {
   const LeaveRequestTile({super.key, required this.request, this.showPerson = false, this.yourTurn = false});
@@ -95,12 +122,27 @@ class LeaveRequestTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (dates.isNotEmpty) Text(dates),
+          // The latest approver's note (2026-11-21).
+          if (request.steps.lastWhere((s) => s.comment.isNotEmpty, orElse: () => const ApprovalStep(role: UserRole.unknown))
+              case final s when s.comment.isNotEmpty)
+            Text(
+              l10n.leaveNoteFrom(users[s.byId]?.name ?? '?', s.comment),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+            ),
           const SizedBox(height: 4),
           Wrap(
             spacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               LeaveStatusChip(request: request),
+              if (request.workFromHome)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.home_work_outlined, size: 14, color: Theme.of(context).colorScheme.tertiary),
+                  const SizedBox(width: 4),
+                  Text(l10n.workFromHome, style: Theme.of(context).textTheme.bodySmall),
+                ]),
               if (request.pastRecord) Text(l10n.pastLeaveRecorded, style: Theme.of(context).textTheme.bodySmall),
               if (yourTurn)
                 Text(l10n.yourTurn,

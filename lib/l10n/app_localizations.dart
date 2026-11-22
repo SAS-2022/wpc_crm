@@ -6005,7 +6005,7 @@ abstract class AppLocalizations {
   /// No description provided for @trackingSchedulesHelp.
   ///
   /// In en, this message translates to:
-  /// **'When each person\'s location is shared. By default the sales team follows the company work hours ({hours}) and drivers are tracked all day. Tap a person to give them their own days and hours, or all day.'**
+  /// **'Whose location is shared live and when. By default the sales team follows the company work hours ({hours}), drivers are tracked all day and other staff aren\'t tracked live. Tap a person to turn tracking on or off for them, or give them their own days and hours.'**
   String trackingSchedulesHelp(String hours);
 
   /// No description provided for @noTrackedPeople.
@@ -12941,6 +12941,438 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} members'**
   String kamTeamMembers(int count);
+
+  /// No description provided for @trackedLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracked live'**
+  String get trackedLive;
+
+  /// No description provided for @notTrackedLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Not tracked'**
+  String get notTrackedLive;
+
+  /// No description provided for @notTrackedLiveRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not tracked live · GPS recorded for attendance'**
+  String get notTrackedLiveRecorded;
+
+  /// No description provided for @trackingSetForPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Set for this person (not the role\'s default)'**
+  String get trackingSetForPerson;
+
+  /// No description provided for @trackLiveLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Track live location'**
+  String get trackLiveLocation;
+
+  /// No description provided for @trackingRoleDefaultOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On, like everyone with this role'**
+  String get trackingRoleDefaultOn;
+
+  /// No description provided for @trackingRoleDefaultOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off, like everyone with this role'**
+  String get trackingRoleDefaultOff;
+
+  /// No description provided for @trackingTurnedOnForPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Turned on for this person (their role isn\'t tracked)'**
+  String get trackingTurnedOnForPerson;
+
+  /// No description provided for @trackingTurnedOffForPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Turned off for this person (their role is tracked)'**
+  String get trackingTurnedOffForPerson;
+
+  /// No description provided for @notTrackedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Their location isn\'t shared. Their phone needs the app open once after this change.'**
+  String get notTrackedHelp;
+
+  /// No description provided for @notTrackedRecordedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Not shared live. If they check attendance, their GPS is still recorded 08:00–18:00 for the attendance checks.'**
+  String get notTrackedRecordedHelp;
+
+  /// No description provided for @trackingOnForPersonHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown on Live tracking and Route history like the sales team; their phone asks for location \"all the time\" and shares it in the hours below. Tracking problems and unanswered phones are reported to the sales managers.'**
+  String get trackingOnForPersonHelp;
+
+  /// No description provided for @trackingBackToRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the role\'s default'**
+  String get trackingBackToRole;
+
+  /// No description provided for @liveLocationTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Live location tracking'**
+  String get liveLocationTracking;
+
+  /// No description provided for @clientBreakdownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 client} other{{count} clients}} · by type and tag'**
+  String clientBreakdownTitle(int count);
+
+  /// No description provided for @noTag.
+  ///
+  /// In en, this message translates to:
+  /// **'No tag'**
+  String get noTag;
+
+  /// No description provided for @leaveNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get leaveNotesLabel;
+
+  /// No description provided for @leaveNotesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The employee, the next approvers (e.g. HR) and the people informed will see this note.'**
+  String get leaveNotesHelp;
+
+  /// No description provided for @leaveEarlierNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes from earlier approvals'**
+  String get leaveEarlierNotes;
+
+  /// No description provided for @leaveNoteFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Note from {name}: “{note}”'**
+  String leaveNoteFrom(String name, String note);
+
+  /// No description provided for @clientBreakdownShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Types & tags'**
+  String get clientBreakdownShow;
+
+  /// No description provided for @clientBreakdownHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the legend'**
+  String get clientBreakdownHide;
+
+  /// No description provided for @alsoVisitedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Also visited by'**
+  String get alsoVisitedBy;
+
+  /// No description provided for @addVisitor.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask someone to visit'**
+  String get addVisitor;
+
+  /// No description provided for @allLocations.
+  ///
+  /// In en, this message translates to:
+  /// **'All locations'**
+  String get allLocations;
+
+  /// No description provided for @visitorLocationsGone.
+  ///
+  /// In en, this message translates to:
+  /// **'Its locations were removed'**
+  String get visitorLocationsGone;
+
+  /// No description provided for @visitingForOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'You visit this client for {owner}'**
+  String visitingForOwner(String owner);
+
+  /// No description provided for @visitorHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'They see only the ticked locations of this client, can check in, log calls and record catalogs there. The visits count for them, and the client\'s salesperson is told. The client stays with its salesperson.'**
+  String get visitorHelp;
+
+  /// No description provided for @addToPlanOfToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {name}\'s plan today'**
+  String addToPlanOfToday(String name);
+
+  /// No description provided for @addedToPlanOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to {name}\'s plan for today'**
+  String addedToPlanOf(String name);
+
+  /// No description provided for @notifClientVisitAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asked you to visit {client} ({count, plural, =1{1 location} other{{count} locations}})'**
+  String notifClientVisitAssigned(String name, String client, int count);
+
+  /// No description provided for @notifClientVisitAssignedAll.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} asked you to visit {client}'**
+  String notifClientVisitAssignedAll(String name, String client);
+
+  /// No description provided for @notifClientVisitedByOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} visited your client {client}'**
+  String notifClientVisitedByOther(String name, String client);
+
+  /// No description provided for @notifClientCalledByOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} called your client {client}'**
+  String notifClientCalledByOther(String name, String client);
+
+  /// No description provided for @visitorLinkedClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked companies and showrooms'**
+  String get visitorLinkedClients;
+
+  /// No description provided for @locationsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} locations'**
+  String locationsCount(int count);
+
+  /// No description provided for @locationName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (optional)'**
+  String get locationName;
+
+  /// No description provided for @locationNameHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'To tell places apart, e.g. \"Olaya showroom\"'**
+  String get locationNameHelp;
+
+  /// No description provided for @visitedByPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Visited by {names}'**
+  String visitedByPeople(String names);
+
+  /// No description provided for @askToVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask to visit'**
+  String get askToVisit;
+
+  /// No description provided for @askToVisitSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{clients, plural, =1{1 client} other{{clients} clients}} · {locations, plural, =1{1 location} other{{locations} locations}} picked'**
+  String askToVisitSummary(int clients, int locations);
+
+  /// No description provided for @askToVisitSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 client} other{{count} clients}} left out: you can\'t assign visitors for them'**
+  String askToVisitSkipped(int count);
+
+  /// No description provided for @askToVisitOwnSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 of them is} other{{count} of them are}} already theirs and stay as they are'**
+  String askToVisitOwnSkipped(int count);
+
+  /// No description provided for @askToVisitNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t assign visitors for these clients'**
+  String get askToVisitNotAllowed;
+
+  /// No description provided for @askToVisitDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} now visits {count, plural, =1{1 client} other{{count} clients}}'**
+  String askToVisitDone(String name, int count);
+
+  /// No description provided for @endOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'End overtime'**
+  String get endOvertime;
+
+  /// No description provided for @checkOutLastJob.
+  ///
+  /// In en, this message translates to:
+  /// **'left the last job (overtime away from the site)'**
+  String get checkOutLastJob;
+
+  /// No description provided for @fieldOvertimeQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time} – still working?'**
+  String fieldOvertimeQuestion(String time);
+
+  /// No description provided for @fieldOvertimeConfirmHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not at home, so your overtime from {time} is being recorded. Confirm you\'re working, and tap \"End overtime\" when you finish. The drive home doesn\'t count.'**
+  String fieldOvertimeConfirmHelp(String time);
+
+  /// No description provided for @fieldOvertimeStartHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Working away from the site? Start overtime – it counts from {time} until you tap \"End overtime\". Set your home location so the app can end it when you get home.'**
+  String fieldOvertimeStartHelp(String time);
+
+  /// No description provided for @imWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, I\'m working'**
+  String get imWorking;
+
+  /// No description provided for @notWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m not working'**
+  String get notWorking;
+
+  /// No description provided for @fieldOvertimeRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime away from the site since {time} – tap \"End overtime\" when you finish'**
+  String fieldOvertimeRunning(String time);
+
+  /// No description provided for @notifFieldOvertime.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is still working away from the site after the end of the shift ({time}) – overtime is recorded'**
+  String notifFieldOvertime(String name, String time);
+
+  /// No description provided for @notifFieldOvertimeAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time} and you\'re not at home – your overtime is being recorded. Confirm you\'re working.'**
+  String notifFieldOvertimeAsk(String time);
+
+  /// No description provided for @notifFieldOvertimeStartAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shift ended at {time}. Still working? Start overtime in the app.'**
+  String notifFieldOvertimeStartAsk(String time);
+
+  /// No description provided for @fieldOvertimeNotConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Away from the site · not confirmed by them – check Route history before approving'**
+  String get fieldOvertimeNotConfirmed;
+
+  /// No description provided for @fieldOvertimeConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Away from the site · confirmed by them'**
+  String get fieldOvertimeConfirmed;
+
+  /// No description provided for @workFromHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Work from home'**
+  String get workFromHome;
+
+  /// No description provided for @wfhCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {ratio} work days from home use 1 day of annual leave'**
+  String wfhCounts(String ratio);
+
+  /// No description provided for @wfhNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Employees working from home must be available on Microsoft Teams from 8:00 AM to 5:00 PM every day and have an internet connection at all times.'**
+  String get wfhNote;
+
+  /// No description provided for @wfhDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{workDays} work days from home = {days} days of annual leave'**
+  String wfhDaysCount(String workDays, String days);
+
+  /// No description provided for @wfhRatioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Work from home'**
+  String get wfhRatioTitle;
+
+  /// No description provided for @wfhRatioValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{ratio} work days from home = 1 day of annual leave'**
+  String wfhRatioValue(String ratio);
+
+  /// No description provided for @wfhRatioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Work days from home per annual leave day'**
+  String get wfhRatioLabel;
+
+  /// No description provided for @wfhRatioHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g. 2: two days working from home use one day of annual leave. Applies to requests sent after the change.'**
+  String get wfhRatioHelp;
+
+  /// No description provided for @wfhRatioRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Between 1 and 10'**
+  String get wfhRatioRange;
+
+  /// No description provided for @dayWorkingFromHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Working from home · On leave'**
+  String get dayWorkingFromHome;
+
+  /// No description provided for @wfhLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'Working from home'**
+  String get wfhLegend;
+
+  /// No description provided for @wfhDaysInMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of them from home'**
+  String wfhDaysInMonth(int count);
+
+  /// No description provided for @clientBreakdownHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients by type and tag'**
+  String get clientBreakdownHeading;
+
+  /// No description provided for @clientBreakdownWho.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients · {who}'**
+  String clientBreakdownWho(int count, String who);
 }
 
 class _AppLocalizationsDelegate

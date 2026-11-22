@@ -275,6 +275,7 @@ class _DayCell extends StatelessWidget {
         day.mark == DayMark.attended ||
         day.mark == DayMark.missed ||
         day.mark == DayMark.leave ||
+        day.mark == DayMark.wfh ||
         day.mark == DayMark.absent;
     final muted = day.mark == DayMark.off || day.mark == DayMark.future || day.mark == DayMark.none;
     final extra = lines.length - _shown;
@@ -342,7 +343,7 @@ class _Summary extends StatelessWidget {
       runSpacing: 8,
       children: [
         chip(
-          l10n.reportSummaryLine(row.attended, row.workDays, row.missed, row.leave),
+          [l10n.reportSummaryLine(row.attended, row.workDays, row.missed, row.leave), if (row.wfh > 0) l10n.wfhDaysInMonth(row.wfh)].join(' · '),
           dayMarkColor(DayMark.attended, scheme),
         ),
         chip(l10n.monthHours(formatMinutes(row.workedMin))),

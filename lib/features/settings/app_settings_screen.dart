@@ -72,6 +72,7 @@ class AppSettingsScreen extends ConsumerWidget {
           number(Icons.home_outlined, AppSetting.driveHomeGraceMin),
           header(l10n.settingsSectionHr),
           const AnnualCarryOverTile(),
+          const WfhRatioTile(),
           page(Icons.account_tree_outlined, l10n.departments, '/departments'),
           header(l10n.vehicles),
           number(Icons.directions_car_outlined, AppSetting.vehicleRenewalDays),

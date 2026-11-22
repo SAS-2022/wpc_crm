@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../visits/visit_place.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -26,6 +27,8 @@ import 'transfer.dart';
 import 'transfer_dialog.dart';
 import 'visit_rules.dart';
 import 'client_links_widgets.dart';
+import 'client_visitors.dart';
+import 'client_visitors_widgets.dart';
 import '../projects/project.dart' show canUseProjects;
 import '../projects/project_widgets.dart';
 
@@ -342,6 +345,12 @@ class ClientDetailScreen extends ConsumerWidget {
                 client.contacts.isEmpty)
               ListTile(dense: true, title: Text(l10n.noContactDetails)),
           ]),
+          // Other salespeople who visit some locations of it (2026-11-21).
+          if (client.visitAssignments.isNotEmpty ||
+              (me != null &&
+                  canAssignVisitors(me, client, usersById) &&
+                  (client.hasLocation || linkedGroupOf(client, clients.value ?? const []).isNotEmpty)))
+            section(l10n.alsoVisitedBy, [ClientVisitorsSection(client: client)]),
           // Catalogs / display stands: what the client got, when a new one is
           // due, and recording one (backdated if needed).
           section(l10n.itemsGiven, [GivenItemsSection(client: client, canEdit: canEdit)]),
@@ -412,7 +421,7 @@ class ClientDetailScreen extends ConsumerWidget {
                 for (final v in visits)
                   _VisitTile(
                     visit: v,
-                    place: ref.watch(locationTypesByIdProvider)[v.locationTypeId]?.label(locale.split('_').first),
+                    place: visitPlace(v, client, ref.watch(locationTypesByIdProvider), locale.split('_').first),
                     author: users.where((u) => u.id == v.salesExecId).firstOrNull?.name ?? '',
                     locale: locale,
                   ),

@@ -169,9 +169,22 @@ class LocationTracker {
         }
       }, onError: (_) {}),
     );
+    // Overtime away from the site (2026-11-21): the server sets
+    // `overtime_tracking/{uid}.until` while it runs, so the GPS keeps
+    // recording past the usual hours until it ends.
+    _subscriptions.add(
+      FirebaseDatabase.instance.ref('overtime_tracking/$uid/until').onValue.listen((event) {
+        final v = event.snapshot.value;
+        _overtimeUntil = v is num ? DateTime.fromMillisecondsSinceEpoch(v.toInt()) : null;
+        _applyDuty();
+      }, onError: (_) {}),
+    );
     _dutyCheck = Timer.periodic(const Duration(minutes: 1), (_) => _applyDuty());
     await _applyDuty();
   }
+
+  /// Field overtime running until then (null = none).
+  DateTime? _overtimeUntil;
 
   /// Online / offline, GPS state and the heartbeat (not for [recordOnly]).
   void _watchPresence() {
@@ -207,8 +220,10 @@ class LocationTracker {
 
   Future<void> _applyDutyNow() async {
     if (_loaded.length < 3 || !_active) return;
-    final on = _schedule.isOn(DateTime.now(), _hours,
-        driver: _driver, recordOnly: recordOnly, officeHours: _officeHours, days: recordDays);
+    final now = DateTime.now();
+    final on = _schedule.isOn(now, _hours,
+            driver: _driver, recordOnly: recordOnly, officeHours: _officeHours, days: recordDays) ||
+        (_overtimeUntil != null && now.isBefore(_overtimeUntil!));
     if (on == _onDuty) return;
     _onDuty = on;
     await _positions?.cancel();

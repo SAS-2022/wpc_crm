@@ -123,6 +123,7 @@ class _Names {
         'overtimeMaxMin' => l10n.userLogFieldOvertimeMax,
         'attendanceRequired' => l10n.userLogFieldAttendance,
         'leaveSiteAllowed' => l10n.userLogFieldLeaveSite,
+        'liveTracking' => l10n.liveLocationTracking,
         'workSchedule' => l10n.userLogFieldSchedule,
         'homeLocation' => l10n.userLogFieldHome,
         'joiningDate' => l10n.userLogFieldJoining,

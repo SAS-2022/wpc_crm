@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'client_status.dart';
+import 'client_visitors.dart';
 import 'given_items.dart';
 import 'merge.dart';
 import 'transfer.dart';
@@ -51,6 +52,7 @@ class Client {
     this.notDuplicates = const [],
     this.mergedFrom = const [],
     this.mainLocationType = '',
+    this.mainLocationName = '',
     this.extraLocations = const [],
     this.given = const {},
     this.givenLog = const [],
@@ -60,6 +62,8 @@ class Client {
     this.statusRequest,
     this.statusLog = const [],
     this.parentId,
+    this.visitAssignments = const [],
+    this.onlyLocationIds,
   });
 
   final String id;
@@ -141,6 +145,9 @@ class Client {
   /// id such as 'office'; empty = unlabelled.
   final String mainLocationType;
 
+  /// Optional name of the main location ("Olaya showroom", 2026-11-21).
+  final String mainLocationName;
+
   /// More places of the same client (factory, showroom, …), each labelled.
   /// Only kept while the client has a main location.
   final List<ClientLocation> extraLocations;
@@ -165,6 +172,15 @@ class Client {
   /// The main company this client (e.g. a showroom) belongs to; null = none.
   final String? parentId;
 
+  /// Sales people asked to visit some of this client's locations though it
+  /// isn't theirs (2026-11-21, user: showrooms in other areas). `visitorIds`
+  /// on the doc = their uids (rules, queries).
+  final List<VisitAssignment> visitAssignments;
+
+  /// Set for a visiting salesperson's copy ([Client.fromDoc] `viewerId`):
+  /// only these locations are shown to them; null = every location.
+  final Set<String>? onlyLocationIds;
+
   /// The main location. Imports, duplicates and plans use this one.
   bool get hasLocation => lat != null && lng != null;
 
@@ -177,16 +193,28 @@ class Client {
 
   /// Every location, main first; empty without a main location.
   List<ClientLocation> get locations => [
+        for (final l in allLocations)
+          if (onlyLocationIds == null || onlyLocationIds!.contains(l.id)) l,
+      ];
+
+  /// Every location, also those a visiting salesperson isn't asked to visit.
+  List<ClientLocation> get allLocations => [
         if (hasLocation)
-          ClientLocation(id: ClientLocation.mainId, typeId: mainLocationType, lat: lat!, lng: lng!),
+          ClientLocation(id: ClientLocation.mainId, typeId: mainLocationType, lat: lat!, lng: lng!, name: mainLocationName),
         if (hasLocation) ...extraLocations,
       ];
 
   static String normalizeName(String name) =>
       name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
-  factory Client.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+  /// [viewerId]: the signed-in sales exec; when the client isn't theirs but
+  /// they are asked to visit some locations, only those are kept.
+  factory Client.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc, {String? viewerId}) {
     final d = doc.data() ?? const {};
+    final assignments = parseVisitAssignments(d['visitAssignments']);
+    final mine = viewerId == null || d['assignedTo'] == viewerId
+        ? null
+        : assignments.where((a) => a.uid == viewerId).firstOrNull;
     return Client(
       id: doc.id,
       vat: d['vat'] as String? ?? '',
@@ -235,6 +263,7 @@ class Client {
           if (m is Map) MergedClient.fromMap(m),
       ],
       mainLocationType: d['mainLocationType'] as String? ?? '',
+      mainLocationName: d['mainLocationName'] as String? ?? '',
       extraLocations: [
         for (final l in d['extraLocations'] as List? ?? const [])
           if (l is Map && l['lat'] is num && l['lng'] is num) ClientLocation.fromMap(l),
@@ -250,6 +279,8 @@ class Client {
           if (s is Map) StatusChange.fromMap(s),
       ],
       parentId: d['parentId'] as String?,
+      visitAssignments: assignments,
+      onlyLocationIds: mine == null || mine.locationIds.isEmpty ? null : mine.locationIds.toSet(),
     );
   }
 }
@@ -263,6 +294,7 @@ class ClientLocation {
     required this.lat,
     required this.lng,
     this.address = '',
+    this.name = '',
   });
 
   static const mainId = 'main';
@@ -273,6 +305,7 @@ class ClientLocation {
         lat: (m['lat'] as num).toDouble(),
         lng: (m['lng'] as num).toDouble(),
         address: m['address'] as String? ?? '',
+        name: m['name'] as String? ?? '',
       );
 
   final String id;
@@ -283,17 +316,24 @@ class ClientLocation {
   final double lng;
   final String address;
 
+  /// Optional name to tell places apart ("Olaya showroom", 2026-11-21, user:
+  /// a client with 10 showrooms); shown after the label.
+  final String name;
+
   bool get isMain => id == mainId;
 
-  ClientLocation copyWith({String? id, String? typeId, double? lat, double? lng, String? address}) => ClientLocation(
+  ClientLocation copyWith({String? id, String? typeId, double? lat, double? lng, String? address, String? name}) =>
+      ClientLocation(
         id: id ?? this.id,
         typeId: typeId ?? this.typeId,
         lat: lat ?? this.lat,
         lng: lng ?? this.lng,
         address: address ?? this.address,
+        name: name ?? this.name,
       );
 
-  Map<String, dynamic> toMap() => {'id': id, 'typeId': typeId, 'lat': lat, 'lng': lng, 'address': address};
+  Map<String, dynamic> toMap() =>
+      {'id': id, 'typeId': typeId, 'lat': lat, 'lng': lng, 'address': address, if (name.isNotEmpty) 'name': name};
 }
 
 /// Great-circle distance in meters.
@@ -330,6 +370,7 @@ Map<String, dynamic> locationsUpdate(List<ClientLocation> list) {
     'lat': main?.lat,
     'lng': main?.lng,
     'mainLocationType': main?.typeId ?? '',
+    'mainLocationName': main?.name ?? '',
     'extraLocations': [
       for (final (i, l) in list.skip(1).indexed)
         (l.isMain ? l.copyWith(id: 'l${DateTime.now().millisecondsSinceEpoch}_$i') : l).toMap(),
