@@ -2208,5 +2208,7 @@
   "wfhLegend": "العمل من المنزل",
   "wfhDaysInMonth": "منها {count} من المنزل",
   "clientBreakdownHeading": "العملاء حسب النوع والوسم",
-  "clientBreakdownWho": "{count} عميل · {who}"
+  "clientBreakdownWho": "{count} عميل · {who}",
+  "askToVisitAddToPlan": "أضفها أيضاً إلى خطة الزيارات",
+  "askToVisitPlanned": "{count, plural, =1{أضيف عميل واحد} other{أضيف {count} عملاء}} إلى خطة {name}"
 }

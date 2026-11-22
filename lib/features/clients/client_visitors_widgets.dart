@@ -6,7 +6,11 @@ import '../../core/city_areas.dart';
 import '../../core/providers.dart';
 import '../../core/saudi_cities.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
+import '../notifications/notifications.dart';
 import '../plan/add_task_sheet.dart' show addClientToTodayPlan;
+import '../plan/plan_repository.dart';
+import '../plan/plan_task.dart';
 import '../users/people_filter.dart' show territoryRegionsProvider;
 import '../users/users_repository.dart';
 import 'client.dart';
@@ -353,7 +357,18 @@ class _VisitorDialogState extends ConsumerState<_VisitorDialog> {
 /// or more clients to a salesperson to visit. Their existing locations on
 /// each client are kept and the picked ones added; clients the person owns,
 /// or that [me] may not assign, are skipped. True when saved.
-Future<bool> askToVisitLocations(BuildContext context, WidgetRef ref, AppUser me, Map<Client, Set<String>> picked) async {
+/// "Also add to their plan" (2026-11-22, user: the clients didn't show on
+/// the person's Team plan): on by default, puts each client on their plan
+/// for the chosen day (approved, `planItemsAdded`), at the location in
+/// [planAt] (the pin tapped last) when it is one of the picked ones, else
+/// the first picked; clients already on that day's plan are skipped.
+Future<bool> askToVisitLocations(
+  BuildContext context,
+  WidgetRef ref,
+  AppUser me,
+  Map<Client, Set<String>> picked, {
+  Map<String, String> planAt = const {},
+}) async {
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final users = ref.read(usersProvider).value ?? const <AppUser>[];
@@ -369,6 +384,11 @@ Future<bool> askToVisitLocations(BuildContext context, WidgetRef ref, AppUser me
   final people = [...transferTargets(me, users)]..sort((a, b) => a.name.compareTo(b.name));
   final regions = ref.read(territoryRegionsProvider);
   final locationCount = allowed.values.fold(0, (n, s) => n + s.length);
+  final locale = Localizations.localeOf(context).toString();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  var plan = true;
+  var day = today;
   final uid = await showDialog<String>(
     context: context,
     builder: (dialog) {
@@ -412,6 +432,30 @@ Future<bool> askToVisitLocations(BuildContext context, WidgetRef ref, AppUser me
                       child: Text(l10n.askToVisitOwnSkipped(owned), style: Theme.of(context).textTheme.bodySmall),
                     ),
                   const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: plan,
+                    onChanged: (v) => setState(() => plan = v),
+                    title: Text(l10n.askToVisitAddToPlan),
+                  ),
+                  if (plan)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.calendar_today, size: 16),
+                        label: Text(DateFormat.yMMMEd(locale).format(day)),
+                        onPressed: () async {
+                          final d = await showDatePicker(
+                            context: context,
+                            initialDate: day,
+                            firstDate: today,
+                            lastDate: today.add(const Duration(days: 90)),
+                          );
+                          if (d != null) setState(() => day = d);
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   Text(l10n.visitorHelp, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -431,9 +475,18 @@ Future<bool> askToVisitLocations(BuildContext context, WidgetRef ref, AppUser me
   if (uid == null) return false;
   final repo = ref.read(clientsRepositoryProvider);
   var saved = 0;
+  final toPlan = <({String id, String name, String? locationId})>[];
   for (final e in allowed.entries) {
     final c = e.key;
     if (c.assignedTo == uid) continue;
+    final at = planAt[c.id];
+    toPlan.add((
+      id: c.id,
+      name: c.name,
+      locationId: at != null && e.value.contains(at)
+          ? at
+          : c.allLocations.map((l) => l.id).where(e.value.contains).firstOrNull,
+    ));
     final had = assignmentOf(c, uid);
     // Already every location: stays so; else their old ones + the picked ones.
     final ids = had != null && had.locationIds.isEmpty
@@ -445,6 +498,44 @@ Future<bool> askToVisitLocations(BuildContext context, WidgetRef ref, AppUser me
     await repo.setVisitAssignments(c, withVisitor(c, uid, ids, byId: me.id), byId: me.id);
     saved++;
   }
-  messenger.showSnackBar(SnackBar(content: Text(l10n.askToVisitDone(byId[uid]?.name ?? '', saved))));
+  final name = byId[uid]?.name ?? '';
+  var planned = 0, already = 0;
+  if (plan && toPlan.isNotEmpty) {
+    final date = dayKey(day);
+    final existing = await ref.read(dayTasksProvider((uid, date)).future);
+    final onPlan = {
+      for (final t in existing)
+        if (t.clientId != null && t.approval != TaskApproval.rejected) t.clientId!,
+    };
+    final fresh = toPlan.where((c) => !onPlan.contains(c.id)).toList();
+    already = toPlan.length - fresh.length;
+    if (fresh.isNotEmpty) {
+      await ref.read(planRepositoryProvider).addMany(
+            ownerId: uid,
+            date: date,
+            createdBy: me.id,
+            approved: true,
+            clients: fresh,
+          );
+      if (uid != me.id) {
+        await sendNotifications(
+          toIds: [uid],
+          type: NotificationType.planItemsAdded,
+          fromId: me.id,
+          ownerId: uid,
+          date: date,
+          count: fresh.length,
+        );
+      }
+      planned = fresh.length;
+    }
+  }
+  messenger.showSnackBar(SnackBar(
+    content: Text([
+      l10n.askToVisitDone(name, saved),
+      if (planned > 0) l10n.askToVisitPlanned(planned, name),
+      if (already > 0) l10n.alreadyOnPlanCount(already),
+    ].join(' · ')),
+  ));
   return true;
 }

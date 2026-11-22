@@ -13373,6 +13373,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} clients · {who}'**
   String clientBreakdownWho(int count, String who);
+
+  /// No description provided for @askToVisitAddToPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Also add to their plan'**
+  String get askToVisitAddToPlan;
+
+  /// No description provided for @askToVisitPlanned.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 added} other{{count} added}} to {name}\'s plan'**
+  String askToVisitPlanned(int count, String name);
 }
 
 class _AppLocalizationsDelegate

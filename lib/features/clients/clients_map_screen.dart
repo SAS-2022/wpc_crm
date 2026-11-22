@@ -127,7 +127,7 @@ class _ClientsMapScreenState extends ConsumerState<ClientsMapScreen> {
     if (me == null) return;
     final picked = {for (final c in all) if (_picked.containsKey(c.id)) c: _picked[c.id]!};
     setState(() => _moving = true);
-    final done = await askToVisitLocations(context, ref, me, picked);
+    final done = await askToVisitLocations(context, ref, me, picked, planAt: _selectedAt);
     if (!mounted) return;
     setState(() {
       _moving = false;

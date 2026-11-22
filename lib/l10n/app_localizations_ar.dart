@@ -8228,4 +8228,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String clientBreakdownWho(int count, String who) {
     return '$count عميل · $who';
   }
+
+  @override
+  String get askToVisitAddToPlan => 'أضفها أيضاً إلى خطة الزيارات';
+
+  @override
+  String askToVisitPlanned(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'أضيف $count عملاء',
+      one: 'أضيف عميل واحد',
+    );
+    return '$_temp0 إلى خطة $name';
+  }
 }

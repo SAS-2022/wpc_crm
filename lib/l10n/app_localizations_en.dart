@@ -8220,4 +8220,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String clientBreakdownWho(int count, String who) {
     return '$count clients · $who';
   }
+
+  @override
+  String get askToVisitAddToPlan => 'Also add to their plan';
+
+  @override
+  String askToVisitPlanned(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count added',
+      one: '1 added',
+    );
+    return '$_temp0 to $name\'s plan';
+  }
 }

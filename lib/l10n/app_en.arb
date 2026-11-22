@@ -3744,5 +3744,8 @@
   "@wfhDaysInMonth": {"placeholders": {"count": {"type": "int"}}},
   "clientBreakdownHeading": "Clients by type and tag",
   "clientBreakdownWho": "{count} clients · {who}",
-  "@clientBreakdownWho": {"placeholders": {"count": {"type": "int"}, "who": {"type": "String"}}}
+  "@clientBreakdownWho": {"placeholders": {"count": {"type": "int"}, "who": {"type": "String"}}},
+  "askToVisitAddToPlan": "Also add to their plan",
+  "askToVisitPlanned": "{count, plural, =1{1 added} other{{count} added}} to {name}'s plan",
+  "@askToVisitPlanned": {"placeholders": {"count": {"type": "int"}, "name": {"type": "String"}}}
 }
