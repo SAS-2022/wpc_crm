@@ -22,6 +22,7 @@ import 'attendance_day.dart';
 import 'attendance_repository.dart';
 import 'attendance_rules.dart';
 import 'break_widgets.dart';
+import 'hours_bar.dart';
 import 'overtime.dart' show canSetOvertimeFor;
 import 'work_sites.dart';
 import '../../core/search_text.dart';
@@ -300,28 +301,43 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final p = days[u.id]!;
       final d = results[u.id];
       final open = p.status == DayStatus.onSite || p.status == DayStatus.away;
-      final share = p.scheduledMin == 0 ? 0.0 : (p.workedMin / p.scheduledMin).clamp(0.0, 1.0);
+      final r = records[u.id];
+      final ot = d?.overtimeMin ?? 0;
+      final split = hoursSplit(workedMin: p.workedMin, overtimeMin: ot, scheduledMin: p.scheduledMin);
+      final review = r?.review;
+      final otColor = overtimeBarColor(approved: review != null && !review.rejected, rejected: review?.rejected ?? false);
       return ListTile(
         title: Text(u.name),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: share,
-                minHeight: 8,
-                color: open ? Colors.green.shade600 : theme.colorScheme.primary,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              ),
+            HoursBar(
+              split: split,
+              normalColor: open ? Colors.green.shade600 : theme.colorScheme.primary,
+              overtimeColor: otColor,
             ),
             const SizedBox(height: 4),
-            Text([
-              if (p.scheduledMin > 0) l10n.workedOf(formatMinutes(p.workedMin), formatMinutes(p.scheduledMin)) else l10n.dayOff,
-              if (open) l10n.stillIn,
-              if ((d?.overtimeMin ?? 0) > 0) l10n.overtimeTime(formatMinutes(d!.overtimeMin!)),
-            ].join(' · ')),
+            Text.rich(TextSpan(children: [
+              TextSpan(text: [
+                if (p.scheduledMin > 0)
+                  l10n.workedOf(formatMinutes(split.normalMin), formatMinutes(p.scheduledMin))
+                else
+                  l10n.dayOff,
+                if (open) l10n.stillIn,
+              ].join(' · ')),
+              if (ot > 0)
+                TextSpan(
+                  text: ' · ${[
+                    l10n.overtimeTime(formatMinutes(ot)),
+                    if (review case final rv?)
+                      rv.rejected ? l10n.overtimeRejectedText : l10n.overtimeApprovedText(formatMinutes(rv.minutes))
+                    else if (r?.overtimeWaiting ?? false)
+                      l10n.otStatePending,
+                  ].join(' · ')}',
+                  style: TextStyle(color: otColor, fontWeight: FontWeight.w600),
+                ),
+            ])),
           ],
         ),
         trailing: Text(formatMinutes(p.workedMin), style: theme.textTheme.titleMedium),

@@ -8234,4 +8234,59 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0 to $name\'s plan';
   }
+
+  @override
+  String get visitsCalendar => 'Visits calendar';
+
+  @override
+  String get visitKind => 'Visit';
+
+  @override
+  String calVisitsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count visits',
+      one: '1 visit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calCallsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count calls',
+      one: '1 call',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calTargetLine(int done, int target) {
+    return '$done of $target target';
+  }
+
+  @override
+  String calFieldDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days in the field',
+      one: '1 day in the field',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calClientsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clients',
+      one: '1 client',
+    );
+    return '$_temp0';
+  }
 }

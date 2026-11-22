@@ -8242,4 +8242,59 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0 إلى خطة $name';
   }
+
+  @override
+  String get visitsCalendar => 'تقويم الزيارات';
+
+  @override
+  String get visitKind => 'زيارة';
+
+  @override
+  String calVisitsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count زيارات',
+      one: 'زيارة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calCallsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مكالمات',
+      one: 'مكالمة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calTargetLine(int done, int target) {
+    return '$done من الهدف $target';
+  }
+
+  @override
+  String calFieldDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count أيام في الميدان',
+      one: 'يوم واحد في الميدان',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calClientsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عملاء',
+      one: 'عميل واحد',
+    );
+    return '$_temp0';
+  }
 }

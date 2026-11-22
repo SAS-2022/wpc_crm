@@ -214,7 +214,21 @@ class _VisitsScreenState extends ConsumerState<VisitsScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.visits)),
+      appBar: AppBar(
+        title: Text(l10n.visits),
+        actions: [
+          IconButton(
+            tooltip: l10n.visitsCalendar,
+            icon: const Icon(Icons.calendar_month),
+            onPressed: () => context.push(
+              Uri(path: '/visits/calendar', queryParameters: {
+                'uid': ?_visitor,
+                'month': monthKey(_day),
+              }).toString(),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,

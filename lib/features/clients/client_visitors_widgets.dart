@@ -147,12 +147,37 @@ class ClientVisitorsSection extends ConsumerWidget {
       if (want == (had != null)) continue;
       await repo.setVisitAssignments(c, withVisitor(c, result.uid, want ? const [] : null, byId: me.id), byId: me.id);
     }
+    // "Also add to their plan": this client at its first ticked location
+    // (all = main) and each ticked linked client at its main location.
+    final day = result.planDay;
+    if (day == null) return;
+    final ids = result.locationIds;
+    final toPlan = [
+      if (ids != null && client.assignedTo != result.uid)
+        (
+          id: client.id,
+          name: client.name,
+          locationId: ids.isEmpty ? null : client.allLocations.map((l) => l.id).where(ids.contains).firstOrNull,
+        ),
+      for (final c in linked)
+        if (result.linkedIds.contains(c.id) && c.assignedTo != result.uid) (id: c.id, name: c.name, locationId: null),
+    ];
+    final (:planned, :already) = await addVisitorPlan(ref, me, result.uid, day, toPlan);
+    if (planned + already == 0 || !context.mounted) return;
+    final name = users.where((u) => u.id == result.uid).firstOrNull?.name ?? '';
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text([
+        if (planned > 0) l10n.askToVisitPlanned(planned, name),
+        if (already > 0) l10n.alreadyOnPlanCount(already),
+      ].join(' · ')),
+    ));
   }
 }
 
 /// What the dialog picked: the person, this client's locations (null = not
 /// this client; empty = all) and the linked clients they visit too.
-typedef _VisitorChoice = ({String uid, List<String>? locationIds, Set<String> linkedIds});
+typedef _VisitorChoice = ({String uid, List<String>? locationIds, Set<String> linkedIds, DateTime? planDay});
 
 /// Puts the client on the visitor's plan for today, at one of their
 /// locations (a menu when they have several).
@@ -211,6 +236,8 @@ class _VisitorDialog extends ConsumerStatefulWidget {
 class _VisitorDialogState extends ConsumerState<_VisitorDialog> {
   String? _uid;
   bool _all = false;
+  bool _plan = true;
+  DateTime _day = _today();
   final _ticked = <String>{};
   final _linked = <String>{};
 
@@ -328,6 +355,14 @@ class _VisitorDialogState extends ConsumerState<_VisitorDialog> {
                     onChanged: (v) => setState(() => v == true ? _linked.add(c.id) : _linked.remove(c.id)),
                   ),
               ],
+              const Divider(),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _plan,
+                onChanged: (v) => setState(() => _plan = v),
+                title: Text(l10n.askToVisitAddToPlan),
+              ),
+              if (_plan) _PlanDayButton(day: _day, onChanged: (d) => setState(() => _day = d)),
             ],
           ),
         ),
@@ -345,6 +380,7 @@ class _VisitorDialogState extends ConsumerState<_VisitorDialog> {
                             ? const <String>[]
                             : [for (final l in locations) if (_ticked.contains(l.id)) l.id],
                     linkedIds: {for (final c in linked) if (_linked.contains(c.id)) c.id},
+                    planDay: _plan ? _day : null,
                   )),
           child: Text(l10n.save),
         ),
@@ -384,11 +420,8 @@ Future<bool> askToVisitLocations(
   final people = [...transferTargets(me, users)]..sort((a, b) => a.name.compareTo(b.name));
   final regions = ref.read(territoryRegionsProvider);
   final locationCount = allowed.values.fold(0, (n, s) => n + s.length);
-  final locale = Localizations.localeOf(context).toString();
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
   var plan = true;
-  var day = today;
+  var day = _today();
   final uid = await showDialog<String>(
     context: context,
     builder: (dialog) {
@@ -438,23 +471,7 @@ Future<bool> askToVisitLocations(
                     onChanged: (v) => setState(() => plan = v),
                     title: Text(l10n.askToVisitAddToPlan),
                   ),
-                  if (plan)
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.calendar_today, size: 16),
-                        label: Text(DateFormat.yMMMEd(locale).format(day)),
-                        onPressed: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: day,
-                            firstDate: today,
-                            lastDate: today.add(const Duration(days: 90)),
-                          );
-                          if (d != null) setState(() => day = d);
-                        },
-                      ),
-                    ),
+                  if (plan) _PlanDayButton(day: day, onChanged: (d) => setState(() => day = d)),
                   const SizedBox(height: 8),
                   Text(l10n.visitorHelp, style: Theme.of(context).textTheme.bodySmall),
                 ],
@@ -499,37 +516,8 @@ Future<bool> askToVisitLocations(
     saved++;
   }
   final name = byId[uid]?.name ?? '';
-  var planned = 0, already = 0;
-  if (plan && toPlan.isNotEmpty) {
-    final date = dayKey(day);
-    final existing = await ref.read(dayTasksProvider((uid, date)).future);
-    final onPlan = {
-      for (final t in existing)
-        if (t.clientId != null && t.approval != TaskApproval.rejected) t.clientId!,
-    };
-    final fresh = toPlan.where((c) => !onPlan.contains(c.id)).toList();
-    already = toPlan.length - fresh.length;
-    if (fresh.isNotEmpty) {
-      await ref.read(planRepositoryProvider).addMany(
-            ownerId: uid,
-            date: date,
-            createdBy: me.id,
-            approved: true,
-            clients: fresh,
-          );
-      if (uid != me.id) {
-        await sendNotifications(
-          toIds: [uid],
-          type: NotificationType.planItemsAdded,
-          fromId: me.id,
-          ownerId: uid,
-          date: date,
-          count: fresh.length,
-        );
-      }
-      planned = fresh.length;
-    }
-  }
+  final (:planned, :already) =
+      plan ? await addVisitorPlan(ref, me, uid, day, toPlan) : (planned: 0, already: 0);
   messenger.showSnackBar(SnackBar(
     content: Text([
       l10n.askToVisitDone(name, saved),
@@ -538,4 +526,78 @@ Future<bool> askToVisitLocations(
     ].join(' · ')),
   ));
   return true;
+}
+
+DateTime _today() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
+
+/// The day the visit goes on the person's plan (today … +90).
+class _PlanDayButton extends StatelessWidget {
+  const _PlanDayButton({required this.day, required this.onChanged});
+
+  final DateTime day;
+  final ValueChanged<DateTime> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toString();
+    final today = _today();
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.calendar_today, size: 16),
+        label: Text(DateFormat.yMMMEd(locale).format(day)),
+        onPressed: () async {
+          final d = await showDatePicker(
+            context: context,
+            initialDate: day,
+            firstDate: today,
+            lastDate: today.add(const Duration(days: 90)),
+          );
+          if (d != null) onChanged(d);
+        },
+      ),
+    );
+  }
+}
+
+/// Puts [clients] on [uid]'s plan for [day] (approved, `planItemsAdded` to
+/// them); clients already on that day's plan are skipped.
+Future<({int planned, int already})> addVisitorPlan(
+  WidgetRef ref,
+  AppUser me,
+  String uid,
+  DateTime day,
+  List<({String id, String name, String? locationId})> clients,
+) async {
+  if (clients.isEmpty) return (planned: 0, already: 0);
+  final date = dayKey(day);
+  final existing = await ref.read(dayTasksProvider((uid, date)).future);
+  final onPlan = {
+    for (final t in existing)
+      if (t.clientId != null && t.approval != TaskApproval.rejected) t.clientId!,
+  };
+  final fresh = clients.where((c) => !onPlan.contains(c.id)).toList();
+  if (fresh.isNotEmpty) {
+    await ref.read(planRepositoryProvider).addMany(
+          ownerId: uid,
+          date: date,
+          createdBy: me.id,
+          approved: true,
+          clients: fresh,
+        );
+    if (uid != me.id) {
+      await sendNotifications(
+        toIds: [uid],
+        type: NotificationType.planItemsAdded,
+        fromId: me.id,
+        ownerId: uid,
+        date: date,
+        count: fresh.length,
+      );
+    }
+  }
+  return (planned: fresh.length, already: clients.length - fresh.length);
 }

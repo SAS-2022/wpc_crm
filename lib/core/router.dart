@@ -43,6 +43,7 @@ import '../features/tracking/people_map_screen.dart';
 import '../features/tracking/work_hours_screen.dart';
 import '../features/visits/add_visit_screen.dart';
 import '../features/visits/visit_detail_screen.dart';
+import '../features/visits/visits_calendar_screen.dart';
 import '../features/visits/visits_screen.dart';
 import '../features/users/users_screen.dart';
 import '../features/plan/plan_task.dart';
@@ -212,6 +213,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const VisitsScreen(),
               routes: [
                 // Before ':id' so "new" isn't read as a visit id.
+                GoRoute(
+                  path: 'calendar',
+                  builder: (_, state) => VisitsCalendarScreen(
+                    uid: state.uri.queryParameters['uid'],
+                    month: state.uri.queryParameters['month'],
+                  ),
+                ),
                 GoRoute(
                   path: 'new/:clientId',
                   builder: (_, state) => AddVisitScreen(clientId: state.pathParameters['clientId']!),

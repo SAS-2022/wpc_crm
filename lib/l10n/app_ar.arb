@@ -2210,5 +2210,12 @@
   "clientBreakdownHeading": "العملاء حسب النوع والوسم",
   "clientBreakdownWho": "{count} عميل · {who}",
   "askToVisitAddToPlan": "أضفها أيضاً إلى خطة الزيارات",
-  "askToVisitPlanned": "{count, plural, =1{أضيف عميل واحد} other{أضيف {count} عملاء}} إلى خطة {name}"
+  "askToVisitPlanned": "{count, plural, =1{أضيف عميل واحد} other{أضيف {count} عملاء}} إلى خطة {name}",
+  "visitsCalendar": "تقويم الزيارات",
+  "visitKind": "زيارة",
+  "calVisitsCount": "{count, plural, =1{زيارة واحدة} other{{count} زيارات}}",
+  "calCallsCount": "{count, plural, =1{مكالمة واحدة} other{{count} مكالمات}}",
+  "calTargetLine": "{done} من الهدف {target}",
+  "calFieldDays": "{count, plural, =1{يوم واحد في الميدان} other{{count} أيام في الميدان}}",
+  "calClientsCount": "{count, plural, =1{عميل واحد} other{{count} عملاء}}"
 }

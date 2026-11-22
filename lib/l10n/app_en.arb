@@ -3747,5 +3747,17 @@
   "@clientBreakdownWho": {"placeholders": {"count": {"type": "int"}, "who": {"type": "String"}}},
   "askToVisitAddToPlan": "Also add to their plan",
   "askToVisitPlanned": "{count, plural, =1{1 added} other{{count} added}} to {name}'s plan",
-  "@askToVisitPlanned": {"placeholders": {"count": {"type": "int"}, "name": {"type": "String"}}}
+  "@askToVisitPlanned": {"placeholders": {"count": {"type": "int"}, "name": {"type": "String"}}},
+  "visitsCalendar": "Visits calendar",
+  "visitKind": "Visit",
+  "calVisitsCount": "{count, plural, =1{1 visit} other{{count} visits}}",
+  "@calVisitsCount": {"placeholders": {"count": {"type": "int"}}},
+  "calCallsCount": "{count, plural, =1{1 call} other{{count} calls}}",
+  "@calCallsCount": {"placeholders": {"count": {"type": "int"}}},
+  "calTargetLine": "{done} of {target} target",
+  "@calTargetLine": {"placeholders": {"done": {"type": "int"}, "target": {"type": "int"}}},
+  "calFieldDays": "{count, plural, =1{1 day in the field} other{{count} days in the field}}",
+  "@calFieldDays": {"placeholders": {"count": {"type": "int"}}},
+  "calClientsCount": "{count, plural, =1{1 client} other{{count} clients}}",
+  "@calClientsCount": {"placeholders": {"count": {"type": "int"}}}
 }

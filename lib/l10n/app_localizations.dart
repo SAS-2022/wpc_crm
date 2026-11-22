@@ -13385,6 +13385,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 added} other{{count} added}} to {name}\'s plan'**
   String askToVisitPlanned(int count, String name);
+
+  /// No description provided for @visitsCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits calendar'**
+  String get visitsCalendar;
+
+  /// No description provided for @visitKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get visitKind;
+
+  /// No description provided for @calVisitsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 visit} other{{count} visits}}'**
+  String calVisitsCount(int count);
+
+  /// No description provided for @calCallsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 call} other{{count} calls}}'**
+  String calCallsCount(int count);
+
+  /// No description provided for @calTargetLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {target} target'**
+  String calTargetLine(int done, int target);
+
+  /// No description provided for @calFieldDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day in the field} other{{count} days in the field}}'**
+  String calFieldDays(int count);
+
+  /// No description provided for @calClientsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 client} other{{count} clients}}'**
+  String calClientsCount(int count);
 }
 
 class _AppLocalizationsDelegate
