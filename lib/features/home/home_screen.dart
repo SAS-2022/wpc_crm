@@ -31,6 +31,7 @@ import '../attendance/overtime_widgets.dart' show OvertimeApprovalsCard;
 import '../attendance/team_alerts_screen.dart' show TeamAlertsCard;
 import '../attendance/early_checkout_card.dart';
 import '../settings/page_access.dart';
+import '../kam_meetings/kam_meeting_widgets.dart' show KamMeetingsCard;
 import '../attendance/attendance_card.dart';
 import '../attendance/attendance_calendar_view.dart';
 
@@ -343,6 +344,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
           const SizedBox(height: 12),
           if (me.can.isSupervisor) ...[
+            // KAM meetings (2026-11-22): open tasks / next meetings.
+            KamMeetingsCard(me: me),
             ApprovalsCard(me: me),
             TeamPlansCard(me: me),
           ],

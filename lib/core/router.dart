@@ -67,6 +67,10 @@ import '../features/documents/company_docs.dart' show DocSection;
 import '../features/documents/company_docs_screen.dart';
 import '../features/projects/project.dart' show canUseProjects;
 import '../features/projects/projects_screen.dart';
+import '../features/kam_meetings/kam_meeting.dart' show seesKamMeetings, managesKamMeetings;
+import '../features/kam_meetings/kam_meeting_form.dart';
+import '../features/kam_meetings/kam_meeting_screen.dart';
+import '../features/kam_meetings/kam_meetings_screen.dart';
 import '../features/products/product_import_screen.dart';
 import '../features/products/products_screen.dart';
 
@@ -125,6 +129,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc.startsWith('/documents') && !me.can.seesCompanyDocs) return '/';
       // Projects (2026-11-17): the sales team, SM and GM.
       if ((loc.startsWith('/projects') || loc == '/products') && !canUseProjects(me)) return '/';
+      // KAM meetings (2026-11-22): SM / GM, and KAMs (their own).
+      if (loc.startsWith('/kam-meetings') && !seesKamMeetings(me)) return '/';
+      if ((loc == '/kam-meetings/new' || loc.endsWith('/edit') && loc.startsWith('/kam-meetings')) && !managesKamMeetings(me)) {
+        return '/kam-meetings';
+      }
       if (loc.startsWith('/hr') && !me.can.canSeeHr) return '/';
       // Departments: HR edits them too (HR area → Leave types tab).
       if (loc == '/departments' && !me.can.canManageHr) return '/';
@@ -331,6 +340,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                   builder: (_, state) => ProjectScreen(id: state.pathParameters['id']!),
                   routes: [
                     GoRoute(path: 'edit', builder: (_, state) => ProjectEditScreen(id: state.pathParameters['id']!)),
+                  ],
+                ),
+              ],
+            ),
+            // KAM meetings (2026-11-22); 'new' before ':id'.
+            GoRoute(
+              path: '/kam-meetings',
+              builder: (_, _) => const KamMeetingsScreen(),
+              routes: [
+                GoRoute(path: 'new', builder: (_, state) => KamMeetingForm(kamId: state.uri.queryParameters['kam'])),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => KamMeetingScreen(id: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(path: 'edit', builder: (_, state) => KamMeetingForm(id: state.pathParameters['id']!)),
                   ],
                 ),
               ],

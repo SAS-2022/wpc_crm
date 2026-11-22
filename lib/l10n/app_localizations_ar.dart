@@ -8297,4 +8297,192 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get kamMeetings => 'اجتماعات مديري الحسابات';
+
+  @override
+  String get kamMeeting => 'اجتماع';
+
+  @override
+  String get kamMeetingsTab => 'الاجتماعات';
+
+  @override
+  String get kamTasksTab => 'المهام';
+
+  @override
+  String get kamMyTasksTab => 'مهامي';
+
+  @override
+  String get kamNewMeeting => 'اجتماع جديد';
+
+  @override
+  String get kamEditMeeting => 'تعديل الاجتماع';
+
+  @override
+  String get kamAllKams => 'كل مديري الحسابات';
+
+  @override
+  String get kamLabel => 'مدير الحساب';
+
+  @override
+  String get kamPickKam => 'اختر مدير الحساب';
+
+  @override
+  String get kamMeetingTime => 'موعد الاجتماع';
+
+  @override
+  String get kamConclusion => 'خلاصة الاجتماع';
+
+  @override
+  String get kamConclusionHelp =>
+      'ما تمت مناقشته والاتفاق عليه. يمكن إضافتها بعد الاجتماع.';
+
+  @override
+  String get kamNoConclusion => 'لم تُكتب خلاصة بعد.';
+
+  @override
+  String get kamTaskHint => 'مهمة لمدير الحساب';
+
+  @override
+  String get kamTaskAddDue => 'تاريخ الاستحقاق (اختياري)';
+
+  @override
+  String get kamTaskNoDue => 'بدون تاريخ استحقاق';
+
+  @override
+  String get kamTaskAlreadyDone => 'منجزة';
+
+  @override
+  String get kamTaskRemove => 'حذف المهمة';
+
+  @override
+  String get kamAddTask => 'إضافة مهمة';
+
+  @override
+  String get kamTaskMarkDone => 'تم الإنجاز';
+
+  @override
+  String get kamTaskComment => 'تعليق';
+
+  @override
+  String get kamTaskCommentHelp => 'مطلوب: ما الذي تم إنجازه والنتيجة.';
+
+  @override
+  String get kamTaskCommentRequired => 'اكتب تعليقًا لتأكيد الإنجاز';
+
+  @override
+  String get kamTaskDoneSaved => 'تم تأكيد إنجاز المهمة';
+
+  @override
+  String get kamTaskReopen => 'إعادة فتح';
+
+  @override
+  String get kamMeetingUpcoming => 'اجتماع قادم';
+
+  @override
+  String get kamUpcoming => 'قادم';
+
+  @override
+  String get kamNoMeetings => 'لا توجد اجتماعات بعد.';
+
+  @override
+  String get kamNoMeetingsManager =>
+      'لا توجد اجتماعات بعد. اضغط \"اجتماع جديد\" لتحديد اجتماع.';
+
+  @override
+  String get kamNoTasks => 'لا توجد مهام.';
+
+  @override
+  String get kamNoOpenTasks => 'لا توجد مهام مفتوحة.';
+
+  @override
+  String get kamMeetingNotFound => 'تم حذف هذا الاجتماع أو لا يمكنك فتحه.';
+
+  @override
+  String get kamDeleteMeeting => 'حذف الاجتماع؟';
+
+  @override
+  String kamTaskOverdue(String date) {
+    return 'متأخرة منذ $date';
+  }
+
+  @override
+  String kamTaskDue(String date) {
+    return 'مستحقة $date';
+  }
+
+  @override
+  String kamTaskDoneOn(String date) {
+    return 'أُنجزت $date';
+  }
+
+  @override
+  String kamMeetingBy(String name) {
+    return 'حدده $name';
+  }
+
+  @override
+  String kamTasksDoneOf(int done, int total) {
+    return '$done من $total منجزة';
+  }
+
+  @override
+  String kamOpenTasks(int count) {
+    return 'مهام مفتوحة ($count)';
+  }
+
+  @override
+  String kamAllTasks(int count) {
+    return 'الكل ($count)';
+  }
+
+  @override
+  String kamUpcomingMeetings(int count) {
+    return 'القادمة ($count)';
+  }
+
+  @override
+  String kamPastMeetings(int count) {
+    return 'الاجتماعات السابقة ($count)';
+  }
+
+  @override
+  String kamDeleteMeetingConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهام',
+      one: 'مهمته',
+    );
+    return 'سيتم حذف الاجتماع و$_temp0.';
+  }
+
+  @override
+  String notifKamMeeting(String name, String day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' مع $count مهام',
+      one: ' مع مهمة واحدة',
+      zero: '',
+    );
+    return 'حدد $name اجتماعًا معك بتاريخ $day$_temp0';
+  }
+
+  @override
+  String notifKamTasksAdded(String name, int count, String day) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهام',
+      one: 'مهمة',
+    );
+    return 'أضاف $name $_temp0 إلى اجتماعك بتاريخ $day';
+  }
+
+  @override
+  String notifKamTaskDone(String name, String task, String comment) {
+    return 'أنهى $name «$task»: «$comment»';
+  }
 }

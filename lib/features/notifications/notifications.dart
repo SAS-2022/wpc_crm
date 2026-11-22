@@ -172,6 +172,15 @@ enum NotificationType {
   /// [AppNotification.count] = minutes since the first notice.
   teamAlert,
 
+  /// KAM meetings (2026-11-22): the SM set a meeting ([AppNotification.issue]
+  /// 'new') or added tasks to one ('tasks'); [AppNotification.count] = new
+  /// tasks, [AppNotification.ref] = meeting id, date = the meeting day.
+  kamMeeting,
+
+  /// The KAM `ownerId` marked a meeting task done: [AppNotification.clientName]
+  /// = the task, [AppNotification.note] = their comment, ref = meeting id.
+  kamTaskDone,
+
   /// Asked to visit a client that isn't theirs (2026-11-21, "Also visited
   /// by"): [AppNotification.ref] = client id, [AppNotification.clientName],
   /// [AppNotification.count] = number of locations (0 = all).

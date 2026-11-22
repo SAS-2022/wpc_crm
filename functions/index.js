@@ -153,6 +153,10 @@ const TEXTS = {
     visitComment: (n, c, d, o, x) => `${x.reply ? `${n} replied on the visit to` : `${n} commented on your visit to`} ${x.client}: “${x.note}”`,
     clientVisitAssigned: (n, c, d, o, x) => c > 0 ? `${n} asked you to visit ${x.client} (${c} location${c === 1 ? '' : 's'})` : `${n} asked you to visit ${x.client}`,
     clientVisitedByOther: (n, c, d, o, x) => `${n} ${x.call ? 'called' : 'visited'} your client ${x.client}${x.note ? ` · ${x.note}` : ''}`,
+    kamMeeting: (n, c, d, o, x) => x.kamTasks
+      ? `${n} added ${c} task${c === 1 ? '' : 's'} to your meeting of ${d}`
+      : `${n} set a meeting with you on ${d}${c > 0 ? ` with ${c} task${c === 1 ? '' : 's'}` : ''}`,
+    kamTaskDone: (n, c, d, o, x) => `${n} finished “${x.client}”: “${x.note}”`,
     hrActionIssued: (n, c, d, o, x) => `HR sent you ${x.hrKind}: “${x.note}” – open the app to read and accept it`,
     hrActionAccepted: (n, c, d, o, x) => `${o} accepted ${x.hrKind}: “${x.note}”`,
     hrKind: { warning: 'a warning', deduction: 'a deduction', reward: 'a reward', note: 'a note' },
@@ -243,6 +247,10 @@ const TEXTS = {
     visitComment: (n, c, d, o, x) => `${x.reply ? `ردّ ${n} على زيارة` : `علّق ${n} على زيارتك إلى`} ${x.client}: «${x.note}»`,
     clientVisitAssigned: (n, c, d, o, x) => c > 0 ? `طلب منك ${n} زيارة ${x.client} (${c} موقع)` : `طلب منك ${n} زيارة ${x.client}`,
     clientVisitedByOther: (n, c, d, o, x) => `${x.call ? 'اتصل' : 'زار'} ${n} عميلك ${x.client}${x.note ? ` · ${x.note}` : ''}`,
+    kamMeeting: (n, c, d, o, x) => x.kamTasks
+      ? `أضاف ${n} ${c} مهمة إلى اجتماعك بتاريخ ${d}`
+      : `حدد ${n} اجتماعًا معك بتاريخ ${d}${c > 0 ? ` مع ${c} مهمة` : ''}`,
+    kamTaskDone: (n, c, d, o, x) => `أنهى ${n} «${x.client}»: «${x.note}»`,
     hrActionIssued: (n, c, d, o, x) => `أرسلت لك الموارد البشرية ${x.hrKind}: «${x.note}» – افتح التطبيق لقراءته وقبوله`,
     hrActionAccepted: (n, c, d, o, x) => `قبل ${o} ${x.hrKind}: «${x.note}»`,
     hrKind: { warning: 'إنذارًا', deduction: 'خصمًا', reward: 'مكافأة', note: 'ملاحظة' },
@@ -404,6 +412,7 @@ exports.sendPush = onDocumentCreated({ document: 'notifications/{id}', maxInstan
       vehicle: n.vehicleName || '', renewal: t.renewal[n.issue] || '', km: String(n.note || ''),
       idType: lang === 'ar' ? (n.issue === 'nationalId' ? 'الهوية الوطنية' : 'الإقامة') : (n.issue === 'nationalId' ? 'national ID' : 'Iqama'),
       reply: n.issue === 'reply',
+      kamTasks: n.type === 'kamMeeting' && n.issue === 'tasks',
       call: n.issue === 'call',
       hrKind: t.hrKind[n.issue] || t.hrKind.note,
       first: n.fromId === n.ownerId,

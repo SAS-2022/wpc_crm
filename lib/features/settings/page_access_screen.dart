@@ -15,6 +15,7 @@ String appPageLabel(AppLocalizations l10n, AppPage p) => switch (p) {
       AppPage.catalogs => l10n.catalogsPage,
       AppPage.projects => l10n.projects,
       AppPage.products => l10n.products,
+      AppPage.kamMeetings => l10n.kamMeetings,
       AppPage.liveTracking => l10n.liveTracking,
       AppPage.routeHistory => l10n.routeHistory,
       AppPage.drivers => l10n.driversPage,

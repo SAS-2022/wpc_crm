@@ -269,6 +269,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // KAM meetings (2026-11-22): the SM / GM meet each KAM, write the
+    // conclusion and give tasks; the KAM reads their own and may only mark
+    // an open task done, with a comment.
+    match /kam_meetings/{meetingId} {
+      allow read: if isAdmin() || (active() && resource.data.kamId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    match /kam_tasks/{taskId} {
+      allow read: if isAdmin() || (active() && resource.data.kamId == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (active() && resource.data.kamId == request.auth.uid
+          && resource.data.status == 'open'
+          && request.resource.data.status == 'done'
+          && request.resource.data.comment is string
+          && request.resource.data.comment.trim().size() > 0
+          && request.resource.data.doneAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'comment', 'doneAt']));
+    }
+
     // Projects (2026-11-17): the sales team, SM and GM add, view and edit
     // every project (name + contracting company required). Whoever adds one
     // is its lead; only the SM / GM change the lead (and its log) or delete.

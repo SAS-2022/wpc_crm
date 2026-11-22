@@ -156,6 +156,10 @@ class NotificationsScreen extends ConsumerWidget {
         NotificationType.planRejected => l10n.notifPlanRejected(from, day),
         NotificationType.planChanged => l10n.notifPlanChanged(from, day),
         NotificationType.planItemsAdded => l10n.notifPlanItemsAdded(from, n.count, day),
+        NotificationType.kamMeeting => n.issue == 'tasks'
+            ? l10n.notifKamTasksAdded(from, n.count, day)
+            : l10n.notifKamMeeting(from, day, n.count),
+        NotificationType.kamTaskDone => l10n.notifKamTaskDone(from, n.clientName, n.note),
         NotificationType.hrActionIssued => l10n.notifHrActionIssued(_hrKind(l10n, n.issue), n.note),
         NotificationType.hrActionAccepted => l10n.notifHrActionAccepted(owner, _hrKind(l10n, n.issue), n.note),
         NotificationType.visitComment => n.issue == 'reply'
@@ -244,6 +248,8 @@ class NotificationsScreen extends ConsumerWidget {
                     NotificationType.visitComment => Icons.comment_outlined,
                     NotificationType.clientVisitAssigned => Icons.add_location_alt_outlined,
                     NotificationType.clientVisitedByOther => Icons.storefront,
+                    NotificationType.kamMeeting => Icons.handshake_outlined,
+                    NotificationType.kamTaskDone => Icons.task_alt,
                     NotificationType.hrActionIssued => Icons.gavel,
                     NotificationType.hrActionAccepted => Icons.verified_outlined,
                     NotificationType.clientsTransferredIn || NotificationType.clientsTransferredOut => Icons.swap_horiz,
@@ -345,6 +351,8 @@ class NotificationsScreen extends ConsumerWidget {
                       // The gate shows it until accepted.
                       case NotificationType.hrActionIssued:
                         context.go('/');
+                      case NotificationType.kamMeeting || NotificationType.kamTaskDone:
+                        context.push(n.ref.isEmpty ? '/kam-meetings' : '/kam-meetings/${n.ref}');
                       case NotificationType.hrActionAccepted:
                         if (n.ref.isNotEmpty) context.push('/hr/action/${n.ref}');
                       case NotificationType.teamAlert:

@@ -13427,6 +13427,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 client} other{{count} clients}}'**
   String calClientsCount(int count);
+
+  /// No description provided for @kamMeetings.
+  ///
+  /// In en, this message translates to:
+  /// **'KAM meetings'**
+  String get kamMeetings;
+
+  /// No description provided for @kamMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting'**
+  String get kamMeeting;
+
+  /// No description provided for @kamMeetingsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Meetings'**
+  String get kamMeetingsTab;
+
+  /// No description provided for @kamTasksTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get kamTasksTab;
+
+  /// No description provided for @kamMyTasksTab.
+  ///
+  /// In en, this message translates to:
+  /// **'My tasks'**
+  String get kamMyTasksTab;
+
+  /// No description provided for @kamNewMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'New meeting'**
+  String get kamNewMeeting;
+
+  /// No description provided for @kamEditMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit meeting'**
+  String get kamEditMeeting;
+
+  /// No description provided for @kamAllKams.
+  ///
+  /// In en, this message translates to:
+  /// **'All KAMs'**
+  String get kamAllKams;
+
+  /// No description provided for @kamLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Key account manager'**
+  String get kamLabel;
+
+  /// No description provided for @kamPickKam.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the KAM'**
+  String get kamPickKam;
+
+  /// No description provided for @kamMeetingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting time'**
+  String get kamMeetingTime;
+
+  /// No description provided for @kamConclusion.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting conclusion'**
+  String get kamConclusion;
+
+  /// No description provided for @kamConclusionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'What was discussed and agreed. Can be added after the meeting.'**
+  String get kamConclusionHelp;
+
+  /// No description provided for @kamNoConclusion.
+  ///
+  /// In en, this message translates to:
+  /// **'No conclusion written yet.'**
+  String get kamNoConclusion;
+
+  /// No description provided for @kamTaskHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Task for the KAM'**
+  String get kamTaskHint;
+
+  /// No description provided for @kamTaskAddDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due date (optional)'**
+  String get kamTaskAddDue;
+
+  /// No description provided for @kamTaskNoDue.
+  ///
+  /// In en, this message translates to:
+  /// **'No due date'**
+  String get kamTaskNoDue;
+
+  /// No description provided for @kamTaskAlreadyDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done already'**
+  String get kamTaskAlreadyDone;
+
+  /// No description provided for @kamTaskRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove task'**
+  String get kamTaskRemove;
+
+  /// No description provided for @kamAddTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Add task'**
+  String get kamAddTask;
+
+  /// No description provided for @kamTaskMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as done'**
+  String get kamTaskMarkDone;
+
+  /// No description provided for @kamTaskComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get kamTaskComment;
+
+  /// No description provided for @kamTaskCommentHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Required: what was done and the result.'**
+  String get kamTaskCommentHelp;
+
+  /// No description provided for @kamTaskCommentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a comment to mark it done'**
+  String get kamTaskCommentRequired;
+
+  /// No description provided for @kamTaskDoneSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Task marked as done'**
+  String get kamTaskDoneSaved;
+
+  /// No description provided for @kamTaskReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open again'**
+  String get kamTaskReopen;
+
+  /// No description provided for @kamMeetingUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming meeting'**
+  String get kamMeetingUpcoming;
+
+  /// No description provided for @kamUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get kamUpcoming;
+
+  /// No description provided for @kamNoMeetings.
+  ///
+  /// In en, this message translates to:
+  /// **'No meetings yet.'**
+  String get kamNoMeetings;
+
+  /// No description provided for @kamNoMeetingsManager.
+  ///
+  /// In en, this message translates to:
+  /// **'No meetings yet. Tap \"New meeting\" to set one.'**
+  String get kamNoMeetingsManager;
+
+  /// No description provided for @kamNoTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks.'**
+  String get kamNoTasks;
+
+  /// No description provided for @kamNoOpenTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No open tasks.'**
+  String get kamNoOpenTasks;
+
+  /// No description provided for @kamMeetingNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This meeting was deleted or you can\'t open it.'**
+  String get kamMeetingNotFound;
+
+  /// No description provided for @kamDeleteMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete meeting?'**
+  String get kamDeleteMeeting;
+
+  /// No description provided for @kamTaskOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue since {date}'**
+  String kamTaskOverdue(String date);
+
+  /// No description provided for @kamTaskDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String kamTaskDue(String date);
+
+  /// No description provided for @kamTaskDoneOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Done {date}'**
+  String kamTaskDoneOn(String date);
+
+  /// No description provided for @kamMeetingBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Set by {name}'**
+  String kamMeetingBy(String name);
+
+  /// No description provided for @kamTasksDoneOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} done'**
+  String kamTasksDoneOf(int done, int total);
+
+  /// No description provided for @kamOpenTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Open tasks ({count})'**
+  String kamOpenTasks(int count);
+
+  /// No description provided for @kamAllTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'All ({count})'**
+  String kamAllTasks(int count);
+
+  /// No description provided for @kamUpcomingMeetings.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming ({count})'**
+  String kamUpcomingMeetings(int count);
+
+  /// No description provided for @kamPastMeetings.
+  ///
+  /// In en, this message translates to:
+  /// **'Past meetings ({count})'**
+  String kamPastMeetings(int count);
+
+  /// No description provided for @kamDeleteMeetingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The meeting and its {count, plural, =1{task} other{{count} tasks}} will be deleted.'**
+  String kamDeleteMeetingConfirm(int count);
+
+  /// No description provided for @notifKamMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} set a meeting with you on {day}{count, plural, =0{} =1{ with 1 task} other{ with {count} tasks}}'**
+  String notifKamMeeting(String name, String day, int count);
+
+  /// No description provided for @notifKamTasksAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added {count, plural, =1{a task} other{{count} tasks}} to your meeting of {day}'**
+  String notifKamTasksAdded(String name, int count, String day);
+
+  /// No description provided for @notifKamTaskDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} finished “{task}”: “{comment}”'**
+  String notifKamTaskDone(String name, String task, String comment);
 }
 
 class _AppLocalizationsDelegate

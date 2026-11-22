@@ -97,6 +97,7 @@ class AppShell extends ConsumerWidget {
           label: l10n.transferredClients,
         ),
         (path: '/catalogs', icon: Icons.style_outlined, selected: Icons.style, label: l10n.catalogsPage),
+        (path: '/kam-meetings', icon: Icons.handshake_outlined, selected: Icons.handshake, label: l10n.kamMeetings),
       ],
       // Department heads too, with their own people (2026-11-14).
       if (me?.seesRouteHistory ?? false)

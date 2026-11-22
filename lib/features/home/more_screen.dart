@@ -48,6 +48,7 @@ class MoreScreen extends ConsumerWidget {
           item(Icons.table_chart, l10n.reports, '/reports'),
           item(Icons.swap_horiz, l10n.transferredClients, '/transfers'),
           item(Icons.style, l10n.catalogsPage, '/catalogs'),
+          item(Icons.handshake_outlined, l10n.kamMeetings, '/kam-meetings'),
           item(Icons.route, l10n.routeHistory, '/history'),
         ],
       ]),
