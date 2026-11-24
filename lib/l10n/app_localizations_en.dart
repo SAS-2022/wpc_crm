@@ -6225,6 +6225,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'No supervisor to approve breaks yet – ask HR to set one.';
 
   @override
+  String get breakAfterCheckIn => 'Check in to request a break.';
+
+  @override
+  String breakOnlyWorkHours(String time) {
+    return 'Breaks can be requested on work days until $time.';
+  }
+
+  @override
   String get breaksTitle => 'Breaks and leaving the site';
 
   @override

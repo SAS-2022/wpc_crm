@@ -399,16 +399,19 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.breakDialogHelp(names)),
-                const SizedBox(height: 8),
-                Text(
-                  usedMin < breakAllowanceMin
-                      ? l10n.breakLeftToday(formatMinutes(breakAllowanceMin - usedMin))
-                      : l10n.breakNoneLeftToday,
-                  style: TextStyle(
-                    color: usedMin < breakAllowanceMin ? null : Theme.of(dialog).colorScheme.error,
-                    fontWeight: FontWeight.w600,
+                // Daily break allowance: not for people allowed to leave the site.
+                if (widget.me.breakTimeCounted) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    usedMin < breakAllowanceMin
+                        ? l10n.breakLeftToday(formatMinutes(breakAllowanceMin - usedMin))
+                        : l10n.breakNoneLeftToday,
+                    style: TextStyle(
+                      color: usedMin < breakAllowanceMin ? null : Theme.of(dialog).colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 12),
                 Text(l10n.breakLength, style: Theme.of(dialog).textTheme.titleSmall),
                 const SizedBox(height: 4),
@@ -507,6 +510,15 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
     // Same test as leaving early: a work day, before its end.
     final beforeEnd = needsEarlyCheckoutApproval(now, hours);
     final canAskBreak = open && me.requestsBreaks && users != null && beforeEnd && !(lastBreak?.pending ?? false);
+    // Why there is no "Request a break" (2026-11-24, user saw no button on an
+    // operator's Home and couldn't tell why).
+    final String? breakHint = !me.requestsBreaks || absentToday != null || canAskBreak || (lastBreak?.pending ?? false)
+        ? null
+        : !beforeEnd
+        ? l10n.breakOnlyWorkHours(endTime)
+        : !open
+        ? l10n.breakAfterCheckIn
+        : null;
 
     final String title;
     final String detail;
@@ -528,7 +540,7 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
         if (day.checkInEventAt != null) l10n.arrivedByGps(time.format(day.checkInEventAt!)),
         l10n.checkedInFor(formatMinutes(so.isNegative ? 0 : so.inMinutes)),
         day.inside || day.lastExitAt == null ? l10n.atTheSite : l10n.leftSiteAt(time.format(day.lastExitAt!)),
-        if (me.requestsBreaks && (day.breakMin ?? 0) > 0)
+        if (me.breakTimeCounted && (day.breakMin ?? 0) > 0)
           l10n.breakTimeLine(formatMinutes(day.breakMin!), formatMinutes(breakAllowanceMin)),
         if ((day.breakOverMin ?? 0) > 0) l10n.breakOverWarning(formatMinutes(day.breakOverMin!)),
       ].join(' · ');
@@ -705,6 +717,18 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
                           icon: const Icon(Icons.free_breakfast_outlined),
                           label: Text(l10n.requestBreak),
                         ),
+                ),
+              ),
+            if (breakHint != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  mainAxisAlignment: widget.prominent ? MainAxisAlignment.center : MainAxisAlignment.end,
+                  children: [
+                    Icon(Icons.free_breakfast_outlined, size: 16, color: theme.colorScheme.outline),
+                    const SizedBox(width: 6),
+                    Flexible(child: Text(breakHint, style: theme.textTheme.bodySmall)),
+                  ],
                 ),
               ),
             // Report an absence: today (until they check in) or tomorrow.

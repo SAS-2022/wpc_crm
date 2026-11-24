@@ -13,7 +13,7 @@ import 'attendance_rules.dart';
 /// [person]'s exits on [record]'s day before the end of their work day,
 /// each with its break; empty for people who don't request breaks.
 List<ExitCheck> personExitChecks(AppUser person, AttendanceRecord? record, DayResult? d, WorkHours company) {
-  if (record == null || !person.requestsBreaks) return const [];
+  if (record == null || !person.breakTimeCounted) return const [];
   final day = DateTime.parse(record.date);
   final hours = person.scheduleOr(company);
   return record.exitChecks(

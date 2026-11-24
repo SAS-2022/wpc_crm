@@ -274,7 +274,7 @@ class AttendanceRecord {
       leavesSite: user.leavesSite,
       overtimeAllowed: user.overtimeAllowed,
       overtimeMaxMin: user.overtimeCapMin,
-      breakAllowance: user.requestsBreaks ? breakAllowanceMin : null,
+      breakAllowance: user.breakTimeCounted ? breakAllowanceMin : null,
     );
     return server?.fillFrom(local) ?? local;
   }

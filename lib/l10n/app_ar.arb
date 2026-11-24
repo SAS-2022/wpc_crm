@@ -1682,6 +1682,8 @@
   "breakRejectedLine": "لم يوافق {name} على استراحتك",
   "breakRequestsWaiting": "طلبات الاستراحة ({count})",
   "breakNoApprover": "لا يوجد مشرف للموافقة على الاستراحات بعد – اطلب من الموارد البشرية تحديده.",
+  "breakAfterCheckIn": "سجّل الحضور لطلب استراحة.",
+  "breakOnlyWorkHours": "يمكن طلب الاستراحة في أيام العمل حتى {time}.",
   "breaksTitle": "الاستراحات ومغادرة الموقع",
   "breakAskedLine": "طُلبت الساعة {time} · {minutes} دقيقة",
   "breakStatusPending": "بانتظار الموافقة",

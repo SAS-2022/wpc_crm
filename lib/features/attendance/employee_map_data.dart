@@ -325,7 +325,7 @@ class EmployeeDetails extends ConsumerWidget {
               ? line(l10n.lateByLong(formatMinutes(day.lateMin)), color: error, bold: true)
               : line(l10n.onTime, color: green, bold: true),
           if (day.status == DayStatus.away && d.lastExitAt != null) line(l10n.leftSiteAt(time.format(d.lastExitAt!))),
-          if (u.requestsBreaks)
+          if (u.breakTimeCounted)
             for (final c in personExitChecks(u, p.record, d, ref.watch(workHoursProvider).value ?? WorkHours.defaults))
               line(exitCheckLine(l10n, time, c, today: true), color: exitCheckColor(context, c, today: true))
           else

@@ -10207,6 +10207,18 @@ abstract class AppLocalizations {
   /// **'No supervisor to approve breaks yet – ask HR to set one.'**
   String get breakNoApprover;
 
+  /// No description provided for @breakAfterCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in to request a break.'**
+  String get breakAfterCheckIn;
+
+  /// No description provided for @breakOnlyWorkHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaks can be requested on work days until {time}.'**
+  String breakOnlyWorkHours(String time);
+
   /// No description provided for @breaksTitle.
   ///
   /// In en, this message translates to:

@@ -6238,6 +6238,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يوجد مشرف للموافقة على الاستراحات بعد – اطلب من الموارد البشرية تحديده.';
 
   @override
+  String get breakAfterCheckIn => 'سجّل الحضور لطلب استراحة.';
+
+  @override
+  String breakOnlyWorkHours(String time) {
+    return 'يمكن طلب الاستراحة في أيام العمل حتى $time.';
+  }
+
+  @override
   String get breaksTitle => 'الاستراحات ومغادرة الموقع';
 
   @override

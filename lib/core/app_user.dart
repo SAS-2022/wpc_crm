@@ -440,9 +440,15 @@ class AppUser {
   /// `role.isLocationTracked`, for a person).
   bool get locationTracked => liveTracking ?? role.isLocationTracked;
 
-  /// Requests breaks ([UserRole.asksForBreaks]) — not when allowed to leave
-  /// the site, and only with attendance.
-  bool get requestsBreaks => role.asksForBreaks && !leavesSite && checksAttendance;
+  /// Requests breaks ([UserRole.asksForBreaks]), only with attendance — also
+  /// when allowed to leave the site (user 2026-11-24).
+  bool get requestsBreaks => role.asksForBreaks && checksAttendance;
+
+  /// Time out of the site counts as break time (daily allowance, the rest
+  /// deducted) and exits are checked for permission — not for people allowed
+  /// to leave the site, whose time out is work (server `BREAK_ROLES` +
+  /// `!leavesSite`).
+  bool get breakTimeCounted => requestsBreaks && !leavesSite;
 
   /// Checks in and out: attendance required and at least one work site.
   bool get checksAttendance => needsAttendance && workSiteIds.isNotEmpty;
