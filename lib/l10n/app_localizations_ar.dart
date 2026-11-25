@@ -8493,4 +8493,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifKamTaskDone(String name, String task, String comment) {
     return 'أنهى $name «$task»: «$comment»';
   }
+
+  @override
+  String get overtimeRecordedKind => 'تسجيل البقاء بعد الدوام';
+
+  @override
+  String get overtimeAssignedKind => 'تخصيص ساعات (السائقون)';
+
+  @override
+  String get overtimeRecordedHelp =>
+      'يُسجَّل الوقت الذي يبقونه بعد نهاية الدوام عملاً إضافياً وينتظر الموافقة.';
+
+  @override
+  String get overtimeAssignedHelp =>
+      'للسائقين فقط. الساعات التي تخصّصها هي عملهم الإضافي في ذلك اليوم، معتمدة فوراً وتُحتسب حتى دون تسجيل حضور. البقاء بعد الدوام في ذلك اليوم لا يُسجَّل عملاً إضافياً.';
+
+  @override
+  String get overtimeAssignedHoursLabel => 'ساعات العمل الإضافي';
+
+  @override
+  String overtimeAssignedHours(String hours) {
+    return 'مخصّص: $hours';
+  }
+
+  @override
+  String overtimeAssignedToday(String name, String hours) {
+    return 'خصّص لك $name $hours عملاً إضافياً اليوم – البقاء بعد الدوام لا يُسجَّل عملاً إضافياً';
+  }
+
+  @override
+  String notifOvertimeAssigned(String name, String date, String hours) {
+    return 'خصّص لك $name $hours عملاً إضافياً يوم $date – البقاء بعد الدوام في ذلك اليوم لا يُسجَّل عملاً إضافياً';
+  }
 }

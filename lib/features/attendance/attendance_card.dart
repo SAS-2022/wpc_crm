@@ -609,7 +609,9 @@ class _AttendanceCardState extends ConsumerState<AttendanceCard> with WidgetsBin
               ListTile(
                 dense: true,
                 leading: Icon(Icons.more_time, color: Colors.green.shade700),
-                title: Text(l10n.overtimeDayToday(byId[otToday.byId]?.name ?? '')),
+                title: Text(otToday.assignedMin != null && me.role == UserRole.driver
+                    ? l10n.overtimeAssignedToday(byId[otToday.byId]?.name ?? '', formatMinutes(otToday.assignedMin!))
+                    : l10n.overtimeDayToday(byId[otToday.byId]?.name ?? '')),
                 subtitle: otToday.note.isEmpty ? null : Text('“${otToday.note}”'),
               ),
             if (lastBreak != null)

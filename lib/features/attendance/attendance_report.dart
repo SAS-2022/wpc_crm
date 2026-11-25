@@ -38,7 +38,8 @@ class AttendanceReportDay {
   /// A manager turned the day's overtime down (2026-10-27).
   final bool overtimeRejected;
 
-  int get recordedOvertimeMin => result?.checkedIn == true ? result!.overtimeMin ?? 0 : 0;
+  /// Also a driver's assigned overtime on a day without a check-in (2026-11-25).
+  int get recordedOvertimeMin => result?.overtimeMin ?? 0;
 
   /// Null = no overtime that day.
   OvertimeState? get overtimeState => overtimeRejected
@@ -76,7 +77,7 @@ class AttendanceReportRow {
   int get lateDays => _results.where((r) => (r.lateMin ?? 0) > 0).length;
   int get lateMin => _results.fold(0, (s, r) => s + (r.lateMin ?? 0));
   int get workedMin => _results.fold(0, (s, r) => s + (r.countedMin ?? 0));
-  int get overtimeMin => _results.fold(0, (s, r) => s + (r.overtimeMin ?? 0));
+  int get overtimeMin => days.fold(0, (s, d) => s + d.recordedOvertimeMin);
 
   /// Overtime approved by managers (2026-10-25), possibly changed from what was recorded.
   int get approvedOvertimeMin => days.fold(0, (s, d) => s + (d.approvedOvertimeMin ?? 0));

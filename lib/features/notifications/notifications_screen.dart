@@ -8,6 +8,7 @@ import '../vehicles/vehicle_widgets.dart';
 import '../../core/app_user.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../attendance/attendance_rules.dart' show formatMinutes;
 import '../users/users_repository.dart';
 import 'notifications.dart';
 import '../hr/hr_actions.dart';
@@ -132,7 +133,9 @@ class NotificationsScreen extends ConsumerWidget {
             if (n.note.isNotEmpty) '“${n.note}”',
           ].join(' '),
         NotificationType.overtimeDayAllowed => [
-            l10n.notifOvertimeDayAllowed(from, day),
+            n.count > 0
+                ? l10n.notifOvertimeAssigned(from, day, formatMinutes(n.count))
+                : l10n.notifOvertimeDayAllowed(from, day),
             if (n.note.isNotEmpty) '“${n.note}”',
           ].join(' '),
         NotificationType.earlyCheckoutRejected => [

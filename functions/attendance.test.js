@@ -519,3 +519,40 @@ test('overtime day on a work day: time after the end counts without "Start overt
   assert.equal(d.overtimeOn, true);
   assert.equal(overtimeAskDue(d, { ...o, now: t(17, 15) }), null);
 });
+
+// Assigned overtime hours for drivers (2026-11-25).
+test('assigned overtime: staying late records nothing, the assigned hours are the overtime', () => {
+  const date = '2026-11-26';
+  const t = (h, m = 0) => saudiTime(date, h * 60 + m);
+  const o = {
+    startMs: t(8), endMs: t(17), closeAllMs: t(23, 55), now: t(23, 59), leavesSite: true,
+    overtimeAllowed: true, overtimeMaxMin: 180, overtimeDay: { dayOff: false, assignedMin: 120 },
+    drive: { startAt: t(17), endAt: t(21), place: 'home' },
+  };
+  const d = deriveDay([{ type: 'in', at: t(8), siteId: 's' }, { type: 'out', at: t(20), siteId: 's' }], o);
+  assert.equal(d.overtimeMin, 120);
+  assert.equal(d.afterHoursMin, 180);
+  assert.equal(d.countedMin, 9 * 60 + 120);
+  assert.equal(d.overtimeAssignedMin, 120);
+  // Left at the end: the hours still count.
+  const early = deriveDay([{ type: 'in', at: t(8), siteId: 's' }, { type: 'checkOut', at: t(17) }], o);
+  assert.equal(early.overtimeMin, 120);
+});
+
+test('assigned overtime counts without a check-in; the day closes at 23:55', () => {
+  const date = '2026-11-27'; // Friday, day off
+  const t = (h, m = 0) => saudiTime(date, h * 60 + m);
+  const o = { startMs: null, endMs: t(17), closeAllMs: t(23, 55), now: t(12), leavesSite: true,
+    overtimeAllowed: false, overtimeDay: { dayOff: true, assignedMin: 300 } };
+  const open = deriveDay([], o);
+  assert.equal(open.overtimeMin, 300);
+  assert.equal(open.closed, false);
+  const late = deriveDay([], { ...o, now: t(23, 59) });
+  assert.equal(late.closed, true);
+  assert.equal(late.checkInAt, null);
+  assert.equal(late.workedMin, null);
+  // Came in on the day off: only the assigned hours count, not the stay.
+  const came = deriveDay([{ type: 'in', at: t(9), siteId: 's' }, { type: 'out', at: t(15), siteId: 's' }], { ...o, now: t(23, 59) });
+  assert.equal(came.overtimeMin, 300);
+  assert.equal(came.countedMin, 300);
+});

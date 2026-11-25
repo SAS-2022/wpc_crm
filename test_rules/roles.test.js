@@ -430,6 +430,8 @@ describe('user history stamp (2026-11-08)', () => {
 
 describe('live tracking per person (2026-11-18)', () => {
   test('only the SM / GM switch live tracking on or off', async () => {
+    // The user form writes it unchanged (null when not set): allowed (2026-11-25).
+    await assertSucceeds(setDoc(doc(fs('lm'), 'users/driver'), { name: 'Driver 4', liveTracking: null }, { merge: true }));
     await assertSucceeds(updateDoc(doc(fs('sm'), 'users/driver'), { liveTracking: false }));
     await assertSucceeds(updateDoc(doc(fs('gm'), 'users/op'), { liveTracking: true }));
     // The logistics manager edits their drivers but not this field.

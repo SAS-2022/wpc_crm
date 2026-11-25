@@ -192,11 +192,16 @@ class DayResult {
 /// (arrival → leaving) is overtime, no cap, time out and back not counted;
 /// false = a work day, the time after the end counts without "Start
 /// overtime". Same as `deriveDay` in functions/attendance.js.
+///
+/// [overtimeAssignedMin] (drivers, 2026-11-25): hours a manager assigned for
+/// the day — an ordinary day (no driving overtime, staying late is after
+/// hours) whose overtime is those minutes, also without a check-in.
 DayResult deriveDay(
   List<AttendanceEvent> events, {
   DateTime? start,
   required DateTime end,
   bool? overtimeDayOff,
+  int? overtimeAssignedMin,
   required DateTime closeAll,
   required DateTime now,
   required bool leavesSite,
@@ -209,6 +214,13 @@ DayResult deriveDay(
   List<BreakSlot> breaks = const [],
   int? breakAllowanceMin,
 }) {
+  final assigned = overtimeAssignedMin != null && overtimeAssignedMin > 0 ? overtimeAssignedMin : null;
+  final assignedDayOff = assigned != null && overtimeDayOff == true;
+  if (assigned != null) {
+    overtimeDayOff = null;
+    overtimeAllowed = false;
+    drive = null;
+  }
   final otDay = overtimeDayOff != null;
   final otDayOff = overtimeDayOff == true;
   if (otDayOff) {
@@ -418,6 +430,11 @@ DayResult deriveDay(
   final breakTotal = breakAllowanceMin == null ? null : _minutes(breakTime);
   final breakOver = breakTotal == null ? null : (breakTotal - breakAllowanceMin! > 0 ? breakTotal - breakAllowanceMin : 0);
   if (counted != null && (breakOver ?? 0) > 0) counted = counted - breakOver! < 0 ? 0 : counted - breakOver;
+  if (assigned != null) {
+    // Staying late isn't overtime; the assigned hours are (on top of the normal day).
+    overtime = assigned;
+    if (counted != null) counted = (assignedDayOff ? 0 : counted) + assigned;
+  }
   final late = checkInAt == null || start == null ? null : lateMinutes(checkInAt.difference(start));
   // Overtime started, no exit / arrival seen and not seen up to the cap: when it ended is unknown.
   final endUnknown = closed && outType == 'auto' && overtimeOn && checkOutAt!.isBefore(later(end, checkInAt!).add(cap));

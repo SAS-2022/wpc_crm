@@ -48,7 +48,10 @@ class OvertimeReview {
 
 /// A manager allowed overtime on this day (`attendance.overtimeDay`).
 class OvertimeDayInfo {
-  const OvertimeDayInfo({required this.byId, this.note = '', required this.dayOff});
+  const OvertimeDayInfo({required this.byId, this.note = '', required this.dayOff, this.assignedMin});
+
+  /// Assigned overtime minutes (drivers, 2026-11-25); null = recorded as usual.
+  final int? assignedMin;
 
   final String byId;
   final String note;
@@ -111,7 +114,11 @@ class AttendanceRecord {
     // Overtime under [minOvertimeMin] counts as none, also on days the server
     // saved before that rule (2026-11-10): after-hours time, nothing to approve.
     final storedOvertime = (d['overtimeMin'] as num?)?.toInt();
-    final short = storedOvertime != null && storedOvertime > 0 && storedOvertime < minOvertimeMin ? storedOvertime : 0;
+    // Assigned overtime (drivers, 2026-11-25) is never "too short".
+    final assigned = d['overtimeDay'] is Map && ((d['overtimeDay'] as Map)['assignedMin'] as num? ?? 0) > 0;
+    final short = !assigned && storedOvertime != null && storedOvertime > 0 && storedOvertime < minOvertimeMin
+        ? storedOvertime
+        : 0;
     DateTime? time(String k) => (d[k] as Timestamp?)?.toDate();
     return AttendanceRecord(
       uid: d['uid'] as String? ?? '',
@@ -167,6 +174,10 @@ class AttendanceRecord {
             byId: v['byId'] as String? ?? '',
             note: v['note'] as String? ?? '',
             dayOff: v['dayOff'] == true,
+            assignedMin: switch ((v['assignedMin'] as num?)?.toInt()) {
+              final m? when m > 0 => m,
+              _ => null,
+            },
           ),
         _ => null,
       },
@@ -253,6 +264,7 @@ class AttendanceRecord {
       start: hours.days.contains(day.weekday) ? day.add(Duration(minutes: hours.startMinute)) : null,
       end: day.add(Duration(minutes: hours.endMinute)),
       overtimeDayOff: overtimeDay?.dayOff,
+      overtimeAssignedMin: overtimeDay?.assignedMin,
       closeAll: day.add(const Duration(hours: 23, minutes: 55)),
       now: now ?? DateTime.now(),
       leavesSite: leavesSite,

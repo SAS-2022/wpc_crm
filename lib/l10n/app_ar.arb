@@ -2266,5 +2266,13 @@
   "kamDeleteMeetingConfirm": "سيتم حذف الاجتماع و{count, plural, =1{مهمته} other{{count} مهام}}.",
   "notifKamMeeting": "حدد {name} اجتماعًا معك بتاريخ {day}{count, plural, =0{} =1{ مع مهمة واحدة} other{ مع {count} مهام}}",
   "notifKamTasksAdded": "أضاف {name} {count, plural, =1{مهمة} other{{count} مهام}} إلى اجتماعك بتاريخ {day}",
-  "notifKamTaskDone": "أنهى {name} «{task}»: «{comment}»"
+  "notifKamTaskDone": "أنهى {name} «{task}»: «{comment}»",
+  "overtimeRecordedKind": "تسجيل البقاء بعد الدوام",
+  "overtimeAssignedKind": "تخصيص ساعات (السائقون)",
+  "overtimeRecordedHelp": "يُسجَّل الوقت الذي يبقونه بعد نهاية الدوام عملاً إضافياً وينتظر الموافقة.",
+  "overtimeAssignedHelp": "للسائقين فقط. الساعات التي تخصّصها هي عملهم الإضافي في ذلك اليوم، معتمدة فوراً وتُحتسب حتى دون تسجيل حضور. البقاء بعد الدوام في ذلك اليوم لا يُسجَّل عملاً إضافياً.",
+  "overtimeAssignedHoursLabel": "ساعات العمل الإضافي",
+  "overtimeAssignedHours": "مخصّص: {hours}",
+  "overtimeAssignedToday": "خصّص لك {name} {hours} عملاً إضافياً اليوم – البقاء بعد الدوام لا يُسجَّل عملاً إضافياً",
+  "notifOvertimeAssigned": "خصّص لك {name} {hours} عملاً إضافياً يوم {date} – البقاء بعد الدوام في ذلك اليوم لا يُسجَّل عملاً إضافياً"
 }

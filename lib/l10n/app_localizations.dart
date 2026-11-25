@@ -13721,6 +13721,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} finished “{task}”: “{comment}”'**
   String notifKamTaskDone(String name, String task, String comment);
+
+  /// No description provided for @overtimeRecordedKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Record staying late'**
+  String get overtimeRecordedKind;
+
+  /// No description provided for @overtimeAssignedKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign hours (drivers)'**
+  String get overtimeAssignedKind;
+
+  /// No description provided for @overtimeRecordedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The time they stay after the end of the day is recorded as overtime and waits for approval.'**
+  String get overtimeRecordedHelp;
+
+  /// No description provided for @overtimeAssignedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Only drivers. The hours you give are their overtime for that day, approved at once and counted even without a check-in. Staying late that day is not recorded as overtime.'**
+  String get overtimeAssignedHelp;
+
+  /// No description provided for @overtimeAssignedHoursLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Overtime hours'**
+  String get overtimeAssignedHoursLabel;
+
+  /// No description provided for @overtimeAssignedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned: {hours}'**
+  String overtimeAssignedHours(String hours);
+
+  /// No description provided for @overtimeAssignedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} gave you {hours} of overtime today – staying late isn\'t recorded as overtime'**
+  String overtimeAssignedToday(String name, String hours);
+
+  /// No description provided for @notifOvertimeAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} gave you {hours} of overtime on {date} – staying late that day isn\'t recorded as overtime'**
+  String notifOvertimeAssigned(String name, String date, String hours);
 }
 
 class _AppLocalizationsDelegate

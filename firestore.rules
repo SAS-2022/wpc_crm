@@ -84,7 +84,10 @@ service cloud.firestore {
       // Never on their own record (2026-11-16: HR is itself one of hrRoles()).
       allow update: if active() && stampOk() && extraRolesKept() && request.auth.uid != uid
         && resource.data.role in managedRoles() && request.resource.data.role in managedRoles()
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt', 'liveTracking']);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approval', 'updateRemindedAt'])
+        // The user form writes `liveTracking` as it is (null when not set):
+        // allowed as long as it doesn't change (2026-11-25, LM saves failed).
+        && request.resource.data.get('liveTracking', null) == resource.data.get('liveTracking', null);
       // Self-registration: a new account creates its own profile, inactive
       // and pending, with no role; the sales manager / GM approve it.
       allow create: if request.auth != null && request.auth.uid == uid
@@ -113,7 +116,11 @@ service cloud.firestore {
       allow update: if isManagerUser() && request.auth.uid != uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['overtimeAllowed', 'overtimeMaxMin', 'changedBy', 'changedAt']) && stampOk()
         && (resource.data.get('managerId', null) == request.auth.uid
-            || (deptOf(resource.data) != null && deptOf(resource.data) == deptOf(me())));
+            || (deptOf(resource.data) != null && deptOf(resource.data) == deptOf(me()))
+            // 2026-11-25: a warehouse supervisor their own people, the
+            // logistics / factory manager the roles they manage.
+            || resource.data.get('supervisorId', null) == request.auth.uid
+            || resource.data.role in managedRoles());
       // HR sets each person's joining date and department (2026-10-24).
       allow update: if managesHr()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joiningDate', 'department', 'changedBy', 'changedAt']) && stampOk();
@@ -512,7 +519,12 @@ service cloud.firestore {
         && request.resource.data.uid == otId.split('_')[0]
         && otId == request.resource.data.uid + '_' + request.resource.data.date
         && request.resource.data.uid != request.auth.uid
-        && request.resource.data.byId == request.auth.uid;
+        && request.resource.data.byId == request.auth.uid
+        // Assigned overtime hours (2026-11-25): drivers only, 15 min – 12 h.
+        && (!('assignedMin' in request.resource.data)
+          || (request.resource.data.assignedMin is int
+            && request.resource.data.assignedMin >= 15 && request.resource.data.assignedMin <= 720
+            && get(/databases/$(database)/documents/users/$(request.resource.data.uid)).data.role == 'driver'));
       allow delete: if isHrArea() || isManagerUser();
     }
 

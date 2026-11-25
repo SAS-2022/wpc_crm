@@ -8486,4 +8486,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifKamTaskDone(String name, String task, String comment) {
     return '$name finished “$task”: “$comment”';
   }
+
+  @override
+  String get overtimeRecordedKind => 'Record staying late';
+
+  @override
+  String get overtimeAssignedKind => 'Assign hours (drivers)';
+
+  @override
+  String get overtimeRecordedHelp =>
+      'The time they stay after the end of the day is recorded as overtime and waits for approval.';
+
+  @override
+  String get overtimeAssignedHelp =>
+      'Only drivers. The hours you give are their overtime for that day, approved at once and counted even without a check-in. Staying late that day is not recorded as overtime.';
+
+  @override
+  String get overtimeAssignedHoursLabel => 'Overtime hours';
+
+  @override
+  String overtimeAssignedHours(String hours) {
+    return 'Assigned: $hours';
+  }
+
+  @override
+  String overtimeAssignedToday(String name, String hours) {
+    return '$name gave you $hours of overtime today – staying late isn\'t recorded as overtime';
+  }
+
+  @override
+  String notifOvertimeAssigned(String name, String date, String hours) {
+    return '$name gave you $hours of overtime on $date – staying late that day isn\'t recorded as overtime';
+  }
 }

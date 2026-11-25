@@ -136,8 +136,17 @@ function breakTaker(breaks) {
  * on a work day the time after the end counts as overtime without the
  * "Start overtime?" confirmation (up to the person's cap). Overtime
  * approval as usual. Same in attendance_rules.dart.
+ *
+ * Assigned overtime (2026-11-25, user; drivers only): o.overtimeDay.assignedMin
+ * = hours a manager gave the driver for the day. The day then runs as an
+ * ordinary day (no driving overtime, nothing recorded for staying late: the
+ * time after the end is after-hours) and the overtime is the assigned
+ * minutes, also without a check-in (user decision); a day without one closes
+ * at 23:55 with no check-out.
  */
 function deriveDay(events, o) {
+  const assignedMin = o.overtimeDay && o.overtimeDay.assignedMin > 0 ? Math.round(o.overtimeDay.assignedMin) : null;
+  if (assignedMin !== null) o = { ...o, overtimeDay: null, overtimeAllowed: false, drive: null, assignedDayOff: o.overtimeDay.dayOff === true };
   const otDay = o.overtimeDay && typeof o.overtimeDay === 'object' ? o.overtimeDay : null;
   const otDayOff = otDay !== null && otDay.dayOff === true;
   // Day off: the work day "ends" at midnight, so everything is after it.
@@ -282,8 +291,10 @@ function deriveDay(events, o) {
       close(overtimeOn && seenAt !== null ? Math.min(Math.max(seenAt, from), from + capMs) : from, 'auto');
     }
   }
+  // Assigned overtime with no check-in: nothing to wait for after 23:55.
+  if (assignedMin !== null && s.checkInAt === null && o.now >= o.closeAllMs) s.closed = true;
   let workedMin = null, countedMin = null, overtimeMin = null, afterHoursMin = null;
-  if (s.closed) {
+  if (s.closed && s.checkInAt !== null) {
     workedMin = Math.max(0, Math.round((s.checkOutAt - s.checkInAt - awayBefore - awayAfter) / MINUTE));
     const extra = Math.max(0, s.checkOutAt - Math.max(o.endMs, s.checkInAt) - awayAfter);
     let overtime = overtimeOn ? Math.min(extra, capMs) : 0;
@@ -301,13 +312,18 @@ function deriveDay(events, o) {
   const breakMin = tracksBreaks ? Math.round(breakMs / MINUTE) : null;
   const breakOverMin = tracksBreaks ? Math.max(0, breakMin - o.breakAllowanceMin) : null;
   if (countedMin !== null && breakOverMin) countedMin = Math.max(0, countedMin - breakOverMin);
+  if (assignedMin !== null) {
+    // Staying late isn't overtime; the assigned hours are (counted on top of the normal day).
+    overtimeMin = assignedMin;
+    if (countedMin !== null) countedMin = (o.assignedDayOff ? 0 : countedMin) + assignedMin;
+  }
   // Overtime started, no exit / arrival seen and not seen up to the cap: when it ended is unknown.
   const overtimeEndUnknown = s.closed && s.checkOutType === 'auto' && overtimeOn
     && s.checkOutAt < Math.max(o.endMs, s.checkInAt) + capMs;
   const lateMin = s.checkInAt === null || o.startMs === null || o.startMs === undefined
     ? null : lateMinutes(s.checkInAt - o.startMs, o.graceMin ?? LATE_GRACE_MIN);
   return { ...s, workedMin, countedMin, overtimeMin, afterHoursMin, lateMin, awayMin, breakMin, breakOverMin, lastSeenAt: seenAt,
-    overtimeOn, overtimeConfirmedAt: confirmedAt, overtimeDeclined: declined, overtimeEndUnknown };
+    overtimeOn, overtimeConfirmedAt: confirmedAt, overtimeDeclined: declined, overtimeEndUnknown, overtimeAssignedMin: assignedMin };
 }
 
 /**

@@ -85,4 +85,10 @@ describe('overtime permission', () => {
     await assertSucceeds(updateDoc(doc(fs('chosen'), 'users/picked'), { overtimeAllowed: true }));
     await assertFails(updateDoc(doc(fs('ws'), 'users/acc'), { overtimeAllowed: true }));
   });
+
+  test('a warehouse supervisor their own people (2026-11-25)', async () => {
+    await assertSucceeds(updateDoc(doc(fs('ws'), 'users/worker'), { overtimeAllowed: true, overtimeMaxMin: 120 }));
+    await assertFails(updateDoc(doc(fs('ws'), 'users/other'), { overtimeAllowed: true }));
+    await assertFails(updateDoc(doc(fs('ws'), 'users/worker'), { overtimeAllowed: true, name: 'x' }));
+  });
 });

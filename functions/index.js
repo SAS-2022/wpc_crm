@@ -24,6 +24,13 @@ function rolesOf(u) {
   const extra = get('extraRoles');
   return [get('role'), ...(Array.isArray(extra) ? extra : [])].filter(Boolean);
 }
+/** "3 h" / "2 h 30 min" (Arabic: "3 س" / "2 س 30 د") for push texts. */
+function hoursText(min, lang) {
+  const h = Math.floor(min / 60), m = min % 60;
+  const [hs, ms] = lang === 'ar' ? ['س', 'د'] : ['h', 'min'];
+  return [h ? `${h} ${hs}` : '', m ? `${m} ${ms}` : ''].filter(Boolean).join(' ');
+}
+
 function hasRole(u, ...roles) {
   const mine = rolesOf(u);
   return roles.flat().some((r) => mine.includes(r));
@@ -221,7 +228,9 @@ const TEXTS = {
       absence: () => "reported they won't come to work",
     },
     breakApproved: (n, c) => `${n} approved your ${c} min break – you may leave the site`,
-    overtimeDayAllowed: (n, c, d, o, x) => `${n} allowed you overtime on ${d} – your time at the site counts as overtime${x.note ? ` – ${x.note}` : ''}`,
+    overtimeDayAllowed: (n, c, d, o, x) => (c > 0
+      ? `${n} gave you ${hoursText(c, 'en')} of overtime on ${d} – staying late that day isn't recorded as overtime`
+      : `${n} allowed you overtime on ${d} – your time at the site counts as overtime`) + (x.note ? ` – ${x.note}` : ''),
     breakRejected: (n, c, d, o, x) => `${n} didn't approve your break${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ${x.renewal} expires in ${c} days (${d})`
@@ -314,7 +323,9 @@ const TEXTS = {
       absence: () => 'أبلغ أنه لن يحضر إلى العمل',
     },
     breakApproved: (n, c) => `وافق ${n} على استراحتك (${c} دقيقة) – يمكنك مغادرة الموقع`,
-    overtimeDayAllowed: (n, c, d, o, x) => `سمح لك ${n} بالعمل الإضافي يوم ${d} – يُحتسب وقتك في الموقع عملاً إضافياً${x.note ? ` – ${x.note}` : ''}`,
+    overtimeDayAllowed: (n, c, d, o, x) => (c > 0
+      ? `خصّص لك ${n} ${hoursText(c, 'ar')} عملاً إضافياً يوم ${d} – البقاء بعد الدوام في ذلك اليوم لا يُسجَّل عملاً إضافياً`
+      : `سمح لك ${n} بالعمل الإضافي يوم ${d} – يُحتسب وقتك في الموقع عملاً إضافياً`) + (x.note ? ` – ${x.note}` : ''),
     breakRejected: (n, c, d, o, x) => `لم يوافق ${n} على استراحتك${x.note ? ` – ${x.note}` : ''}`,
     vehicleRenewalDue: (n, c, d, o, x) => (c > 0
       ? `${x.vehicle}: ينتهي ${x.renewal} بعد ${c} يوماً (${d})`
@@ -1331,13 +1342,19 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
   if (otDoc.exists) {
     const holidays = options.startMs === null ? [] : (await admin.firestore().doc('settings/holidays').get()).get('dates') || [];
     options.overtimeDay = { dayOff: options.startMs === null || holidays.includes(data.date) };
+    // Assigned overtime hours (drivers, 2026-11-25): replaces what staying late would record.
+    if (user.role === 'driver' && otDoc.get('assignedMin') > 0) options.overtimeDay.assignedMin = otDoc.get('assignedMin');
   } else options.overtimeDay = null;
+  const assignedMin = options.overtimeDay?.assignedMin ?? null;
+  if (assignedMin) options.drive = null;
   const otField = otDoc.exists
-    ? { byId: otDoc.get('byId') || null, note: otDoc.get('note') || '', dayOff: options.overtimeDay.dayOff }
+    ? { byId: otDoc.get('byId') || null, note: otDoc.get('note') || '', dayOff: options.overtimeDay.dayOff,
+      ...(assignedMin ? { assignedMin } : {}) }
     : null;
   const oldOt = data.overtimeDay ?? null;
   const sameOt = oldOt === null || otField === null ? oldOt === otField
-    : oldOt.byId === otField.byId && oldOt.note === otField.note && oldOt.dayOff === otField.dayOff;
+    : oldOt.byId === otField.byId && oldOt.note === otField.note && oldOt.dayOff === otField.dayOff
+      && (oldOt.assignedMin ?? null) === (otField.assignedMin ?? null);
   if (!sameOt) {
     await ref.update({ overtimeDay: otField ?? admin.firestore.FieldValue.delete() });
     return; // runs again with it
@@ -1363,10 +1380,22 @@ async function updateAttendance(ref, data, hours, now, { graceMin, awayGraceMin,
   // For the managers' approval (Attendance page, Home card): 'pending' until
   // a manager saves `overtimeReview` {minutes, byId, at, note, rejected?}
   // (rejected 2026-10-27: minutes 0).
-  d.overtimeStatus = d.closed && d.overtimeMin > 0
-    ? (data.overtimeReview ? (data.overtimeReview.rejected === true ? 'rejected' : 'approved') : 'pending')
-    : d.overtimeOn && !d.closed ? 'running' : null;
   const update = { ...arrival.update };
+  // Assigned overtime is approved by assigning it (user decision 2026-11-25):
+  // an automatic review, kept in step with the hours; a manager's own review stays.
+  let review = data.overtimeReview ?? null;
+  if (assignedMin && (!review || (review.assigned === true && review.minutes !== assignedMin))) {
+    review = { minutes: assignedMin, byId: otField.byId, at: admin.firestore.Timestamp.fromMillis(now), note: otField.note, assigned: true };
+    update.overtimeReview = review;
+  } else if (!assignedMin && review?.assigned === true) {
+    review = null; // assignment taken back
+    update.overtimeReview = admin.firestore.FieldValue.delete();
+  }
+  d.overtimeStatus = assignedMin
+    ? (review?.rejected === true ? 'rejected' : 'approved')
+    : d.closed && d.overtimeMin > 0
+    ? (review ? (review.rejected === true ? 'rejected' : 'approved') : 'pending')
+    : d.overtimeOn && !d.closed ? 'running' : null;
   if (data.overtimeUnconfirmed !== undefined) update.overtimeUnconfirmed = admin.firestore.FieldValue.delete();
   for (const k of DERIVED) {
     const v = TIME_FIELDS.includes(k) && d[k] !== null ? admin.firestore.Timestamp.fromMillis(d[k]) : d[k];
@@ -1471,11 +1500,15 @@ exports.overtimeDayWritten = onDocumentWritten('overtime_days/{id}', async (even
   if (day.exists) {
     const hours = workHours((await admin.database().ref('settings/workHours').get()).val());
     await updateAttendance(day.ref, day.data(), hours, Date.now(), await attendanceSettings());
+  } else if (after?.assignedMin > 0) {
+    // Assigned hours count without a check-in (2026-11-25): the day is made
+    // here, and attendanceUpdated works it out.
+    await day.ref.set({ uid: d.uid, date: d.date, month: d.date.slice(0, 7), events: [] });
   }
   if (after && !before) {
     await db.doc(`notifications/otDay_${d.uid}_${d.date}`).set({
       toId: d.uid, fromId: d.byId || '', ownerId: d.uid, type: 'overtimeDayAllowed', date: d.date,
-      note: (d.note || '').slice(0, 140), count: 0, read: false,
+      note: (d.note || '').slice(0, 140), count: after.assignedMin > 0 ? after.assignedMin : 0, read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
@@ -1542,6 +1575,7 @@ async function driverOvertime(hours, now) {
     const ref = db.doc(`attendance/${u.id}_${date}`);
     const day = await ref.get();
     if (!day.exists || !day.get('checkInAt') || day.get('driveOvertime')) continue;
+    if (day.get('overtimeDay')?.assignedMin > 0) continue; // hours assigned: staying late isn't recorded
     const [history, places] = await Promise.all([rtdb.ref(`location_history/${u.id}/${date}`).get(), driverPlaces(user)]);
     const r = driveDecide({ points: Object.values(history.val() || {}), endMs, now, homeGraceMs, places });
     if (r === 'wait') continue;
@@ -1560,6 +1594,7 @@ async function driverOvertime(hours, now) {
   for (const doc of running.docs) {
     const data = doc.data();
     if (data.driveOvertime.kind === 'field') continue; // fieldOvertime below
+    if (data.overtimeDay?.assignedMin > 0) continue; // assigned after it started: not recorded
     const startAt = data.driveOvertime.startAt?.toMillis?.();
     if (!startAt || !data.uid) continue;
     const user = (await db.doc(`users/${data.uid}`).get()).data() || {};

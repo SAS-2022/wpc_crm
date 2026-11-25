@@ -192,6 +192,7 @@ class _OvertimeDaysCard extends ConsumerWidget {
                   dense: true,
                   title: Text(byId[d.uid]?.name ?? '?'),
                   subtitle: Text([
+                    if (d.assignedMin != null) l10n.overtimeAssignedHours(formatMinutes(d.assignedMin!)),
                     if (d.note.isNotEmpty) d.note,
                     l10n.allowedBy(byId[d.byId]?.name ?? ''),
                   ].join(' · ')),
@@ -237,6 +238,10 @@ class _OvertimeDayDialogState extends ConsumerState<_OvertimeDayDialog> {
   final _note = TextEditingController();
   String _search = '';
 
+  /// Assigned hours (drivers only, 2026-11-25) instead of recording the time stayed late.
+  bool _assign = false;
+  int _assignedMin = 120;
+
   @override
   void dispose() {
     _note.dispose();
@@ -248,8 +253,9 @@ class _OvertimeDayDialogState extends ConsumerState<_OvertimeDayDialog> {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     final now = DateTime.now();
+    final drivers = widget.people.where((u) => u.role == UserRole.driver).toList();
     final shown = [
-      for (final u in widget.people)
+      for (final u in _assign ? drivers : widget.people)
         if (_search.isEmpty || searchHas(u.name, _search) || _picked.contains(u.id)) u,
     ];
     return AlertDialog(
@@ -274,6 +280,39 @@ class _OvertimeDayDialogState extends ConsumerState<_OvertimeDayDialog> {
                 if (picked != null) setState(() => _date = picked);
               },
             ),
+            if (drivers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: false, label: Text(l10n.overtimeRecordedKind)),
+                  ButtonSegment(value: true, label: Text(l10n.overtimeAssignedKind)),
+                ],
+                selected: {_assign},
+                onSelectionChanged: (v) => setState(() {
+                  _assign = v.first;
+                  // Only drivers can be given hours.
+                  if (_assign) _picked.removeWhere((id) => !drivers.any((u) => u.id == id));
+                }),
+              ),
+              const SizedBox(height: 4),
+              Text(_assign ? l10n.overtimeAssignedHelp : l10n.overtimeRecordedHelp,
+                  style: Theme.of(context).textTheme.bodySmall),
+              if (_assign)
+                Row(
+                  children: [
+                    Expanded(child: Text(l10n.overtimeAssignedHoursLabel)),
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: _assignedMin <= 30 ? null : () => setState(() => _assignedMin -= 30),
+                    ),
+                    Text(formatMinutes(_assignedMin), style: Theme.of(context).textTheme.titleMedium),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: _assignedMin >= 720 ? null : () => setState(() => _assignedMin += 30),
+                    ),
+                  ],
+                ),
+            ],
             const SizedBox(height: 8),
             TextField(controller: _note, decoration: InputDecoration(labelText: l10n.adjustNote, isDense: true)),
             const SizedBox(height: 8),
@@ -310,6 +349,7 @@ class _OvertimeDayDialogState extends ConsumerState<_OvertimeDayDialog> {
                         people: [for (final u in widget.people) if (_picked.contains(u.id)) u],
                         date: attendanceDay(_date!),
                         note: _note.text.trim(),
+                        assignedMin: _assign ? _assignedMin : null,
                       );
                   if (context.mounted) Navigator.pop(context);
                 },

@@ -3822,5 +3822,16 @@
   "notifKamTasksAdded": "{name} added {count, plural, =1{a task} other{{count} tasks}} to your meeting of {day}",
   "@notifKamTasksAdded": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}, "day": {"type": "String"}}},
   "notifKamTaskDone": "{name} finished “{task}”: “{comment}”",
-  "@notifKamTaskDone": {"placeholders": {"name": {"type": "String"}, "task": {"type": "String"}, "comment": {"type": "String"}}}
+  "@notifKamTaskDone": {"placeholders": {"name": {"type": "String"}, "task": {"type": "String"}, "comment": {"type": "String"}}},
+  "overtimeRecordedKind": "Record staying late",
+  "overtimeAssignedKind": "Assign hours (drivers)",
+  "overtimeRecordedHelp": "The time they stay after the end of the day is recorded as overtime and waits for approval.",
+  "overtimeAssignedHelp": "Only drivers. The hours you give are their overtime for that day, approved at once and counted even without a check-in. Staying late that day is not recorded as overtime.",
+  "overtimeAssignedHoursLabel": "Overtime hours",
+  "overtimeAssignedHours": "Assigned: {hours}",
+  "overtimeAssignedToday": "{name} gave you {hours} of overtime today – staying late isn't recorded as overtime",
+  "@overtimeAssignedHours": {"placeholders": {"hours": {"type": "String"}}},
+  "@overtimeAssignedToday": {"placeholders": {"name": {"type": "String"}, "hours": {"type": "String"}}},
+  "notifOvertimeAssigned": "{name} gave you {hours} of overtime on {date} – staying late that day isn't recorded as overtime",
+  "@notifOvertimeAssigned": {"placeholders": {"name": {"type": "String"}, "date": {"type": "String"}, "hours": {"type": "String"}}}
 }

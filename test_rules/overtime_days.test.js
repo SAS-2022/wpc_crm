@@ -13,6 +13,8 @@ const users = {
   sm: { role: 'sales_manager' },
   hr: { role: 'hr' },
   acc: { role: 'accounting' },
+  drv: { role: 'driver' },
+  fork: { role: 'forklift_driver' },
 };
 
 before(async () => {
@@ -55,4 +57,13 @@ test('the person reads their own (also before it exists); others do not', async 
   await assertFails(getDocs(collection(fs('acc'), 'overtime_days')));
   await assertFails(deleteDoc(doc(fs('worker'), 'overtime_days/worker_2026-11-13')));
   await assertSucceeds(deleteDoc(doc(fs('fm'), 'overtime_days/worker_2026-11-13')));
+});
+
+test('assigned overtime hours: drivers only (not forklift drivers), 15 min – 12 h (2026-11-25)', async () => {
+  const a = (uid, min, date = '2026-11-26') => ({ ...day(uid, 'sm', date), assignedMin: min });
+  await assertSucceeds(setDoc(doc(fs('sm'), 'overtime_days/drv_2026-11-26'), a('drv', 180)));
+  await assertFails(setDoc(doc(fs('sm'), 'overtime_days/fork_2026-11-26'), a('fork', 180)));
+  await assertFails(setDoc(doc(fs('sm'), 'overtime_days/worker_2026-11-26'), a('worker', 180)));
+  await assertFails(setDoc(doc(fs('sm'), 'overtime_days/drv_2026-11-27'), a('drv', 10, '2026-11-27')));
+  await assertFails(setDoc(doc(fs('sm'), 'overtime_days/drv_2026-11-28'), a('drv', 800, '2026-11-28')));
 });

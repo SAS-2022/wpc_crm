@@ -41,4 +41,37 @@ void main() {
     expect(d.overtimeOn, isTrue);
     expect(d.overtimeMin, 180);
   });
+
+  // Assigned overtime hours for drivers (2026-11-25), same as attendance.test.js.
+  test('assigned: staying late records nothing, the hours are the overtime', () {
+    final d = deriveDay([e(AttendanceEventType.in_, t(26, 8)), e(AttendanceEventType.out, t(26, 20))],
+        start: t(26, 8),
+        end: t(26, 17),
+        closeAll: t(26, 23, 55),
+        now: t(26, 23, 59),
+        leavesSite: true,
+        overtimeAllowed: true,
+        overtimeMaxMin: 180,
+        overtimeDayOff: false,
+        overtimeAssignedMin: 120,
+        drive: DriveOvertime(startAt: t(26, 17), endAt: t(26, 21), place: 'home'));
+    expect(d.overtimeMin, 120);
+    expect(d.afterHoursMin, 180);
+    expect(d.countedMin, 9 * 60 + 120);
+  });
+
+  test('assigned: counts without a check-in; on a day off only the hours count', () {
+    DayResult run(List<AttendanceEvent> ev) => deriveDay(ev,
+        end: t(27, 17),
+        closeAll: t(27, 23, 55),
+        now: t(27, 23, 59),
+        leavesSite: true,
+        overtimeAllowed: false,
+        overtimeDayOff: true,
+        overtimeAssignedMin: 300);
+    expect(run(const []).overtimeMin, 300);
+    final came = run([e(AttendanceEventType.in_, t(27, 9)), e(AttendanceEventType.out, t(27, 15))]);
+    expect(came.overtimeMin, 300);
+    expect(came.countedMin, 300);
+  });
 }

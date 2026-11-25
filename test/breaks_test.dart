@@ -140,12 +140,17 @@ void main() {
       u('ws', UserRole.warehouseSupervisor),
       u('w', UserRole.worker, supervisorId: 'ws'),
       u('sm', UserRole.salesManager),
+      u('lm', UserRole.logisticsManager),
+      u('drv', UserRole.driver),
     ];
     AppUser by(String id) => users.firstWhere((x) => x.id == id);
     expect(canSetOvertimeFor(by('accBoss'), by('acc'), users), isTrue);
     expect(canSetOvertimeFor(by('accBoss'), by('pw'), users), isFalse);
     expect(canSetOvertimeFor(by('fm'), by('pw'), users), isTrue);
-    expect(canSetOvertimeFor(by('ws'), by('w'), users), isFalse); // supervisor, not department head
+    // 2026-11-25: the warehouse supervisor their own people, the LM every driver.
+    expect(canSetOvertimeFor(by('ws'), by('w'), users), isTrue);
+    expect(canSetOvertimeFor(by('ws'), by('pw'), users), isFalse);
+    expect(canSetOvertimeFor(by('lm'), by('drv'), users), isTrue);
     expect(canSetOvertimeFor(by('sm'), by('w'), users), isTrue);
     expect(canSetOvertimeFor(by('accBoss'), by('accBoss'), users), isFalse);
   });

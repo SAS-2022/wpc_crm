@@ -111,6 +111,10 @@ bool canSetOvertimeFor(AppUser me, AppUser person, List<AppUser> users) {
   if (person.id == me.id || !person.active || !me.active) return false;
   if (me.can.isAdmin) return true;
   if (me.hasRole(UserRole.hr)) return UserRole.hrManagedRoles.contains(person.role);
+  // Warehouse supervisors their own people, the logistics manager every
+  // driver (2026-11-25, user).
+  if (person.supervisorId == me.id) return true;
+  if (me.can.managesDrivers && person.role.isDriver) return true;
   if (!me.isManager) return false;
   return departmentHeadsOf(person, users).contains(me.id) || directManagersOf(person, users).contains(me.id);
 }
