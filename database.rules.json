@@ -8,7 +8,7 @@
       }
     },
     "live_locations": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true",
         ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()",
@@ -16,14 +16,14 @@
       }
     },
     "presence": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true",
         ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()"
       }
     },
     "location_history": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true",
         "$day": {
@@ -35,7 +35,7 @@
       }
     },
     "route_snapped": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid || root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true"
       }
@@ -47,7 +47,7 @@
       }
     },
     "tracking_device": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && ((auth.uid === $uid && root.child('roles').child(auth.uid).exists()) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true))",
@@ -55,14 +55,14 @@
       }
     },
     "device_status": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'factory_manager' || root.child('role_extras').child(auth.uid).child('factory_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true) || (root.child('roles').child(auth.uid).val() === 'factory_manager' || root.child('role_extras').child(auth.uid).child('factory_manager').val() === true)",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true",
         ".write": "auth != null && auth.uid === $uid && root.child('roles').child(auth.uid).exists()"
       }
     },
     "tracking_events": {
-      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true)",
+      ".read": "(root.child('roles').child(auth.uid).val() === 'kam' || root.child('role_extras').child(auth.uid).child('kam').val() === true) || (root.child('roles').child(auth.uid).val() === 'sales_manager' || root.child('role_extras').child(auth.uid).child('sales_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'gm' || root.child('role_extras').child(auth.uid).child('gm').val() === true) || (root.child('roles').child(auth.uid).val() === 'logistics_manager' || root.child('role_extras').child(auth.uid).child('logistics_manager').val() === true) || (root.child('roles').child(auth.uid).val() === 'hr' || root.child('role_extras').child(auth.uid).child('hr').val() === true)",
       "$uid": {
         ".read": "root.child('driver_supervisors').child($uid).val() === auth.uid || root.child('location_viewers').child($uid).child(auth.uid).val() === true"
       }

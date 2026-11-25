@@ -1030,7 +1030,7 @@ exports.snapRoute = onCall({ timeoutSeconds: 120, maxInstances: 3 }, async (req)
   const db = admin.firestore();
   const me = await db.doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
-  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
+  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm', 'hr')) {
     const target = await db.doc(`users/${uid}`).get();
     if (!(await followsOrViews(me, req.auth.uid, target))) throw new HttpsError('permission-denied', 'Not your team');
   }
@@ -2153,7 +2153,7 @@ exports.buildTimeline = onCall({ timeoutSeconds: 60, maxInstances: 3 }, async (r
   const me = await db.doc(`users/${req.auth.uid}`).get();
   if (!me.exists || me.get('active') !== true) throw new HttpsError('permission-denied', 'Active users only');
   const target = uid === req.auth.uid ? me : await db.doc(`users/${uid}`).get();
-  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm')) {
+  if (uid !== req.auth.uid && !hasRole(me, 'sales_manager', 'gm', 'hr')) {
     if (!(await followsOrViews(me, req.auth.uid, target))) throw new HttpsError('permission-denied', 'Not your team');
   }
   const { hours, sites } = await timelineContext();

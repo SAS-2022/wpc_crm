@@ -378,7 +378,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
       }).toList();
       // Everyone else whose GPS is recorded for attendance (sales manager /
       // GM: all of them; department heads: their own people).
-      final staffGroup = !driversOnly && ((me?.can.isAdmin ?? false) || teamScoped);
+      final staffGroup = !driversOnly && ((me?.seesAllPeople ?? false) || teamScoped);
       final staffAll = !staffGroup
           ? const <AppUser>[]
           : users
@@ -403,7 +403,7 @@ class _PeopleMapScreenState extends ConsumerState<PeopleMapScreen> {
         if (staffGroup && (!teamScoped || staff.isNotEmpty)) _Group.staff,
       ];
       final showGroups =
-          !driversOnly && (teamScoped ? groupOptions.length > 2 : (driverCount > 0 || (me?.can.isAdmin ?? false)));
+          !driversOnly && (teamScoped ? groupOptions.length > 2 : (driverCount > 0 || (me?.seesAllPeople ?? false)));
       final picked = driversOnly
           ? _Group.drivers
           : showGroups && groupOptions.contains(_group)

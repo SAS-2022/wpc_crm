@@ -63,7 +63,14 @@ void main() {
       expect(u(r).seesEmployeesMap, isTrue, reason: r.name);
     }
     expect(u(UserRole.salesExec).seesEmployeesMap, isFalse);
-    expect(u(UserRole.hr).seesEmployeesMap, isFalse);
+    // HR sees every employee on the maps and Phone status (2026-11-25, user).
+    final hr = u(UserRole.hr);
+    expect(hr.seesEmployeesMap, isTrue);
+    expect(hr.seesLiveTracking, isTrue);
+    expect(hr.seesRouteHistory, isTrue);
+    expect(hr.seesPhoneStatus, isTrue);
+    expect(hr.seesAllPeople, isTrue);
+    expect(hr.teamScopedMaps, isFalse);
     expect(u(UserRole.accounting).seesEmployeesMap, isFalse);
     // "Is a manager" (e.g. the accounting manager): their department.
     expect(u(UserRole.accounting, manager: true).seesEmployeesMap, isTrue);

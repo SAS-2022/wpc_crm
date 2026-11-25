@@ -84,7 +84,7 @@ Map<String, Map<Object?, Object?>> _children(DataSnapshot s) => {
     };
 
 /// The roles whose RTDB rules let them read every person's location data.
-const readsAllLocations = {UserRole.kam, UserRole.salesManager, UserRole.gm, UserRole.logisticsManager};
+const readsAllLocations = {UserRole.kam, UserRole.salesManager, UserRole.gm, UserRole.logisticsManager, UserRole.hr};
 
 /// Everyone else (warehouse supervisors, department heads, other managers)
 /// may read only the people under them — RTDB `location_viewers/{uid}`

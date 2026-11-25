@@ -124,14 +124,15 @@ enum UserRole {
   /// SM, GM and logistics manager (read everyone's positions), the
   /// warehouse supervisor and the factory manager (the people under them);
   /// "Is a manager" people too ([AppUser.seesEmployeesMap]).
+  /// HR sees everyone there too (2026-11-25, user).
   bool get seesEmployeesMap =>
-      isSupervisor || this == logisticsManager || this == warehouseSupervisor || this == factoryManager;
+      isSupervisor || this == logisticsManager || this == warehouseSupervisor || this == factoryManager || this == hr;
 
   /// Can have a warehouse supervisor (`users.supervisorId`; drivers since
   /// 2026-10-23, workers since 2026-11-04).
   bool get supervisedByWarehouse => this == driver || this == worker || this == forkliftDriver;
 
-  bool get seesPhoneStatus => isSupervisor || this == logisticsManager || this == factoryManager;
+  bool get seesPhoneStatus => isSupervisor || this == logisticsManager || this == factoryManager || this == hr;
 
   /// Manager roles: always a manager, can be someone's direct manager
   /// (2026-10-23). Anyone else becomes one with [AppUser.markedManager].
@@ -504,7 +505,7 @@ class AppUser {
   /// warehouse supervisors; the HR area ([UserRole.canSeeHr]) sees everyone.
   /// The employee map with the people under them (department heads,
   /// warehouse supervisors) or everyone (SM / GM).
-  bool get seesEmployeesMap => role.seesEmployeesMap || isManager;
+  bool get seesEmployeesMap => can.seesEmployeesMap || isManager;
 
   bool get seesTeamAttendance => role.canSeeHr || isManager || role == UserRole.warehouseSupervisor;
 
@@ -512,12 +513,16 @@ class AppUser {
   /// manager" people; user request 2026-11-14) also get Live tracking, Route
   /// history and Phone status, each with only the people under them
   /// ([peopleUnder]); KAM / SM / GM as before.
-  bool get seesLiveTracking => can.isSupervisor || isManager;
-  bool get seesRouteHistory => can.isSupervisor || can.seesDrivers || isManager;
+  bool get seesLiveTracking => can.isSupervisor || isManager || hasRole(UserRole.hr);
+  bool get seesRouteHistory => can.isSupervisor || can.seesDrivers || isManager || hasRole(UserRole.hr);
   bool get seesPhoneStatus => can.seesPhoneStatus || isManager;
 
-  /// Sees only the people under them on the people maps (not KAM / SM / GM).
-  bool get teamScopedMaps => !can.isSupervisor;
+  /// Sees every employee on the people maps and Phone status like the SM /
+  /// GM: HR (2026-11-25, user: HR must see all employees).
+  bool get seesAllPeople => can.isAdmin || hasRole(UserRole.hr);
+
+  /// Sees only the people under them on the people maps (not KAM / SM / GM / HR).
+  bool get teamScopedMaps => !can.isSupervisor && !hasRole(UserRole.hr);
 
   /// Joining date 'yyyy-MM-dd' (HR, 2026-10-24): their leave year starts
   /// on its anniversary (`leaveYearOf` in leave_rules.dart); null = the

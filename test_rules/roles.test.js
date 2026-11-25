@@ -69,8 +69,11 @@ describe('back-office roles see and create no sales data', () => {
     test(`${uid}: no clients, visits or live locations`, async () => {
       await assertFails(getDoc(doc(fs(uid), 'clients/c1')));
       await assertFails(getDoc(doc(fs(uid), 'visits/v1')));
-      await assertFails(get(ref(rtdb(uid), 'live_locations')));
-      await assertFails(get(ref(rtdb(uid), 'location_history')));
+      // HR reads every employee's location data (2026-11-25, user); the others don't.
+      const loc = uid === 'hr' ? assertSucceeds : assertFails;
+      await loc(get(ref(rtdb(uid), 'live_locations')));
+      await loc(get(ref(rtdb(uid), 'location_history')));
+      await loc(get(ref(rtdb(uid), 'device_status')));
     });
 
     test(`${uid}: can't add clients, visits or plan items for themselves`, async () => {

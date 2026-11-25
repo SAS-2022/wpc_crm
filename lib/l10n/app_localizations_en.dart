@@ -6692,11 +6692,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get addPastLeave => 'Add past leave';
+  String get addPastLeave => 'Record leave';
 
   @override
   String get pastLeaveHelp =>
-      'Leave already taken, entered by date (for example before the app was used). It is saved as approved and counts in the balance of its leave year.';
+      'Leave the employee didn\'t request in the app: already taken, going on now or booked ahead. It is saved as approved and counts in the balance of its leave year.';
 
   @override
   String get pastLeaveType => 'Leave type';
@@ -6716,7 +6716,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'The dates must be in one leave year. Enter each leave year separately.';
 
   @override
-  String get pastLeaveRecorded => 'Past record entered by HR';
+  String get pastLeaveRecorded => 'Recorded by HR (no request)';
 
   @override
   String get deletePastLeave => 'Delete this past record?';

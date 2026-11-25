@@ -10960,13 +10960,13 @@ abstract class AppLocalizations {
   /// No description provided for @addPastLeave.
   ///
   /// In en, this message translates to:
-  /// **'Add past leave'**
+  /// **'Record leave'**
   String get addPastLeave;
 
   /// No description provided for @pastLeaveHelp.
   ///
   /// In en, this message translates to:
-  /// **'Leave already taken, entered by date (for example before the app was used). It is saved as approved and counts in the balance of its leave year.'**
+  /// **'Leave the employee didn\'t request in the app: already taken, going on now or booked ahead. It is saved as approved and counts in the balance of its leave year.'**
   String get pastLeaveHelp;
 
   /// No description provided for @pastLeaveType.
@@ -11002,7 +11002,7 @@ abstract class AppLocalizations {
   /// No description provided for @pastLeaveRecorded.
   ///
   /// In en, this message translates to:
-  /// **'Past record entered by HR'**
+  /// **'Recorded by HR (no request)'**
   String get pastLeaveRecorded;
 
   /// No description provided for @deletePastLeave.

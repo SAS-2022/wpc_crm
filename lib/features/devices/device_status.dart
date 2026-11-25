@@ -500,7 +500,7 @@ final deviceStatusesProvider = StreamProvider<Map<String, DeviceStatus>>((ref) {
 /// manager drivers and logistics staff, the factory manager production).
 List<AppUser> phoneStatusPeople(AppUser me, List<AppUser> users) {
   final active = users.where((u) => u.active && u.role != UserRole.unknown && u.role.value.isNotEmpty);
-  if (me.can.isAdmin) return active.toList();
+  if (me.seesAllPeople) return active.toList();
   final under = {for (final u in peopleUnder(me, users)) u.id};
   return active.where((u) => under.contains(u.id) || (me.hasRole(UserRole.kam) && u.kamId == me.id)).toList();
 }

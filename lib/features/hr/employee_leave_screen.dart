@@ -366,7 +366,8 @@ class _PastLeaveDialogState extends ConsumerState<_PastLeaveDialog> {
                     context: context,
                     initialDateRange: _dates,
                     firstDate: DateTime(now.year - 10),
-                    lastDate: DateTime(now.year, now.month, now.day),
+                    // Also leave going on now or booked ahead without a request (2026-11-25, user).
+                    lastDate: DateTime(now.year + 1, 12, 31),
                   );
                   if (picked != null) setState(() => _dates = picked);
                 },

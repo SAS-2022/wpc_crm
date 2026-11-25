@@ -6701,11 +6701,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get addPastLeave => 'إضافة إجازة سابقة';
+  String get addPastLeave => 'تسجيل إجازة';
 
   @override
   String get pastLeaveHelp =>
-      'إجازة أُخذت سابقاً تُدخل بالتاريخ (مثلاً قبل استخدام التطبيق). تُحفظ كإجازة معتمدة وتُحتسب من رصيد سنة الإجازة الخاصة بها.';
+      'إجازة لم يطلبها الموظف في التطبيق: أُخذت سابقاً أو جارية الآن أو محجوزة مسبقاً. تُحفظ كإجازة معتمدة وتُحتسب من رصيد سنة الإجازة الخاصة بها.';
 
   @override
   String get pastLeaveType => 'نوع الإجازة';
@@ -6725,7 +6725,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'يجب أن تكون التواريخ في سنة إجازة واحدة. أدخل كل سنة على حدة.';
 
   @override
-  String get pastLeaveRecorded => 'سجل سابق أدخلته الموارد البشرية';
+  String get pastLeaveRecorded => 'سجلتها الموارد البشرية (بدون طلب)';
 
   @override
   String get deletePastLeave => 'حذف هذا السجل السابق؟';
